@@ -5,12 +5,8 @@ namespace App\Notifications;
 use App\Actions\TwoFactor\GenerateOTP;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\Log;
-use NotificationChannels\Twilio\TwilioChannel;
-use NotificationChannels\Twilio\TwilioSmsMessage;
 use PragmaRX\Google2FA\Exceptions\IncompatibleWithGoogleAuthenticatorException;
 use PragmaRX\Google2FA\Exceptions\InvalidCharactersException;
 use PragmaRX\Google2FA\Exceptions\SecretKeyTooShortException;
@@ -37,7 +33,7 @@ class SendOTP extends Notification
      */
     public function via($notifiable)
     {
-        return [TwilioChannel::class];
+        return ['mail'];
     }
 
     /**
@@ -48,17 +44,13 @@ class SendOTP extends Notification
      */
     public function toMail($notifiable)
     {
-        return (new MailMessage)
-            ->line('Il codice di sicurezza per gestiio è ' . $this->getTwoFactorCode($notifiable))
-            ->action('Notification Action', url('/'))
-            ->line('Thank you for using our application!');
-    }
+        $otp = $this->getTwoFactorCode($notifiable);
 
-    public function toTwilio($notifiable)
-    {
-        Log::info('Invio Sms a ' . $notifiable->nominativo());
-        return (new TwilioSmsMessage())
-            ->content('Il codice di sicurezza per Gestiio è ' . $this->getTwoFactorCode($notifiable));
+        return (new MailMessage)
+            ->subject('Codice OTP di accesso - Gestiio')
+            ->greeting('Ciao ' . $notifiable->nominativo())
+            ->line('Il tuo codice OTP per l\'accesso è: ' . $otp)
+            ->line('Il codice scade in breve tempo. Se non hai richiesto questo accesso, ignora questa email.');
     }
 
     /**

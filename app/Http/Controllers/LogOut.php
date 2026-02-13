@@ -26,7 +26,7 @@ class LogOut
     }
 
 
-    public function sendSms($id)
+    public function sendOtpEmail($id)
     {
 
         $user = User::find($id);

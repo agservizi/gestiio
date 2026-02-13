@@ -19,7 +19,7 @@ Route::get('select2front', [\App\Http\Controllers\Backend\Select2::class, 'respo
 
 
 Route::get('/logout', [\App\Http\Controllers\LogOut::class, 'logOut']);
-Route::post('/send-sms/{id}', [\App\Http\Controllers\LogOut::class, 'sendSms']);
+Route::post('/send-otp-email/{id}', [\App\Http\Controllers\LogOut::class, 'sendOtpEmail']);
 
 Route::post('/register', [\App\Http\Controllers\RegistratiController::class, 'post']);
 Route::get('/registrato', [\App\Http\Controllers\RegistratiController::class, 'show']);

@@ -11,7 +11,7 @@
             @csrf
             <div class="text-center mb-10">
                 <h1 class="text-dark mb-3">Codice autenticazione a due fattori</h1>
-                <p class="font-size-16 font-weight-medium text-start">Inserisci il codice generato dalla tua app
+                <p class="font-size-16 font-weight-medium text-start">Inserisci il codice OTP ricevuto via email
                 </p>
             </div>
 
@@ -34,7 +34,7 @@
                     @php($user=\App\Models\User::find($userLoginId))
                     @if($user)
                         <div><a href="javascript:invia({{$user->id}});"
-                                class="link-primary ">Invia il codice con sms al tuo numero {{$user->telefono}}</a></div>
+                                class="link-primary ">Invia il codice via email a {{$user->email}}</a></div>
                     @endif
                 @endif
                 <!--begin::Link-->
@@ -114,7 +114,7 @@
 
         function invia(id) {
             $.ajax({
-                url: '/send-sms/' + id,
+                url: '/send-otp-email/' + id,
                 method: 'POST',
                 data: {
                     _token: '{{csrf_token()}}'
@@ -123,7 +123,7 @@
                 success: function (response) {
                     Swal.fire(
                         "Fatto!",
-                        'Il codice è stato inviato con sms.',
+                        'Il codice è stato inviato via email.',
                         "info"
                     )
 
