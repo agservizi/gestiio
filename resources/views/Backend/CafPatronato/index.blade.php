@@ -75,6 +75,25 @@
 @section('content')
 
     @include('Backend._components.alertMessage')
+
+    @if(($praticheFermiCount ?? 0) > 0)
+        <div class="alert alert-warning d-flex align-items-center p-4 mb-6">
+            <span class="svg-icon svg-icon-2hx svg-icon-warning me-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path opacity="0.3" d="M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12C21 7.03 16.97 3 12 3Z" fill="currentColor"/>
+                    <path d="M11 10H13V16H11V10ZM11 7H13V9H11V7Z" fill="currentColor"/>
+                </svg>
+            </span>
+            <div class="d-flex flex-column">
+                <h4 class="mb-1 text-warning">Pratiche ferme rilevate</h4>
+                <span>
+                    Ci sono <strong>{{$praticheFermiCount}}</strong> pratiche in stato bozza/da gestire da almeno <strong>{{$giorniFermo ?? 7}}</strong> giorni.
+                    <a class="fw-bold ms-1" href="{{request()->fullUrlWithQuery(['solo_fermi' => 1, 'giorni_fermo' => $giorniFermo ?? 7])}}">Vedi solo pratiche ferme</a>
+                </span>
+            </div>
+        </div>
+    @endif
+
     <div class="card pt-4">
         <div class="card-body pt-0 pb-5 fs-6" id="tabella">
             @include('Backend.CafPatronato.tabella')

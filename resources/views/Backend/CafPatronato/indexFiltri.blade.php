@@ -27,6 +27,52 @@
                 </div>
             </div>
         </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Esiti</label>
+            @php($selectedEsiti = (array)request()->input('esiti', []))
+            <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" name="esiti[]" multiple>
+                @foreach(\App\Models\EsitoCafPatronato::orderBy('nome')->get(['id','nome']) as $esito)
+                    <option value="{{$esito->id}}" {{in_array($esito->id, $selectedEsiti) ? 'selected' : ''}}>{{$esito->nome}}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Tipo pratica</label>
+            @php($selectedTipo = request()->input('tipo_caf_patronato_id'))
+            <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" data-placeholder="Tutti" data-allow-clear="true" name="tipo_caf_patronato_id">
+                <option></option>
+                @foreach(\App\Models\TipoCafPatronato::orderBy('nome')->get(['id','nome']) as $tipo)
+                    <option value="{{$tipo->id}}" {{$selectedTipo==$tipo->id ? 'selected' : ''}}>{{$tipo->nome}}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Agente</label>
+            @php($selectedAgente = request()->input('agente_id'))
+            <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" data-placeholder="Tutti" data-allow-clear="true" name="agente_id">
+                <option></option>
+                @foreach(\App\Models\User::role('agente')->orderBy('nome')->get(['id','nome','cognome']) as $agente)
+                    <option value="{{$agente->id}}" {{$selectedAgente==$agente->id ? 'selected' : ''}}>{{$agente->nominativo()}}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check form-switch form-check-custom form-check-solid">
+                <input class="form-check-input" type="checkbox" value="1" id="solo_fermi" name="solo_fermi" {{request()->boolean('solo_fermi') ? 'checked' : ''}}>
+                <label class="form-check-label" for="solo_fermi">Solo pratiche ferme</label>
+            </div>
+            <div class="text-muted fs-8 mt-1">Bozza / Da gestire oltre soglia giorni</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Giorni fermo</label>
+            <input type="number" min="1" class="form-control form-control-sm form-control-solid" name="giorni_fermo" value="{{max(1, (int)request()->input('giorni_fermo', 7))}}">
+        </div>
+
         <div class="d-flex justify-content-between">
             <div>
                 @if($conFiltro)
