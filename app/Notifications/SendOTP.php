@@ -5,13 +5,13 @@ namespace App\Notifications;
 use App\Actions\TwoFactor\GenerateOTP;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use PragmaRX\Google2FA\Exceptions\IncompatibleWithGoogleAuthenticatorException;
 use PragmaRX\Google2FA\Exceptions\InvalidCharactersException;
 use PragmaRX\Google2FA\Exceptions\SecretKeyTooShortException;
 
-class SendOTP extends Notification
+class SendOTP
 {
     use Queueable;
 
@@ -26,44 +26,45 @@ class SendOTP extends Notification
     }
 
     /**
-     * Get the notification's delivery channels.
-     *
-     * @param mixed $notifiable
-     * @return array
+     * @throws IncompatibleWithGoogleAuthenticatorException
+     * @throws SecretKeyTooShortException
+     * @throws InvalidCharactersException
      */
-    public function via($notifiable)
+    public function sendToUser(User $user): void
     {
-        return ['mail'];
-    }
+        if (!$user->email) {
+            throw new RuntimeException('Email utente non disponibile.');
+        }
 
-    /**
-     * Get the mail representation of the notification.
-     *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
-     */
-    public function toMail($notifiable)
-    {
-        $otp = $this->getTwoFactorCode($notifiable);
+        $otp = $this->getTwoFactorCode($user);
+        if (!$otp) {
+            throw new RuntimeException('OTP non generabile: autenticazione a due fattori non configurata.');
+        }
 
-        return (new MailMessage)
-            ->subject('Codice OTP di accesso - Gestiio')
-            ->greeting('Ciao ' . $notifiable->nominativo())
-            ->line('Il tuo codice OTP per l\'accesso è: ' . $otp)
-            ->line('Il codice scade in breve tempo. Se non hai richiesto questo accesso, ignora questa email.');
-    }
+        $fromAddress = config('mail.from.address');
+        $fromName = config('mail.from.name');
+        $from = $fromName ? sprintf('%s <%s>', $fromName, $fromAddress) : $fromAddress;
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @param mixed $notifiable
-     * @return array
-     */
-    public function toArray($notifiable)
-    {
-        return [
-            //
-        ];
+        $apiKey = config('services.resend.key');
+        if (!$apiKey) {
+            throw new RuntimeException('RESEND_KEY non configurata.');
+        }
+
+        $response = Http::timeout(15)
+            ->withToken($apiKey)
+            ->acceptJson()
+            ->post('https://api.resend.com/emails', [
+                'from' => $from,
+                'to' => [$user->email],
+                'subject' => 'Codice OTP di accesso - Gestiio',
+                'text' => "Ciao {$user->nominativo()}\n\nIl tuo codice OTP per l'accesso è: {$otp}\n\nSe non hai richiesto questo accesso, ignora questa email.",
+            ]);
+
+        if ($response->failed()) {
+            $body = $response->json();
+            $message = is_array($body) && isset($body['message']) ? $body['message'] : $response->body();
+            throw new RuntimeException('Resend API error: ' . $message);
+        }
     }
 
     /**

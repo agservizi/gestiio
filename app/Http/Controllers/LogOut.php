@@ -47,7 +47,7 @@ class LogOut
         }
 
         try {
-            $user->notify(new SendOTP());
+            app(SendOTP::class)->sendToUser($user);
         } catch (Throwable $exception) {
             Log::warning('Invio OTP email fallito', [
                 'user_id' => $user->id,

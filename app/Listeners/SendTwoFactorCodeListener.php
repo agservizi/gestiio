@@ -32,7 +32,7 @@ class SendTwoFactorCodeListener
         TwoFactorAuthenticationChallenged|TwoFactorAuthenticationEnabled $event
     ): void {
         try {
-            $event->user->notify(app(SendOTP::class));
+            app(SendOTP::class)->sendToUser($event->user);
         } catch (Throwable $exception) {
             Log::warning('Invio OTP automatico fallito', [
                 'user_id' => $event->user->id,
