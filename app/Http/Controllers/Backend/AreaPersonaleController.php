@@ -30,22 +30,30 @@ use function App\getInputUcwords;
 class AreaPersonaleController extends Controller
 {
 
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
+
     public function metronic($cosa)
     {
         switch ($cosa) {
             case 'dark':
-                if (Auth::user()->getExtra('darkMode')) {
-                    Auth::user()->setExtra(['darkMode' => false]);
+                if ($this->currentUser()->getExtra('darkMode')) {
+                    $this->currentUser()->setExtra(['darkMode' => false]);
                 } else {
-                    Auth::user()->setExtra(['darkMode' => true]);
+                    $this->currentUser()->setExtra(['darkMode' => true]);
                 }
                 return redirect()->back();
 
             case 'aside':
-                if (Auth::user()->getExtra('aside') == 'off') {
-                    Auth::user()->setExtra(['aside' => 'on']);
+                if ($this->currentUser()->getExtra('aside') == 'off') {
+                    $this->currentUser()->setExtra(['aside' => 'on']);
                 } else {
-                    Auth::user()->setExtra(['aside' => 'off']);
+                    $this->currentUser()->setExtra(['aside' => 'off']);
                 }
                 return ['success' => true];
         }
@@ -55,7 +63,7 @@ class AreaPersonaleController extends Controller
     {
 
         return view('Backend.DatiUtente.editDatiUtente', [
-            'record' => Auth::user(),
+            'record' => $this->currentUser(),
             'controller' => AreaPersonaleController::class
         ]);
 
@@ -68,7 +76,7 @@ class AreaPersonaleController extends Controller
                 Validator::make($request->input(), [
                     'nome' => ['required', 'string', 'max:255'],
                     'cognome' => ['required', 'string', 'max:255'],
-                    'telefono' => ['required', new TelefonoRule(),Rule::unique(User::class)->ignore(\Auth::id())],
+                    'telefono' => ['required', new TelefonoRule(), Rule::unique(User::class)->ignore(Auth::id())],
                     'codice_fiscale' => ['nullable', new CodiceFiscaleRule()],
                     'partita_iva' => ['nullable', new PartitaIvaRule()],
                     'iban' => ['nullable', new IbanRule()]
@@ -88,7 +96,7 @@ class AreaPersonaleController extends Controller
                         'email:rfc,dns',
                         'max:255',
                         'confirmed',
-                        Rule::unique(User::class)->ignore(\Auth::id()),
+                        Rule::unique(User::class)->ignore(Auth::id()),
                     ]
                 ])->validate();
                 $this->updateEmail($request);
@@ -118,7 +126,7 @@ class AreaPersonaleController extends Controller
 
     protected function updateDatiUtente($request)
     {
-        $user = Auth::user();
+        $user = $this->currentUser();
         $user->nome = getInputUcwords($request->input('nome'));
         $user->cognome = getInputUcwords($request->input('cognome'));
         $user->telefono = getInputTelefono($request->input('telefono'));
@@ -130,7 +138,7 @@ class AreaPersonaleController extends Controller
 
     protected function updateEmail($request)
     {
-        $user = Auth::user();
+        $user = $this->currentUser();
         $user->email = $request->input('email');
         $user->save();
 
@@ -138,7 +146,7 @@ class AreaPersonaleController extends Controller
 
     protected function updatePassword($request)
     {
-        $user = Auth::user();
+        $user = $this->currentUser();
         $user->password = Hash::make($request->input('password'));
         $user->save();
 

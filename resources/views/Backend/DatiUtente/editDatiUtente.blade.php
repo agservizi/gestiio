@@ -133,6 +133,7 @@
                                 @csrf
                                 @method('PATCH')
                                 @include('Backend._inputs.inputText',['campo'=>'email','testo'=>'Email','placeholder'=>'Il tuo indirizzo email','required'=>true,'autocomplete'=>'email'])
+                                @include('Backend._inputs.inputText',['campo'=>'email_confirmation','testo'=>'Conferma email','placeholder'=>'Conferma il tuo indirizzo email','required'=>true,'autocomplete'=>'email'])
                                 <div class="w-100 text-center">
                                     <button class="btn btn-primary" type="submit">Modifica email</button>
                                 </div>
