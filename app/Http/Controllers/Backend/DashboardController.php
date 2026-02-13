@@ -16,10 +16,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use function App\mese;
 
 class DashboardController extends Controller
 {
+    protected function produzioneDisponibile(): bool
+    {
+        return Schema::hasTable('produzioni_operatori');
+    }
+
     public function show(Request $request)
     {
         /** @var User|null $user */
@@ -250,6 +256,10 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
+        $produzioneMese = $this->produzioneDisponibile()
+            ? ProduzioneOperatore::find($id . '_' . $mese)
+            : null;
+
 
         return view('Backend.Dashboard.showAdmin', [
             'titoloPagina' => 'Ciao '.Auth::user()->nome,
@@ -259,7 +269,7 @@ class DashboardController extends Controller
             'tikets' => $tikets,
             'conteggioTikets' => $conteggioTikets,
             'datiTortaEsiti' => $this->datiTortaEsiti(),
-            'produzioneMese' => ProduzioneOperatore::find($id . '_' . $mese),
+            'produzioneMese' => $produzioneMese,
             'elencoMesi' => $this->elencoMesi(),
             'mese' => $mese,
             'filtroAnno' => $filtroAnno,
@@ -309,12 +319,20 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        $produzioneMese = $this->produzioneDisponibile()
+            ? ProduzioneOperatore::findByIdAnnoMese($id, $questoMese->year, $questoMese->month)
+            : null;
+
+        $produzioneMesePrecedente = $this->produzioneDisponibile()
+            ? ProduzioneOperatore::findByIdAnnoMese($id, $mesePrecedente->year, $mesePrecedente->month)
+            : null;
+
         return view('Backend.Dashboard.showAgente', [
             'titoloPagina' => 'Ciao '.Auth::user()->nome,
             'mainMenu' => 'dashboard',
             'record' => Auth::user(),
-            'produzioneMese' => ProduzioneOperatore::findByIdAnnoMese($id, $questoMese->year, $questoMese->month),
-            'produzioneMesePrecedente' => ProduzioneOperatore::findByIdAnnoMese($id, $mesePrecedente->year, $mesePrecedente->month),
+            'produzioneMese' => $produzioneMese,
+            'produzioneMesePrecedente' => $produzioneMesePrecedente,
             'datiBarreOrdini' => $this->datiBarreOrdini(now()->year),
             'kpiAgente' => $kpiAgente,
             'ticketDaGestire' => $ticketDaGestire,
@@ -356,6 +374,18 @@ class DashboardController extends Controller
 
         $arrOk = [];
         $arrMese = [];
+
+        if (!$this->produzioneDisponibile()) {
+            for ($mese = 1; $mese <= 12; $mese++) {
+                $arrOk[] = 0;
+                $arrMese[] = mese($mese);
+            }
+
+            return [
+                'arrOk' => $arrOk,
+                'arrMese' => $arrMese
+            ];
+        }
 
         $produzioneAnno = ProduzioneOperatore::query()
             ->where('user_id', Auth::id())
