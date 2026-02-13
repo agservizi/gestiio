@@ -1,8 +1,9 @@
-@php($container='container-xxl')
+@php
+    $container = 'container-xxl';
+@endphp
 @extends('Backend._layout._main')
 
-@section('toolbar')
-@endsection
+@section('toolbar', '')
 @section('content')
     @php
         $kpiAgente = $kpiAgente ?? [
@@ -21,7 +22,9 @@
                      style="background-color: #F1416C;">
                     <!--begin::Header-->
                     <div class="card-header pt-5">
-                        @php($percentuale=\App\percentuale($produzioneMese?->conteggio_ordini_in_lavorazione,$produzioneMese?->conteggio_ordini))
+                        @php
+                            $percentuale = \App\percentuale($produzioneMese?->conteggio_ordini_in_lavorazione, $produzioneMese?->conteggio_ordini);
+                        @endphp
 
                         <!--begin::Title-->
                         <div class="card-title d-flex flex-column">
@@ -119,7 +122,9 @@
         @can('servizio_ticket')
             <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
                 <div class="card card-flush h-md-100 overlay overflow-hidden">
-                    @php($daLeggere=\App\Http\MieClassiCache\CacheConteggioTicketsDaLeggere::get(Auth::id()))
+                    @php
+                        $daLeggere = \App\Http\MieClassiCache\CacheConteggioTicketsDaLeggere::get(Auth::id());
+                    @endphp
                     <a class="card-body pt-5 text-center @if($daLeggere) ribbon ribbon-top @endif" href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'index'])}}">
                         @if($daLeggere)
                             <div class="ribbon-label bg-danger">
