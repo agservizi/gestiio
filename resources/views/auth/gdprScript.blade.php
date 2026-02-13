@@ -1,4 +1,31 @@
 <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+<style>
+    .termsfeed-com---nb.termsfeed-com---nb-headline {
+        position: fixed !important;
+        left: 50% !important;
+        bottom: 16px !important;
+        top: auto !important;
+        right: auto !important;
+        transform: translateX(-50%);
+        width: min(960px, calc(100% - 24px));
+        max-width: 960px;
+        border-radius: 14px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+        z-index: 2147483000 !important;
+    }
+
+    .termsfeed-com---nb .cc-nb-main-container {
+        padding: 1rem 1.25rem !important;
+    }
+
+    @media (max-width: 768px) {
+        .termsfeed-com---nb.termsfeed-com---nb-headline {
+            bottom: 10px !important;
+            width: calc(100% - 12px);
+            border-radius: 10px;
+        }
+    }
+</style>
 <script type="text/javascript" src="/assets_backend/js-progetto/cookie-consent.js" charset="UTF-8"></script>
 <script type="text/javascript" charset="UTF-8">
     document.addEventListener('DOMContentLoaded', function () {
