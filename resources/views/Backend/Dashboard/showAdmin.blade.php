@@ -135,7 +135,7 @@
                                         <span class="font-weight-bolder text-danger">{{ number_format($alertDashboard['richieste_senza_credenziali']) }}</span>
                                     </div>
                                     <div class="mt-3">
-                                        <a href="{{ route('backend.ticket.index') }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
+                                        <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
                                     </div>
                                 </div>
                             </div>
