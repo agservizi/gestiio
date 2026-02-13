@@ -93,13 +93,19 @@
             </div>
 
             <div class="col-md-6 col-xl-4">
-                <div class="card card-flush overlay overflow-hidden" style="height:170px;">
-                    <a class="card-body pt-4 text-center" href="{{ $singleService['service_url'] }}">
-                        <div class="overlay-wrapper">
-                            <img src="{{ $singleService['service_img'] }}" class="img w-50 rounded">
+                <div class="card card-flush" style="height:170px;">
+                    <div class="card-body d-flex align-items-center justify-content-between py-4 px-5">
+                        <div class="d-flex flex-column gap-1 pe-3">
+                            <h4 class="mb-0">{{ $singleService['service_title'] }}</h4>
+                            <span class="text-muted fs-7">Accesso rapido al servizio attivo</span>
+                            <div class="mt-2">
+                                <a href="{{ $singleService['service_url'] }}" class="btn btn-light-primary btn-sm">Apri</a>
+                            </div>
                         </div>
-                        <h4 class="mt-3">{{ $singleService['service_title'] }}</h4>
-                    </a>
+                        <div class="overlay-wrapper">
+                            <img src="{{ $singleService['service_img'] }}" class="img rounded" style="width:64px;height:64px;object-fit:contain;">
+                        </div>
+                    </div>
                 </div>
             </div>
 
