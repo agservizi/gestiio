@@ -24,9 +24,7 @@ class DashboardController extends Controller
         $user = Auth::user();
         abort_if(!$user, 403);
 
-        dispatch(function () {
-            CacheUnaVoltaAlGiorno::get();
-        })->afterResponse();
+        CacheUnaVoltaAlGiorno::get();
 
         if ($user->hasPermissionTo('admin')) {
             return $this->showAdmin($request);
@@ -177,6 +175,20 @@ class DashboardController extends Controller
         $questoMese = now();
         $mesePrecedente = $questoMese->copy()->subMonths(1);
 
+        $kpiAgente = [
+            'miei_ticket_aperti' => Ticket::where('user_id', $id)->where('stato', '<>', 'chiuso')->count(),
+            'miei_ticket_oggi' => Ticket::where('user_id', $id)->whereDate('created_at', now())->count(),
+            'ticket_aperti_totali' => Ticket::where('stato', '<>', 'chiuso')->count(),
+        ];
+
+        $ticketDaGestire = Ticket::query()
+            ->with(['utente:id,nome,cognome', 'causaleTicket:id,nome'])
+            ->where('user_id', $id)
+            ->where('stato', '<>', 'chiuso')
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
         return view('Backend.Dashboard.showAgente', [
             'titoloPagina' => 'Ciao '.Auth::user()->nome,
             'mainMenu' => 'dashboard',
@@ -184,6 +196,8 @@ class DashboardController extends Controller
             'produzioneMese' => ProduzioneOperatore::findByIdAnnoMese($id, $questoMese->year, $questoMese->month),
             'produzioneMesePrecedente' => ProduzioneOperatore::findByIdAnnoMese($id, $mesePrecedente->year, $mesePrecedente->month),
             'datiBarreOrdini' => $this->datiBarreOrdini(now()->year),
+            'kpiAgente' => $kpiAgente,
+            'ticketDaGestire' => $ticketDaGestire,
 
         ]);
 

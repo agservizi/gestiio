@@ -171,6 +171,74 @@
             </div>
         </div>
     </div>
+
+    @can('servizio_ticket')
+        <div class="row">
+            <div class="col-xl-4 mb-5">
+                <div class="card card-custom card-stretch gutter-b">
+                    <div class="card-header">
+                        <h3 class="card-title">Operatività ticket</h3>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted">Aperti assegnati a me</span>
+                            <span class="font-size-h4 font-weight-bolder">{{ number_format($kpiAgente['miei_ticket_aperti']) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted">Creati oggi da me</span>
+                            <span class="font-weight-bolder">{{ number_format($kpiAgente['miei_ticket_oggi']) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Aperti totali</span>
+                            <span class="font-weight-bolder">{{ number_format($kpiAgente['ticket_aperti_totali']) }}</span>
+                        </div>
+                        <div class="mt-4">
+                            <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'index'])}}" class="btn btn-light-primary btn-sm">Apri ticket</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-8 mb-5">
+                <div class="card card-custom gutter-b">
+                    <div class="card-header">
+                        <h3 class="card-title">Priorità personali</h3>
+                    </div>
+                    <div class="card-body pt-4">
+                        @if($ticketDaGestire->isEmpty())
+                            <div class="text-muted">Nessun ticket aperto assegnato al tuo utente.</div>
+                        @else
+                            <div class="table-responsive">
+                                <table class="table table-head-custom table-head-bg table-vertical-center">
+                                    <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Causale</th>
+                                        <th>Stato</th>
+                                        <th>Creato il</th>
+                                        <th class="text-right">Azione</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach($ticketDaGestire as $ticket)
+                                        <tr>
+                                            <td>{{ $ticket->uidTicket() }}</td>
+                                            <td>{{ $ticket->causaleTicket?->nome ?? 'N/D' }}</td>
+                                            <td>{!! $ticket->labelStatoTicket() !!}</td>
+                                            <td>{{ $ticket->created_at?->format('d/m/Y H:i') }}</td>
+                                            <td class="text-right">
+                                                <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'show'], $ticket->id) }}" class="btn btn-light-primary btn-sm">Apri</a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endcan
 @endsection
 @push('customCss')
 @endpush

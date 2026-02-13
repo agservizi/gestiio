@@ -9,6 +9,19 @@
 @endsection
 
 @section('content')
+    @php
+        $kpiDashboard = $kpiDashboard ?? [
+            'richieste_assistenza_totali' => 0,
+            'richieste_assistenza_oggi' => 0,
+            'clienti_assistenza_totali' => 0,
+            'ticket_aperti' => 0,
+        ];
+        $alertDashboard = $alertDashboard ?? [
+            'richieste_senza_credenziali' => 0,
+            'clienti_senza_contatti' => 0,
+        ];
+        $azioniRapide = $azioniRapide ?? collect();
+    @endphp
     <div class="row g-5 g-xl-10 ">
         <!--begin::Col-->
         <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-10">
