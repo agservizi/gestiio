@@ -76,6 +76,41 @@
 
     @include('Backend._components.alertMessage')
 
+    <div class="row g-4 mb-6">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-warning">
+                <div class="card-body py-4">
+                    <div class="text-muted fs-7">In lavorazione</div>
+                    <div class="fs-2 fw-bold text-warning">{{$kpiInLavorazione ?? 0}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-danger">
+                <div class="card-body py-4">
+                    <div class="text-muted fs-7">Bloccate</div>
+                    <div class="fs-2 fw-bold text-danger">{{$kpiBloccate ?? 0}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-info">
+                <div class="card-body py-4">
+                    <div class="text-muted fs-7">In scadenza (7 gg)</div>
+                    <div class="fs-2 fw-bold text-info">{{$kpiInScadenza ?? 0}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-success">
+                <div class="card-body py-4">
+                    <div class="text-muted fs-7">Concluse</div>
+                    <div class="fs-2 fw-bold text-success">{{$kpiConcluse ?? 0}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @if(($praticheFermiCount ?? 0) > 0)
         <div class="alert alert-warning d-flex align-items-center p-4 mb-6">
             <span class="svg-icon svg-icon-2hx svg-icon-warning me-4">

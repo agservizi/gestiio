@@ -86,6 +86,25 @@ class CafPatronatoController extends Controller
         //Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
+        $kpiInLavorazione = (clone $recordsQB)
+            ->whereIn('esito_id', ['bozza', 'da-gestire'])
+            ->count();
+
+        $kpiBloccate = (clone $recordsQB)
+            ->whereNotNull('motivo_ko')
+            ->where('motivo_ko', '!=', '')
+            ->count();
+
+        $kpiInScadenza = (clone $recordsQB)
+            ->whereIn('esito_id', ['bozza', 'da-gestire'])
+            ->whereDate('data', '>=', today())
+            ->whereDate('data', '<=', today()->addDays(7))
+            ->count();
+
+        $kpiConcluse = (clone $recordsQB)
+            ->whereNotIn('esito_id', ['bozza', 'da-gestire'])
+            ->count();
+
         $praticheFermiCount = (clone $recordsQB)
             ->whereIn('esito_id', ['bozza', 'da-gestire'])
             ->whereDate('created_at', '<=', now()->subDays($giorniFermo))
@@ -128,6 +147,10 @@ class CafPatronatoController extends Controller
             'puoModificareEsito' => $puoModificareEsito,
             'giorniFermo' => $giorniFermo,
             'praticheFermiCount' => $praticheFermiCount,
+            'kpiInLavorazione' => $kpiInLavorazione,
+            'kpiBloccate' => $kpiBloccate,
+            'kpiInScadenza' => $kpiInScadenza,
+            'kpiConcluse' => $kpiConcluse,
 
         ]);
     }
@@ -181,7 +204,7 @@ class CafPatronatoController extends Controller
         if ($term) {
             $arrTerm = explode(' ', $term);
             foreach ($arrTerm as $t) {
-                $queryBuilder->where(DB::raw('concat_ws(\' \',nome,cognome,codice_fiscale)'), 'like', "%$t%");
+                $queryBuilder->where(DB::raw("concat_ws(' ',id,nome,cognome,codice_fiscale,email,cellulare)"), 'like', "%$t%");
             }
             $this->conFiltro = true;
         }
