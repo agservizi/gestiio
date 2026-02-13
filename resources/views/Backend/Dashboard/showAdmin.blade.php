@@ -9,117 +9,127 @@
 @endsection
 
 @section('content')
-    <div class="row g-5 g-xl-10 ">
-        <!--begin::Col-->
-        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-10">
-            <!--begin::Card widget 20-->
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-2 mb-xl-5 h-lg-50"
-                 style="background-color: #F1416C;background-image:url('/assets_backend/media/patterns/vector-1.png')">
-                <!--begin::Header-->
+    @php
+        $kpiDashboard = $kpiDashboard ?? [
+            'richieste_assistenza_totali' => 0,
+            'richieste_assistenza_oggi' => 0,
+            'clienti_assistenza_totali' => 0,
+            'ticket_aperti' => 0,
+        ];
+        $alertDashboard = $alertDashboard ?? [
+            'richieste_senza_credenziali' => 0,
+            'clienti_senza_contatti' => 0,
+        ];
+        $azioniRapide = $azioniRapide ?? collect();
+        $produzioneConteggio = (int)($produzioneMese?->conteggio_ordini ?? 0);
+        $produzioneInLavorazione = (int)($produzioneMese?->conteggio_ordini_in_lavorazione ?? 0);
+        $percentualeProduzione = \App\percentuale($produzioneInLavorazione, $produzioneConteggio);
+        $guadagno = \App\Models\GuadagnoAgenzia::firstOrNew(['mese' => $filtroMese, 'anno' => $filtroAnno]);
+        $percentualeUtile = \App\percentuale($guadagno->utile, $guadagno->entrate);
+        $ticketAperti = (int) data_get($conteggioTikets, 'aperto.conteggio', 0) + (int) data_get($conteggioTikets, 'in_lavorazione.conteggio', 0);
+        $ticketChiusi = (int) data_get($conteggioTikets, 'chiuso.conteggio', 0);
+    @endphp
 
-                @php($percentuale=\App\percentuale($produzioneMese?->conteggio_ordini_in_lavorazione,$produzioneMese?->conteggio_ordini))
+    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-flush h-md-100">
                 <div class="card-header pt-5">
-                    <div class="card-title d-flex flex-column">
-                        <span class="fs-2hx fw-bold text-white me-2 lh-1 ls-n2">{{$produzioneMese?->conteggio_ordini}}</span>
-                        <span class="text-white opacity-75 pt-1 fw-semibold fs-6">I tuoi contratti</span>
-                    </div>
-                    @if($produzioneMese)
-                        <div class="d-flex flex-column">
-                            <!--begin::Amount-->
-                            <span class="fs-2hx fw-bold text-white me-2 lh-1 ls-n2">{{\App\importo($produzioneMese->importo_totale,true)}}</span>
-                            <!--end::Amount-->
-                            <!--begin::Subtitle-->
-                            <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Il tuo guadagno</span>
-                            <!--end::Subtitle-->
-                        </div>
-                    @endif
-                    <!--end::Title-->
+                    <h3 class="card-title">Produzione mese</h3>
                 </div>
-
-                <!--end::Header-->
-                <!--begin::Card body-->
-                <div class="card-body d-flex align-items-end pt-0">
-                    <!--begin::Progress-->
-
-                    <div class="d-flex align-items-center flex-column mt-3 w-100">
-                        <div class="d-flex justify-content-between fw-bold fs-6 text-white opacity-75 w-100 mt-auto mb-2">
-                            <span>{{$produzioneMese?->conteggio_ordini_in_lavorazione}} in lavorazione</span>
-                            <span>{{$percentuale}}%</span>
-                        </div>
-                        <div class="h-8px mx-3 w-100 bg-white bg-opacity-50 rounded">
-                            <div class="bg-white rounded h-8px" role="progressbar" style="width: {{$percentuale}}%;"
-                                 aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
+                <div class="card-body pt-2">
+                    <div class="fs-2hx fw-bold">{{ number_format($produzioneConteggio) }}</div>
+                    <div class="text-muted mb-4">Contratti totali</div>
+                    <div class="d-flex justify-content-between fw-semibold mb-2">
+                        <span>In lavorazione</span>
+                        <span>{{ number_format($produzioneInLavorazione) }} ({{ $percentualeProduzione }}%)</span>
                     </div>
-                    <!--end::Progress-->
+                    <div class="progress h-8px bg-light-primary">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $percentualeProduzione }}%" aria-valuenow="{{ $percentualeProduzione }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                 </div>
-                <!--end::Card body-->
             </div>
-
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-2 mb-xl-5"
-                 style="background-color: #F1416C;background-image:url('/assets_backend/media/patterns/vector-1.png')">
-                <!--begin::Header-->
-                @php($guadagno=\App\Models\GuadagnoAgenzia::firstOrNew(['mese'=>$filtroMese,'anno'=>$filtroAnno]))
-
-                <div class="card-header pt-5">
-                    <!--begin::Title-->
-                    <div class="card-title d-flex flex-column">
-                        <!--begin::Amount-->
-                        <span class="fs-2hx fw-bold text-white me-2 lh-1 ls-n2">{{\App\importo($guadagno->entrate,true)}}</span>
-                        <!--end::Amount-->
-                        <!--begin::Subtitle-->
-                        <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Entrate</span>
-                        <!--end::Subtitle-->
-                        <!--end::Subtitle-->
-                    </div>
-                    <div class="d-flex flex-column">
-                        <!--begin::Amount-->
-                        <span class="fs-2hx fw-bold text-white me-2 lh-1 ls-n2">{{\App\importo($guadagno->uscite,true)}}</span>
-                        <!--end::Amount-->
-                        <!--begin::Subtitle-->
-                        <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Uscite</span>
-                        <!--end::Subtitle-->
-                    </div>
-                    <!--end::Title-->
-                </div>
-                <!--end::Header-->
-                <!--begin::Card body-->
-                <div class="card-body d-flex align-items-end pt-0">
-                    <!--begin::Progress-->
-                    @php($percentuale=\App\percentuale($guadagno->utile,$guadagno->entrate))
-                    <div class="d-flex align-items-center flex-column mt-3 w-100">
-                        <div class="d-flex justify-content-between fw-bold fs-6 text-white  w-100 mt-auto mb-2">
-                            <span class="fs-3">{{\App\importo($guadagno->utile,true)}} utile</span>
-                            <span class="opacity-75">{{$percentuale}}%</span>
-                        </div>
-                        <div class="h-8px mx-3 w-100 bg-white bg-opacity-50 rounded">
-                            <div class="bg-white rounded h-8px" role="progressbar" style="width: {{$percentuale}}%;"
-                                 aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div>
-                    <!--end::Progress-->
-                </div>
-                <!--end::Card body-->
-            </div>
-            <!--end::Card widget 20-->
         </div>
-        <!--end::Col-->
-        <!--begin::Col-->
-        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush mb-5 mb-xl-10 h-lg-100">
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-flush h-md-100">
+                <div class="card-header pt-5">
+                    <h3 class="card-title">Economico mese</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Entrate</span>
+                        <span class="fw-bolder">{{ \App\importo($guadagno->entrate,true) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Uscite</span>
+                        <span class="fw-bolder">{{ \App\importo($guadagno->uscite,true) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Utile</span>
+                        <span class="fw-bolder">{{ \App\importo($guadagno->utile,true) }}</span>
+                    </div>
+                    <div class="text-muted">Incidenza utile: {{ $percentualeUtile }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-flush h-md-100">
+                <div class="card-header pt-5">
+                    <h3 class="card-title">Ticket</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Aperti / in lavorazione</span>
+                        <span class="fw-bolder">{{ number_format($ticketAperti) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-5">
+                        <span class="text-muted">Chiusi</span>
+                        <span class="fw-bolder">{{ number_format($ticketChiusi) }}</span>
+                    </div>
+                    <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-flush h-md-100">
+                <div class="card-header pt-5">
+                    <h3 class="card-title">Assistenza</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Richieste totali</span>
+                        <span class="fw-bolder">{{ number_format($kpiDashboard['richieste_assistenza_totali']) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Nuove oggi</span>
+                        <span class="fw-bolder">{{ number_format($kpiDashboard['richieste_assistenza_oggi']) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Senza credenziali</span>
+                        <span class="fw-bolder text-danger">{{ number_format($alertDashboard['richieste_senza_credenziali']) }}</span>
+                    </div>
+                    <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'index']) }}" class="btn btn-light-warning btn-sm">Apri richieste</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
+        <div class="col-xl-6">
+            <div class="card card-flush h-lg-100">
                 <div class="card-header mt-6">
                     <div class="card-title flex-column">
                         <h3 class="fw-bolder mb-1">Esito finale</h3>
                         <div class="fs-6 fw-bold text-gray-400">Tutti i contratti</div>
-                    </div>
-                    <div class="card-toolbar">
                     </div>
                 </div>
                 <div class="card-body p-9 pt-5">
                     <div class="d-flex flex-wrap">
                         <div class="position-relative d-flex flex-center h-150px w-150px me-5 mb-7">
                             <div class="position-absolute translate-middle start-50 top-50 d-flex flex-column flex-center">
-                                <span class="fs-2qx fw-bolder">{{$datiTortaEsiti['totale']}}</span>
+                                <span class="fs-2qx fw-bolder">{{ $datiTortaEsiti['totale'] }}</span>
                                 <span class="fs-6 fw-bold text-gray-400">Ordini</span>
                             </div>
                             <canvas id="kt_card_widget_17_chart"></canvas>
@@ -127,10 +137,9 @@
                         <div class="d-flex flex-column justify-content-center flex-row-fluid pe-5 mb-5">
                             @for($n=0;$n<count($datiTortaEsiti['labels']);$n++)
                                 <div class="d-flex fs-6 fw-bold align-items-center mb-3">
-                                    <div class="bullet me-3 h-5px w-15px"
-                                         style="background-color: {{$datiTortaEsiti['backgroundColor'][$n]}};"></div>
-                                    <div class="text-gray-400">{{$datiTortaEsiti['labels'][$n]}}</div>
-                                    <div class="ms-auto fw-bolder text-gray-700">{{$datiTortaEsiti['data'][$n]}}</div>
+                                    <div class="bullet me-3 h-5px w-15px" style="background-color: {{ $datiTortaEsiti['backgroundColor'][$n] }};"></div>
+                                    <div class="text-gray-400">{{ $datiTortaEsiti['labels'][$n] }}</div>
+                                    <div class="ms-auto fw-bolder text-gray-700">{{ $datiTortaEsiti['data'][$n] }}</div>
                                 </div>
                             @endfor
                         </div>
@@ -138,27 +147,25 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-10">
+        <div class="col-xl-3">
             @include('Backend.Dashboard.admin.ticket',['records'=>$tikets])
         </div>
-        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-10">
+        <div class="col-xl-3">
             @include('Backend.Dashboard.linksGestori',['altezza'=>'h-lg-100'])
         </div>
     </div>
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-
-
         <div class="col-xxl-6">
-            <!--begin::Engage widget 10-->
-            <div class="card card-flush h-md-75">
-                <div class="card-header border-0 pt-5"><h3 class="card-title align-items-start flex-column"><span
-                                class="card-label fw-bold fs-3 mb-1">Contratti recenti</span></h3>
+            <div class="card card-flush h-md-100">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bold fs-3 mb-1">Contratti recenti</span>
+                    </h3>
                     <div class="card-toolbar">
-                        <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
-                           href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'create'])}}"><span
-                                    class="d-md-none">+</span><span
-                                    class="d-none d-md-block">Nuovo contratto</span></a>
+                        <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax" href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'create'])}}">
+                            <span class="d-md-none">+</span><span class="d-none d-md-block">Nuovo contratto</span>
+                        </a>
                     </div>
                 </div>
                 <div class="card-body card-scroll py-3">
@@ -166,7 +173,7 @@
                         <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
                             <thead>
                             <tr class="fw-bold text-muted">
-                                <th class="">Data</th>
+                                <th>Data</th>
                                 <th class="min-w-150px">Agente</th>
                                 <th class="min-w-140px">Prodotto</th>
                                 <th class="min-w-120px text-center">Esito</th>
@@ -181,15 +188,17 @@
                 </div>
             </div>
         </div>
+
         <div class="col-xxl-6">
-            <div class="card card-flush h-md-75">
-                <div class="card-header border-0 pt-5"><h3 class="card-title align-items-start flex-column"><span
-                                class="card-label fw-bold fs-3 mb-1">Caf / Patronato</span></h3>
+            <div class="card card-flush h-md-100">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bold fs-3 mb-1">Caf / Patronato</span>
+                    </h3>
                     <div class="card-toolbar">
-                        <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
-                           href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'create'])}}"><span
-                                    class="d-md-none">+</span><span
-                                    class="d-none d-md-block">Nuova pratica caf patronato</span></a>
+                        <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax" href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'create'])}}">
+                            <span class="d-md-none">+</span><span class="d-none d-md-block">Nuova pratica caf patronato</span>
+                        </a>
                     </div>
                 </div>
                 <div class="card-body card-scroll py-3">
@@ -197,10 +206,10 @@
                         <table class="table table-row-bordered" id="tabella-elenco">
                             <thead>
                             <tr class="fw-bolder fs-6 text-gray-800">
-                                <th class="">Data</th>
-                                <th class="">Tipo pratica</th>
-                                <th class="">Esito</th>
-                                <th class="">Nominativo</th>
+                                <th>Data</th>
+                                <th>Tipo pratica</th>
+                                <th>Esito</th>
+                                <th>Nominativo</th>
                                 <th class="text-center">Azioni</th>
                             </tr>
                             </thead>
@@ -209,6 +218,51 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5 g-xl-10">
+        <div class="col-12">
+            <div class="card card-flush">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bold fs-3 mb-1">Priorità assistenza</span>
+                        <span class="text-muted mt-1 fw-semibold fs-7">Richieste con credenziali mancanti</span>
+                    </h3>
+                </div>
+                <div class="card-body pt-0">
+                    @if($azioniRapide->isEmpty())
+                        <div class="text-muted py-5">Nessuna priorità operativa al momento.</div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-row-dashed align-middle gs-0 gy-3">
+                                <thead>
+                                <tr class="fw-bold text-muted">
+                                    <th>ID</th>
+                                    <th>Cliente</th>
+                                    <th>Prodotto</th>
+                                    <th>Creato il</th>
+                                    <th class="text-end">Azione</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach($azioniRapide as $azione)
+                                    <tr>
+                                        <td>{{ $azione->id }}</td>
+                                        <td>{{ $azione->cliente?->nominativo() ?? 'Cliente non associato' }}</td>
+                                        <td>{{ $azione->prodotto->nome ?? 'Prodotto non associato' }}</td>
+                                        <td>{{ $azione->created_at?->format('d/m/Y H:i') }}</td>
+                                        <td class="text-end">
+                                            <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'edit'], $azione->id) }}" class="btn btn-light-warning btn-sm">Apri</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

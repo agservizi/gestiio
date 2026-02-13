@@ -4,6 +4,14 @@
 @section('toolbar')
 @endsection
 @section('content')
+    @php
+        $kpiAgente = $kpiAgente ?? [
+            'miei_ticket_aperti' => 0,
+            'miei_ticket_oggi' => 0,
+            'ticket_aperti_totali' => 0,
+        ];
+        $ticketDaGestire = $ticketDaGestire ?? collect();
+    @endphp
     <div class="row g-5 g-xl-10">
         @can('servizio_contratti_telefonia')
             <!--begin::Col-->
@@ -141,7 +149,7 @@
                     </a>
                 </div>
             </div>
-        @endif
+        @endcan
         @can('servizio_documentazione')
             <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
                 <div class="card card-flush h-md-100 overlay overflow-hidden">
@@ -156,7 +164,7 @@
                     </a>
                 </div>
             </div>
-        @endif
+        @endcan
         <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
             <div class="card card-flush h-md-100 overlay overflow-hidden">
                 <a class="card-body pt-5 text-center"
