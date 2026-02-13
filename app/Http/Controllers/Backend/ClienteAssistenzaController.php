@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ClienteAssistenza;
-use DB;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class ClienteAssistenzaController extends Controller
 {
@@ -18,7 +22,7 @@ class ClienteAssistenzaController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request)
+    public function index(Request $request): View|JsonResponse
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
@@ -34,7 +38,9 @@ class ClienteAssistenzaController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        $orderByUser = $authUser?->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -45,8 +51,8 @@ class ClienteAssistenzaController extends Controller
             $orderBy = 'recente';
         }
 
-        if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+        if ($authUser instanceof User && $orderByUser != $orderByString) {
+            $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -55,13 +61,12 @@ class ClienteAssistenzaController extends Controller
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
         if ($request->ajax()) {
-
-            return [
+            return response()->json([
                 'html' => base64_encode(view('Backend.ClienteAssistenza.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
-            ];
+                ])->render())
+            ]);
 
         }
 
@@ -107,7 +112,7 @@ class ClienteAssistenzaController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function create()
+    public function create(): View
     {
         $record = new ClienteAssistenza();
         return view('Backend.ClienteAssistenza.edit', [
@@ -125,7 +130,7 @@ class ClienteAssistenzaController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $request->validate($this->rules(null));
         $record = new ClienteAssistenza();
@@ -139,7 +144,7 @@ class ClienteAssistenzaController extends Controller
      * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show($id): View
     {
         $record = ClienteAssistenza::find($id);
         abort_if(!$record, 404, 'Questo clienteassistenza non esiste');
@@ -158,7 +163,7 @@ class ClienteAssistenzaController extends Controller
      * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit($id): View
     {
         $record = ClienteAssistenza::find($id);
         abort_if(!$record, 404, 'Questo clienteassistenza non esiste');
@@ -184,7 +189,7 @@ class ClienteAssistenzaController extends Controller
      * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): RedirectResponse
     {
         $record = ClienteAssistenza::find($id);
         abort_if(!$record, 404, 'Questo ' . ClienteAssistenza::NOME_SINGOLARE . ' non esiste');
@@ -199,7 +204,7 @@ class ClienteAssistenzaController extends Controller
      * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
         $record = ClienteAssistenza::find($id);
         abort_if(!$record, 404, 'Questo clienteassistenza non esiste');
@@ -207,10 +212,10 @@ class ClienteAssistenzaController extends Controller
         $record->delete();
 
 
-        return [
+        return response()->json([
             'success' => true,
             'redirect' => action([ClienteAssistenzaController::class, 'index']),
-        ];
+        ]);
     }
 
     /**
@@ -247,7 +252,7 @@ class ClienteAssistenzaController extends Controller
         return $model;
     }
 
-    protected function backToIndex()
+    protected function backToIndex(): RedirectResponse
     {
         return redirect()->action([get_class($this), 'index']);
     }

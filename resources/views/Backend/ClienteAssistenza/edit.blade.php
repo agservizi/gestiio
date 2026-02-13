@@ -33,7 +33,7 @@
                 </div>
                 <div class="row">
                     <div class="col-md-4 offset-md-4 text-center">
-                        <button class="btn btn-primary mt-3" type="submit" id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\ClienteAssistenza::NOME_SINGOLARE}}</button>
+                        <button class="btn btn-primary mt-3" type="submit" id="submit">{{$vecchio?'Salva cliente assistenza':'Crea cliente assistenza'}}</button>
                     </div>
                     @if($vecchio)
                         <div class="col-md-4 text-end">

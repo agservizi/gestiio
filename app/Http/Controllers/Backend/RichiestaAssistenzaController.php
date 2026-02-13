@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use App\Models\ClienteAssistenza;
 use App\Models\RichiestaAssistenza;
 use App\Models\User;
 use DB;
@@ -122,6 +123,7 @@ class RichiestaAssistenzaController extends Controller
         $record->cliente_id = $request->input('cliente_id');
         return view('Backend.RichiestaAssistenza.edit', [
             'record' => $record,
+            'clienteInline' => $record->cliente_id ? ClienteAssistenza::find($record->cliente_id) : new ClienteAssistenza(),
             'titoloPagina' => 'Nuovo ' . RichiestaAssistenza::NOME_SINGOLARE,
             'controller' => get_class($this),
             'breadcrumbs' => [action([RichiestaAssistenzaController::class, 'index']) => 'Torna a elenco ' . RichiestaAssistenza::NOME_PLURALE]
@@ -161,6 +163,7 @@ class RichiestaAssistenzaController extends Controller
         }
         return view('Backend.RichiestaAssistenza.edit', [
             'record' => $record,
+            'clienteInline' => $record->cliente ?? new ClienteAssistenza(),
             'controller' => RichiestaAssistenzaController::class,
             'titoloPagina' => 'Modifica ' . RichiestaAssistenza::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
@@ -265,9 +268,10 @@ class RichiestaAssistenzaController extends Controller
 
         }
 
+        $clienteId = $this->resolveClienteId($request, $model->cliente_id);
+
         //Ciclo su campi
         $campi = [
-            'cliente_id' => '',
             'prodotto_assistenza_id' => '',
             'nome_utente' => '',
             'password' => '',
@@ -280,9 +284,39 @@ class RichiestaAssistenzaController extends Controller
             }
             $model->$campo = $valore;
         }
+        $model->cliente_id = $clienteId;
 
         $model->save();
         return $model;
+    }
+
+    protected function resolveClienteId(Request $request, ?int $currentClienteId = null): int
+    {
+        $clienteId = $request->input('cliente_id');
+        $codiceFiscale = strtoupper((string)$request->input('cliente_codice_fiscale', ''));
+
+        if ($clienteId) {
+            $cliente = ClienteAssistenza::find($clienteId);
+        } elseif ($codiceFiscale !== '') {
+            $cliente = ClienteAssistenza::firstOrNew(['codice_fiscale' => $codiceFiscale]);
+        } elseif ($currentClienteId) {
+            $cliente = ClienteAssistenza::find($currentClienteId);
+        } else {
+            $cliente = new ClienteAssistenza();
+        }
+
+        abort_if(!$cliente, 404, 'Cliente assistenza non trovato');
+
+        if ($codiceFiscale !== '' || !$cliente->id) {
+            $cliente->nome = \App\getInputUcwords($request->input('cliente_nome'));
+            $cliente->cognome = \App\getInputUcwords($request->input('cliente_cognome'));
+            $cliente->codice_fiscale = $codiceFiscale;
+            $cliente->email = strtolower((string)$request->input('cliente_email', ''));
+            $cliente->telefono = \App\getInputTelefono($request->input('cliente_telefono'));
+            $cliente->save();
+        }
+
+        return (int)$cliente->id;
     }
 
     protected function backToIndex(): RedirectResponse
@@ -304,7 +338,12 @@ class RichiestaAssistenzaController extends Controller
 
 
         $rules = [
-            'cliente_id' => ['required'],
+            'cliente_id' => ['nullable', 'required_without:cliente_codice_fiscale'],
+            'cliente_nome' => ['nullable', 'required_without:cliente_id', 'max:255'],
+            'cliente_cognome' => ['nullable', 'required_without:cliente_id', 'max:255'],
+            'cliente_codice_fiscale' => ['nullable', 'required_without:cliente_id', new \App\Rules\CodiceFiscaleRule()],
+            'cliente_email' => ['nullable', 'max:255'],
+            'cliente_telefono' => ['nullable', new \App\Rules\TelefonoRule()],
             'prodotto_assistenza_id' => ['required'],
             'nome_utente' => ['nullable', 'max:255'],
             'password' => ['nullable', 'max:255'],

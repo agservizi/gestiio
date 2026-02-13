@@ -6,7 +6,7 @@
             <th class="">Prodotto assistenza</th>
             <th class="">Nome utente</th>
             <th class="">Password</th>
-            <th class="">Pin</th>
+            <th class="">PIN</th>
             <th></th>
         </tr>
         </thead>
@@ -26,7 +26,7 @@
                     <a href="{{action([$controller,'pdf'],$record->id)}}"
                        class="btn btn-icon btn-sm btn-light btn-active-light-primary"
 
-                       data-bs-toggle="tooltip" data-bs-placement="top" title="Scarica allegato"
+                              data-bs-toggle="tooltip" data-bs-placement="top" title="Scarica PDF"
                     >
                     <span class="svg-icon svg-icon-muted svg-icon-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path opacity="0.3"
