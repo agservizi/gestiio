@@ -37,10 +37,21 @@ class RegistriController extends Controller
 
             case 'backup-db':
                 if ($request->input('scarica')) {
+                    $backupDisks = (array) config('backup.backup.destination.disks', ['local']);
+                    $disk = (string) $request->input('disk', $backupDisks[0] ?? 'local');
+                    abort_unless(in_array($disk, $backupDisks, true), 404);
+
                     $filePath = ltrim((string)$request->input('scarica'), '/');
                     abort_unless(str_starts_with($filePath, 'backup-database/'), 404);
-                    abort_unless(Storage::exists($filePath), 404);
-                    return Storage::download($filePath, basename($filePath));
+                    abort_unless(Storage::disk($disk)->exists($filePath), 404);
+
+                    $stream = Storage::disk($disk)->readStream($filePath);
+                    abort_unless($stream !== false, 404);
+
+                    return response()->streamDownload(function () use ($stream) {
+                        fpassthru($stream);
+                        fclose($stream);
+                    }, basename($filePath));
                 }
                 if ($request->has('esegui')) {
                     Artisan::call('backup:run --only-db --disable-notifications');
@@ -158,16 +169,23 @@ class RegistriController extends Controller
         $statuses = BackupDestinationStatusFactory::createForMonitorConfig(config('backup.monitor_backups'));
         list($headers, $rows) = $this->displayOverview($statuses);
 
-        $files = collect(Storage::allFiles('backup-database'))
-            ->filter(function (string $path) {
-                return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'zip';
-            })
-            ->map(function (string $path) {
-                return [
-                    'path' => $path,
-                    'fileSize' => Storage::size($path),
-                    'lastModified' => Storage::lastModified($path),
-                ];
+        $backupName = (string) config('backup.backup.name', 'backup-database');
+        $backupDisks = (array) config('backup.backup.destination.disks', ['local']);
+
+        $files = collect($backupDisks)
+            ->flatMap(function (string $disk) use ($backupName) {
+                return collect(Storage::disk($disk)->allFiles($backupName))
+                    ->filter(function (string $path) {
+                        return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'zip';
+                    })
+                    ->map(function (string $path) use ($disk) {
+                        return [
+                            'disk' => $disk,
+                            'path' => $path,
+                            'fileSize' => Storage::disk($disk)->size($path),
+                            'lastModified' => Storage::disk($disk)->lastModified($path),
+                        ];
+                    });
             })
             ->sortByDesc('lastModified')
             ->values();
