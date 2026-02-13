@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
+use App\Models\ClienteAssistenza;
 use App\Models\ContrattoTelefonia;
 use App\Models\ProduzioneOperatore;
+use App\Models\RichiestaAssistenza;
 use App\Models\Ticket;
 use App\Models\User;
 use Carbon\Carbon;
@@ -86,6 +88,50 @@ class DashboardController extends Controller
             ->select('stato', DB::raw('count(*) as conteggio'))
             ->get()->keyBy('stato');
 
+        $kpiDashboard = [
+            'richieste_assistenza_totali' => RichiestaAssistenza::count(),
+            'richieste_assistenza_oggi' => RichiestaAssistenza::whereDate('created_at', now())->count(),
+            'clienti_assistenza_totali' => ClienteAssistenza::count(),
+            'ticket_aperti' => Ticket::where('stato', '<>', 'chiuso')->count(),
+        ];
+
+        $alertDashboard = [
+            'richieste_senza_credenziali' => RichiestaAssistenza::query()
+                ->where(function ($q) {
+                    $q->whereNull('nome_utente')->orWhere('nome_utente', '');
+                })
+                ->orWhere(function ($q) {
+                    $q->whereNull('password')->orWhere('password', '');
+                })
+                ->orWhere(function ($q) {
+                    $q->whereNull('pin')->orWhere('pin', '');
+                })
+                ->count(),
+            'clienti_senza_contatti' => ClienteAssistenza::query()
+                ->where(function ($q) {
+                    $q->whereNull('email')->orWhere('email', '');
+                })
+                ->orWhere(function ($q) {
+                    $q->whereNull('telefono')->orWhere('telefono', '');
+                })
+                ->count(),
+        ];
+
+        $azioniRapide = RichiestaAssistenza::query()
+            ->with(['cliente:id,nome,cognome,codice_fiscale,email,telefono', 'prodotto:id,nome'])
+            ->where(function ($q) {
+                $q->whereNull('nome_utente')->orWhere('nome_utente', '');
+            })
+            ->orWhere(function ($q) {
+                $q->whereNull('password')->orWhere('password', '');
+            })
+            ->orWhere(function ($q) {
+                $q->whereNull('pin')->orWhere('pin', '');
+            })
+            ->latest('id')
+            ->limit(8)
+            ->get();
+
 
         return view('Backend.Dashboard.showAdmin', [
             'titoloPagina' => 'Ciao '.Auth::user()->nome,
@@ -99,7 +145,10 @@ class DashboardController extends Controller
             'elencoMesi' => $this->elencoMesi(),
             'mese' => $mese,
             'filtroAnno' => $filtroAnno,
-            'filtroMese' => $filtroMese
+            'filtroMese' => $filtroMese,
+            'kpiDashboard' => $kpiDashboard,
+            'alertDashboard' => $alertDashboard,
+            'azioniRapide' => $azioniRapide,
         ]);
 
     }
