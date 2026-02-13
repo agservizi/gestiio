@@ -52,9 +52,11 @@
         <div class="mb-3">
             <label class="form-label fw-bold">Agente</label>
             @php($selectedAgente = request()->input('agente_id'))
+            @php($agentiIds = \App\Models\CafPatronato::query()->whereNotNull('agente_id')->distinct()->pluck('agente_id'))
+            @php($agenti = \App\Models\User::query()->whereIn('id', $agentiIds)->orderBy('nome')->orderBy('cognome')->get(['id','nome','cognome']))
             <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" data-placeholder="Tutti" data-allow-clear="true" name="agente_id">
                 <option></option>
-                @foreach(\App\Models\User::role('agente')->orderBy('nome')->get(['id','nome','cognome']) as $agente)
+                @foreach($agenti as $agente)
                     <option value="{{$agente->id}}" {{$selectedAgente==$agente->id ? 'selected' : ''}}>{{$agente->nominativo()}}</option>
                 @endforeach
             </select>
