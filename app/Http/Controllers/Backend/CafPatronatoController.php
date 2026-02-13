@@ -233,7 +233,7 @@ class CafPatronatoController extends Controller
                 'titoloPagina' => 'Nuova pratica Caf / Patronato',
                 'portafoglioServizi'=>$portafoglioServizi,
                 'controller' => get_class($this),
-                'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . CafPatronato::NOME_PLURALE]
+                'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco ' . CafPatronato::NOME_PLURALE]
             ]);
         }
         $record = new CafPatronato();
