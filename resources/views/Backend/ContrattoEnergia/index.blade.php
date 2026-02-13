@@ -55,6 +55,23 @@
     </div>
 @endsection
 @section('content')
+    @if(($contrattiFermiCount ?? 0) > 0)
+        <div class="alert alert-warning d-flex align-items-center mb-5">
+            <span class="svg-icon svg-icon-2hx svg-icon-warning me-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path opacity="0.3" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"/>
+                    <path d="M12 7C12.5523 7 13 7.44772 13 8V13C13 13.5523 12.5523 14 12 14C11.4477 14 11 13.5523 11 13V8C11 7.44772 11.4477 7 12 7Z" fill="currentColor"/>
+                    <path d="M12 16C12.5523 16 13 16.4477 13 17C13 17.5523 12.5523 18 12 18C11.4477 18 11 17.5523 11 17C11 16.4477 11.4477 16 12 16Z" fill="currentColor"/>
+                </svg>
+            </span>
+            <div class="d-flex flex-column flex-grow-1">
+                <span class="fw-bold">{{ number_format($contrattiFermiCount) }} contratti energia fermi da almeno {{ $giorniFermo }} giorni</span>
+                <span class="text-muted">Stato bozza o da gestire.</span>
+            </div>
+            <a href="{{ request()->fullUrlWithQuery(['solo_fermi' => 1, 'giorni_fermo' => $giorniFermo]) }}" class="btn btn-sm btn-warning">Vedi solo fermi</a>
+        </div>
+    @endif
+
     <div class="card pt-4">
         <div class="card-body pt-0 pb-5 fs-6" id="tabella">
             @include('Backend.ContrattoEnergia.tabella')

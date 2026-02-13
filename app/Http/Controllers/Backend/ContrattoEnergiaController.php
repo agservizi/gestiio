@@ -24,7 +24,10 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ContrattoEnergia;
-use DB;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
@@ -33,16 +36,25 @@ class ContrattoEnergiaController extends Controller
 {
     protected $conFiltro = false;
 
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
+
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+    * @return mixed
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
+        $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
 
         $ordinamenti = [
             'data' => ['testo' => 'Data', 'filtro' => function ($q) {
@@ -56,7 +68,7 @@ class ContrattoEnergiaController extends Controller
             }]
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $this->currentUser()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -68,11 +80,16 @@ class ContrattoEnergiaController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
+
+        $contrattiFermiCount = (clone $recordsQB)
+            ->whereIn('esito_id', ['bozza', 'da-gestire'])
+            ->whereDate('created_at', '<=', now()->subDays($giorniFermo))
+            ->count();
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
@@ -90,7 +107,7 @@ class ContrattoEnergiaController extends Controller
                     'puoCambiareStato' => $puoCambiareStato,
                     'puoCreare' => $puoCreare,
 
-                ]))
+                ])->render())
             ];
 
         }
@@ -109,6 +126,8 @@ class ContrattoEnergiaController extends Controller
             'puoModificare' => $puoModificare,
             'puoCambiareStato' => $puoCambiareStato,
             'puoCreare' => $puoCreare,
+            'giorniFermo' => $giorniFermo,
+            'contrattiFermiCount' => $contrattiFermiCount,
 
 
         ]);
@@ -176,6 +195,14 @@ class ContrattoEnergiaController extends Controller
 
         }
 
+        if ($request->boolean('solo_fermi')) {
+            $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+            $queryBuilder
+                ->whereIn('esito_id', ['bozza', 'da-gestire'])
+                ->whereDate('created_at', '<=', now()->subDays($giorniFermo));
+            $this->conFiltro = true;
+        }
+
         return $queryBuilder;
     }
 
@@ -183,7 +210,7 @@ class ContrattoEnergiaController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+    * @return mixed
      */
     public function create(Request $request, $gestoreId = null)
     {
@@ -191,7 +218,7 @@ class ContrattoEnergiaController extends Controller
 
         if (!$gestoreId) {
             $record = new ContrattoEnergia();
-            if (Auth::user()->hasPermissionTo('agente')) {
+            if ($this->currentUser()->hasPermissionTo('agente')) {
                 $record->agente_id = Auth::id();
             }
             return view('Backend.ContrattoEnergia.modalNuovo', [
@@ -206,7 +233,7 @@ class ContrattoEnergiaController extends Controller
 
 
         $record = new ContrattoEnergia();
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         } else {
             $record->agente_id = $request->input('agente_id');
@@ -256,7 +283,7 @@ class ContrattoEnergiaController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+    * @return mixed
      */
     public function store(Request $request)
     {
@@ -277,7 +304,7 @@ class ContrattoEnergiaController extends Controller
             $this->inviaNotifiche($record);
         }
 
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             Notifica::notificaAdAdmin('Nuovo Contratto Energia', '<span class="fw-bold">' . $record->gestore->nome . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
         }
 
@@ -288,7 +315,7 @@ class ContrattoEnergiaController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+    * @return mixed
      */
     public function show($id)
     {
@@ -299,7 +326,7 @@ class ContrattoEnergiaController extends Controller
         } else {
             $eliminabile = true;
         }
-        $puoCreare = Auth::user()->hasAnyPermission(['admin', 'agente']);
+        $puoCreare = $this->currentUser()->hasAnyPermission(['admin', 'agente']);
 
 
         return view('Backend.ContrattoEnergia.show', [
@@ -316,14 +343,14 @@ class ContrattoEnergiaController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+    * @return mixed
      */
     public function edit($id)
     {
         $record = ContrattoEnergia::with('gestore')->find($id);
         abort_if(!$record, 404, 'Questo ContrattoEnergia non esiste');
 
-        abort_if(!$record->puoModificare(Auth::user()->hasPermissionTo('admin')), 404, 'Non puo modificare questo ContrattoEnergia');
+        abort_if(!$record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 404, 'Non puo modificare questo ContrattoEnergia');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -362,7 +389,7 @@ class ContrattoEnergiaController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+    * @return mixed
      */
     public function update(Request $request, $id)
     {
@@ -395,7 +422,7 @@ class ContrattoEnergiaController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+    * @return mixed
      */
     public function destroy($id)
     {
@@ -420,7 +447,7 @@ class ContrattoEnergiaController extends Controller
         $record = AllegatoContrattoEnergia::find($allegatoId);
         abort_if(!$record, 404, 'Questo allegato non esiste');
         abort_if($record->contratto_energia_id != $ContrattoEnergiaId, 404, 'Questo allegato non esiste');
-        return response()->download(\Storage::path($record->path_filename), $record->filename_originale);
+        return response()->download(Storage::path($record->path_filename), $record->filename_originale);
     }
 
     public function uploadAllegato(Request $request)
@@ -453,9 +480,9 @@ class ContrattoEnergiaController extends Controller
     {
         $record = AllegatoContrattoEnergia::find($request->input('id'));
         abort_if(!$record, 404, 'File non trovato');
-        \Log::debug(__FUNCTION__, $record->toArray());
+        Log::debug(__FUNCTION__, $record->toArray());
 
-        \Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente' . $record->path_filename);
         $record->delete();
         return $record->path_filename;
     }
@@ -469,7 +496,7 @@ class ContrattoEnergiaController extends Controller
 
         $esito = EsitoContrattoEnergia::find($request->input('esito_id'));
         $motivoKoprima = $ContrattoEnergia->motivo_ko;
-        if (Auth::user()->hasPermissionTo('admin')) {
+        if ($this->currentUser()->hasPermissionTo('admin')) {
             $ContrattoEnergia->pagato = getInputCheckbox($request->input('pagato'));
         }
         $ContrattoEnergia->codice_contratto = getInputToUpper($request->input('codice_contratto'));
@@ -529,7 +556,7 @@ class ContrattoEnergiaController extends Controller
                 'puoModificare' => $this->determinaPuoModificare(),
                 'puoCreare' => $this->determinaPuoCreare(),
                 'puoCambiareStato' => $this->determinaPuoCambiareStato(),
-            ]))
+            ])->render())
         ];
     }
 
@@ -577,7 +604,7 @@ class ContrattoEnergiaController extends Controller
 
         }
 
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             dispatch(function () use ($ContrattoEnergia) {
                 $user = new User();
                 $user->email = 'noreply@gestiio.it';
@@ -712,7 +739,7 @@ class ContrattoEnergiaController extends Controller
 
     /**
      * @param ContrattoEnergia $ContrattoEnergia
-     * @return int
+    * @return void
      */
     protected function creaUtente(ContrattoEnergia $ContrattoEnergia)
     {
@@ -726,7 +753,7 @@ class ContrattoEnergiaController extends Controller
                 $user->cognome = $cliente->cognome;
                 $user->email = $cliente->email;
                 $password = rand(11111111, 99999999);
-                $user->password = \Hash::make($password);
+                $user->password = Hash::make($password);
                 $user->telefono = $cliente->telefono;
                 $user->save();
                 $cliente->user_id = $user->id;
@@ -807,19 +834,19 @@ class ContrattoEnergiaController extends Controller
 
     protected function determinaPuoModificare()
     {
-        return Auth::user()->hasAnyPermission(['admin', 'supervisore']);
+        return $this->currentUser()->hasAnyPermission(['admin', 'supervisore']);
 
     }
 
     protected function determinaPuoCambiareStato()
     {
-        return $this->determinaPuoModificare() || Auth::user()->hasPermissionTo('supervisore');
+        return $this->determinaPuoModificare() || $this->currentUser()->hasPermissionTo('supervisore');
 
     }
 
     protected function determinaPuoCreare()
     {
-        return Auth::user()->hasAnyPermission(['admin', 'agente']);
+        return $this->currentUser()->hasAnyPermission(['admin', 'agente']);
 
     }
 
