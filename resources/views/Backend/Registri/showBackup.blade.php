@@ -52,19 +52,20 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @foreach($files->reverse() as $file)
-                        @php($pathinfo=pathinfo($file['path']))
-                        @if(isset($pathinfo['extension']) && $pathinfo['extension']=='zip')
-                            <tr class="">
-                                <td class=""> {{$pathinfo['basename']}} </td>
-                                <td class=""> {{\Carbon\Carbon::createFromFormat('Y-m-d-H-i-s',$pathinfo['filename'])->diffForHumans()}} </td>
-                                <td class="text-end"> {{\App\humanFileSize($file['fileSize'])}}</td>
-                                <td class="text-end">
-                                    <a href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],['cosa'=>'backup-db','scarica'=>$pathinfo['basename']])}}">Scarica</a>
-                                </td>
-                            </tr>
-                        @endif
-                    @endforeach
+                    @forelse($files as $file)
+                        <tr>
+                            <td>{{ basename($file['path']) }}</td>
+                            <td>{{ \Carbon\Carbon::createFromTimestamp($file['lastModified'])->diffForHumans() }}</td>
+                            <td class="text-end">{{ \App\humanFileSize($file['fileSize']) }}</td>
+                            <td class="text-end">
+                                <a href="{{ action([\App\Http\Controllers\Backend\RegistriController::class,'index'],['cosa'=>'backup-db','scarica'=>$file['path']]) }}">Scarica</a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">Nessun backup disponibile.</td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>

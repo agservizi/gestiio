@@ -23,7 +23,7 @@ class RegistriController extends Controller
     /**
      * Display a listing of the resource.
      *
-    * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View|\Symfony\Component\HttpFoundation\BinaryFileResponse
+    * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View|\Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse
      */
     public function index(Request $request, $cosa)
     {
@@ -37,10 +37,10 @@ class RegistriController extends Controller
 
             case 'backup-db':
                 if ($request->input('scarica')) {
-                    $fileName = $request->input('scarica');
-                    $pathToFile = storage_path('app/backup-database/' . $fileName);
-                    abort_unless(is_file($pathToFile), 404);
-                    return response()->download($pathToFile, $fileName);
+                    $filePath = ltrim((string)$request->input('scarica'), '/');
+                    abort_unless(str_starts_with($filePath, 'backup-database/'), 404);
+                    abort_unless(Storage::exists($filePath), 404);
+                    return Storage::download($filePath, basename($filePath));
                 }
                 if ($request->has('esegui')) {
                     Artisan::call('backup:run --only-db --disable-notifications');
@@ -158,14 +158,19 @@ class RegistriController extends Controller
         $statuses = BackupDestinationStatusFactory::createForMonitorConfig(config('backup.monitor_backups'));
         list($headers, $rows) = $this->displayOverview($statuses);
 
-        $files = collect(Storage::files('backup-database'))
+        $files = collect(Storage::allFiles('backup-database'))
+            ->filter(function (string $path) {
+                return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'zip';
+            })
             ->map(function (string $path) {
                 return [
                     'path' => $path,
                     'fileSize' => Storage::size($path),
+                    'lastModified' => Storage::lastModified($path),
                 ];
             })
-            ->sortBy('path');
+            ->sortByDesc('lastModified')
+            ->values();
 
         return view('Backend.Registri.showBackup', [
             'headers' => $headers,
