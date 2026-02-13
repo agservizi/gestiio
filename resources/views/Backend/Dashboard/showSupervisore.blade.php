@@ -11,6 +11,11 @@
 
 @section('content')
     @php
+        $canTelefonia = $canTelefonia ?? auth()->user()?->can('servizio_contratti_telefonia');
+        $canEnergia = $canEnergia ?? auth()->user()?->can('servizio_contratti_energia');
+        $canCafPatronato = $canCafPatronato ?? auth()->user()?->can('servizio_caf_patronato');
+        $canTicket = $canTicket ?? auth()->user()?->can('servizio_ticket');
+
         $kpiSupervisore = $kpiSupervisore ?? [
             'contratti_telefonia_mese' => 0,
             'contratti_energia_mese' => 0,
@@ -23,57 +28,71 @@
             'ticket_aperti_oltre_48h' => 0,
         ];
         $ticketRecenti = $ticketRecenti ?? collect();
+
+        $showPriorita = $canCafPatronato || $canTicket;
+        $prioritaColClass = $canTicket ? 'col-xl-8' : 'col-xl-12';
+        $showContrattiPanel = $canTelefonia;
+        $showCafPanel = $canCafPatronato;
+        $tablesColClass = ($showContrattiPanel && $showCafPanel) ? 'col-xxl-6' : 'col-xxl-12';
     @endphp
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Telefonia mese</h3>
-                </div>
-                <div class="card-body pt-0">
-                    <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['contratti_telefonia_mese']) }}</div>
-                    <div class="text-muted">Contratti inseriti nel periodo selezionato</div>
+        @if($canTelefonia)
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-flush h-md-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">Telefonia mese</h3>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['contratti_telefonia_mese']) }}</div>
+                        <div class="text-muted">Contratti inseriti nel periodo selezionato</div>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
 
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Energia mese</h3>
-                </div>
-                <div class="card-body pt-0">
-                    <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['contratti_energia_mese']) }}</div>
-                    <div class="text-muted">Pratiche luce/gas inserite nel periodo</div>
+        @if($canEnergia)
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-flush h-md-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">Energia mese</h3>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['contratti_energia_mese']) }}</div>
+                        <div class="text-muted">Pratiche luce/gas inserite nel periodo</div>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
 
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Caf/Patronato mese</h3>
-                </div>
-                <div class="card-body pt-0">
-                    <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['pratiche_caf_mese']) }}</div>
-                    <div class="text-muted">Pratiche inserite nel periodo</div>
+        @if($canCafPatronato)
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-flush h-md-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">Caf/Patronato mese</h3>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['pratiche_caf_mese']) }}</div>
+                        <div class="text-muted">Pratiche inserite nel periodo</div>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
 
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Ticket aperti</h3>
-                </div>
-                <div class="card-body pt-0">
-                    <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['ticket_aperti']) }}</div>
-                    <div class="text-muted mb-3">In lavorazione complessiva</div>
-                    <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
+        @if($canTicket)
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-flush h-md-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">Ticket aperti</h3>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="fs-2hx fw-bold">{{ number_format($kpiSupervisore['ticket_aperti']) }}</div>
+                        <div class="text-muted mb-3">In lavorazione complessiva</div>
+                        <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
     </div>
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
@@ -131,35 +150,45 @@
     </div>
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-        <div class="col-xl-8">
-            <div class="card card-flush h-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Priorità supervisione</h3>
-                </div>
-                <div class="card-body pt-0">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="text-muted">Pratiche CAF bloccate</span>
-                        <span class="fw-bolder text-danger">{{ number_format($alertSupervisore['caf_bloccate']) }}</span>
+        @if($showPriorita)
+            <div class="{{ $prioritaColClass }}">
+                <div class="card card-flush h-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">Priorità supervisione</h3>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="text-muted">Ticket aperti da oltre 48h</span>
-                        <span class="fw-bolder text-warning">{{ number_format($alertSupervisore['ticket_aperti_oltre_48h']) }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted">Pratiche ferme (7+ giorni)</span>
-                        <span class="fw-bolder">{{ number_format($kpiSupervisore['pratiche_ferme']) }}</span>
+                    <div class="card-body pt-0">
+                        @if($canCafPatronato)
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted">Pratiche CAF bloccate</span>
+                                <span class="fw-bolder text-danger">{{ number_format($alertSupervisore['caf_bloccate']) }}</span>
+                            </div>
+                        @endif
+                        @if($canTicket)
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted">Ticket aperti da oltre 48h</span>
+                                <span class="fw-bolder text-warning">{{ number_format($alertSupervisore['ticket_aperti_oltre_48h']) }}</span>
+                            </div>
+                        @endif
+                        @if($canCafPatronato)
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Pratiche ferme (7+ giorni)</span>
+                                <span class="fw-bolder">{{ number_format($kpiSupervisore['pratiche_ferme']) }}</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-4">
-            @include('Backend.Dashboard.admin.ticket', ['records' => $ticketRecenti])
-        </div>
+        @endif
+        @if($canTicket)
+            <div class="col-xl-4">
+                @include('Backend.Dashboard.admin.ticket', ['records' => $ticketRecenti])
+            </div>
+        @endif
     </div>
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-        @can('servizio_contratti_telefonia')
-            <div class="col-xxl-6">
+        @if($showContrattiPanel)
+            <div class="{{ $tablesColClass }}">
                 <div class="card card-flush h-md-100">
                     <div class="card-header border-0 pt-5">
                         <h3 class="card-title align-items-start flex-column">
@@ -189,10 +218,10 @@
                     </div>
                 </div>
             </div>
-        @endcan
+        @endif
 
-        @can('servizio_caf_patronato')
-            <div class="col-xxl-6">
+        @if($showCafPanel)
+            <div class="{{ $tablesColClass }}">
                 <div class="card card-flush h-md-100">
                     <div class="card-header border-0 pt-5">
                         <h3 class="card-title align-items-start flex-column">
@@ -222,7 +251,7 @@
                     </div>
                 </div>
             </div>
-        @endcan
+        @endif
     </div>
 @endsection
 

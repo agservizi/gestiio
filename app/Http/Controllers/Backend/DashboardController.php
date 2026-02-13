@@ -40,70 +40,105 @@ class DashboardController extends Controller
 
     protected function showSupervisore(Request $request)
     {
+        /** @var User|null $user */
+        $user = Auth::user();
+        abort_if(!$user, 403);
+
+        $canTelefonia = $user->can('servizio_contratti_telefonia');
+        $canEnergia = $user->can('servizio_contratti_energia');
+        $canCafPatronato = $user->can('servizio_caf_patronato');
+        $canTicket = $user->can('servizio_ticket');
+
         $this->elencoMesi();
         $mese = $request->input('mese', now()->format('Y_m'));
         [$filtroAnno, $filtroMese] = explode('_', $mese);
 
-        $contratti = ContrattoTelefonia::query()
-            ->with('agente')
-            ->with('tipoContratto.gestore')
-            ->with('esito')
-            ->limit(10)
-            ->orderByDesc('data')
-            ->get();
+        $contratti = collect();
+        if ($canTelefonia) {
+            $contratti = ContrattoTelefonia::query()
+                ->with('agente')
+                ->with('tipoContratto.gestore')
+                ->with('esito')
+                ->limit(10)
+                ->orderByDesc('data')
+                ->get();
+        }
 
-        $servizi = CafPatronato::query()
-            ->with('esito')
-            ->with('agente')
-            ->with('tipo:id,nome')
-            ->withCount('allegati')
-            ->withCount('allegatiPerCliente')
-            ->limit(10)
-            ->orderByDesc('data')
-            ->get();
+        $servizi = collect();
+        if ($canCafPatronato) {
+            $servizi = CafPatronato::query()
+                ->with('esito')
+                ->with('agente')
+                ->with('tipo:id,nome')
+                ->withCount('allegati')
+                ->withCount('allegatiPerCliente')
+                ->limit(10)
+                ->orderByDesc('data')
+                ->get();
+        }
 
-        $ticketRecenti = Ticket::query()
-            ->with('utente')
-            ->with('causaleTicket')
-            ->orderByDesc('id')
-            ->limit(5)
-            ->where('stato', '<>', 'chiuso')
-            ->get();
+        $ticketRecenti = collect();
+        if ($canTicket) {
+            $ticketRecenti = Ticket::query()
+                ->with('utente')
+                ->with('causaleTicket')
+                ->orderByDesc('id')
+                ->limit(5)
+                ->where('stato', '<>', 'chiuso')
+                ->get();
+        }
 
-        $conteggioTikets = Ticket::groupBy('stato')
-            ->select('stato', DB::raw('count(*) as conteggio'))
-            ->get()
-            ->keyBy('stato');
+        $conteggioTikets = collect();
+        if ($canTicket) {
+            $conteggioTikets = Ticket::groupBy('stato')
+                ->select('stato', DB::raw('count(*) as conteggio'))
+                ->get()
+                ->keyBy('stato');
+        }
 
         $kpiSupervisore = [
-            'contratti_telefonia_mese' => ContrattoTelefonia::query()
-                ->whereYear('data', $filtroAnno)
-                ->whereMonth('data', $filtroMese)
-                ->count(),
-            'contratti_energia_mese' => ContrattoEnergia::query()
-                ->whereYear('data', $filtroAnno)
-                ->whereMonth('data', $filtroMese)
-                ->count(),
-            'pratiche_caf_mese' => CafPatronato::query()
-                ->whereYear('data', $filtroAnno)
-                ->whereMonth('data', $filtroMese)
-                ->count(),
-            'ticket_aperti' => Ticket::query()->where('stato', '<>', 'chiuso')->count(),
-            'pratiche_ferme' => CafPatronato::query()
-                ->whereIn('esito_id', ['bozza', 'da-gestire'])
-                ->whereDate('created_at', '<=', now()->subDays(7))
-                ->count(),
+            'contratti_telefonia_mese' => $canTelefonia
+                ? ContrattoTelefonia::query()
+                    ->whereYear('data', $filtroAnno)
+                    ->whereMonth('data', $filtroMese)
+                    ->count()
+                : 0,
+            'contratti_energia_mese' => $canEnergia
+                ? ContrattoEnergia::query()
+                    ->whereYear('data', $filtroAnno)
+                    ->whereMonth('data', $filtroMese)
+                    ->count()
+                : 0,
+            'pratiche_caf_mese' => $canCafPatronato
+                ? CafPatronato::query()
+                    ->whereYear('data', $filtroAnno)
+                    ->whereMonth('data', $filtroMese)
+                    ->count()
+                : 0,
+            'ticket_aperti' => $canTicket
+                ? Ticket::query()->where('stato', '<>', 'chiuso')->count()
+                : 0,
+            'pratiche_ferme' => $canCafPatronato
+                ? CafPatronato::query()
+                    ->whereIn('esito_id', ['bozza', 'da-gestire'])
+                    ->whereDate('created_at', '<=', now()->subDays(7))
+                    ->count()
+                : 0,
         ];
 
         $alertSupervisore = [
-            'caf_bloccate' => CafPatronato::query()
-                ->whereNotNull('motivo_ko')
-                ->where('motivo_ko', '!=', '')
-                ->count(),
-            'ticket_aperti_oltre_48h' => Ticket::query()
-                ->where('stato', '<>', 'chiuso')
-                ->whereDate('created_at', '<=', now()->subDays(2))
-                ->count(),
+            'caf_bloccate' => $canCafPatronato
+                ? CafPatronato::query()
+                    ->whereNotNull('motivo_ko')
+                    ->where('motivo_ko', '!=', '')
+                    ->count()
+                : 0,
+            'ticket_aperti_oltre_48h' => $canTicket
+                ? Ticket::query()
+                    ->where('stato', '<>', 'chiuso')
+                    ->whereDate('created_at', '<=', now()->subDays(2))
+                    ->count()
+                : 0,
         ];
 
         return view('Backend.Dashboard.showSupervisore', [
@@ -120,6 +155,10 @@ class DashboardController extends Controller
             'mese' => $mese,
             'filtroAnno' => $filtroAnno,
             'filtroMese' => $filtroMese,
+            'canTelefonia' => $canTelefonia,
+            'canEnergia' => $canEnergia,
+            'canCafPatronato' => $canCafPatronato,
+            'canTicket' => $canTicket,
         ]);
     }
 
