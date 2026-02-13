@@ -27,6 +27,8 @@ Route::post('/verifica-partita-iva', [\App\Http\Controllers\RegistratiController
 
 Route::get('/test', \App\Http\Controllers\TestController::class);
 
+Route::view('/policies', 'auth.policies');
+
 Route::get('/pagina/{pagina}', [\App\Http\Controllers\PagineController::class, 'show']);
 
 Route::group(['middleware' => ['auth']], function () {
