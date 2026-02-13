@@ -48,9 +48,15 @@ class ContrattoEnergia extends Model
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
 
-            if (Auth::user()->hasPermissionTo('agente')) {
-                $builder->where('agente_id', Auth::id());
-            } elseif (Auth::user()->hasPermissionTo('supervisore')) {
+            /** @var User|null $user */
+            $user = Auth::user();
+            if (!$user) {
+                return;
+            }
+
+            if ($user->hasPermissionTo('agente')) {
+                $builder->where('agente_id', $user->id);
+            } elseif ($user->hasPermissionTo('supervisore')) {
                 $builder->whereHas('mandato', function ($q) {
                     $q->where('agente_id', Auth::id());
                 });
@@ -178,7 +184,7 @@ class ContrattoEnergia extends Model
 
     public function mandato()
     {
-        return $this->hasManyThrough(Mandato::class, TipoContratto::class, 'id', 'gestore_id', 'tipo_contratto_id', 'gestore_id');
+        return $this->hasMany(Mandato::class, 'gestore_id', 'gestore_id');
     }
 
 
