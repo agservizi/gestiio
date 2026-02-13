@@ -81,7 +81,7 @@
     @if($isSingleService)
         <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
             <div class="col-md-6 col-xl-4">
-                <div class="card card-flush h-md-100">
+                <div class="card card-flush" style="height:170px;">
                     <div class="card-header border-0 pt-5 pb-2">
                         <h3 class="card-title">{{ $singleService['kpi_title'] }}</h3>
                     </div>
@@ -93,18 +93,18 @@
             </div>
 
             <div class="col-md-6 col-xl-4">
-                <div class="card card-flush h-md-100 overlay overflow-hidden">
-                    <a class="card-body pt-5 text-center" href="{{ $singleService['service_url'] }}">
+                <div class="card card-flush overlay overflow-hidden" style="height:170px;">
+                    <a class="card-body pt-4 text-center" href="{{ $singleService['service_url'] }}">
                         <div class="overlay-wrapper">
-                            <img src="{{ $singleService['service_img'] }}" class="img w-75 rounded">
+                            <img src="{{ $singleService['service_img'] }}" class="img w-50 rounded">
                         </div>
-                        <h4 class="mt-4">{{ $singleService['service_title'] }}</h4>
+                        <h4 class="mt-3">{{ $singleService['service_title'] }}</h4>
                     </a>
                 </div>
             </div>
 
             <div class="col-md-12 col-xl-4">
-                <div class="card card-flush h-md-100">
+                <div class="card card-flush" style="height:170px;">
                     <div class="card-header border-0 pt-5 pb-2">
                         <h3 class="card-title">Priorità supervisione</h3>
                     </div>
