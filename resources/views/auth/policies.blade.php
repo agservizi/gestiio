@@ -6,7 +6,7 @@
     <!--end::Header-->
 
     <h4>Piattaforma Gestiio di AG SERVIZI </h4>
-    <h4>Data di pubblicazione: 04 gennaio 2024</h4>
+    <h4>Data di aggiornamento: 13 febbraio 2026</h4>
     <!--begin::Scroll-->
     <div class="scroll pe-5"
          data-kt-scroll="true"
@@ -31,9 +31,18 @@
             <p>2. Descrizione dei Servizi</p>
             <p></p>
             <p></p>
-            <p>Gestiio offre una serie di servizi, tra cui contratti telefonici, contratti luce e gas, spedizioni,
-                visure, segnalazione Amex, servizi di CAF e patronato, attivazioni SIM, servizi finanziari e altri
-                servizi correlati.</p>
+            <p>Gestiio offre i seguenti servizi disponibili in piattaforma:</p>
+            <p></p>
+            <p>- Contratti di telefonia</p>
+            <p>- Contratti energia (luce e gas)</p>
+            <p>- Servizi CAF e Patronato</p>
+            <p>- Visure</p>
+            <p>- Spedizioni BRT</p>
+            <p>- Ticket e richieste di assistenza</p>
+            <p>- Gestione allegati e documenti di servizio</p>
+            <p>- Servizi accessori collegati ai flussi operativi (es. pagamenti e portafoglio servizi)</p>
+            <p></p>
+            <p>L’elenco dei servizi può essere aggiornato nel tempo in base all’evoluzione della piattaforma.</p>
             <p></p>
             <p></p>
             <p>3. Account Utente e Sicurezza</p>

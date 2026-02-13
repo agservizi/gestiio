@@ -1710,7 +1710,7 @@
                                 <a href="https://www.agenziaplinio.it" class="text-white opacity-50 text-hover-primary fs-5 mb-6">Chi Siamo</a>
                                 <!--end::Link-->
                                 <!--begin::Link-->
-                                <a href="/pagina/policies" class="text-white opacity-50 text-hover-primary fs-5 mb-6">La nostra Policy</a>
+                                <a href="/policies" class="text-white opacity-50 text-hover-primary fs-5 mb-6">Termini e condizioni</a>
                                 <!--end::Link-->
                                 <!--begin::Link-->
 

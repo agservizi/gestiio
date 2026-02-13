@@ -102,7 +102,7 @@
                     <!--begin::Navs-->
                     <ul class="menu fw-semibold order-1">
                         <li class="menu-item">
-                            <a href="{{action([\App\Http\Controllers\PagineController::class,'show'],'policies')}}" data-target="kt_modal" data-toggleZ="modal-ajax"
+                            <a href="/policies"
                                class="menu-link text-white opacity-50 opacity-100-hover px-3">Termini e condizioni</a>
                         </li>
                         @if(false)
