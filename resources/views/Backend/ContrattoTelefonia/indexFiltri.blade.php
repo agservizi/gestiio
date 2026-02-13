@@ -70,6 +70,17 @@
                 </select>
             </div>
         </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Pratiche ferme:</label>
+            <div class="d-flex align-items-center">
+                <div class="form-check form-check-custom form-check-solid form-check-sm me-3">
+                    <input class="form-check-input" type="checkbox" value="1" name="solo_fermi" id="solo_fermi" {{request()->boolean('solo_fermi') ? 'checked' : ''}}/>
+                    <label class="form-check-label" for="solo_fermi">Solo fermi</label>
+                </div>
+                <input type="number" min="1" step="1" class="form-control form-control-sm form-control-solid w-90px" name="giorni_fermo" value="{{ (int)request()->input('giorni_fermo', 7) }}" title="Giorni minimi"/>
+            </div>
+            <div class="text-muted fs-8 mt-1">Stato bozza o da gestire.</div>
+        </div>
         <div class="d-flex justify-content-between">
             <div>
                 @if($conFiltro)

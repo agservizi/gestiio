@@ -37,8 +37,11 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ContrattoTelefonia;
-use DB;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
@@ -47,16 +50,25 @@ class ContrattoTelefoniaController extends Controller
 {
     protected $conFiltro = false;
 
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
+
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|array
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
+        $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
 
         $ordinamenti = [
             'data' => ['testo' => 'Data', 'filtro' => function ($q) {
@@ -70,7 +82,7 @@ class ContrattoTelefoniaController extends Controller
             }]
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $this->currentUser()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -82,11 +94,16 @@ class ContrattoTelefoniaController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
+
+        $contrattiFermiCount = (clone $recordsQB)
+            ->whereIn('esito_id', ['bozza', 'da-gestire'])
+            ->whereDate('created_at', '<=', now()->subDays($giorniFermo))
+            ->count();
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
@@ -103,7 +120,7 @@ class ContrattoTelefoniaController extends Controller
                     'puoCambiareStato' => $puoCambiareStato,
                     'puoCreare' => $puoCreare,
 
-                ]))
+                ])->render())
             ];
         }
 
@@ -121,6 +138,8 @@ class ContrattoTelefoniaController extends Controller
             'puoModificare' => $puoModificare,
             'puoCambiareStato' => $puoCambiareStato,
             'puoCreare' => $puoCreare,
+            'giorniFermo' => $giorniFermo,
+            'contrattiFermiCount' => $contrattiFermiCount,
         ]);
 
 
@@ -197,6 +216,14 @@ class ContrattoTelefoniaController extends Controller
 
         }
 
+        if ($request->boolean('solo_fermi')) {
+            $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+            $queryBuilder
+                ->whereIn('esito_id', ['bozza', 'da-gestire'])
+                ->whereDate('created_at', '<=', now()->subDays($giorniFermo));
+            $this->conFiltro = true;
+        }
+
         return $queryBuilder;
     }
 
@@ -204,7 +231,7 @@ class ContrattoTelefoniaController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
     public function create(Request $request)
     {
@@ -213,7 +240,7 @@ class ContrattoTelefoniaController extends Controller
         if ($request->ajax()) {
             $record = new ContrattoTelefonia();
 
-            if (Auth::user()->hasPermissionTo('agente')) {
+            if ($this->currentUser()->hasPermissionTo('agente')) {
                 $record->agente_id = Auth::id();
             }
             return view('Backend.ContrattoTelefonia.modalNuovo', [
@@ -234,7 +261,7 @@ class ContrattoTelefoniaController extends Controller
 
         } else {
             $record = new ContrattoTelefonia();
-            if (Auth::user()->hasPermissionTo('agente')) {
+            if ($this->currentUser()->hasPermissionTo('agente')) {
                 $record->agente_id = Auth::id();
             } else {
                 $record->agente_id = $request->input('agente_id');
@@ -280,7 +307,7 @@ class ContrattoTelefoniaController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
@@ -300,7 +327,7 @@ class ContrattoTelefoniaController extends Controller
             $this->inviaNotifiche($record);
         }
 
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             Notifica::notificaAdAdmin('Nuovo contratto', '<span class="fw-bold">' . $record->tipoContratto->nome . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
         }
 
@@ -311,7 +338,7 @@ class ContrattoTelefoniaController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
     public function show($id)
     {
@@ -322,7 +349,7 @@ class ContrattoTelefoniaController extends Controller
         } else {
             $eliminabile = true;
         }
-        $puoCreare = Auth::user()->hasAnyPermission(['admin', 'agente']);
+        $puoCreare = $this->currentUser()->hasAnyPermission(['admin', 'agente']);
 
 
         return view('Backend.ContrattoTelefonia.show', [
@@ -339,13 +366,13 @@ class ContrattoTelefoniaController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
     public function edit($id)
     {
         $record = ContrattoTelefonia::with('tipoContratto')->find($id);
         abort_if(!$record, 404, 'Questo contratto non esiste');
-        abort_if(!$record->puoModificare(Auth::user()->hasPermissionTo('admin')), 404, 'Non puo modificare questo contratto');
+        abort_if(!$record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 404, 'Non puo modificare questo contratto');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -381,7 +408,7 @@ class ContrattoTelefoniaController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
@@ -413,7 +440,7 @@ class ContrattoTelefoniaController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return array
      */
     public function destroy($id)
     {
@@ -438,7 +465,7 @@ class ContrattoTelefoniaController extends Controller
         $record = AllegatoContratto::find($allegatoId);
         abort_if(!$record, 404, 'Questo allegato non esiste');
         abort_if($record->contratto_id != $contrattoId, 404, 'Questo allegato non esiste');
-        return response()->download(\Storage::path($record->path_filename), $record->filename_originale);
+        return response()->download(Storage::path($record->path_filename), $record->filename_originale);
     }
 
     public function uploadAllegato(Request $request)
@@ -472,9 +499,9 @@ class ContrattoTelefoniaController extends Controller
     {
         $record = AllegatoContratto::find($request->input('id'));
         abort_if(!$record, 404, 'File non trovato');
-        \Log::debug(__FUNCTION__, $record->toArray());
+        Log::debug(__FUNCTION__, $record->toArray());
 
-        \Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente' . $record->path_filename);
         $record->delete();
         return $record->path_filename;
     }
@@ -548,7 +575,7 @@ class ContrattoTelefoniaController extends Controller
                 'puoModificare' => ContrattoTelefonia::determinaPuoModificare(),
                 'puoCreare' => ContrattoTelefonia::determinaPuoCreare(),
                 'puoCambiareStato' => ContrattoTelefonia::determinaPuoCambiareStato(),
-            ]))
+            ])->render())
         ];
     }
 
@@ -680,7 +707,7 @@ class ContrattoTelefoniaController extends Controller
             })->afterResponse();
         }
 
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             dispatch(function () use ($contratto) {
                 $user = new User();
                 $user->email = 'noreply@gestiio.it';
@@ -896,7 +923,7 @@ class ContrattoTelefoniaController extends Controller
 
     /**
      * @param ContrattoTelefonia $contratto
-     * @return int
+        * @return void
      */
     protected function creaUtente(ContrattoTelefonia $contratto)
     {
@@ -909,7 +936,7 @@ class ContrattoTelefoniaController extends Controller
             $user->cognome = $cliente->cognome;
             $user->email = $cliente->email;
             $password = rand(11111111, 99999999);
-            $user->password = \Hash::make($password);
+            $user->password = Hash::make($password);
             $user->telefono = $cliente->telefono;
             $user->save();
             $cliente->user_id = $user->id;
