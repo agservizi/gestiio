@@ -1,0 +1,15 @@
+{
+  "The :attribute must be a valid role.": ":attribute deve avere un ruolo valido.",
+  "The :attribute must be at least :length characters and contain at least one number.": ":attribute deve contenere almeno :length caratteri ed un numero.",
+  "The :attribute must be at least :length characters and contain at least one special character and one number.": ":attribute deve contenere almeno :length caratteri, un carattere speciale ed un numero.",
+  "The :attribute must be at least :length characters and contain at least one special character.": ":attribute deve contenere almeno :length caratteri ed un carattere speciale.",
+  "The :attribute must be at least :length characters and contain at least one uppercase character and one number.": ":attribute deve contenere almeno :length caratteri, una maiuscola e un numero.",
+  "The :attribute must be at least :length characters and contain at least one uppercase character and one special character.": ":attribute deve contenere almeno :length caratteri, una maiuscola e un carattere speciale.",
+  "The :attribute must be at least :length characters and contain at least one uppercase character, one number, and one special character.": ":attribute deve contenere almeno :length caratteri, una maiuscola, un numero e un carattere speciale.",
+  "The :attribute must be at least :length characters and contain at least one uppercase character.": ":attribute deve contenere almeno :length caratteri e una maiuscola.",
+  "The :attribute must be at least :length characters.": ":attribute deve contenere almeno :length caratteri.",
+  "The :attribute must contain at least one letter.": ":attribute deve contenere almeno una lettera.",
+  "The :attribute must contain at least one number.": ":attribute deve contenere almeno un numero.",
+  "The :attribute must contain at least one symbol.": ":attribute deve contenere almeno un carattere speciale.",
+  "The :attribute must contain at least one uppercase and one lowercase letter.": ":attribute deve contenere almeno un carattere maiuscolo ed uno minuscolo."
+}

@@ -1,0 +1,20 @@
+.text-green-jungle {
+    color: #26C281 !important;
+}
+
+.menu-title{
+    text-transform: capitalize;
+}
+
+.uppercase {
+    text-transform: uppercase;
+}
+
+.capitalize {
+    text-transform: capitalize;
+}
+
+.dz-image img {
+    width: 100%;
+}
+
