@@ -34,8 +34,108 @@
         $showContrattiPanel = $canTelefonia;
         $showCafPanel = $canCafPatronato;
         $tablesColClass = ($showContrattiPanel && $showCafPanel) ? 'col-xxl-6' : 'col-xxl-12';
+
+        $serviceCards = collect([
+            [
+                'enabled' => $canTelefonia,
+                'kpi_title' => 'Telefonia mese',
+                'kpi_value' => $kpiSupervisore['contratti_telefonia_mese'],
+                'kpi_text' => 'Contratti inseriti nel periodo selezionato',
+                'service_title' => 'Contratti telefonia',
+                'service_url' => action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'index']),
+                'service_img' => '/icone_dash/contratti_telefonia.png',
+            ],
+            [
+                'enabled' => $canEnergia,
+                'kpi_title' => 'Energia mese',
+                'kpi_value' => $kpiSupervisore['contratti_energia_mese'],
+                'kpi_text' => 'Pratiche luce/gas inserite nel periodo',
+                'service_title' => 'Contratti luce e gas',
+                'service_url' => action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'index']),
+                'service_img' => '/icone_dash/contr_luce_gas.png',
+            ],
+            [
+                'enabled' => $canCafPatronato,
+                'kpi_title' => 'Caf/Patronato mese',
+                'kpi_value' => $kpiSupervisore['pratiche_caf_mese'],
+                'kpi_text' => 'Pratiche inserite nel periodo',
+                'service_title' => 'Servizi Caf Patronato',
+                'service_url' => action([\App\Http\Controllers\Backend\CafPatronatoController::class, 'index']),
+                'service_img' => '/icone_dash/patronato.png',
+            ],
+            [
+                'enabled' => $canTicket,
+                'kpi_title' => 'Ticket aperti',
+                'kpi_value' => $kpiSupervisore['ticket_aperti'],
+                'kpi_text' => 'In lavorazione complessiva',
+                'service_title' => 'Ticket assistenza',
+                'service_url' => action([\App\Http\Controllers\Backend\TicketsController::class, 'index']),
+                'service_img' => '/icone_dash/ticket.png',
+            ],
+        ])->where('enabled', true)->values();
+
+        $isSingleService = $serviceCards->count() === 1;
+        $singleService = $isSingleService ? $serviceCards->first() : null;
     @endphp
 
+    @if($isSingleService)
+        <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
+            <div class="col-md-6 col-xl-4">
+                <div class="card card-flush h-md-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">{{ $singleService['kpi_title'] }}</h3>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="fs-2hx fw-bold">{{ number_format($singleService['kpi_value']) }}</div>
+                        <div class="text-muted">{{ $singleService['kpi_text'] }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-4">
+                <div class="card card-flush h-md-100 overlay overflow-hidden">
+                    <a class="card-body pt-5 text-center" href="{{ $singleService['service_url'] }}">
+                        <div class="overlay-wrapper">
+                            <img src="{{ $singleService['service_img'] }}" class="img w-75 rounded">
+                        </div>
+                        <h4 class="mt-4">{{ $singleService['service_title'] }}</h4>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-12 col-xl-4">
+                <div class="card card-flush h-md-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">Priorità supervisione</h3>
+                    </div>
+                    <div class="card-body pt-0">
+                        @if($canCafPatronato || $canTicket)
+                            <div class="d-flex flex-wrap align-items-center gap-8">
+                                @if($canCafPatronato)
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted">Pratiche CAF bloccate</span>
+                                        <span class="fw-bolder text-danger fs-4">{{ number_format($alertSupervisore['caf_bloccate']) }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted">Pratiche ferme (7+ giorni)</span>
+                                        <span class="fw-bolder fs-4">{{ number_format($kpiSupervisore['pratiche_ferme']) }}</span>
+                                    </div>
+                                @endif
+                                @if($canTicket)
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted">Ticket aperti da oltre 48h</span>
+                                        <span class="fw-bolder text-warning fs-4">{{ number_format($alertSupervisore['ticket_aperti_oltre_48h']) }}</span>
+                                    </div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="text-muted">Nessuna priorità disponibile per il servizio attivo.</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @else
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         @if($canTelefonia)
             <div class="col-md-6 col-lg-3">
@@ -185,6 +285,7 @@
             </div>
         @endif
     </div>
+    @endif
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         @if($showContrattiPanel)
