@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Http\Controllers\Backend\SottoClassiEnergia\ProdottoEnergiaAbstract;
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\Comune;
 use App\Models\ContrattoTelefonia;
 use App\Models\ContrattoEnergia;
@@ -10,6 +11,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Storage;
 use PharIo\Manifest\Email;
 use function App\importo;
 use function App\siNo;
@@ -17,6 +19,7 @@ use function App\siNo;
 class NotificaGenericaGestoreContrattoEnergia extends Notification
 {
     use Queueable;
+    use UsesPersonalizedMailSender;
 
     /**
      * Create a new notification instance.
@@ -211,14 +214,13 @@ class NotificaGenericaGestoreContrattoEnergia extends Notification
             $email->line($conteggio . ' Documenti in allegato');
         }
 
-        $email->salutation(new HtmlString('Saluti,<br>Cavaliere Carmine'));
+        $email->salutation(new HtmlString('Saluti,<br>' . ($this->contratto->agente?->nominativo() ?? config('mail.from.name'))));
 
         foreach ($this->contratto->allegati as $allegato) {
-            $email->attach(\Storage::path($allegato->path_filename));
+            $email->attach(Storage::path($allegato->path_filename));
         }
 
-
-        return $email;
+        return $this->applyPersonalizedSender($email, $this->contratto->agente);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\ContrattoTelefonia;
 use App\Models\Gestore;
 use App\Models\ServizioFinanziario;
@@ -14,6 +15,7 @@ use Illuminate\Support\HtmlString;
 class NotificaClienteServizioFinanziario extends Notification
 {
     use Queueable;
+    use UsesPersonalizedMailSender;
 
     /**
      * Create a new notification instance.
@@ -45,7 +47,7 @@ class NotificaClienteServizioFinanziario extends Notification
     public function toMail($notifiable)
     {
 
-        return (new MailMessage)
+        $email = (new MailMessage)
 
 
         ->greeting('Ciao ' . $this->servizioFinanziario->nome)
@@ -55,6 +57,8 @@ class NotificaClienteServizioFinanziario extends Notification
         ->line('è stata inserita.')
         ->line('Segui l\'avanzamento sul nostro sito')
         ->salutation(new HtmlString('Saluti,<br>' . $this->servizioFinanziario->agente->nominativo()));
+
+        return $this->applyPersonalizedSender($email, $this->servizioFinanziario->agente);
 
     }
 

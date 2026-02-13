@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\ContrattoTelefonia;
 use App\Models\Gestore;
 use Illuminate\Bus\Queueable;
@@ -13,6 +14,7 @@ use Illuminate\Support\HtmlString;
 class NotificaCliente extends Notification
 {
     use Queueable;
+    use UsesPersonalizedMailSender;
 
     /**
      * Create a new notification instance.
@@ -46,7 +48,7 @@ class NotificaCliente extends Notification
 
         $gestore = Gestore::find($this->contratto->tipoContratto->gestore_id);
         $logo = $gestore->immagineLogo();
-        return (new MailMessage)
+        $email = (new MailMessage)
             ->greeting('Ciao ' . $this->contratto->nome)
             ->line('Grazie per la fiducia che ci hai dedicato,')
             //->action('Notification Action', url('/'))
@@ -54,6 +56,8 @@ class NotificaCliente extends Notification
             ->line(new HtmlString('<strong>' . $this->contratto->tipoContratto->nome . '</strong>'))
             ->line(new HtmlString('<img src="' . url()->to($logo) . '" style="max-width:150px; text-align: center;"/>'))
             ->salutation(new HtmlString('Saluti,<br>'.$this->contratto->agente->nominativo()));
+
+        return $this->applyPersonalizedSender($email, $this->contratto->agente);
     }
 
     /**

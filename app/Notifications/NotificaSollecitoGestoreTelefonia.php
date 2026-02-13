@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\ContrattoTelefonia;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,6 +12,7 @@ use Illuminate\Notifications\Notification;
 class NotificaSollecitoGestoreTelefonia extends Notification implements ShouldQueue
 {
     use Queueable;
+    use UsesPersonalizedMailSender;
 
     protected $contratto;
 
@@ -22,7 +24,6 @@ class NotificaSollecitoGestoreTelefonia extends Notification implements ShouldQu
     public function __construct($contrattoid)
     {
         $this->contratto = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')->find($contrattoid);
-        \Log::debug('que');
     }
 
     /**
@@ -47,11 +48,13 @@ class NotificaSollecitoGestoreTelefonia extends Notification implements ShouldQu
         $this->contratto->sollecito_gestore = now();
         $this->contratto->save();
 
-        return (new MailMessage)
+        $email = (new MailMessage)
             ->line('Richiesta informazioni sullo stato di attivazione di:')
             ->line($this->contratto->tipoContratto->nome)
             ->line($this->contratto->nominativo())
             ->subject('Richiesta informazioni sullo stato di attivazione');
+
+        return $this->applyPersonalizedSender($email, $this->contratto->agente);
     }
 
     /**

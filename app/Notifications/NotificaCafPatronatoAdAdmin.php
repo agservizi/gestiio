@@ -41,10 +41,22 @@ class NotificaCafPatronatoAdAdmin extends Notification
      */
     public function toMail($notifiable)
     {
+        $fromAddress = config('mail.from.address');
+        $fromName = config('mail.from.name');
+        $agente = $this->cafPatronato->agente;
+        if ($agente) {
+            $fromName = $agente->nominativo();
+        }
+
         $email = (new MailMessage)
+            ->from($fromAddress, $fromName)
             ->subject('Richiesta ' . $this->cafPatronato->tipo->nome . ' per ' . $this->cafPatronato->nominativo())
             ->line('Nominativo cliente: ' . $this->cafPatronato->nominativo())
             ->salutation(new HtmlString('Saluti,<br>'.$this->cafPatronato->agente->nominativo()));
+
+        if ($agente?->email) {
+            $email->replyTo($agente->email, $agente->nominativo());
+        }
 
         return $email;
     }

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Http\Controllers\Backend\TicketsController;
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\Ticket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,6 +13,7 @@ use Illuminate\Notifications\Notification;
 class NotificaNuovoTicketAdAdmin extends Notification
 {
     use Queueable;
+    use UsesPersonalizedMailSender;
 
     /**
      * Create a new notification instance.
@@ -42,10 +44,12 @@ class NotificaNuovoTicketAdAdmin extends Notification
      */
     public function toMail($notifiable)
     {
-        return (new MailMessage)
+        $email = (new MailMessage)
             ->subject('Nuovo ticket su Gestiio')
             ->line('Oggetto: ' . $this->ticket->oggetto)
             ->action('Vedi tickets', action([TicketsController::class, 'show'], $this->ticket->id));
+
+        return $this->applyPersonalizedSender($email, $this->ticket->utente);
     }
 
     /**
