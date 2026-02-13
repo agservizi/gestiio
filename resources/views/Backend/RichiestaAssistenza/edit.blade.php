@@ -11,7 +11,7 @@
                 @csrf
                 @method($record->id?'PATCH':'POST')
                 @php($clienteInline=$clienteInline??new \App\Models\ClienteAssistenza())
-                @php($showClienteInline = !old('cliente_id',$record->cliente_id) || old('cliente_codice_fiscale') || old('cliente_nome') || old('cliente_cognome') || old('cliente_email') || old('cliente_telefono'))
+                @php($showClienteInline = old('cliente_codice_fiscale') || old('cliente_nome') || old('cliente_cognome') || old('cliente_email') || old('cliente_telefono'))
                 <div class="row" id="cliente-esistente-section">
                     <div class="col-md-6">
                         @include('Backend._inputs.inputSelect2',['campo'=>'cliente_id','testo'=>'Cliente (se già presente)','selected'=>\App\Models\ClienteAssistenza::selected(old('cliente_id',$record->cliente_id))])
@@ -115,8 +115,7 @@
             eliminaHandler('Questa voce verrà eliminata definitivamente');
 
             function syncClienteInlineSection() {
-                const hasClienteSelected = !!$('#cliente_id').val();
-                const useInline = $('#cliente_non_presente').is(':checked') || !hasClienteSelected;
+                const useInline = $('#cliente_non_presente').is(':checked');
 
                 $('#cliente-inline-section').toggle(useInline);
                 $('#cliente-inline-hint').toggle(useInline);
