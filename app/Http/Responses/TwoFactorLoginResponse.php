@@ -4,6 +4,7 @@ namespace App\Http\Responses;
 
 use App\Http\Controllers\Backend\ContrattoTelefoniaController;
 use App\Http\Controllers\Backend\DashboardController;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 
@@ -21,9 +22,12 @@ class TwoFactorLoginResponse implements LoginResponseContract
             return redirect($request->input('backTo'));
         }
 
-        if (Auth::user()->hasAnyPermission(['admin', 'agente'])) {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user && $user->hasAnyPermission(['admin', 'agente'])) {
             $redirectTo = action([DashboardController::class, 'show']);
-        }elseif(Auth::user()->hasPermissionTo('supervisore')){
+        } elseif ($user && $user->hasPermissionTo('supervisore')) {
             $redirectTo = action([ContrattoTelefoniaController::class, 'index']);
 
         } else {

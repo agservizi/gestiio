@@ -138,8 +138,7 @@ return [
         //https://www.youtube.com/watch?v=X0ebWjcQ-uc
         Features::updateProfileInformation(),
         Features::updatePasswords(),
-        //Features::twoFactorAuthentication(['confirmPassword' => true, 'window' => 3]),
-        (env('APP_NAME') == 'gestiio') ? Features::twoFactorAuthentication(['confirmPassword' => true, 'window' => 3]) : null,
+        Features::twoFactorAuthentication(['confirmPassword' => true, 'window' => 3]),
     ],
 
 ];
