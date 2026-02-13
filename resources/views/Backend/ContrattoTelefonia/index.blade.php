@@ -79,7 +79,7 @@
         </div>
     @endif
 
-    <div class="card pt-4">
+    <div class="card card-flush pt-4">
         <div class="card-body pt-0 pb-5 fs-6" id="tabella">
             @include('Backend.ContrattoTelefonia.tabella')
         </div>

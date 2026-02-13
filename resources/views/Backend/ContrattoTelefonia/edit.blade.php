@@ -48,7 +48,7 @@
 
 @section('content')
     @php($vecchio=$record->id)
-    <div class="card">
+    <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
             <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
@@ -60,6 +60,10 @@
                        value="{{old('tipo_contratto_id',$record->tipo_contratto_id)}}">
                 <input type="hidden" id="tipo_prodotto" name="tipo_prodotto"
                        value="{{old('tipo_prodotto',$tipoProdotto)}}">
+                  <div class="mb-5">
+                      <h4 class="fw-bold mb-1">Dati pratica</h4>
+                      <div class="text-muted fs-7">Informazioni generali e assegnazione</div>
+                  </div>
                 <div class="row">
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextReadonly',['campo'=>'tipo_contratto_id','testo'=>'Tipo contratto','valore'=>\App\Models\TipoContratto::find($record->tipo_contratto_id)?->nome])
@@ -85,7 +89,11 @@
                         @include('Backend._inputs.inputText',['campo'=>'codice_contratto','testo'=>'Codice contratto','required'=>false,'autocomplete'=>'off'])
                     </div>
                 </div>
-                <h3 class="card-title">Dati generali</h3>
+                <div class="separator separator-dashed my-6"></div>
+                <div class="mb-5">
+                    <h4 class="fw-bold mb-1">Dati generali</h4>
+                    <div class="text-muted fs-7">Anagrafica cliente e riferimenti pagamento</div>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
                         @include('Backend._inputs.inputText',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase'])
@@ -145,7 +153,11 @@
                         @include('Backend._inputs.inputText',['campo'=>'telefono','testo'=>'Telefono','required'=>true,'autocomplete'=>'off'])
                     </div>
                 </div>
-                <h3 class="card-title">Indirizzo</h3>
+                <div class="separator separator-dashed my-6"></div>
+                <div class="mb-5">
+                    <h4 class="fw-bold mb-1">Indirizzo</h4>
+                    <div class="text-muted fs-7">Dati di ubicazione e recapito</div>
+                </div>
 
                 <div class="row">
                     <div class="col-md-6">
@@ -174,8 +186,10 @@
                         @include('Backend._inputs.inputText',['campo'=>'piano','testo'=>'Piano','autocomplete'=>'off'])
                     </div>
                 </div>
+                <div class="separator separator-dashed my-6"></div>
                 @include('Backend.ContrattoTelefonia.dati-documento')
                 @if($recordProdotto)
+                    <div class="separator separator-dashed my-6"></div>
                     @include('Backend.ContrattoTelefonia.Prodotti.'.$tipoProdotto.'Edit',['record'=>$recordProdotto])
                 @endif
                 <div class="row">
@@ -209,25 +223,26 @@
                 </div>
 
 
-                <div class="row">
-                    <div class="col-md-4 offset-md-4 text-center">
+                <div class="separator separator-dashed my-6"></div>
+                <div class="row align-items-center">
+                    <div class="col-md-8 text-center text-md-start mb-3 mb-md-0">
                         @if($creaContratto)
-                            <button class="btn btn-primary mt-3" type="submit"
+                            <button class="btn btn-primary" type="submit"
                                     id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\ContrattoTelefonia::NOME_SINGOLARE}}</button>
                         @endif
                         @if(!$vecchio || $record->esito_id=='bozza')
-                            <button class="btn btn-warning mt-3" type="submit" id="submit-bozza" name="bozza"
+                            <button class="btn btn-light-warning" type="submit" id="submit-bozza" name="bozza"
                                     value="bozza">{{$vecchio?'Salva bozza':'Crea bozza'}}</button>
                         @endif
                     </div>
                     @if($vecchio)
-                        <div class="col-md-4 text-end">
+                        <div class="col-md-4 text-center text-md-end">
                             @if($eliminabile===true)
-                                <a class="btn btn-danger mt-3" id="elimina"
+                                <a class="btn btn-light-danger" id="elimina"
                                    href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
                             @elseif(is_string($eliminabile))
                                 <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
-                                    <a class="btn btn-danger mt-3 disabled" href="javascript:void(0)">Elimina</a>
+                                    <a class="btn btn-light-danger disabled" href="javascript:void(0)">Elimina</a>
                                 </span>
                             @endif
                         </div>

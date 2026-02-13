@@ -55,7 +55,7 @@
 
 @section('content')
     @php($vecchio=$record->id)
-    <div class="card">
+    <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
             <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
@@ -63,6 +63,10 @@
                 @method($record->id?'PATCH':'POST')
                 @php($uid=old('uid',$record->uid))
                 <input type="hidden" name="uid" id="uid" value="{{$uid}}">
+                <div class="mb-5">
+                    <h4 class="fw-bold mb-1">Dati pratica</h4>
+                    <div class="text-muted fs-7">Informazioni generali e assegnazione</div>
+                </div>
                 <div class="row">
                     @if(Auth::user()->hasAnyPermission(['admin','operatore']))
                         <div class="col-md-6">
@@ -80,6 +84,11 @@
                     </div>
                 </div>
 
+                <div class="separator separator-dashed my-6"></div>
+                <div class="mb-5">
+                    <h4 class="fw-bold mb-1">Dati cliente</h4>
+                    <div class="text-muted fs-7">Anagrafica essenziale per il contratto</div>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextReadonly',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','autocomplete'=>'off','classe'=>'uppercase'])
@@ -87,8 +96,14 @@
                 </div>
 
                 @if($record->prodotto)
+                    <div class="separator separator-dashed my-6"></div>
+                    <div class="mb-5">
+                        <h4 class="fw-bold mb-1">Dettagli fornitura</h4>
+                        <div class="text-muted fs-7">Campi specifici del prodotto energia</div>
+                    </div>
                     @include("Backend.ContrattoEnergia.Prodotti.{$record->gestore->model_prodotto}Show",['record'=>$record->prodotto,'contratto'=>$record])
                 @endif
+                <div class="separator separator-dashed my-6"></div>
                 <div class="row">
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextReadonly',['campo'=>'note','testo'=>'Note','col'=>2])

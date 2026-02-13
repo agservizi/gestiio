@@ -60,12 +60,16 @@
 
 @section('content')
     @php($vecchio=$record->id)
-    <div class="card">
+    <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
             @if($record->sollecito_gestore && $record->esito_id!=='attivo')
                 @include('Backend._components.notice',['level' => 'success','titolo'=>'Sollecito','testo' => 'Sollecito al gestore inviato il '.$record->sollecito_gestore->format('d/m/Y H:i')])
             @endif
+            <div class="mb-5">
+                <h4 class="fw-bold mb-1">Dati pratica</h4>
+                <div class="text-muted fs-7">Informazioni generali e assegnazione</div>
+            </div>
             <div class="row">
                 @if(Auth::user()->hasAnyPermission(['admin','operatore']))
                     <div class="col-md-6">
@@ -89,6 +93,12 @@
                 <div class="col-md-6">
                     @include('Backend._inputs.inputTextReadonly',['campo'=>'codice_contratto','testo'=>'Codice contratto','required'=>false,'autocomplete'=>'off'])
                 </div>
+            </div>
+
+            <div class="separator separator-dashed my-6"></div>
+            <div class="mb-5">
+                <h4 class="fw-bold mb-1">Dati cliente</h4>
+                <div class="text-muted fs-7">Anagrafica, contatti e pagamento</div>
             </div>
 
             <div class="row">
@@ -148,7 +158,11 @@
                 </div>
             </div>
 
-            <h3 class="card-title">Indirizzo</h3>
+            <div class="separator separator-dashed my-6"></div>
+            <div class="mb-5">
+                <h4 class="fw-bold mb-1">Indirizzo</h4>
+                <div class="text-muted fs-7">Recapito e ubicazione cliente</div>
+            </div>
             <div class="row">
                 <div class="col-md-12">
                     @include('Backend._inputs.inputTextReadonly',['campo'=>'indirizzo','testo'=>'Indirizzo','autocomplete'=>'off','col'=>2])
@@ -174,7 +188,11 @@
                 </div>
             </div>
 
-            <h3 class="card-title">Dati documento</h3>
+            <div class="separator separator-dashed my-6"></div>
+            <div class="mb-5">
+                <h4 class="fw-bold mb-1">Dati documento</h4>
+                <div class="text-muted fs-7">Riferimenti documento identificativo</div>
+            </div>
 
             <div class="row">
                 <div class="col-md-6">
@@ -195,6 +213,7 @@
                 <div class="col-md-6">@include('Backend._inputs.inputTextReadonly',['campo'=>'cittadinanza','testo'=>'Cittadinanza','valore'=>\App\Models\Nazione::selected(old('cittadinanza',$record->cittadinanza))])</div>
             </div>
             @if($record->prodotto)
+                <div class="separator separator-dashed my-6"></div>
                 @include('Backend.ContrattoTelefonia.Prodotti.'.$record->tipoContratto->prodotto.'Show',['record'=>$record->prodotto])
             @endif
             <div class="row">
@@ -205,7 +224,11 @@
                 </div>
 
             </div>
-            <h3 class="card-title">Altri dati</h3>
+            <div class="separator separator-dashed my-6"></div>
+            <div class="mb-5">
+                <h4 class="fw-bold mb-1">Altri dati</h4>
+                <div class="text-muted fs-7">Metadati e reminder</div>
+            </div>
             <div class="row">
                 <div class="col-md-6">
                     @include('Backend._inputs.inputTextReadonly',['campo'=>'created_at','testo'=>'Creato il','valore'=>$record->created_at->format('d/m/Y H:i')])
@@ -225,8 +248,14 @@
 
         </div>
     </div>
-    <h4 class="mt-6">Allegati</h4>
-    @include('Backend.ContrattoTelefonia.allegati',['downloadController' => \App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'idPadre'=>$record->id])
+    <div class="card card-flush mt-6">
+        <div class="card-header border-0 pt-5 pb-2">
+            <h3 class="card-title">Allegati</h3>
+        </div>
+        <div class="card-body pt-0">
+            @include('Backend.ContrattoTelefonia.allegati',['downloadController' => \App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'idPadre'=>$record->id])
+        </div>
+    </div>
 @endsection
 @push('customScript')
     <script>

@@ -4,7 +4,7 @@
 
 @section('content')
     @php($vecchio=$record->id)
-    <div class="card">
+    <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
             <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
@@ -16,6 +16,11 @@
                 <input type="hidden" name="tipo_servizio" value="{{old('tipo_servizio',$tipoCafPatronato->id)}}">
 
                 @if(Auth::user()->hasAnyPermission(['admin','operatore']))
+                    <div class="separator separator-dashed my-6"></div>
+                    <div class="mb-5">
+                        <h4 class="fw-bold mb-1">Assegnazione pratica</h4>
+                        <div class="text-muted fs-7">Dati operativi per gestione interna</div>
+                    </div>
                     <div class="row">
                         <div class="col-md-6">
                             @include('Backend._inputs.inputSelect2',['campo'=>'agente_id','testo'=>'Agente','required'=>true,'selected'=>\App\Models\User::selected(old('agente_id',$record->agente_id))])
@@ -29,6 +34,11 @@
                     <input type="hidden" name="data" value="{{old('data',$record->data->format('d/m/Y'))}}">
                 @endif
 
+                <div class="separator separator-dashed my-6"></div>
+                <div class="mb-5">
+                    <h4 class="fw-bold mb-1">Dati cliente</h4>
+                    <div class="text-muted fs-7">Anagrafica e contatti della pratica</div>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
                         @include('Backend._inputs.inputText',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase'])
@@ -72,6 +82,11 @@
                 </div>
                 @if($tipoCafPatronato->html)
 
+                    <div class="separator separator-dashed my-6"></div>
+                    <div class="mb-5">
+                        <h4 class="fw-bold mb-1">Dettagli servizio</h4>
+                        <div class="text-muted fs-7">Informazioni specifiche della tipologia selezionata</div>
+                    </div>
                     <div class="row">
                         <div class="col-md-6 offset-md-2">
                             {!! $tipoCafPatronato->html !!}
@@ -79,9 +94,15 @@
                     </div>
 
                 @else
+                    <div class="separator separator-dashed my-6"></div>
+                    <div class="mb-5">
+                        <h4 class="fw-bold mb-1">Dettagli servizio</h4>
+                        <div class="text-muted fs-7">Informazioni specifiche della tipologia selezionata</div>
+                    </div>
                     @includeWhen($tipoCafPatronato->view,"Backend.CafPatronato.Prodotti.$tipoCafPatronato->view")
                 @endif
 
+                <div class="separator separator-dashed my-6"></div>
                 <div class="row mb-6">
                     <div class="col-lg-2 col-form-label text-lg-end">
                         <label class="fw-bold fs-6">Allegati</label>
@@ -104,17 +125,18 @@
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-4 offset-md-4 text-center">
-                        <button class="btn btn-primary mt-3" type="submit" id="submit">{{$vecchio?'Salva modifiche':'Crea '.$tipoCafPatronato->nome}}</button>
+                <div class="separator separator-dashed my-6"></div>
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                        <button class="btn btn-primary" type="submit" id="submit">{{$vecchio?'Salva modifiche':'Crea '.$tipoCafPatronato->nome}}</button>
                     </div>
                     @if($vecchio)
-                        <div class="col-md-4 text-end">
+                        <div class="col-md-6 text-center text-md-end">
                             @if($eliminabile===true)
-                                <a class="btn btn-danger mt-3" id="elimina" href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
+                                <a class="btn btn-light-danger" id="elimina" href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
                             @elseif(is_string($eliminabile))
                                 <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
-                                    <a class="btn btn-danger mt-3 disabled" href="javascript:void(0)">Elimina</a>
+                                    <a class="btn btn-light-danger disabled" href="javascript:void(0)">Elimina</a>
                                 </span>
                             @endif
                         </div>

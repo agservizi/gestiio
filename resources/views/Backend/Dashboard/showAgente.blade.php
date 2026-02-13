@@ -15,49 +15,33 @@
     @endphp
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         @can('servizio_contratti_telefonia')
-            <!--begin::Col-->
-            <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-6 mb-md-5 mb-xl-5">
-                <!--begin::Card widget 20-->
-                <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-100 mb-5 mb-xl-5"
-                     style="background-color: #F1416C;">
-                    <!--begin::Header-->
-                    <div class="card-header pt-5">
+            <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
+                <div class="card card-flush h-md-100">
+                    <div class="card-header border-0 pt-5 pb-2">
+                        <h3 class="card-title">Produzione telefonia</h3>
+                    </div>
+                    <div class="card-body pt-0">
                         @php
                             $percentuale = \App\percentuale($produzioneMese?->conteggio_ordini_in_lavorazione, $produzioneMese?->conteggio_ordini);
+                            $totaleContratti = (int)($produzioneMese?->conteggio_ordini ?? 0);
+                            $inLavorazione = (int)($produzioneMese?->conteggio_ordini_in_lavorazione ?? 0);
+                            $totalePrecedente = (int)($produzioneMesePrecedente?->conteggio_ordini ?? 0);
+                            $deltaContratti = $totaleContratti - $totalePrecedente;
                         @endphp
-
-                        <!--begin::Title-->
-                        <div class="card-title d-flex flex-column">
-                            <!--begin::Amount-->
-                            <span class="fs-2hx fw-bold text-white me-2 lh-1 ls-n2">{{$produzioneMese?->conteggio_ordini}}</span>
-                            <!--end::Amount-->
-
-                            <!--begin::Subtitle-->
-                            <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Contratti telefonia</span>
-                            <!--end::Subtitle-->
+                        <div class="fs-2hx fw-bold">{{ number_format($totaleContratti) }}</div>
+                        <div class="text-muted mb-4">Contratti del mese</div>
+                        <div class="d-flex justify-content-between fw-semibold mb-2">
+                            <span>In lavorazione</span>
+                            <span>{{ number_format($inLavorazione) }} ({{ $percentuale }}%)</span>
                         </div>
-                        <!--end::Title-->
-                    </div>
-                    <!--end::Header-->
-                    <!--begin::Card body-->
-                    <div class="card-body d-flex align-items-end pt-0">
-                        <!--begin::Progress-->
-                        <div class="d-flex align-items-center flex-column mt-3 w-100">
-                            <div class="d-flex justify-content-between fw-bold fs-6 text-white opacity-75 w-100 mt-auto mb-2">
-                                <span>{{$produzioneMese?->conteggio_ordini_in_lavorazione}} in lavorazione</span>
-                                <span>{{$percentuale}}%</span>
-                            </div>
-
-                            <div class="h-8px mx-3 w-100 bg-white bg-opacity-50 rounded">
-                                <div class="bg-white rounded h-8px" role="progressbar" style="width: {{$percentuale}}%;"
-                                     aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
+                        <div class="progress h-8px bg-light-primary mb-3">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $percentuale }}%" aria-valuenow="{{ $percentuale }}" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <!--end::Progress-->
+                        <div class="text-muted fs-8">
+                            vs mese precedente: <span class="fw-bold {{ $deltaContratti >= 0 ? 'text-success' : 'text-danger' }}">{{ $deltaContratti >= 0 ? '+' : '' }}{{ number_format($deltaContratti) }}</span>
+                        </div>
                     </div>
-                    <!--end::Card body-->
                 </div>
-                <!--end::Card widget 20-->
             </div>
 
             <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
@@ -221,14 +205,14 @@
                             <div class="text-muted">Nessun ticket aperto assegnato al tuo utente.</div>
                         @else
                             <div class="table-responsive">
-                                <table class="table table-head-custom table-head-bg table-vertical-center">
+                                <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-3">
                                     <thead>
-                                    <tr>
+                                    <tr class="fw-bold text-muted">
                                         <th>ID</th>
                                         <th>Causale</th>
                                         <th>Stato</th>
                                         <th>Creato il</th>
-                                        <th class="text-right">Azione</th>
+                                        <th class="text-end">Azione</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -238,7 +222,7 @@
                                             <td>{{ $ticket->causaleTicket?->nome ?? 'N/D' }}</td>
                                             <td>{!! $ticket->labelStatoTicket() !!}</td>
                                             <td>{{ $ticket->created_at?->format('d/m/Y H:i') }}</td>
-                                            <td class="text-right">
+                                            <td class="text-end">
                                                 <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'show'], $ticket->id) }}" class="btn btn-light-primary btn-sm">Apri</a>
                                             </td>
                                         </tr>
