@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'smtp'),
+    'default' => env('MAIL_MAILER', 'resend'),
 
     /*
     |--------------------------------------------------------------------------
@@ -41,6 +41,17 @@ return [
             'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
+            'timeout' => null,
+            'auth_mode' => null,
+        ],
+
+        'resend' => [
+            'transport' => 'smtp',
+            'host' => env('RESEND_HOST', 'smtp.resend.com'),
+            'port' => env('RESEND_PORT', 587),
+            'encryption' => env('RESEND_ENCRYPTION', 'tls'),
+            'username' => env('RESEND_USERNAME', 'resend'),
+            'password' => env('RESEND_KEY', env('MAIL_PASSWORD')),
             'timeout' => null,
             'auth_mode' => null,
         ],
@@ -74,7 +85,7 @@ return [
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
-                'smtp',
+                'resend',
                 'log',
             ],
         ],

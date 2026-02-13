@@ -30,6 +30,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'resend' => [
+        'key' => env('RESEND_KEY'),
+        'host' => env('RESEND_HOST', 'smtp.resend.com'),
+        'port' => env('RESEND_PORT', 587),
+        'username' => env('RESEND_USERNAME', 'resend'),
+        'encryption' => env('RESEND_ENCRYPTION', 'tls'),
+    ],
+
     'openapi' => [
         'bearer_sms' => env('OPENAPI_BEARER_SMS'),
         'sandbox' => env('OPENAPI_SANDBOX', false)

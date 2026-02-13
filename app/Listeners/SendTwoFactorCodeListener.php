@@ -3,10 +3,12 @@
 namespace App\Listeners;
 
 use App\Notifications\SendOTP;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
 use Laravel\Fortify\Events\TwoFactorAuthenticationEnabled;
+use Throwable;
 
 class SendTwoFactorCodeListener
 {
@@ -29,6 +31,14 @@ class SendTwoFactorCodeListener
     public function handle(
         TwoFactorAuthenticationChallenged|TwoFactorAuthenticationEnabled $event
     ): void {
-        $event->user->notify(app(SendOTP::class));
+        try {
+            $event->user->notify(app(SendOTP::class));
+        } catch (Throwable $exception) {
+            Log::warning('Invio OTP automatico fallito', [
+                'user_id' => $event->user->id,
+                'email' => $event->user->email,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }
