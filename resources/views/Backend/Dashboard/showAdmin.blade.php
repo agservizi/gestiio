@@ -223,9 +223,9 @@
         </div>
     </div>
 
-    <div class="row g-5 g-xl-10">
+    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-12">
-            <div class="card card-flush">
+            <div class="card card-flush h-100">
                 <div class="card-header border-0 pt-5">
                     <h3 class="card-title align-items-start flex-column">
                         <span class="card-label fw-bold fs-3 mb-1">Priorità assistenza</span>

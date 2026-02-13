@@ -12,7 +12,7 @@
         ];
         $ticketDaGestire = $ticketDaGestire ?? collect();
     @endphp
-    <div class="row g-5 g-xl-10">
+    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         @can('servizio_contratti_telefonia')
             <!--begin::Col-->
             <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-6 mb-md-5 mb-xl-5">
@@ -181,9 +181,9 @@
     </div>
 
     @can('servizio_ticket')
-        <div class="row">
+        <div class="row g-5 g-xl-10">
             <div class="col-xl-4 mb-5">
-                <div class="card card-custom card-stretch gutter-b">
+                <div class="card card-flush h-100">
                     <div class="card-header">
                         <h3 class="card-title">Operatività ticket</h3>
                     </div>
@@ -207,7 +207,7 @@
                 </div>
             </div>
             <div class="col-xl-8 mb-5">
-                <div class="card card-custom gutter-b">
+                <div class="card card-flush h-100">
                     <div class="card-header">
                         <h3 class="card-title">Priorità personali</h3>
                     </div>
