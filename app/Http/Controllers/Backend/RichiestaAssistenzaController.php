@@ -93,7 +93,7 @@ class RichiestaAssistenzaController extends Controller
     {
 
         $queryBuilder = \App\Models\RichiestaAssistenza::query()
-            ->select('id', 'cliente_id', 'prodotto_assistenza_id', 'created_at', 'stato')
+            ->select('id', 'cliente_id', 'prodotto_assistenza_id', 'created_at')
             ->with('prodotto:id,nome')
             ->with('cliente:id,nome,cognome,email,codice_fiscale');
         $term = $request->input('cerca');
