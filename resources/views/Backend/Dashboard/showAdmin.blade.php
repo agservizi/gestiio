@@ -9,19 +9,6 @@
 @endsection
 
 @section('content')
-    @php
-        $kpiDashboard = $kpiDashboard ?? [
-            'richieste_assistenza_totali' => 0,
-            'richieste_assistenza_oggi' => 0,
-            'clienti_assistenza_totali' => 0,
-            'ticket_aperti' => 0,
-        ];
-        $alertDashboard = $alertDashboard ?? [
-            'richieste_senza_credenziali' => 0,
-            'clienti_senza_contatti' => 0,
-        ];
-        $azioniRapide = $azioniRapide ?? collect();
-    @endphp
     <div class="row g-5 g-xl-10 ">
         <!--begin::Col-->
         <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-10">
@@ -77,136 +64,6 @@
                 <div class="card-header pt-5">
                     <!--begin::Title-->
                     <div class="card-title d-flex flex-column">
-                        <div class="col-md-3">
-                            <div class="card card-custom card-stretch gutter-b">
-                                <div class="card-header">
-                                    <h3 class="card-title">Richieste assistenza</h3>
-                                </div>
-                                <div class="card-body p-4">
-                                    <div class="d-flex flex-column">
-                                        <span class="font-size-sm text-muted">Totali</span>
-                                        <span class="font-size-h2 font-weight-bolder">{{ number_format($kpiDashboard['richieste_assistenza_totali']) }}</span>
-                                    </div>
-                                    <div class="separator separator-dashed my-4"></div>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-muted">Nuove oggi</span>
-                                        <span class="font-weight-bolder">{{ number_format($kpiDashboard['richieste_assistenza_oggi']) }}</span>
-                                    </div>
-                                    <div class="mt-3">
-                                        <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri elenco</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-custom card-stretch gutter-b">
-                                <div class="card-header">
-                                    <h3 class="card-title">Clienti assistenza</h3>
-                                </div>
-                                <div class="card-body p-4">
-                                    <div class="d-flex flex-column">
-                                        <span class="font-size-sm text-muted">Anagrafica clienti</span>
-                                        <span class="font-size-h2 font-weight-bolder">{{ number_format($kpiDashboard['clienti_assistenza_totali']) }}</span>
-                                    </div>
-                                    <div class="separator separator-dashed my-4"></div>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-muted">Con contatti mancanti</span>
-                                        <span class="font-weight-bolder text-warning">{{ number_format($alertDashboard['clienti_senza_contatti']) }}</span>
-                                    </div>
-                                    <div class="mt-3">
-                                        <a href="{{ action([\App\Http\Controllers\Backend\ClienteAssistenzaController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri anagrafica</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-custom card-stretch gutter-b">
-                                <div class="card-header">
-                                    <h3 class="card-title">Ticket operativi</h3>
-                                </div>
-                                <div class="card-body p-4">
-                                    <div class="d-flex flex-column">
-                                        <span class="font-size-sm text-muted">Aperti / in lavorazione</span>
-                                        <span class="font-size-h2 font-weight-bolder">{{ number_format($kpiDashboard['ticket_aperti']) }}</span>
-                                    </div>
-                                    <div class="separator separator-dashed my-4"></div>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-muted">Richieste senza credenziali</span>
-                                        <span class="font-weight-bolder text-danger">{{ number_format($alertDashboard['richieste_senza_credenziali']) }}</span>
-                                    </div>
-                                    <div class="mt-3">
-                                        <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-custom card-stretch gutter-b">
-                                <div class="card-header">
-                                    <h3 class="card-title">Da fare oggi</h3>
-                                </div>
-                                <div class="card-body p-4">
-                                    @if($azioniRapide->isEmpty())
-                                        <div class="text-muted">Nessuna priorità operativa sulle credenziali.</div>
-                                    @else
-                                        @foreach($azioniRapide->take(3) as $azione)
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <div class="mr-2">
-                                                    <div class="font-weight-bolder">#{{ $azione->id }} {{ $azione->cliente?->nominativo() ?? 'Cliente non associato' }}</div>
-                                                    <div class="font-size-sm text-muted">{{ $azione->prodotto->nome ?? 'Prodotto non associato' }}</div>
-                                                </div>
-                                                <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'edit'], $azione->id) }}" class="btn btn-light-warning btn-sm">Completa</a>
-                                            </div>
-                                        @endforeach
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card card-custom gutter-b">
-                                <div class="card-header">
-                                    <h3 class="card-title">Richieste da completare (credenziali mancanti)</h3>
-                                </div>
-                                <div class="card-body pt-4">
-                                    @if($azioniRapide->isEmpty())
-                                        <div class="text-muted">Tutte le richieste assistenza recenti hanno credenziali complete.</div>
-                                    @else
-                                        <div class="table-responsive">
-                                            <table class="table table-head-custom table-head-bg table-vertical-center">
-                                                <thead>
-                                                <tr>
-                                                    <th>ID</th>
-                                                    <th>Cliente</th>
-                                                    <th>Prodotto</th>
-                                                    <th>Creato il</th>
-                                                    <th class="text-right">Azione</th>
-                                                </tr>
-                                                </thead>
-                                                <tbody>
-                                                @foreach($azioniRapide as $azione)
-                                                    <tr>
-                                                        <td>{{ $azione->id }}</td>
-                                                        <td>{{ $azione->cliente?->nominativo() ?? 'Cliente non associato' }}</td>
-                                                        <td>{{ $azione->prodotto->nome ?? 'Prodotto non associato' }}</td>
-                                                        <td>{{ $azione->created_at?->format('d/m/Y H:i') }}</td>
-                                                        <td class="text-right">
-                                                            <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'edit'], $azione->id) }}" class="btn btn-light-primary btn-sm">Apri</a>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
                         <!--begin::Amount-->
                         <span class="fs-2hx fw-bold text-white me-2 lh-1 ls-n2">{{\App\importo($guadagno->entrate,true)}}</span>
                         <!--end::Amount-->
@@ -286,6 +143,89 @@
         </div>
         <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-10">
             @include('Backend.Dashboard.linksGestori',['altezza'=>'h-lg-100'])
+        </div>
+    </div>
+
+    @php
+        $kpiDashboard = $kpiDashboard ?? [
+            'richieste_assistenza_totali' => 0,
+            'richieste_assistenza_oggi' => 0,
+            'clienti_assistenza_totali' => 0,
+            'ticket_aperti' => 0,
+        ];
+        $alertDashboard = $alertDashboard ?? [
+            'richieste_senza_credenziali' => 0,
+            'clienti_senza_contatti' => 0,
+        ];
+    @endphp
+    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
+        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3">
+            <div class="card card-flush h-lg-100">
+                <div class="card-header pt-5">
+                    <h3 class="card-title">Richieste assistenza</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted">Totali</span>
+                        <span class="fs-2 fw-bolder">{{ number_format($kpiDashboard['richieste_assistenza_totali']) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted">Nuove oggi</span>
+                        <span class="fw-bolder">{{ number_format($kpiDashboard['richieste_assistenza_oggi']) }}</span>
+                    </div>
+                    <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri elenco</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3">
+            <div class="card card-flush h-lg-100">
+                <div class="card-header pt-5">
+                    <h3 class="card-title">Clienti assistenza</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted">Anagrafica</span>
+                        <span class="fs-2 fw-bolder">{{ number_format($kpiDashboard['clienti_assistenza_totali']) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted">Senza contatti</span>
+                        <span class="fw-bolder text-warning">{{ number_format($alertDashboard['clienti_senza_contatti']) }}</span>
+                    </div>
+                    <a href="{{ action([\App\Http\Controllers\Backend\ClienteAssistenzaController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri anagrafica</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3">
+            <div class="card card-flush h-lg-100">
+                <div class="card-header pt-5">
+                    <h3 class="card-title">Ticket operativi</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted">Aperti/in lavorazione</span>
+                        <span class="fs-2 fw-bolder">{{ number_format($kpiDashboard['ticket_aperti']) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted">Richieste senza credenziali</span>
+                        <span class="fw-bolder text-danger">{{ number_format($alertDashboard['richieste_senza_credenziali']) }}</span>
+                    </div>
+                    <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3">
+            <div class="card card-flush h-lg-100">
+                <div class="card-header pt-5">
+                    <h3 class="card-title">Azioni rapide</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <p class="text-muted mb-4">Completa le richieste con credenziali mancanti.</p>
+                    <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'index']) }}" class="btn btn-light-warning btn-sm">Apri richieste</a>
+                </div>
+            </div>
         </div>
     </div>
 
