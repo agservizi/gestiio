@@ -19,16 +19,6 @@
                 {{\App\importo($record->importo_contratti_energia)}}
             </td>
         </tr>
-
-        <tr>
-            <td class="fw-bolder">
-                Servizi finanziari
-            </td>
-            <td class="text-end fw-bolder">
-                {{\App\importo($record->importo_servizi_finanziari)}}
-            </td>
-        </tr>
-
         </tbody>
     </table>
 

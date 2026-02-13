@@ -8,9 +8,9 @@ use App\Models\FatturaProforma;
 use App\Models\IntestazioneFatturaProforma;
 use App\Models\ProduzioneOperatore;
 use App\Models\RigaFatturaProforma;
-use App\Models\Segnalazione;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class FatturaProformaService
 {
@@ -70,10 +70,9 @@ class FatturaProformaService
             $intestazione->save();
         }
 
-        \DB::beginTransaction();
+        DB::beginTransaction();
         $fattura = new FatturaProforma();
-        $fattura->data = now();
-        $fattura->numero = $this->trovaNumero($fattura->data);
+        $fattura->numero = $this->trovaNumero(now());
         $fattura->intestazione_id = $intestazione->id;
         $fattura->aliquota_iva = 0;
         $fattura->save();
@@ -129,36 +128,13 @@ class FatturaProformaService
         $riga->save();
         $totaleImponibile += $riga->imponibile;
 
-
-        //Riga seganalazione AMEX
-        $dataInizio = Carbon::createFromDate($this->anno, $this->mese, 1);
-        $dataFine = $dataInizio->copy()->endOfMonth();
-
-        $conteggio = Segnalazione::withoutGlobalScope('filtroOperatore')
-            ->whereDate('created_at', '>=', $dataInizio)
-            ->whereDate('created_at', '<=', $dataFine)
-            ->where('agente_id', $agenteId)
-            ->where('esito_id', 'gestito')
-            ->count();
-
-
-        $riga = new RigaFatturaProforma();
-        $riga->fattura_proforma_id = $fattura->id;
-        $riga->descrizione = 'Provvigioni segnalazioni AMEX ' . $periodo;
-        $riga->imponibile = $produzione->importo_segnalazioni ?? 0;
-        $riga->quantita = $conteggio;
-        $riga->totale_imponibile = $produzione->importo_segnalazioni ?? 0;
-        $riga->classe = Segnalazione::class;
-        $riga->save();
-        $totaleImponibile += $riga->imponibile;
-
         $fattura->totale_imponibile = $totaleImponibile;
         $fattura->save();
 
         $produzione->fattura_proforma_id = $fattura->id;
         $produzione->save();
 
-        \DB::commit();
+        DB::commit();
 
         return $fattura->id;
     }

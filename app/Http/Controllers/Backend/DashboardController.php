@@ -5,37 +5,39 @@ namespace App\Http\Controllers\Backend;
 use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
 use App\Models\ContrattoTelefonia;
 use App\Models\ProduzioneOperatore;
-use App\Models\ServizioFinanziario;
 use App\Models\Ticket;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use function App\mese;
 
 class DashboardController extends Controller
 {
     public function show(Request $request)
     {
+        /** @var User|null $user */
+        $user = Auth::user();
+        abort_if(!$user, 403);
 
         dispatch(function () {
             CacheUnaVoltaAlGiorno::get();
         })->afterResponse();
 
-        if (Auth::user()->hasPermissionTo('admin')) {
+        if ($user->hasPermissionTo('admin')) {
             return $this->showAdmin($request);
-        } else if (Auth::user()->hasPermissionTo('supervisore')) {
-            if (Auth::user()->hasPermissionTo('servizio_contratti_telefonia')) {
+        } else if ($user->hasPermissionTo('supervisore')) {
+            if ($user->hasPermissionTo('servizio_contratti_telefonia')) {
                 return response()->redirectTo(action([ContrattoTelefoniaController::class, 'index']));
             }
-            if (Auth::user()->hasPermissionTo('servizio_caf_patronato')) {
+            if ($user->hasPermissionTo('servizio_caf_patronato')) {
                 return response()->redirectTo(action([CafPatronatoController::class, 'index']));
             }
 
         } else {
-            return $this->showAgente($request);
+            return $this->showAgente();
         }
 
     }
@@ -144,7 +146,7 @@ class DashboardController extends Controller
 
         $esitiFinali = ContrattoTelefonia::query()
             ->groupBy('esito_finale')
-            ->select('esito_finale', \DB::raw('count(*) as conteggio'))
+            ->select('esito_finale', DB::raw('count(*) as conteggio'))
             ->get();
 
         $arrValori = [];

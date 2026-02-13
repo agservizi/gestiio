@@ -31,7 +31,9 @@ class FatturaProforma extends Model
     {
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
-            if (Auth::user()->hasPermissionTo('agente')) {
+            /** @var User|null $user */
+            $user = Auth::user();
+            if ($user && $user->hasPermissionTo('agente')) {
                 $builder->whereHas('intestazione.agente', function ($q) {
                     $q->where('id', Auth::id());
                 });

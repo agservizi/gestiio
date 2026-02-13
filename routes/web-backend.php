@@ -28,22 +28,6 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     //Route::post('/contratto-energia/{id}/azione/{azione}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'azioni']);
 
 
-    //Servizi finanziari
-    Route::get('/servizio-finanziario/create/{servizio?}', [\App\Http\Controllers\Backend\ServizioFinanziarioController::class, 'create']);
-    Route::resource('/servizio-finanziario', \App\Http\Controllers\Backend\ServizioFinanziarioController::class)->except(['create']);
-
-    //Comparasemplice
-    Route::resource('/comparasemplice', \App\Http\Controllers\Backend\ComparasempliceController::class);
-
-    //Attivazioni
-    Route::post('/allegato-attivazione-sim', [\App\Http\Controllers\Backend\AttivazioneSimController::class, 'uploadAllegato']);
-    Route::delete('/allegato-attivazione-sim', [\App\Http\Controllers\Backend\AttivazioneSimController::class, 'deleteAllegato']);
-    Route::get('attivazione-sim/{contrattoId}/allegato/{allegatoId}', [\App\Http\Controllers\Backend\AttivazioneSimController::class, 'downloadAllegato']);
-    Route::get('/attivazione-sim/create/{servizio?}', [\App\Http\Controllers\Backend\AttivazioneSimController::class, 'create']);
-    Route::resource('/attivazione-sim', \App\Http\Controllers\Backend\AttivazioneSimController::class)->except(['create']);
-
-    //Sostituzioni sim
-    Route::resource('sostituzioni-sim', \App\Http\Controllers\Backend\SostituzioneSimController::class)->except(['show', 'update', 'edit', 'create']);
 
 
     //Caf patronato
@@ -61,8 +45,6 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/allegato-visura', [\App\Http\Controllers\Backend\VisuraController::class, 'uploadAllegato']);
     Route::delete('/allegato-visura', [\App\Http\Controllers\Backend\VisuraController::class, 'deleteAllegato']);
 
-    //Segnalazioni
-    Route::resource('segnalazione', \App\Http\Controllers\Backend\SegnalazioneController::class);
 
     //Spedizioni
     Route::get('spedizione-brt/bordero/{id?}', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'bordero']);
@@ -124,9 +106,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/contratto-stato/{id}', [\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'aggiornaStato']);
     Route::post('/contratto-energia-stato/{id}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'aggiornaStato']);
     Route::post('/caf-patronato-stato/{id}', [\App\Http\Controllers\Backend\CafPatronatoController::class, 'aggiornaStato']);
-    Route::post('/attivazione-sim-stato/{id}', [\App\Http\Controllers\Backend\AttivazioneSimController::class, 'aggiornaStato']);
     Route::post('/visura-stato/{id}', [\App\Http\Controllers\Backend\VisuraController::class, 'aggiornaStato']);
-    Route::post('/segnalazione-stato/{id}', [\App\Http\Controllers\Backend\SegnalazioneController::class, 'aggiornaStato']);
 
     Route::get('profilo', [\App\Http\Controllers\Backend\ProfiloController::class, 'show']);
     Route::get('profilo-listino/{tipoContratto}', [\App\Http\Controllers\Backend\ProfiloController::class, 'showListino']);
@@ -139,10 +119,6 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
 
 
 Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function () {
-
-
-    Route::post('/servizio-finanziario-stato/{id}', [\App\Http\Controllers\Backend\ServizioFinanziarioController::class, 'aggiornaStato']);
-    Route::post('/comparasemplice-stato/{id}', [\App\Http\Controllers\Backend\ComparasempliceController::class, 'aggiornaStato']);
 
 
     //Cliente
@@ -186,8 +162,11 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::get('produzione-operatore', [\App\Http\Controllers\Backend\ProduzioneOperatoreController::class, 'index']);
     Route::get('produzione-operatore/{id}/crea-proforma', [\App\Http\Controllers\Backend\ProduzioneOperatoreController::class, 'creaProforma']);
 
-    Route::get('test-twilio', [\App\Http\Controllers\TestTwilio::class, 'show']);
-    Route::post('test-twilio', [\App\Http\Controllers\TestTwilio::class, 'post']);
+    $testTwilioController = 'App\\Http\\Controllers\\TestTwilio';
+    if (class_exists($testTwilioController)) {
+        Route::get('test-twilio', [$testTwilioController, 'show']);
+        Route::post('test-twilio', [$testTwilioController, 'post']);
+    }
 
     Route::resource('/tipo-contratto', \App\Http\Controllers\Backend\TipoContrattoController::class)->except(['show']);
     Route::resource('/tipo-caf-patronato', \App\Http\Controllers\Backend\TipoCafPatronatoController::class)->except(['show']);
@@ -209,13 +188,9 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
 
 
     //Esiti
-    Route::resource('esito-servizio', \App\Http\Controllers\Backend\EsitoServizioFinanziarioController::class)->except(['show']);
     Route::resource('esito-caf-patronato', \App\Http\Controllers\Backend\EsitoCafPatronatoController::class)->except(['show']);
     Route::resource('esito-contratto-energia', \App\Http\Controllers\Backend\EsitoContrattoEnergiaController::class)->except(['show']);
-    Route::resource('esito-attivazione-sim', \App\Http\Controllers\Backend\EsitoAttivazioneSimController::class)->except(['show']);
     Route::resource('esito-visura', \App\Http\Controllers\Backend\EsitoVisuraController::class)->except(['show']);
-    Route::resource('esito-segnalazione', \App\Http\Controllers\Backend\EsitoSegnalazioneController::class)->except(['show']);
-    Route::resource('esito-comparasemplice', \App\Http\Controllers\Backend\EsitoComparasempliceController::class)->except(['show']);
 
     //Listini
     Route::resource('listino', \App\Http\Controllers\Backend\ListinoController::class);

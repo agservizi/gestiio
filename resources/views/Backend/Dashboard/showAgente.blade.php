@@ -66,20 +66,6 @@
                 <!--end::Card widget 7-->
             </div>
         @endcan
-        @can('servizio_contratti_amex')
-            <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
-                <div class="card card-flush h-md-100 overlay overflow-hidden">
-                    <a class="card-body pt-5 text-center" href="{{action([\App\Http\Controllers\Backend\SegnalazioneController::class,'index'])}}">
-                        <div class="overlay-wrapper">
-                            <img src="/icone_dash/amex.png" class="img w-75 rounded">
-                        </div>
-                        <div class="overlay-layer bg-dark bg-opacity-25 d-flex flex-column">
-                        </div>
-                        <h4 class="mt-4">Contratti AMEX</h4>
-                    </a>
-                </div>
-            </div>
-        @endcan
         @can('servizio_contratti_energia')
             <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
                 <div class="card card-flush h-md-100 overlay overflow-hidden">
@@ -90,48 +76,6 @@
                         <div class="overlay-layer bg-dark bg-opacity-25 d-flex flex-column">
                         </div>
                         <h4 class="mt-4">Contratti Luce e Gas</h4>
-                    </a>
-                </div>
-            </div>
-        @endcan
-        @can('servizio_servizi_finanziari')
-            <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
-                <div class="card card-flush h-md-100 overlay overflow-hidden">
-                    <a class="card-body pt-5 text-center" href="{{action([\App\Http\Controllers\Backend\ServizioFinanziarioController::class,'index'])}}">
-                        <div class="overlay-wrapper">
-                            <img src="/icone_dash/serv_finanziari.png" class="img w-75 rounded">
-                        </div>
-                        <div class="overlay-layer bg-dark bg-opacity-25 d-flex flex-column">
-                        </div>
-                        <h4 class="mt-4">Servizi finanziari</h4>
-                    </a>
-                </div>
-            </div>
-        @endcan
-        @can('servizio_compara_semplice')
-            <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
-                <div class="card card-flush h-md-100 overlay overflow-hidden">
-                    <a class="card-body pt-5 text-center" href="{{action([\App\Http\Controllers\Backend\ComparasempliceController::class,'index'])}}">
-                        <div class="overlay-wrapper">
-                            <img src="/icone_dash/comparasemplice.png" class="img w-75 rounded">
-                        </div>
-                        <div class="overlay-layer bg-dark bg-opacity-25 d-flex flex-column">
-                        </div>
-                        <h4 class="mt-4">ComparaSemplice</h4>
-                    </a>
-                </div>
-            </div>
-        @endcan
-        @can('servizio_attivazioni_sim')
-            <div class="col-md-6 col-lg-6 col-xl-3 col-xxl-3 mb-md-5 mb-xl-5">
-                <div class="card card-flush h-md-100 overlay overflow-hidden">
-                    <a class="card-body pt-5 text-center" href="{{action([\App\Http\Controllers\Backend\AttivazioneSimController::class,'index'])}}">
-                        <div class="overlay-wrapper">
-                            <img src="/icone_dash/sim.png" class="img w-75 rounded">
-                        </div>
-                        <div class="overlay-layer bg-dark bg-opacity-25 d-flex flex-column">
-                        </div>
-                        <h4 class="mt-4">Attivazioni Sim</h4>
                     </a>
                 </div>
             </div>

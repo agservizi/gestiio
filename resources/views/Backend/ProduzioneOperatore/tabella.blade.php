@@ -6,7 +6,6 @@
             <th class="">Nominativo</th>
             <th class="text-end">Contratti Telefonia</th>
             <th class="text-end">Contratti Energia</th>
-            <th class="text-end">Segnalazioni AMEX</th>
             <th class="text-end">Totale</th>
             <th class="text-end">Proforma</th>
             <th></th>
@@ -23,7 +22,6 @@
                     {{$record->importo_ordini}}
                 </td>
                 <td class="text-end">{{$record->importo_contratti_energia}}</td>
-                <td class="text-end">{{$record->importo_segnalazioni}}</td>
                 <td class="text-end">{{$record->importo_totale}}</td>
                 <td class="text-end">
                     @if($record->fattura_proforma_id)

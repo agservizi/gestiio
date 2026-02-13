@@ -102,23 +102,6 @@
                                 </div>
                                 <!--end::Stat-->
                             @endcan
-                            @can('servizio_attivazioni_sim')
-                                <!--begin::Stat-->
-                                <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-2 mb-3">
-                                    <!--begin::Number-->
-                                    <div class="d-flex align-items-center">
-                                        <div class="fs-2 fw-bold" data-kt-countup="true"
-                                             data-kt-countup-value="{{\App\Models\AttivazioneSim::count()}}"
-                                             data-kt-countup-prefix="">0
-                                        </div>
-                                    </div>
-                                    <!--end::Number-->
-                                    <!--begin::Label-->
-                                    <div class="fw-semibold fs-6 text-gray-400">Attivazioni sim</div>
-                                    <!--end::Label-->
-                                </div>
-                                <!--end::Stat-->
-                            @endcan
                             @can('servizio_caf_patronato')
                                 <!--begin::Stat-->
                                 <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-2 mb-3">

@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Backup\BackupDestination\Backup;
 use Spatie\Backup\Helpers\Format;
@@ -23,7 +23,7 @@ class RegistriController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View|\Symfony\Component\HttpFoundation\BinaryFileResponse
      */
     public function index(Request $request, $cosa)
     {
@@ -33,16 +33,17 @@ class RegistriController extends Controller
                 return $this->registroLogin($request);
 
             case 'modifiche':
-                return $this->registroModifiche($request);
+                abort(404);
 
             case 'backup-db':
                 if ($request->input('scarica')) {
                     $fileName = $request->input('scarica');
-                    $path_to_file = '/backup-database/' . $fileName;
-                    return response()->download(Storage::disk('local')->path($path_to_file), $fileName);
+                    $pathToFile = storage_path('app/backup-database/' . $fileName);
+                    abort_unless(is_file($pathToFile), 404);
+                    return response()->download($pathToFile, $fileName);
                 }
                 if ($request->has('esegui')) {
-                    \Artisan::call('backup:run --only-db --disable-notifications');
+                    Artisan::call('backup:run --only-db --disable-notifications');
                 }
                 return $this->backupDatabase();
 
@@ -59,6 +60,8 @@ class RegistriController extends Controller
                 return $this->infoSito($request);
 
         }
+
+        abort(404);
 
     }
 
@@ -99,7 +102,7 @@ class RegistriController extends Controller
 
         $records = $recordsQB->paginate(100);
         if ($filtro) {
-            $records->appends($_GET)->links();
+            $records->appends($_GET);
 
         }
 
@@ -111,38 +114,6 @@ class RegistriController extends Controller
         ]);
 
     }
-
-    public function registroModifiche(Request $request)
-    {
-        $recordsQB = Audit::with(['user' => function ($q) {
-            $q->select('id', 'name', 'cognome', 'ragione_sociale');
-        }]);
-
-        $orderBy = false;
-        if ($request->has('ordine')) {
-            $recordsQB->where('tags', 'ordine_' . $request->input('ordine'));
-            $orderBy = true;
-
-        }
-
-        if ($request->input('id')) {
-            $recordsQB->where('auditable_id', $request->input('id'));
-        }
-
-        if ($request->input('giorno')) {
-            $recordsQB->whereDate('created_at', Carbon::createFromFormat('d/m/Y', $request->input('giorno')));
-        }
-        if ($orderBy == false) {
-            $recordsQB->orderBy('id', 'desc');
-        }
-
-        return view('Backend.Registri.indexModifiche')->with([
-            'records' => $recordsQB->paginate(100)->withQueryString()
-        ]);
-
-
-    }
-
 
     protected function registroEmail($request)
     {
@@ -169,9 +140,9 @@ class RegistriController extends Controller
 
         $stat['allegati_telefonia'] = \App\Models\AllegatoContratto::sum('dimensione_file');
         $stat['allegati_energia'] = \App\Models\AllegatoContrattoEnergia::sum('dimensione_file');
-        $stat['allegati_servizi_finanziari'] = \App\Models\AllegatoServizio::where('allegato_type', 'App\Models\ServizioFinanziario')->sum('dimensione_file');
+        $stat['allegati_servizi_finanziari'] = 0;
         $stat['allegati_caf_patronato'] = \App\Models\AllegatoCafPatronato::sum('dimensione_file');
-        $stat['allegati_attivazioni_sim'] = \App\Models\AllegatoAttivazioneSim::sum('dimensione_file');
+        $stat['allegati_attivazioni_sim'] = 0;
         $stat['allegati_visure'] =\App\Models\AllegatoServizio::where('allegato_type', 'App\Models\Visura')->sum('dimensione_file');
 
         return view('Backend.Registri.infoSito', [
@@ -187,7 +158,14 @@ class RegistriController extends Controller
         $statuses = BackupDestinationStatusFactory::createForMonitorConfig(config('backup.monitor_backups'));
         list($headers, $rows) = $this->displayOverview($statuses);
 
-        $files = collect(\Storage::disk('local')->listContents('/backup-database'))->sortBy('basename');
+        $files = collect(Storage::files('backup-database'))
+            ->map(function (string $path) {
+                return [
+                    'path' => $path,
+                    'fileSize' => Storage::size($path),
+                ];
+            })
+            ->sortBy('path');
 
         return view('Backend.Registri.showBackup', [
             'headers' => $headers,
@@ -238,7 +216,7 @@ class RegistriController extends Controller
         return $row;
     }
 
-    protected function getFormattedBackupDate(Backup $backup = null)
+    protected function getFormattedBackupDate(?Backup $backup = null)
     {
         return is_null($backup)
             ? 'Nessun backup'

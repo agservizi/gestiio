@@ -2,19 +2,15 @@
 
 namespace App\Http\Livewire;
 
-use App\Http\Controllers\Backend\AttivazioneSimController;
 use App\Http\Controllers\Backend\CafPatronatoController;
 use App\Http\Controllers\Backend\ClienteController;
 use App\Http\Controllers\Backend\ContrattoTelefoniaController;
 use App\Http\Controllers\Backend\ContrattoEnergiaController;
-use App\Http\Controllers\Backend\ServizioFinanziarioController;
-use App\Models\AttivazioneSim;
 use App\Models\CafPatronato;
 use App\Models\Cliente;
 use App\Models\ContrattoEnergia;
 use App\Models\ContrattoTelefonia;
-use App\Models\ServizioFinanziario;
-use DB;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class Ricerca extends Component
@@ -46,25 +42,11 @@ class Ricerca extends Component
                 $arrRisultati[] = ['testo' => $record->denominazione, 'sottotesto' => 'Contratto ' . $record->gestore->nome, 'url' => action([ContrattoEnergiaController::class, 'show'], $record->id)];
             }
 
-            //Cerco servizio
-            $records = ServizioFinanziario::where(DB::raw('concat_ws(\' \',nome,cognome,email,cellulare,codice_fiscale)'), 'like', "%{$this->testoRicerca}%")
-                ->get();
-            foreach ($records as $record) {
-                $arrRisultati[] = ['testo' => $record->nominativo(), 'sottotesto' =>  $record->tipoProdottoBlade(), 'url' => action([ServizioFinanziarioController::class, 'edit'], $record->id)];
-            }
-
             //Cerco CafPatronato
             $records = CafPatronato::with('tipo:id,nome')->where(DB::raw('concat_ws(\' \',nome,cognome,email,cellulare,codice_fiscale)'), 'like', "%{$this->testoRicerca}%")
                 ->get();
             foreach ($records as $record) {
                 $arrRisultati[] = ['testo' => $record->nominativo(), 'sottotesto' => 'Pratica ' . $record->tipo->nome, 'url' => action([CafPatronatoController::class, 'edit'], $record->id)];
-            }
-
-            //Cerco Attivazioni
-            $records = AttivazioneSim::with('gestore:id,nome')->where(DB::raw('concat_ws(\' \',nome,cognome,email,cellulare,codice_fiscale)'), 'like', "%{$this->testoRicerca}%")
-                ->get();
-            foreach ($records as $record) {
-                $arrRisultati[] = ['testo' => $record->nominativo(), 'sottotesto' => 'Attivazione sim ' . $record->gestore->nome, 'url' => action([AttivazioneSimController::class, 'edit'], $record->id)];
             }
 
             //Cerco clienti

@@ -64,40 +64,6 @@
                 </div>
                 <div class="menu-item">
                     <a class="menu-link"
-                       href="{{action([\App\Http\Controllers\Backend\ServizioFinanziarioController::class,'index'])}}">
-                        <span class="menu-icon">
-                            <span class="svg-icon svg-icon-2">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                     xmlns="http://www.w3.org/2000/svg">
-                                    <path opacity="0.3"
-                                          d="M19 22H5C4.4 22 4 21.6 4 21V3C4 2.4 4.4 2 5 2H14L20 8V21C20 21.6 19.6 22 19 22Z"
-                                          fill="currentColor"/>
-                                    <path d="M15 8H20L14 2V7C14 7.6 14.4 8 15 8Z" fill="currentColor"/>
-                                </svg>
-                            </span>
-                        </span>
-                        <span class="menu-title">Servizi finanziari</span>
-                    </a>
-                </div>
-                <div class="menu-item">
-                    <a class="menu-link"
-                       href="{{action([\App\Http\Controllers\Backend\ComparasempliceController::class,'index'])}}">
-                        <span class="menu-icon">
-                            <span class="svg-icon svg-icon-2">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                     xmlns="http://www.w3.org/2000/svg">
-                                    <path opacity="0.3"
-                                          d="M19 22H5C4.4 22 4 21.6 4 21V3C4 2.4 4.4 2 5 2H14L20 8V21C20 21.6 19.6 22 19 22Z"
-                                          fill="currentColor"/>
-                                    <path d="M15 8H20L14 2V7C14 7.6 14.4 8 15 8Z" fill="currentColor"/>
-                                </svg>
-                            </span>
-                        </span>
-                        <span class="menu-title">Comparasemplice</span>
-                    </a>
-                </div>
-                <div class="menu-item">
-                    <a class="menu-link"
                        href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'index'])}}">
                         <span class="menu-icon">
                             <span class="svg-icon svg-icon-2">
@@ -111,36 +77,6 @@
                             </span>
                         </span>
                         <span class="menu-title">Caf / Patronato</span>
-                    </a>
-                </div>
-                <div class="menu-item">
-                    <a class="menu-link"
-                       href="{{action([\App\Http\Controllers\Backend\AttivazioneSimController::class,'index'])}}">
-                        <span class="menu-icon">
-                            <span class="svg-icon svg-icon-2">
-<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-sim"
-     viewBox="0 0 18 18"> <path
-            d="M2 1.5A1.5 1.5 0 0 1 3.5 0h7.086a1.5 1.5 0 0 1 1.06.44l1.915 1.914A1.5 1.5 0 0 1 14 3.414V14.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-13zM3.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V3.414a.5.5 0 0 0-.146-.353l-1.915-1.915A.5.5 0 0 0 10.586 1H3.5z"/> <path
-            d="M5.5 4a.5.5 0 0 0-.5.5V6h2.5V4h-2zm3 0v2H11V4.5a.5.5 0 0 0-.5-.5h-2zM11 7H5v2h6V7zm0 3H8.5v2h2a.5.5 0 0 0 .5-.5V10zm-3.5 2v-2H5v1.5a.5.5 0 0 0 .5.5h2zM4 4.5A1.5 1.5 0 0 1 5.5 3h5A1.5 1.5 0 0 1 12 4.5v7a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 4 11.5v-7z"/> </svg>                            </span>
-                        </span>
-                        <span class="menu-title">Attivazioni Sim</span>
-                    </a>
-                </div>
-                <div class="menu-item">
-                    <a class="menu-link"
-                       href="{{action([\App\Http\Controllers\Backend\SegnalazioneController::class,'index'])}}">
-                        <span class="menu-icon">
-                            <span class="svg-icon svg-icon-2">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                     xmlns="http://www.w3.org/2000/svg">
-                                    <path opacity="0.3"
-                                          d="M19 22H5C4.4 22 4 21.6 4 21V3C4 2.4 4.4 2 5 2H14L20 8V21C20 21.6 19.6 22 19 22Z"
-                                          fill="currentColor"/>
-                                    <path d="M15 8H20L14 2V7C14 7.6 14.4 8 15 8Z" fill="currentColor"/>
-                                </svg>
-                            </span>
-                        </span>
-                        <span class="menu-title">Segnalazioni AMEX</span>
                     </a>
                 </div>
                 <div class="menu-item">
@@ -643,48 +579,6 @@
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
-                                    <span class="menu-title">Servizi finanziari</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <!--end:Menu link-->
-                                <!--begin:Menu sub-->
-                                <div class="menu-sub menu-sub-accordion">
-                                    <div class="menu-item">
-                                        <a class="menu-link"
-                                           href="{{action([\App\Http\Controllers\Backend\EsitoServizioFinanziarioController::class,'index'])}}">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                            <span class="menu-title">Esiti</span>
-                                        </a>
-                                    </div>
-                                </div>
-                                <!--end:Menu sub-->
-                            </div>
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
-                                <!--begin:Menu link-->
-                                <span class="menu-link">
-                                    <span class="menu-title">ComparaSemplice</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <!--end:Menu link-->
-                                <!--begin:Menu sub-->
-                                <div class="menu-sub menu-sub-accordion">
-                                    <div class="menu-item">
-                                        <a class="menu-link"
-                                           href="{{action([\App\Http\Controllers\Backend\EsitoComparasempliceController::class,'index'])}}">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                            <span class="menu-title">Esiti</span>
-                                        </a>
-                                    </div>
-                                </div>
-                                <!--end:Menu sub-->
-                            </div>
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
-                                <!--begin:Menu link-->
-                                <span class="menu-link">
                                     <span class="menu-title">Caf Patronato</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -709,63 +603,6 @@
                                             <span class="menu-title">Tipo caf patronato</span>
                                         </a>
                                     </div>
-                                </div>
-                                <!--end:Menu sub-->
-                            </div>
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
-                                <!--begin:Menu link-->
-                                <span class="menu-link">
-                                    <span class="menu-title">Attivazioni Sim</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <!--end:Menu link-->
-                                <!--begin:Menu sub-->
-                                <div class="menu-sub menu-sub-accordion">
-                                    <div class="menu-item">
-                                        <a class="menu-link"
-                                           href="{{action([\App\Http\Controllers\Backend\EsitoAttivazioneSimController::class,'index'])}}">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                            <span class="menu-title">Esiti</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item">
-                                        <a class="menu-link"
-                                           href="{{action([\App\Http\Controllers\Backend\GestoreAttivazioniController::class,'index'])}}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Gestori</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item">
-                                        <a class="menu-link"
-                                           href="{{action([\App\Http\Controllers\Backend\OffertaSimController::class,'index'])}}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Offerte</span>
-                                        </a>
-                                    </div>
-                                </div>
-                                <!--end:Menu sub-->
-                            </div>
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
-                                <!--begin:Menu link-->
-                                <span class="menu-link">
-                                    <span class="menu-title">Segnalazioni AMEX</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <!--end:Menu link-->
-                                <!--begin:Menu sub-->
-                                <div class="menu-sub menu-sub-accordion">
-                                    <div class="menu-item">
-                                        <a class="menu-link"
-                                           href="{{action([\App\Http\Controllers\Backend\EsitoSegnalazioneController::class,'index'])}}">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                            <span class="menu-title">Esiti</span>
-                                        </a>
-                                    </div>
-
                                 </div>
                                 <!--end:Menu sub-->
                             </div>

@@ -50,9 +50,8 @@ class GuadagnoAgenzia extends Model
 
     public function calcolaGuadagnoServizi()
     {
-        $res = self::calcolaGuadagnoMeseServizi($this->anno, $this->mese);
-        $this->entrate_servizi = $res->provvigione_agenzia ?? 0;
-        $this->uscite_servizi = $res->provvigione_agente ?? 0;
+        $this->entrate_servizi = 0;
+        $this->uscite_servizi = 0;
         $this->save();
 
     }
@@ -60,13 +59,10 @@ class GuadagnoAgenzia extends Model
 
     public static function calcolaGuadagnoMeseServizi($anno, $mese)
     {
-        $res = ServizioFinanziario::query()
-            ->withoutGlobalScope('filtroOperatore')
-            ->where('mese_pagamento', $mese . '_' . $anno)
-            ->select(DB::raw('sum(provvigione_agente) as provvigione_agente'), DB::raw('sum(provvigione_agenzia) as provvigione_agenzia'))
-            ->first();
-
-        return $res;
+        return (object) [
+            'provvigione_agente' => 0,
+            'provvigione_agenzia' => 0,
+        ];
     }
 
 
