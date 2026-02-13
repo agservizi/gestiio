@@ -18,6 +18,4 @@ class TwilioController extends Controller
         \Log::notice(__FUNCTION__,$request->all());
         return __FUNCTION__;
     }
-
-}
 }

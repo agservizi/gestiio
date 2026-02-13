@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use App\Models\RichiestaAssistenza;
+use App\Models\User;
 use DB;
 use Illuminate\Support\Str;
 use setasign\Fpdi\Fpdi;
+use Illuminate\Contracts\View\View;
 
 
 class RichiestaAssistenzaController extends Controller
@@ -16,12 +21,7 @@ class RichiestaAssistenzaController extends Controller
     protected $conFiltro = false;
 
 
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index(Request $request)
+    public function index(Request $request): View|JsonResponse
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
@@ -37,7 +37,9 @@ class RichiestaAssistenzaController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        $orderByUser = $authUser?->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -48,8 +50,8 @@ class RichiestaAssistenzaController extends Controller
             $orderBy = 'recente';
         }
 
-        if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+        if ($authUser instanceof User && $orderByUser != $orderByString) {
+            $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -58,25 +60,26 @@ class RichiestaAssistenzaController extends Controller
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
         if ($request->ajax()) {
-            return [
+            return response()->json([
                 'html' => base64_encode(view('Backend.RichiestaAssistenza.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
-            ];
+                ])->render())
+            ]);
         }
 
 
         return view('Backend.RichiestaAssistenza.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\RichiestaAssistenza::NOME_PLURALE,
+            'titoloPagina' => 'Elenco ' . RichiestaAssistenza::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuova ' . \App\Models\RichiestaAssistenza::NOME_SINGOLARE,
-            'testoCerca' => 'Cerca in cognome, nome, codice fiscale, email'
+            'testoNuovo' => 'Nuova ' . RichiestaAssistenza::NOME_SINGOLARE,
+            'testoCerca' => 'Cerca in cognome, nome, codice fiscale, email',
+            'prodotti' => Cache::remember('prodotti_assistenza', 3600, fn() => \App\Models\ProdottoAssistenza::pluck('nome', 'id'))
 
         ]);
 
@@ -90,14 +93,20 @@ class RichiestaAssistenzaController extends Controller
     {
 
         $queryBuilder = \App\Models\RichiestaAssistenza::query()
+            ->select('id', 'cliente_id', 'prodotto_assistenza_id', 'created_at', 'stato')
             ->with('prodotto:id,nome')
-            ->with('cliente');
+            ->with('cliente:id,nome,cognome,email,codice_fiscale');
         $term = $request->input('cerca');
         if ($term) {
             $queryBuilder->whereHas('cliente', function ($q) use ($term) {
                 $arrTerm = explode(' ', $term);
                 foreach ($arrTerm as $t) {
-                    $q->where(DB::raw('concat_ws(\' \',cognome,nome,codice_fiscale,email)'), 'like', "%$t%");
+                    $q->where(function ($query) use ($t) {
+                        $query->where('cognome', 'like', "%$t%")
+                              ->orWhere('nome', 'like', "%$t%")
+                              ->orWhere('codice_fiscale', 'like', "%$t%")
+                              ->orWhere('email', 'like', "%$t%");
+                    });
                 }
             });
         }
@@ -107,12 +116,7 @@ class RichiestaAssistenzaController extends Controller
     }
 
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create(Request $request)
+    public function create(Request $request): View
     {
         $record = new RichiestaAssistenza();
         $record->cliente_id = $request->input('cliente_id');
@@ -125,13 +129,7 @@ class RichiestaAssistenzaController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $request->validate($this->rules(null));
         $record = new RichiestaAssistenza();
@@ -139,13 +137,7 @@ class RichiestaAssistenzaController extends Controller
         return $this->backToIndex();
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
+    public function show($id): View
     {
         $record = RichiestaAssistenza::find($id);
         abort_if(!$record, 404, 'Questa richiestaassistenza non esiste');
@@ -158,13 +150,7 @@ class RichiestaAssistenzaController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
+    public function edit($id): View
     {
         $record = RichiestaAssistenza::find($id);
         abort_if(!$record, 404, 'Questa richiestaassistenza non esiste');
@@ -183,14 +169,7 @@ class RichiestaAssistenzaController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): RedirectResponse
     {
         $record = RichiestaAssistenza::find($id);
         abort_if(!$record, 404, 'Questa ' . RichiestaAssistenza::NOME_SINGOLARE . ' non esiste');
@@ -199,13 +178,7 @@ class RichiestaAssistenzaController extends Controller
         return $this->backToIndex();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
         $record = RichiestaAssistenza::find($id);
         abort_if(!$record, 404, 'Questa richiestaassistenza non esiste');
@@ -213,10 +186,10 @@ class RichiestaAssistenzaController extends Controller
         $record->delete();
 
 
-        return [
+        return response()->json([
             'success' => true,
             'redirect' => action([RichiestaAssistenzaController::class, 'index']),
-        ];
+        ]);
     }
 
     public function pdf($id)
@@ -283,15 +256,10 @@ class RichiestaAssistenzaController extends Controller
         return $fpdf->Output('D', 'spid_' . Str::slug($richiesta->cliente->codice_fiscale) . '.pdf');
     }
 
-    /**
-     * @param RichiestaAssistenza $model
-     * @param Request $request
-     * @return mixed
-     */
-    protected function salvaDati($model, $request)
+    protected function salvaDati(RichiestaAssistenza $model, Request $request): RichiestaAssistenza
     {
 
-        $nuovo = !$model->id;
+        $nuovo = !$model->exists;
 
         if ($nuovo) {
 
@@ -317,7 +285,7 @@ class RichiestaAssistenzaController extends Controller
         return $model;
     }
 
-    protected function backToIndex()
+    protected function backToIndex(): RedirectResponse
     {
         return redirect()->action([get_class($this), 'index']);
     }

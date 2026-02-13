@@ -175,7 +175,7 @@ class User extends Authenticatable implements MustVerifyEmail
      ***************************************************/
 
 
-    public function setExtra($value)
+    public function setExtra(array $value): void
     {
 
         $array = $this->extra;
@@ -188,7 +188,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
 
-    public function getExtra($key = null)
+    public function getExtra(?string $key = null): mixed
     {
         if ($key !== null && is_array($this->extra)) {
             if (array_key_exists($key, $this->extra)) {
@@ -218,7 +218,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         foreach ($livelli as $livello) {
             if ($user->permissions->where('name', $livello)->first()) {
-                return $this::labelLivelloOperatore($livello, $small);
+                return $this->labelLivelloOperatore($livello, $small);
             }
 
         }
