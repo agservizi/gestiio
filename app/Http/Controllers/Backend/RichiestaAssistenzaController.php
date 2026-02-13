@@ -284,10 +284,34 @@ class RichiestaAssistenzaController extends Controller
             }
             $model->$campo = $valore;
         }
+
+        $this->salvaContattiClienteRapidi($request, $clienteId);
         $model->cliente_id = $clienteId;
 
         $model->save();
         return $model;
+    }
+
+    protected function salvaContattiClienteRapidi(Request $request, int $clienteId): void
+    {
+        if (!$request->has('cliente_email_edit') && !$request->has('cliente_telefono_edit')) {
+            return;
+        }
+
+        $cliente = ClienteAssistenza::find($clienteId);
+        if (!$cliente) {
+            return;
+        }
+
+        if ($request->has('cliente_email_edit')) {
+            $cliente->email = strtolower((string)$request->input('cliente_email_edit', ''));
+        }
+
+        if ($request->has('cliente_telefono_edit')) {
+            $cliente->telefono = \App\getInputTelefono($request->input('cliente_telefono_edit'));
+        }
+
+        $cliente->save();
     }
 
     protected function resolveClienteId(Request $request, ?int $currentClienteId = null): int
@@ -344,6 +368,8 @@ class RichiestaAssistenzaController extends Controller
             'cliente_codice_fiscale' => ['nullable', 'required_without:cliente_id', new \App\Rules\CodiceFiscaleRule()],
             'cliente_email' => ['nullable', 'max:255'],
             'cliente_telefono' => ['nullable', new \App\Rules\TelefonoRule()],
+            'cliente_email_edit' => ['nullable', 'max:255'],
+            'cliente_telefono_edit' => ['nullable', new \App\Rules\TelefonoRule()],
             'prodotto_assistenza_id' => ['required'],
             'nome_utente' => ['nullable', 'max:255'],
             'password' => ['nullable', 'max:255'],

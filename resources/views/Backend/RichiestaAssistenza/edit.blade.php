@@ -129,12 +129,13 @@
                                     </div>
                                     <div class="mb-4">
                                         <div class="text-muted fs-7">Email</div>
-                                        <div class="fw-bold fs-6">{{$clienteDettaglio->email ?: '-'}}</div>
+                                        @include('Backend._inputs.inputText',['campo'=>'cliente_email_edit','testo'=>'Email','autocomplete'=>'off','record'=>(object)['cliente_email_edit'=>old('cliente_email_edit',$clienteDettaglio->email)],'col'=>4])
                                     </div>
                                     <div>
                                         <div class="text-muted fs-7">Telefono</div>
-                                        <div class="fw-bold fs-6">{{$clienteDettaglio->telefono ?: '-'}}</div>
+                                        @include('Backend._inputs.inputText',['campo'=>'cliente_telefono_edit','testo'=>'Cellulare','autocomplete'=>'off','record'=>(object)['cliente_telefono_edit'=>old('cliente_telefono_edit',$clienteDettaglio->telefono)],'col'=>4])
                                     </div>
+                                    <div class="form-text mt-2">Le modifiche vengono salvate insieme alla richiesta assistenza.</div>
                                 @else
                                     <div class="text-muted">Nessun cliente associato alla richiesta.</div>
                                 @endif
