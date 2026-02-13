@@ -33,10 +33,10 @@
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header pt-5">
+                <div class="card-header border-0 pt-5 pb-2">
                     <h3 class="card-title">Produzione mese</h3>
                 </div>
-                <div class="card-body pt-2">
+                <div class="card-body pt-0">
                     <div class="fs-2hx fw-bold">{{ number_format($produzioneConteggio) }}</div>
                     <div class="text-muted mb-4">Contratti totali</div>
                     <div class="d-flex justify-content-between fw-semibold mb-2">
@@ -52,10 +52,10 @@
 
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header pt-5">
+                <div class="card-header border-0 pt-5 pb-2">
                     <h3 class="card-title">Economico mese</h3>
                 </div>
-                <div class="card-body pt-2">
+                <div class="card-body pt-0">
                     <div class="d-flex justify-content-between mb-3">
                         <span class="text-muted">Entrate</span>
                         <span class="fw-bolder">{{ \App\importo($guadagno->entrate,true) }}</span>
@@ -75,10 +75,10 @@
 
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header pt-5">
+                <div class="card-header border-0 pt-5 pb-2">
                     <h3 class="card-title">Ticket</h3>
                 </div>
-                <div class="card-body pt-2">
+                <div class="card-body pt-0">
                     <div class="d-flex justify-content-between mb-3">
                         <span class="text-muted">Aperti / in lavorazione</span>
                         <span class="fw-bolder">{{ number_format($ticketAperti) }}</span>
@@ -94,10 +94,10 @@
 
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header pt-5">
+                <div class="card-header border-0 pt-5 pb-2">
                     <h3 class="card-title">Assistenza</h3>
                 </div>
-                <div class="card-body pt-2">
+                <div class="card-body pt-0">
                     <div class="d-flex justify-content-between mb-3">
                         <span class="text-muted">Richieste totali</span>
                         <span class="fw-bolder">{{ number_format($kpiDashboard['richieste_assistenza_totali']) }}</span>
@@ -119,13 +119,13 @@
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-xl-6">
             <div class="card card-flush h-lg-100">
-                <div class="card-header mt-6">
+                <div class="card-header border-0 pt-5 pb-2">
                     <div class="card-title flex-column">
                         <h3 class="fw-bolder mb-1">Esito finale</h3>
                         <div class="fs-6 fw-bold text-gray-400">Tutti i contratti</div>
                     </div>
                 </div>
-                <div class="card-body p-9 pt-5">
+                <div class="card-body p-9 pt-3">
                     <div class="d-flex flex-wrap">
                         <div class="position-relative d-flex flex-center h-150px w-150px me-5 mb-7">
                             <div class="position-absolute translate-middle start-50 top-50 d-flex flex-column flex-center">

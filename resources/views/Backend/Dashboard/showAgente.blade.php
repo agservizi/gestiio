@@ -184,10 +184,10 @@
         <div class="row g-5 g-xl-10">
             <div class="col-xl-4 mb-5">
                 <div class="card card-flush h-100">
-                    <div class="card-header">
+                    <div class="card-header border-0 pt-5 pb-2">
                         <h3 class="card-title">Operatività ticket</h3>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body pt-0 px-4 pb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted">Aperti assegnati a me</span>
                             <span class="font-size-h4 font-weight-bolder">{{ number_format($kpiAgente['miei_ticket_aperti']) }}</span>
@@ -208,10 +208,10 @@
             </div>
             <div class="col-xl-8 mb-5">
                 <div class="card card-flush h-100">
-                    <div class="card-header">
+                    <div class="card-header border-0 pt-5 pb-2">
                         <h3 class="card-title">Priorità personali</h3>
                     </div>
-                    <div class="card-body pt-4">
+                    <div class="card-body pt-0">
                         @if($ticketDaGestire->isEmpty())
                             <div class="text-muted">Nessun ticket aperto assegnato al tuo utente.</div>
                         @else
