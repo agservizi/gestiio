@@ -2,7 +2,7 @@
 @section('toolbar')
     <div class="d-flex align-items-center py-1">
         @include('Backend._components.ricercaIndex')
-        @if(Auth::user()->hasAnyPermission(['admin','agente','operatore']))
+        @if(Auth::user()->hasAnyPermission(['admin','agente','operatore','supervisore']))
             <!--begin::Filtri-->
             <div class="me-4">
                 <!--begin::Menu-->

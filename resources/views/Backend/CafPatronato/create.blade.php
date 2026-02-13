@@ -1,6 +1,8 @@
 @extends('Backend._components.modal')
 @section('content')
-    @php($selected=old('tipo_servizio'))
+    @php
+        $selected = old('tipo_servizio');
+    @endphp
     @if(false)
         <div class="w-100 text-center pt-4">
             <div class="fw-bolder fs-4">in collaborazione con:</div>

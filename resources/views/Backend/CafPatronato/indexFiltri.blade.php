@@ -5,10 +5,14 @@
             <div data-bs-toggle="tooltip" data-bs-placement="top"
                  data-bs-original-title="Impostando solo il mese verrà considerano l'anno in corso">
                 <div class="d-flex justify-content-between w-100">
-                    @php($selected=request()->input('giorno'))
+                    @php
+                        $selected = request()->input('giorno');
+                    @endphp
                     <input type="text" class="form-control form-control-sm form-control-solid w-60px me-2" placeholder="Giorno" name="giorno"
                            value="{{is_numeric($selected)?$selected:''}}">
-                    @php($selected=request()->input('mese'))
+                    @php
+                        $selected = request()->input('mese');
+                    @endphp
                     <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" data-placeholder="Mese" data-allow-clear="true" name="mese"
                             data-minimum-results-for-search="Infinity">
                         <option></option>
@@ -16,7 +20,9 @@
                             <option value="{{$m}}" {{$selected==$m?'selected':''}}>{{\App\mese($m)}}</option>
                         @endfor
                     </select>
-                    @php($selected=request()->input('anno'))
+                    @php
+                        $selected = request()->input('anno');
+                    @endphp
                     <select class="form-select form-select-solid form-select-sm ms-2" data-kt-select2="true" data-placeholder="Anno" data-allow-clear="true" name="anno"
                             data-minimum-results-for-search="Infinity">
                         <option></option>
@@ -30,7 +36,9 @@
 
         <div class="mb-3">
             <label class="form-label fw-bold">Esiti</label>
-            @php($selectedEsiti = (array)request()->input('esiti', []))
+            @php
+                $selectedEsiti = (array)request()->input('esiti', []);
+            @endphp
             <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" name="esiti[]" multiple>
                 @foreach(\App\Models\EsitoCafPatronato::orderBy('nome')->get(['id','nome']) as $esito)
                     <option value="{{$esito->id}}" {{in_array($esito->id, $selectedEsiti) ? 'selected' : ''}}>{{$esito->nome}}</option>
@@ -40,7 +48,9 @@
 
         <div class="mb-3">
             <label class="form-label fw-bold">Tipo pratica</label>
-            @php($selectedTipo = request()->input('tipo_caf_patronato_id'))
+            @php
+                $selectedTipo = request()->input('tipo_caf_patronato_id');
+            @endphp
             <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" data-placeholder="Tutti" data-allow-clear="true" name="tipo_caf_patronato_id">
                 <option></option>
                 @foreach(\App\Models\TipoCafPatronato::orderBy('nome')->get(['id','nome']) as $tipo)
@@ -51,9 +61,11 @@
 
         <div class="mb-3">
             <label class="form-label fw-bold">Agente</label>
-            @php($selectedAgente = request()->input('agente_id'))
-            @php($agentiIds = \App\Models\CafPatronato::query()->whereNotNull('agente_id')->distinct()->pluck('agente_id'))
-            @php($agenti = \App\Models\User::query()->whereIn('id', $agentiIds)->orderBy('nome')->orderBy('cognome')->get(['id','nome','cognome']))
+            @php
+                $selectedAgente = request()->input('agente_id');
+                $agentiIds = \App\Models\CafPatronato::query()->whereNotNull('agente_id')->distinct()->pluck('agente_id');
+                $agenti = \App\Models\User::query()->whereIn('id', $agentiIds)->orderBy('nome')->orderBy('cognome')->get(['id', 'nome', 'cognome']);
+            @endphp
             <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" data-placeholder="Tutti" data-allow-clear="true" name="agente_id">
                 <option></option>
                 @foreach($agenti as $agente)

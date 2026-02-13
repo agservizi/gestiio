@@ -27,20 +27,20 @@
                     <a href="{{action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class,'edit'],$record->id)}}"
                        class="menu-link px-3">Modifica</a>
                 </div>
-                @if(false)
+                @if($puoCreare || $record->prodotto || Auth::user()->hasAnyPermission(['admin','supervisore']))
                     @if($puoCreare)
                         <div class="menu-item px-3">
-                            <a href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'create'],['duplica'=>$record->id])}}"
+                                     <a href="{{action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class,'create'],['duplica'=>$record->id])}}"
                                class="menu-link px-3">Duplica</a>
                         </div>
                     @endif
                     @if($record->prodotto)
                         <div class="menu-item px-3">
-                            <a href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'pda'],$record->id)}}"
+                                     <a href="{{action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class,'pda'],$record->id)}}"
                                class="menu-link px-3">PDA</a>
                         </div>
                     @endif
-                    @if( Auth::id()==2 && $record->agente_id!=2)
+                    @if(Auth::user()->hasAnyPermission(['admin','supervisore']))
                         <div class="menu-item px-3">
                             <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['contratto_id'=>$record->id])}}"
                                data-targetZ="kt_modal" data-toggleZ="modal-ajax"
@@ -54,21 +54,25 @@
 @endsection
 
 @section('content')
-    @php($vecchio=$record->id)
+    @php
+        $vecchio = $record->id;
+    @endphp
     <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
             <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
                 @csrf
                 @method($record->id?'PATCH':'POST')
-                @php($uid=old('uid',$record->uid))
+                @php
+                    $uid = old('uid', $record->uid);
+                @endphp
                 <input type="hidden" name="uid" id="uid" value="{{$uid}}">
                 <div class="mb-5">
                     <h4 class="fw-bold mb-1">Dati pratica</h4>
                     <div class="text-muted fs-7">Informazioni generali e assegnazione</div>
                 </div>
                 <div class="row">
-                    @if(Auth::user()->hasAnyPermission(['admin','operatore']))
+                    @if(Auth::user()->hasAnyPermission(['admin','operatore','supervisore']))
                         <div class="col-md-6">
                             @include('Backend._inputs.inputTextReadonly',['campo'=>'agente_id','testo'=>'Agente','valore'=>$record->agente->nominativo()])
                         </div>

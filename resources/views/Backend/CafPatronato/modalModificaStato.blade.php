@@ -7,7 +7,9 @@
                 <span class="required">Stato</span>
             </label>
             <div class="row">
-                @php($selected=$record->esito_id)
+                @php
+                    $selected = $record->esito_id;
+                @endphp
                 @foreach($stati as $stato)
                     <div class="col-6">
                         <label class="d-flex flex-stack mb-1 cursor-pointer rounded-2" style="padding: 10px; background-color: {{$stato->colore_hex}}; color: white;">

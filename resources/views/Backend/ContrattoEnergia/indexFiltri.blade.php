@@ -5,7 +5,9 @@
             <div data-bs-toggle="tooltip" data-bs-placement="top"
                  title="Impostando solo il mese verrà considerano l'anno in corso">
                 <div class="d-flex justify-content-between w-100">
-                    @php($selected=request()->input('mese'))
+                    @php
+                        $selected = request()->input('mese');
+                    @endphp
                     <select class="form-select form-select-solid form-select-sm" data-kt-select2="true" data-placeholder="Mese" data-allow-clear="true" name="mese"
                             data-minimum-results-for-search="Infinity">
                         <option></option>
@@ -13,7 +15,9 @@
                             <option value="{{$m}}" {{$selected==$m?'selected':''}}>{{\App\mese($m)}}</option>
                         @endfor
                     </select>
-                    @php($selected=request()->input('anno'))
+                    @php
+                        $selected = request()->input('anno');
+                    @endphp
                     <select class="form-select form-select-solid form-select-sm ms-2" data-kt-select2="true" data-placeholder="Anno" data-allow-clear="true" name="anno"
                             data-minimum-results-for-search="Infinity">
                         <option></option>
@@ -28,7 +32,9 @@
             <label class="form-label fw-bold">Esiti:</label>
             <div class="row">
                 <div class="col-12">
-                    @php($selected=request()->input('esiti',[]))
+                    @php
+                        $selected = request()->input('esiti', []);
+                    @endphp
                     @foreach(\App\Models\EsitoContrattoEnergia::get() as $esito)
                         <div class="form-check form-check-custom form-check-solid form-check-sm mb-4 me-2" style="display: inline-block;">
                             <input class="form-check-input" type="checkbox" value="{{$esito->id}}" name="esiti[]"
@@ -44,7 +50,9 @@
         <div class="mb-3">
             <label class="form-label fw-bold">Agente:</label>
             <div>
-                @php($selected=request()->input('agente_id'))
+                @php
+                    $selected = request()->input('agente_id');
+                @endphp
                 <select class="form-select form-select-solid form-select-sm" data-dropdown-parent="#filtri-drop"
                         name="agente_id" id="agente"
                 >

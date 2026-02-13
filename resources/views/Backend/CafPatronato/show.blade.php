@@ -75,7 +75,9 @@
             <h3 class="card-title">Allegati</h3>
         </div>
         <div class="card-body pt-0">
-            @php($allegati = $record->allegati)
+            @php
+                $allegati = $record->allegati;
+            @endphp
             @if($allegati->isEmpty())
                 <div class="text-muted">Nessun allegato presente.</div>
             @else

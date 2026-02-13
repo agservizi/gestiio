@@ -24,10 +24,10 @@
             <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-200px py-4"
                  data-kt-menu="true">
                 <div class="menu-item px-3">
-                    <a href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'create'],['duplica'=>$record->id])}}"
+                          <a href="{{action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class,'create'],['duplica'=>$record->id])}}"
                        class="menu-link px-3">Duplica</a>
                 </div>
-                @if( Auth::id()==2 && $record->agente_id!=2)
+                @if(Auth::user()->hasAnyPermission(['admin','supervisore']))
                     <div class="menu-item px-3">
                         <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['contratto_id'=>$record->id])}}"
                            data-targetZ="kt_modal" data-toggleZ="modal-ajax"
@@ -40,14 +40,18 @@
 @endsection
 
 @section('content')
-    @php($vecchio=$record->id)
+    @php
+        $vecchio = $record->id;
+    @endphp
     <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
             <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
                 @csrf
                 @method($record->id?'PATCH':'POST')
-                @php($uid=old('uid',$record->uid))
+                @php
+                    $uid = old('uid', $record->uid);
+                @endphp
                 <input type="hidden" name="uid" id="uid" value="{{$uid}}">
                 <input type="hidden" id="gestore_id" name="gestore_id"
                        value="{{old('gestore_id',$record->gestore_id)}}">
@@ -65,7 +69,7 @@
                     </div>
 
                 </div>
-                @if(Auth::user()->hasAnyPermission(['admin','operatore']))
+                @if(Auth::user()->hasAnyPermission(['admin','operatore','supervisore']))
                     <div class="row">
                         <div class="col-md-6">
                             @include('Backend._inputs.inputSelect2',['campo'=>'agente_id','testo'=>'Agente','required'=>true,'selected'=>\App\Models\User::selected(old('agente_id',$record->agente_id))])

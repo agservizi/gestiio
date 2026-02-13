@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
+use App\Models\CafPatronato;
+use App\Models\ContrattoEnergia;
 use App\Models\ClienteAssistenza;
 use App\Models\ContrattoTelefonia;
 use App\Models\ProduzioneOperatore;
@@ -29,17 +31,96 @@ class DashboardController extends Controller
         if ($user->hasPermissionTo('admin')) {
             return $this->showAdmin($request);
         } else if ($user->hasPermissionTo('supervisore')) {
-            if ($user->hasPermissionTo('servizio_contratti_telefonia')) {
-                return response()->redirectTo(action([ContrattoTelefoniaController::class, 'index']));
-            }
-            if ($user->hasPermissionTo('servizio_caf_patronato')) {
-                return response()->redirectTo(action([CafPatronatoController::class, 'index']));
-            }
-
+            return $this->showSupervisore($request);
         } else {
             return $this->showAgente();
         }
 
+    }
+
+    protected function showSupervisore(Request $request)
+    {
+        $this->elencoMesi();
+        $mese = $request->input('mese', now()->format('Y_m'));
+        [$filtroAnno, $filtroMese] = explode('_', $mese);
+
+        $contratti = ContrattoTelefonia::query()
+            ->with('agente')
+            ->with('tipoContratto.gestore')
+            ->with('esito')
+            ->limit(10)
+            ->orderByDesc('data')
+            ->get();
+
+        $servizi = CafPatronato::query()
+            ->with('esito')
+            ->with('agente')
+            ->with('tipo:id,nome')
+            ->withCount('allegati')
+            ->withCount('allegatiPerCliente')
+            ->limit(10)
+            ->orderByDesc('data')
+            ->get();
+
+        $ticketRecenti = Ticket::query()
+            ->with('utente')
+            ->with('causaleTicket')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->where('stato', '<>', 'chiuso')
+            ->get();
+
+        $conteggioTikets = Ticket::groupBy('stato')
+            ->select('stato', DB::raw('count(*) as conteggio'))
+            ->get()
+            ->keyBy('stato');
+
+        $kpiSupervisore = [
+            'contratti_telefonia_mese' => ContrattoTelefonia::query()
+                ->whereYear('data', $filtroAnno)
+                ->whereMonth('data', $filtroMese)
+                ->count(),
+            'contratti_energia_mese' => ContrattoEnergia::query()
+                ->whereYear('data', $filtroAnno)
+                ->whereMonth('data', $filtroMese)
+                ->count(),
+            'pratiche_caf_mese' => CafPatronato::query()
+                ->whereYear('data', $filtroAnno)
+                ->whereMonth('data', $filtroMese)
+                ->count(),
+            'ticket_aperti' => Ticket::query()->where('stato', '<>', 'chiuso')->count(),
+            'pratiche_ferme' => CafPatronato::query()
+                ->whereIn('esito_id', ['bozza', 'da-gestire'])
+                ->whereDate('created_at', '<=', now()->subDays(7))
+                ->count(),
+        ];
+
+        $alertSupervisore = [
+            'caf_bloccate' => CafPatronato::query()
+                ->whereNotNull('motivo_ko')
+                ->where('motivo_ko', '!=', '')
+                ->count(),
+            'ticket_aperti_oltre_48h' => Ticket::query()
+                ->where('stato', '<>', 'chiuso')
+                ->whereDate('created_at', '<=', now()->subDays(2))
+                ->count(),
+        ];
+
+        return view('Backend.Dashboard.showSupervisore', [
+            'titoloPagina' => 'Ciao ' . Auth::user()->nome,
+            'mainMenu' => 'dashboard',
+            'contratti' => $contratti,
+            'servizi' => $servizi,
+            'ticketRecenti' => $ticketRecenti,
+            'conteggioTikets' => $conteggioTikets,
+            'kpiSupervisore' => $kpiSupervisore,
+            'alertSupervisore' => $alertSupervisore,
+            'datiTortaEsiti' => $this->datiTortaEsiti(),
+            'elencoMesi' => $this->elencoMesi(),
+            'mese' => $mese,
+            'filtroAnno' => $filtroAnno,
+            'filtroMese' => $filtroMese,
+        ]);
     }
 
     /**

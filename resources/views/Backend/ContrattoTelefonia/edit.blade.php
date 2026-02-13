@@ -34,7 +34,7 @@
                            class="menu-link px-3">Richiedi visura</a>
                     </div>
                 @endif
-                @if( (Auth::id()==2 && $record->agente_id!=2) || Auth::id()==1)
+                @if(Auth::user()->hasAnyPermission(['admin','supervisore']))
                     <div class="menu-item px-3">
                         <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_id'=>$record->id,'servizio_type'=>'contratto-telefonia'])}}"
                            data-targetZ="kt_modal" data-toggleZ="modal-ajax"
@@ -68,7 +68,7 @@
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextReadonly',['campo'=>'tipo_contratto_id','testo'=>'Tipo contratto','valore'=>\App\Models\TipoContratto::find($record->tipo_contratto_id)?->nome])
                     </div>
-                    @if(Auth::user()->hasAnyPermission(['admin','operatore']))
+                    @if(Auth::user()->hasAnyPermission(['admin','operatore','supervisore']))
                         <div class="col-md-6">
                             @include('Backend._inputs.inputTextDataMask',['campo'=>'data','testo'=>'Data','required'=>true])
                         </div>

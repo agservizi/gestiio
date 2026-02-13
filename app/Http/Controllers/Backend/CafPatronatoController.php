@@ -126,7 +126,7 @@ class CafPatronatoController extends Controller
             ];
         }
 
-        if ($this->currentUser()->hasAnyPermission(['admin', 'agente', 'operatore'])) {
+        if ($this->currentUser()->hasAnyPermission(['admin', 'agente', 'operatore', 'supervisore'])) {
             $testoNuovo = 'Nuova ' . \App\Models\CafPatronato::NOME_SINGOLARE;
         } else {
             $testoNuovo = null;

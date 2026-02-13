@@ -3,19 +3,23 @@
 @endsection
 
 @section('content')
-    @php($vecchio=$record->id)
+    @php
+        $vecchio = $record->id;
+    @endphp
     <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
             <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
                 @csrf
                 @method($record->id?'PATCH':'POST')
-                @php($uid=old('uid',$record->uid))
+                @php
+                    $uid = old('uid', $record->uid);
+                @endphp
                 <input type="hidden" name="uid" id="uid" value="{{$uid}}">
 
                 <input type="hidden" name="tipo_servizio" value="{{old('tipo_servizio',$tipoCafPatronato->id)}}">
 
-                @if(Auth::user()->hasAnyPermission(['admin','operatore']))
+                @if(Auth::user()->hasAnyPermission(['admin','operatore','supervisore']))
                     <div class="separator separator-dashed my-6"></div>
                     <div class="mb-5">
                         <h4 class="fw-bold mb-1">Assegnazione pratica</h4>

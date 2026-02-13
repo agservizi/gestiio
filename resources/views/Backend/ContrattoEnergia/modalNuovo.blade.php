@@ -1,6 +1,8 @@
 @extends('Backend._components.modal')
 @section('content')
-    @php($selected=old('tipo_servizio'))
+    @php
+        $selected = old('tipo_servizio');
+    @endphp
     <div class="table-responsive">
         <table class="table">
             <thead>

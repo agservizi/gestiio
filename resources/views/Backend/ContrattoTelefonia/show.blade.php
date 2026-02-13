@@ -46,7 +46,7 @@
                            class="menu-link px-3">Richiedi visura</a>
                     </div>
                 @endif
-                @if( Auth::id()==2 && $record->agente_id!=2)
+                @if(Auth::user()->hasAnyPermission(['admin','supervisore']))
                     <div class="menu-item px-3">
                         <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['contratto_id'=>$record->id])}}"
                            data-targetZ="kt_modal" data-toggleZ="modal-ajax"
@@ -71,7 +71,7 @@
                 <div class="text-muted fs-7">Informazioni generali e assegnazione</div>
             </div>
             <div class="row">
-                @if(Auth::user()->hasAnyPermission(['admin','operatore']))
+                @if(Auth::user()->hasAnyPermission(['admin','operatore','supervisore']))
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextReadonly',['campo'=>'agente_id','testo'=>'Agente','required'=>true,'valore'=>$record->agente->nominativo()])
                     </div>
