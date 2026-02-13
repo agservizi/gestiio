@@ -14,24 +14,28 @@
                         @csrf
                         @method($record->id?'PATCH':'POST')
                         @php($clienteInline=$clienteInline??new \App\Models\ClienteAssistenza())
-                        @php($showClienteInline = old('cliente_codice_fiscale') || old('cliente_nome') || old('cliente_cognome') || old('cliente_email') || old('cliente_telefono'))
+                        @php($showClienteInline = !$vecchio && (old('cliente_codice_fiscale') || old('cliente_nome') || old('cliente_cognome') || old('cliente_email') || old('cliente_telefono')))
                         <div class="row" id="cliente-esistente-section">
                             <div class="col-md-6">
                                 @include('Backend._inputs.inputSelect2',['campo'=>'cliente_id','testo'=>'Cliente (se già presente)','selected'=>\App\Models\ClienteAssistenza::selected(old('cliente_id',$record->cliente_id))])
                                 <div class="form-text" id="cliente-esistente-hint" style="display:none">Modalità nuovo cliente attiva: questo campo è disabilitato.</div>
                             </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="form-check form-check-custom form-check-solid mt-4">
-                                    <input class="form-check-input" type="checkbox" id="cliente_non_presente" @if($showClienteInline) checked @endif>
-                                    <label class="form-check-label ms-2" for="cliente_non_presente">Cliente non presente: crea nuovo cliente</label>
+                            @if(!$vecchio)
+                                <div class="col-md-6 d-flex align-items-center">
+                                    <div class="form-check form-check-custom form-check-solid mt-4">
+                                        <input class="form-check-input" type="checkbox" id="cliente_non_presente" @if($showClienteInline) checked @endif>
+                                        <label class="form-check-label ms-2" for="cliente_non_presente">Cliente non presente: crea nuovo cliente</label>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                        @if(!$vecchio)
+                            <div class="row" id="cliente-inline-hint" @if(!$showClienteInline) style="display:none" @endif>
+                                <div class="col-md-12">
+                                    <div class="form-text mb-3">Compila almeno Codice Fiscale, Nome e Cognome.</div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="row" id="cliente-inline-hint" @if(!$showClienteInline) style="display:none" @endif>
-                            <div class="col-md-12">
-                                <div class="form-text mb-3">Compila almeno Codice Fiscale, Nome e Cognome.</div>
-                            </div>
-                        </div>
+                        @endif
 
                         <div id="cliente-inline-section" @if(!$showClienteInline) style="display:none" @endif>
                             <div class="row">
@@ -155,7 +159,8 @@
             eliminaHandler('Questa voce verrà eliminata definitivamente');
 
             function syncClienteInlineSection() {
-                const useInline = $('#cliente_non_presente').is(':checked');
+                const canUseInline = $('#cliente_non_presente').length > 0;
+                const useInline = canUseInline && $('#cliente_non_presente').is(':checked');
 
                 $('#cliente-inline-section').toggle(useInline);
                 $('#cliente-inline-hint').toggle(useInline);
