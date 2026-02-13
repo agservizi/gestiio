@@ -78,8 +78,7 @@
       "php artisan migrate --no-interaction --force",
       "php artisan route:cache",
       "php artisan config:clear",
-      "php artisan permission:cache-reset --no-interaction",
-      "php artisan storage:link --no-interaction --force"
+      "php artisan permission:cache-reset --no-interaction"
     ]
   },
   "extra": {
