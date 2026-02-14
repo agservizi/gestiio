@@ -51,7 +51,7 @@
                             <div class="card-body">
                                 <div class="mb-3"><strong>Target:</strong> <span id="previewDestinatario">-</span></div>
                                 <h4 id="previewTitolo" class="mb-4">(titolo)</h4>
-                                <div id="previewTesto" class="text-gray-800">(testo)</div>
+                                <iframe id="previewFrame" style="width:100%; min-height:260px; border:1px solid #e4e6ef; border-radius:6px; background:#fff;"></iframe>
                             </div>
                         </div>
                     </div>
@@ -93,6 +93,35 @@
                 tutti: 'Tutti gli utenti'
             };
 
+            const decodeIfEscaped = (value) => {
+                if (!value) {
+                    return '';
+                }
+
+                if (value.includes('&lt;') || value.includes('&gt;') || value.includes('&amp;')) {
+                    return $('<textarea/>').html(value).text();
+                }
+
+                return value;
+            };
+
+            const sanitizePreview = (value) => {
+                return value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+            };
+
+            const renderPreviewFrame = (rawHtml) => {
+                const html = sanitizePreview(decodeIfEscaped(rawHtml || '(testo)'));
+                const frame = document.getElementById('previewFrame');
+
+                if (!frame) {
+                    return;
+                }
+
+                frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8">'
+                    + '<style>body{font-family:Arial,Helvetica,sans-serif;padding:12px;margin:0;font-size:14px;line-height:1.45;color:#2f3044;}table{max-width:100%;}img{max-width:100%;height:auto;}</style>'
+                    + '</head><body>' + html + '</body></html>';
+            };
+
             const createEditor = () => {
                 return ClassicEditor
                     .create(document.querySelector('#testo'))
@@ -130,7 +159,7 @@
 
                 $('#previewDestinatario').text(etichetteDestinatario[destinatario] || destinatario);
                 $('#previewTitolo').text(titolo);
-                $('#previewTesto').html(testo || '(testo)');
+                renderPreviewFrame(testo);
             };
 
             createEditor();
