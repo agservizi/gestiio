@@ -21,6 +21,34 @@ use function App\mese;
 
 class DashboardController extends Controller
 {
+    protected function salutoDashboard(): string
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        $nome = trim((string)($user?->nome ?? ''));
+        $genere = strtolower((string)($user?->genere ?? $user?->sesso ?? ''));
+
+        $ora = now()->hour;
+
+        if ($ora < 12) {
+            $saluto = 'Buongiorno';
+        } elseif ($ora < 18) {
+            $saluto = 'Buon pomeriggio';
+        } else {
+            $saluto = 'Buonasera';
+        }
+
+        $rientro = match ($genere) {
+            'f', 'femmina', 'female' => 'bentornata',
+            'm', 'maschio', 'male' => 'bentornato',
+            default => 'che piacere rivederti',
+        };
+
+        return $nome !== ''
+            ? $saluto . ' ' . $nome . ', ' . $rientro . ' nella tua dashboard'
+            : $saluto . ', ' . $rientro . ' nella tua dashboard';
+    }
+
     protected function produzioneDisponibile(): bool
     {
         return Schema::hasTable('produzioni_operatori');
@@ -148,7 +176,7 @@ class DashboardController extends Controller
         ];
 
         return view('Backend.Dashboard.showSupervisore', [
-            'titoloPagina' => 'Ciao ' . Auth::user()->nome,
+            'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
             'contratti' => $contratti,
             'servizi' => $servizi,
@@ -262,7 +290,7 @@ class DashboardController extends Controller
 
 
         return view('Backend.Dashboard.showAdmin', [
-            'titoloPagina' => 'Ciao '.Auth::user()->nome,
+            'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
             'contratti' => $contratti,
             'servizi' => $servizi,
@@ -328,7 +356,7 @@ class DashboardController extends Controller
             : null;
 
         return view('Backend.Dashboard.showAgente', [
-            'titoloPagina' => 'Ciao '.Auth::user()->nome,
+            'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
             'record' => Auth::user(),
             'produzioneMese' => $produzioneMese,
