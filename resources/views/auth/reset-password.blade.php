@@ -1,4 +1,4 @@
-@extends('auth._main')
+@extends('auth._main-split')
 @section('content')
 
     <form class="form w-100 fv-plugins-bootstrap5 fv-plugins-framework" method="POST" action="{{ route('password.update') }}">
