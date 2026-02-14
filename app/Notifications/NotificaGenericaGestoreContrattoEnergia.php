@@ -217,7 +217,19 @@ class NotificaGenericaGestoreContrattoEnergia extends Notification
         $email->salutation(new HtmlString('Saluti,<br>' . ($this->contratto->agente?->nominativo() ?? config('mail.from.name'))));
 
         foreach ($this->contratto->allegati as $allegato) {
-            $email->attach(Storage::path($allegato->path_filename));
+            if ($allegato->path_filename && Storage::exists($allegato->path_filename)) {
+                $email->attach(Storage::path($allegato->path_filename));
+                continue;
+            }
+
+            if ($allegato->file_contenuto_base64) {
+                $contenuto = base64_decode($allegato->file_contenuto_base64, true);
+                if ($contenuto !== false) {
+                    $email->attachData($contenuto, $allegato->filename_originale ?: 'allegato', [
+                        'mime' => $allegato->mime_type ?: 'application/octet-stream',
+                    ]);
+                }
+            }
         }
 
         return $this->applyPersonalizedSender($email, $this->contratto->agente);

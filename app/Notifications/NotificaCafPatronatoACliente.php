@@ -62,8 +62,22 @@ class NotificaCafPatronatoACliente extends Notification
         }
 
         foreach (AllegatoCafPatronato::where('caf_patronato_id', $this->cafPatronato->id)->where('per_cliente', 1)->get() as $file) {
-            $estensione = pathinfo($file->path_filename, PATHINFO_EXTENSION);
-            $email->attach(Storage::path($file->path_filename), ['as' => ucfirst(Str::slug($this->cafPatronato->tipo->nome)) . '.' . $estensione]);
+            $estensione = pathinfo($file->filename_originale ?: $file->path_filename, PATHINFO_EXTENSION);
+            $nomeAllegato = ucfirst(Str::slug($this->cafPatronato->tipo->nome)) . ($estensione ? '.' . $estensione : '');
+
+            if ($file->path_filename && Storage::exists($file->path_filename)) {
+                $email->attach(Storage::path($file->path_filename), ['as' => $nomeAllegato]);
+                continue;
+            }
+
+            if ($file->file_contenuto_base64) {
+                $contenuto = base64_decode($file->file_contenuto_base64, true);
+                if ($contenuto !== false) {
+                    $email->attachData($contenuto, $nomeAllegato ?: 'allegato', [
+                        'mime' => $file->mime_type ?: 'application/octet-stream',
+                    ]);
+                }
+            }
         }
 
         return $email;

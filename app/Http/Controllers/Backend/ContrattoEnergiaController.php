@@ -447,6 +447,17 @@ class ContrattoEnergiaController extends Controller
         $record = AllegatoContrattoEnergia::find($allegatoId);
         abort_if(!$record, 404, 'Questo allegato non esiste');
         abort_if($record->contratto_energia_id != $ContrattoEnergiaId, 404, 'Questo allegato non esiste');
+
+        if ($record->file_contenuto_base64) {
+            $contenuto = base64_decode($record->file_contenuto_base64, true);
+            if ($contenuto !== false) {
+                return response($contenuto, 200, [
+                    'Content-Type' => $record->mime_type ?: 'application/octet-stream',
+                    'Content-Disposition' => 'attachment; filename="' . addslashes($record->filename_originale) . '"',
+                ]);
+            }
+        }
+
         return response()->download(Storage::path($record->path_filename), $record->filename_originale);
     }
 
@@ -462,6 +473,9 @@ class ContrattoEnergiaController extends Controller
             $request->file('file')->storeAs($cartella, $fileName);
             $file->path_filename = $cartella . '/' . $fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
+            $file->mime_type = $filePath->getMimeType();
+            $contenuto = file_get_contents($filePath->getRealPath());
+            $file->file_contenuto_base64 = $contenuto !== false ? base64_encode($contenuto) : null;
             $file->uid = $request->input('uid');
             $file->dimensione_file = $filePath->getSize();
             if ($request->input('contratto_energia_id') > 0) {

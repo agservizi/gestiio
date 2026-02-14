@@ -69,7 +69,19 @@ class NotificaCafPatronato extends Notification
 
         if ($this->cafPatronato->allegati) {
             foreach ($this->cafPatronato->allegati as $allegato) {
-                $email->attach(Storage::path($allegato->path_filename));
+                if ($allegato->path_filename && Storage::exists($allegato->path_filename)) {
+                    $email->attach(Storage::path($allegato->path_filename));
+                    continue;
+                }
+
+                if ($allegato->file_contenuto_base64) {
+                    $contenuto = base64_decode($allegato->file_contenuto_base64, true);
+                    if ($contenuto !== false) {
+                        $email->attachData($contenuto, $allegato->filename_originale ?: 'allegato', [
+                            'mime' => $allegato->mime_type ?: 'application/octet-stream',
+                        ]);
+                    }
+                }
             }
         }
 

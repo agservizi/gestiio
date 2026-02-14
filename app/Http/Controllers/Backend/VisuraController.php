@@ -14,11 +14,13 @@ use App\Models\MovimentoPortafoglio;
 use App\Models\Notifica;
 use App\Models\TabMotivoKo;
 use App\Models\TipoVisura;
+use App\Models\User;
 use App\Notifications\NotificaVisuraCambioEsitoAdAgente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Visura;
-use DB;
 use Illuminate\Support\Str;
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
@@ -28,11 +30,19 @@ class VisuraController extends Controller
 {
     protected $conFiltro = false;
 
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
+
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function index(Request $request)
     {
@@ -50,7 +60,7 @@ class VisuraController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $this->currentUser()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -62,7 +72,7 @@ class VisuraController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -79,7 +89,7 @@ class VisuraController extends Controller
                 'html' => base64_encode(view('Backend.Visura.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -133,7 +143,7 @@ class VisuraController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function create($servizio = null)
     {
@@ -149,7 +159,7 @@ class VisuraController extends Controller
         $record->data = today();
         $record->uid = Str::ulid();
 
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         }
 
@@ -168,7 +178,7 @@ class VisuraController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function store(Request $request)
     {
@@ -211,7 +221,7 @@ class VisuraController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function show($id)
     {
@@ -230,7 +240,7 @@ class VisuraController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function edit($id)
     {
@@ -259,7 +269,7 @@ class VisuraController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function update(Request $request, $id)
     {
@@ -278,7 +288,7 @@ class VisuraController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function destroy($id)
     {
@@ -307,6 +317,9 @@ class VisuraController extends Controller
             $request->file('file')->storeAs($cartella, $fileName);
             $file->path_filename = $cartella . '/' . $fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
+            $file->mime_type = $filePath->getMimeType();
+            $contenuto = file_get_contents($filePath->getRealPath());
+            $file->file_contenuto_base64 = $contenuto !== false ? base64_encode($contenuto) : null;
             $file->uid = $request->input('uid');
             $file->dimensione_file = $filePath->getSize();
             $file->visura_id = $request->input('visura_id');
@@ -324,9 +337,9 @@ class VisuraController extends Controller
     {
         $record = AllegatoVisura::find($request->input('id'));
         abort_if(!$record, 404, 'File non trovato');
-        \Log::debug(__FUNCTION__, $record->toArray());
+        Log::debug(__FUNCTION__, $record->toArray());
 
-        \Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente' . $record->path_filename);
         $record->delete();
         return $record->path_filename;
     }
@@ -366,6 +379,7 @@ class VisuraController extends Controller
             $esito = EsitoVisura::find($visura->esito_id);
             if ($esito->notifica_mail) {
                 dispatch(function () use ($visura) {
+                    /** @var User $agente */
                     $agente = $visura->agente;
                     if ($agente->hasPermissionTo('agente')) {
                         $agente->notify(new NotificaVisuraCambioEsitoAdAgente($visura));
@@ -374,7 +388,7 @@ class VisuraController extends Controller
                 })->afterResponse();
 
             }
-            if (Auth::user()->hasPermissionTo('supervisore')) {
+            if ($this->currentUser()->hasPermissionTo('supervisore')) {
                 Notifica::notificaAdAdmin('Cambio esito pratica', 'Esito per la pratica ' . $visura->nominativo() . ' modificato a ' . $esito->nome);
             }
 
@@ -394,7 +408,7 @@ class VisuraController extends Controller
                 'puoModificare' => $this->puoModificare(),
                 'puoModificareEsito' => $this->puoModificareEsito(),
 
-            ]))
+            ])->render())
         ];
     }
 
@@ -515,12 +529,12 @@ class VisuraController extends Controller
 
     protected function puoModificareEsito()
     {
-        return Auth::user()->hasAnyPermission(['admin', 'supervisore']);
+        return $this->currentUser()->hasAnyPermission(['admin', 'supervisore']);
     }
 
     protected function puoModificare()
     {
-        return !Auth::user()->hasPermissionTo('supervisore');
+        return !$this->currentUser()->hasPermissionTo('supervisore');
     }
 
 
