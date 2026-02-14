@@ -136,7 +136,7 @@ class RichiestaAssistenzaController extends Controller
         $request->validate($this->rules(null));
         $record = new RichiestaAssistenza();
         $this->salvaDati($record, $request);
-        return $this->backToIndex();
+        return $this->backToIndex('Richiesta assistenza creata correttamente');
     }
 
     public function show($id): View
@@ -178,7 +178,7 @@ class RichiestaAssistenzaController extends Controller
         abort_if(!$record, 404, 'Questa ' . RichiestaAssistenza::NOME_SINGOLARE . ' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
-        return $this->backToIndex();
+        return $this->backToIndex('Richiesta assistenza aggiornata correttamente');
     }
 
     public function destroy($id): JsonResponse
@@ -343,9 +343,15 @@ class RichiestaAssistenzaController extends Controller
         return (int)$cliente->id;
     }
 
-    protected function backToIndex(): RedirectResponse
+    protected function backToIndex(?string $status = null): RedirectResponse
     {
-        return redirect()->action([get_class($this), 'index']);
+        $redirect = redirect()->action([get_class($this), 'index']);
+
+        if ($status !== null && $status !== '') {
+            $redirect->with('status', $status);
+        }
+
+        return $redirect;
     }
 
     /** Query per index
