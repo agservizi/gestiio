@@ -9,8 +9,9 @@ use App\Notifications\NotificaAgenteCambioEsitoContratto;
 use App\Notifications\NotificaMessaggioPerAgenti;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use App\Models\Notifica;
-use DB;
 
 class NotificaController extends Controller
 {
@@ -20,7 +21,7 @@ class NotificaController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function index(Request $request)
     {
@@ -38,7 +39,9 @@ class NotificaController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        $orderByUser = $authUser?->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -49,8 +52,8 @@ class NotificaController extends Controller
             $orderBy = 'recente';
         }
 
-        if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+        if ($authUser instanceof User && $orderByUser != $orderByString) {
+            $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -64,7 +67,7 @@ class NotificaController extends Controller
                 'html' => base64_encode(view('Backend.Notifica.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -104,7 +107,7 @@ class NotificaController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function create()
     {
@@ -122,30 +125,29 @@ class NotificaController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
         $record = new Notifica();
         $this->salvaDati($record, $request);
-        dispatch(function () use ($record) {
-            $agenti = User::whereHas('permissions', function ($q) {
-                $q->where('name', 'agente');
-            })->get();
-            foreach ($agenti as $agente) {
-                \Mail::to($agente)->send(new NotificaMail($record));
+        $emails = $this->resolveRecipientEmails($request);
+
+        dispatch(function () use ($record, $emails) {
+            foreach ($emails as $email) {
+                Mail::to($email)->send(new NotificaMail($record));
             }
         })->afterResponse();
 
-        return $this->backToIndex();
+        return $this->backToIndex('Notifica inviata a ' . count($emails) . ' destinatari');
     }
 
     /**
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function show($id)
     {
@@ -164,7 +166,7 @@ class NotificaController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function edit($id)
     {
@@ -190,7 +192,7 @@ class NotificaController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function update(Request $request, $id)
     {
@@ -205,7 +207,7 @@ class NotificaController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function destroy($id)
     {
@@ -247,14 +249,53 @@ class NotificaController extends Controller
             }
             $model->$campo = $valore;
         }
-        $model->destinatario = 'agente';
+        $model->destinatario = $request->input('destinatario', 'agente');
         $model->save();
         return $model;
     }
 
-    protected function backToIndex()
+    protected function backToIndex(?string $status = null)
     {
-        return redirect()->action([get_class($this), 'index']);
+        $redirect = redirect()->action([get_class($this), 'index']);
+        if ($status !== null && $status !== '') {
+            $redirect->with('status', $status);
+        }
+
+        return $redirect;
+    }
+
+    protected function resolveRecipientEmails(Request $request): array
+    {
+        $destinatario = (string)$request->input('destinatario', 'agente');
+
+        $users = User::query()
+            ->whereNotNull('email')
+            ->where('email', '!=', '');
+
+        if (in_array($destinatario, ['agente', 'operatore', 'admin'], true)) {
+            $users->whereHas('permissions', function ($query) use ($destinatario) {
+                $query->where('name', $destinatario);
+            });
+        }
+
+        $emails = $users->pluck('email')
+            ->map(fn($email) => strtolower(trim((string)$email)))
+            ->filter(fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL) !== false)
+            ->values()
+            ->all();
+
+        $extraRaw = (string)$request->input('emails_aggiuntive', '');
+        if ($extraRaw !== '') {
+            $extra = preg_split('/[;,\s]+/', $extraRaw) ?: [];
+            foreach ($extra as $email) {
+                $email = strtolower(trim((string)$email));
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
+                    $emails[] = $email;
+                }
+            }
+        }
+
+        return array_values(array_unique($emails));
     }
 
     /** Query per index
@@ -273,6 +314,8 @@ class NotificaController extends Controller
         $rules = [
             'titolo' => ['required', 'max:255'],
             'testo' => ['required'],
+            'destinatario' => ['required', 'in:agente,operatore,admin,tutti'],
+            'emails_aggiuntive' => ['nullable', 'string'],
         ];
 
         return $rules;
