@@ -456,7 +456,7 @@
                                 </div>
                                 <!--end::Value-->
                                 <!--begin::Label-->
-                                <span class="text-gray-600 fw-semibold fs-5 lh-0">Gestori tra tlc, paytv ed <br> energia</span>
+                                <span class="text-gray-600 fw-semibold fs-5 lh-0">Gestori tra tlc, paytv ed <br> energia con le reali funzioni della piattaforma</span>
                                 <!--end::Label-->
                             </div>
                             <!--end::Info-->
