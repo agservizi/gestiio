@@ -133,6 +133,7 @@
 <script src="/assets_backend/js-miei/mieiScript.js?v=10"></script>
 <script src="/assets_backend/js-miei/html2canvas.min.js"></script>
 <!--end::Global Javascript Bundle-->
+@include('Backend._components.flashToast')
 @stack('customScript')
 
 <script>
