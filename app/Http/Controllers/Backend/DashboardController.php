@@ -32,10 +32,13 @@ class DashboardController extends Controller
 
         if ($ora < 12) {
             $saluto = 'Buongiorno';
+            $icona = '☀️';
         } elseif ($ora < 18) {
             $saluto = 'Buon pomeriggio';
+            $icona = '🌤️';
         } else {
             $saluto = 'Buonasera';
+            $icona = '🌙';
         }
 
         $rientro = match ($genere) {
@@ -45,8 +48,8 @@ class DashboardController extends Controller
         };
 
         return $nome !== ''
-            ? $saluto . ' ' . $nome . ', ' . $rientro . ' nella tua dashboard'
-            : $saluto . ', ' . $rientro . ' nella tua dashboard';
+            ? $icona . ' ' . $saluto . ' ' . $nome . ', ' . $rientro . ' nella tua dashboard'
+            : $icona . ' ' . $saluto . ', ' . $rientro . ' nella tua dashboard';
     }
 
     protected function produzioneDisponibile(): bool
