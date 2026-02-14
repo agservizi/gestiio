@@ -7,7 +7,7 @@
     <title>gestiio</title>
     <meta charset="utf-8"/>
     <meta name="description" content="La tua web-based platform per le attivazioni."/>
-    <meta name="keywords" content="tim, contratti, internet, tv, sky, fastweb, eolo, linkem, very, tiscali"/>
+    <meta name="keywords" content="contratti, internet, tv, sky, fastweb, very"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <meta property="og:locale" content="it_IT"/>
     <meta property="og:type" content="article"/>
@@ -77,7 +77,7 @@
                             <!--end::Mobile menu toggle-->
                             <!--begin::Logo image-->
                             <a href="/">
-                                <img alt="Logo" src="/loghi/logo.png" class="logo-default h-25px h-lg-30px"/>
+                                <img alt="Logo" src="/loghi/pianetafibra.png" class="logo-default h-25px h-lg-30px"/>
                             </a>
                             <!--end::Logo image-->
                         </div>
@@ -177,33 +177,8 @@
                     </div>
                     <!--end::Client-->
                     <!--begin::Client-->
-                    <div class="d-flex flex-center m-3 m-md-6" data-bs-toggle="tooltip" title="Tim">
-                        <img src="/images/tim.png" class="mh-30px mh-lg-40px" alt=""/>
-                    </div>
-                    <!--end::Client-->
-                    <!--begin::Client-->
                     <div class="d-flex flex-center m-3 m-md-6" data-bs-toggle="tooltip" title="Sky">
                         <img src="/images/logo_sky_spectrum.png" class="mh-30px mh-lg-40px" alt=""/>
-                    </div>
-                    <!--end::Client-->
-                    <!--begin::Client-->
-                    <div class="d-flex flex-center m-3 m-md-6" data-bs-toggle="tooltip" title="Eolo">
-                        <img src="/images/eoloLogo.png" class="mh-30px mh-lg-40px" alt=""/>
-                    </div>
-                    <!--end::Client-->
-                    <!--begin::Client-->
-                    <div class="d-flex flex-center m-3 m-md-6" data-bs-toggle="tooltip" title="Kena Mobile">
-                        <img src="/images/logo-kena-mobile-1x.png" class="mh-30px mh-lg-40px" alt=""/>
-                    </div>
-                    <!--end::Client-->
-                    <!--begin::Client-->
-                    <div class="d-flex flex-center m-3 m-md-6" data-bs-toggle="tooltip" title="Linkem">
-                        <img src="/images/logo-linkem-positive.png" class="mh-30px mh-lg-40px" alt=""/>
-                    </div>
-                    <!--end::Client-->
-                    <!--begin::Client-->
-                    <div class="d-flex flex-center m-3 m-md-6" data-bs-toggle="tooltip" title="Tiscali">
-                        <img src="/images/tiscali.png" class="mh-30px mh-lg-40px" alt=""/>
                     </div>
                     <!--end::Client-->
                 </div>
@@ -1775,7 +1750,7 @@
                     <div class="d-flex align-items-center order-2 order-md-1">
                         <!--begin::Logo-->
                         <a href="https://www.gestiio.it">
-                            <img alt="Logo" src="/loghi/logo.png" class="h-15px h-md-20px"/>
+                            <img alt="Logo" src="/loghi/pianetafibra.png" class="h-15px h-md-20px"/>
                         </a>
                         <!--end::Logo image-->
                         <!--begin::Logo image-->
