@@ -9,6 +9,13 @@ class ClienteAssistenza extends Model
 {
     use HasFactory;
     protected $table="clienti_assistenza";
+    protected $fillable = [
+        'nome',
+        'cognome',
+        'codice_fiscale',
+        'email',
+        'telefono',
+    ];
 
     public const NOME_SINGOLARE = "cliente assistenza";
     public const NOME_PLURALE = "clienti assistenza";
