@@ -353,117 +353,85 @@
             <!--begin::Container-->
             <div class="container">
                 <!--begin::Heading-->
-                <div class="text-center mt-15 mb-18" id="presentazione" data-kt-scroll-offset="{default: 100, lg: 150}">
-                    <!--begin::Title-->
+                <div class="text-center mt-15 mb-12" id="presentazione" data-kt-scroll-offset="{default: 100, lg: 150}">
+                    <span class="badge badge-circle badge-outline badge-light px-6 py-4 mb-6 fs-7 fw-bold">PIATTAFORMA GESTIONALE</span>
                     <h3 class="fs-2hx text-white fw-bold mb-5">Ti presentiamo Gestiio</h3>
-                    <!--end::Title-->
-                    <!--begin::Description-->
-                    <div class="fs-5 text-gray-700 fw-bold">Una piattaforma nata dalla nostra esperienza<br>del campo della TLC,
-                        Pay TV, Luce e Gas
-                    </div>
-                    <!--end::Description-->
+                    <div class="fs-4 text-gray-500 fw-semibold mb-3">La cabina di regia per il tuo business multi-servizio</div>
+                    <div class="fs-5 text-gray-700 fw-bold">Una piattaforma nata dalla nostra esperienza nel campo della TLC, Pay TV, Luce e Gas.</div>
                 </div>
                 <!--end::Heading-->
                 <!--begin::Statistics-->
-                <div class="d-flex flex-center">
-                    <!--begin::Items-->
-                    <div class="d-flex flex-wrap flex-center justify-content-lg-between mb-15 mx-auto w-xl-900px">
-                        <!--begin::Item-->
-                        <div class="d-flex flex-column flex-center h-200px w-200px h-lg-250px w-lg-250px m-3 bgi-no-repeat bgi-position-center bgi-size-contain"
-                             style="background-image: url('assets_backend/media/svg/misc/octagon.svg')">
-                            <!--begin::Symbol-->
-                            <!--begin::Svg Icon | path: icons/duotune/general/gen025.svg-->
-                            <span class="svg-icon svg-icon-2tx svg-icon-white mb-3">
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor"/>
-											<rect opacity="0.3" x="13" y="2" width="9" height="9" rx="2" fill="currentColor"/>
-											<rect opacity="0.3" x="13" y="13" width="9" height="9" rx="2" fill="currentColor"/>
-											<rect opacity="0.3" x="2" y="13" width="9" height="9" rx="2" fill="currentColor"/>
-										</svg>
-									</span>
-                            <!--end::Svg Icon-->
-                            <!--end::Symbol-->
-                            <!--begin::Info-->
-                            <div class="mb-0">
-                                <!--begin::Value-->
-                                <div class="fs-lg-2hx fs-2x fw-bold text-white d-flex flex-center">
-                                    <div class="min-w-70px" data-kt-countup="true" data-kt-countup-value="1" data-kt-countup-suffix="">0</div>
-                                </div>
-                                <!--end::Value-->
-                                <!--begin::Label-->
-                                <span class="text-gray-600 fw-semibold fs-5 lh-0">Una dashboard</span>
-                                <!--end::Label-->
+                <div class="row g-7 justify-content-center mb-15">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="h-100 d-flex flex-column justify-content-between bg-body bg-opacity-10 rounded-4 p-8 border border-gray-700">
+                            <div class="symbol symbol-55px mb-6">
+                                <span class="symbol-label bg-light-primary">
+                                    <span class="svg-icon svg-icon-2x svg-icon-primary">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor"/>
+                                            <rect opacity="0.3" x="13" y="2" width="9" height="9" rx="2" fill="currentColor"/>
+                                            <rect opacity="0.3" x="13" y="13" width="9" height="9" rx="2" fill="currentColor"/>
+                                            <rect opacity="0.3" x="2" y="13" width="9" height="9" rx="2" fill="currentColor"/>
+                                        </svg>
+                                    </span>
+                                </span>
                             </div>
-                            <!--end::Info-->
+                            <div class="fs-1 fw-bold text-white mb-2 d-flex align-items-center">
+                                <span data-kt-countup="true" data-kt-countup-value="1">0</span>
+                            </div>
+                            <div class="text-white fw-bold fs-4 mb-2">Una dashboard</div>
+                            <div class="text-gray-500 fw-semibold fs-6">Un unico pannello per monitorare attività, vendite e performance operative.</div>
                         </div>
-                        <!--end::Item-->
-                        <!--begin::Item-->
-                        <div class="d-flex flex-column flex-center h-200px w-200px h-lg-250px w-lg-250px m-3 bgi-no-repeat bgi-position-center bgi-size-contain"
-                             style="background-image: url('assets_backend/media/svg/misc/octagon.svg')">
-                            <!--begin::Symbol-->
-                            <!--begin::Svg Icon | path: icons/duotune/graphs/gra008.svg-->
-                            <span class="svg-icon svg-icon-2tx svg-icon-white mb-3">
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<path d="M13 10.9128V3.01281C13 2.41281 13.5 1.91281 14.1 2.01281C16.1 2.21281 17.9 3.11284 19.3 4.61284C20.7 6.01284 21.6 7.91285 21.9 9.81285C22 10.4129 21.5 10.9128 20.9 10.9128H13Z"
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="h-100 d-flex flex-column justify-content-between bg-body bg-opacity-10 rounded-4 p-8 border border-gray-700">
+                            <div class="symbol symbol-55px mb-6">
+                                <span class="symbol-label bg-light-success">
+                                    <span class="svg-icon svg-icon-2x svg-icon-success">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M13 10.9128V3.01281C13 2.41281 13.5 1.91281 14.1 2.01281C16.1 2.21281 17.9 3.11284 19.3 4.61284C20.7 6.01284 21.6 7.91285 21.9 9.81285C22 10.4129 21.5 10.9128 20.9 10.9128H13Z"
                                                   fill="currentColor"/>
-											<path opacity="0.3"
+                                            <path opacity="0.3"
                                                   d="M13 12.9128V20.8129C13 21.4129 13.5 21.9129 14.1 21.8129C16.1 21.6129 17.9 20.7128 19.3 19.2128C20.7 17.8128 21.6 15.9128 21.9 14.0128C22 13.4128 21.5 12.9128 20.9 12.9128H13Z"
                                                   fill="currentColor"/>
-											<path opacity="0.3"
+                                            <path opacity="0.3"
                                                   d="M11 19.8129C11 20.4129 10.5 20.9129 9.89999 20.8129C5.49999 20.2129 2 16.5128 2 11.9128C2 7.31283 5.39999 3.51281 9.89999 3.01281C10.5 2.91281 11 3.41281 11 4.01281V19.8129Z"
                                                   fill="currentColor"/>
-										</svg>
-									</span>
-                            <!--end::Svg Icon-->
-                            <!--end::Symbol-->
-                            <!--begin::Info-->
-                            <div class="mb-0">
-                                <!--begin::Value-->
-                                <div class="fs-lg-2hx fs-2x fw-bold text-white d-flex flex-center">
-                                    <div class="min-w-70px" data-kt-countup="true" data-kt-countup-value="1" data-kt-countup-suffix="">0</div>
-                                </div>
-                                <!--end::Value-->
-                                <!--begin::Label-->
-                                <span class="text-gray-600 fw-semibold fs-5 lh-0">Set di statistiche</span>
-                                <!--end::Label-->
+                                        </svg>
+                                    </span>
+                                </span>
                             </div>
-                            <!--end::Info-->
+                            <div class="fs-1 fw-bold text-white mb-2 d-flex align-items-center">
+                                <span data-kt-countup="true" data-kt-countup-value="1">0</span>
+                            </div>
+                            <div class="text-white fw-bold fs-4 mb-2">Set di statistiche</div>
+                            <div class="text-gray-500 fw-semibold fs-6">Indicatori chiari e report immediati per decisioni rapide e precise.</div>
                         </div>
-                        <!--end::Item-->
-                        <!--begin::Item-->
-                        <div class="d-flex flex-column flex-center h-200px w-200px h-lg-250px w-lg-250px m-3 bgi-no-repeat bgi-position-center bgi-size-contain"
-                             style="background-image: url('assets_backend/media/svg/misc/octagon.svg')">
-                            <!--begin::Symbol-->
-                            <!--begin::Svg Icon | path: icons/duotune/ecommerce/ecm002.svg-->
-                            <span class="svg-icon svg-icon-2tx svg-icon-white mb-3">
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<path d="M21 10H13V11C13 11.6 12.6 12 12 12C11.4 12 11 11.6 11 11V10H3C2.4 10 2 10.4 2 11V13H22V11C22 10.4 21.6 10 21 10Z"
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="h-100 d-flex flex-column justify-content-between bg-body bg-opacity-10 rounded-4 p-8 border border-gray-700">
+                            <div class="symbol symbol-55px mb-6">
+                                <span class="symbol-label bg-light-info">
+                                    <span class="svg-icon svg-icon-2x svg-icon-info">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21 10H13V11C13 11.6 12.6 12 12 12C11.4 12 11 11.6 11 11V10H3C2.4 10 2 10.4 2 11V13H22V11C22 10.4 21.6 10 21 10Z"
                                                   fill="currentColor"/>
-											<path opacity="0.3" d="M12 12C11.4 12 11 11.6 11 11V3C11 2.4 11.4 2 12 2C12.6 2 13 2.4 13 3V11C13 11.6 12.6 12 12 12Z"
+                                            <path opacity="0.3" d="M12 12C11.4 12 11 11.6 11 11V3C11 2.4 11.4 2 12 2C12.6 2 13 2.4 13 3V11C13 11.6 12.6 12 12 12Z"
                                                   fill="currentColor"/>
-											<path opacity="0.3"
+                                            <path opacity="0.3"
                                                   d="M18.1 21H5.9C5.4 21 4.9 20.6 4.8 20.1L3 13H21L19.2 20.1C19.1 20.6 18.6 21 18.1 21ZM13 18V15C13 14.4 12.6 14 12 14C11.4 14 11 14.4 11 15V18C11 18.6 11.4 19 12 19C12.6 19 13 18.6 13 18ZM17 18V15C17 14.4 16.6 14 16 14C15.4 14 15 14.4 15 15V18C15 18.6 15.4 19 16 19C16.6 19 17 18.6 17 18ZM9 18V15C9 14.4 8.6 14 8 14C7.4 14 7 14.4 7 15V18C7 18.6 7.4 19 8 19C8.6 19 9 18.6 9 18Z"
                                                   fill="currentColor"/>
-										</svg>
-									</span>
-                            <!--end::Svg Icon-->
-                            <!--end::Symbol-->
-                            <!--begin::Info-->
-                            <div class="mb-0">
-                                <!--begin::Value-->
-                                <div class="fs-lg-2hx fs-2x fw-bold text-white d-flex flex-center">
-                                    <div class="min-w-70px" data-kt-countup="true" data-kt-countup-value="8" data-kt-countup-suffix="">0</div>
-                                </div>
-                                <!--end::Value-->
-                                <!--begin::Label-->
-                                <span class="text-gray-600 fw-semibold fs-5 lh-0">Gestori tra tlc, paytv ed <br> energia con le reali funzioni della piattaforma</span>
-                                <!--end::Label-->
+                                        </svg>
+                                    </span>
+                                </span>
                             </div>
-                            <!--end::Info-->
+                            <div class="fs-1 fw-bold text-white mb-2 d-flex align-items-center">
+                                <span data-kt-countup="true" data-kt-countup-value="8">0</span>
+                            </div>
+                            <div class="text-white fw-bold fs-4 mb-2">Gestori TLC, Pay TV ed energia</div>
+                            <div class="text-gray-500 fw-semibold fs-6">Integrazioni reali e funzioni operative per gestire i servizi dalla stessa piattaforma.</div>
                         </div>
-                        <!--end::Item-->
                     </div>
-                    <!--end::Items-->
                 </div>
                 <!--end::Statistics-->
                 @if(false)
