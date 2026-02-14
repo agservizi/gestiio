@@ -86,7 +86,7 @@
                         @endif
                         <!--begin::Logo-->
                         <a href="/">
-                            <img alt="Logo" src="/loghi/logo_white.png" class="h-70px"/>
+                            <img alt="Logo" src="/loghi/logo.png" class="h-70px"/>
                         </a>
                         <!--end::Logo-->
                     </div>

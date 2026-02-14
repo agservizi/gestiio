@@ -77,7 +77,7 @@
                             <!--end::Mobile menu toggle-->
                             <!--begin::Logo image-->
                             <a href="/">
-                                <img alt="Logo" src="/loghi/pianetafibra.png" class="logo-default h-25px h-lg-30px"/>
+                                <img alt="Logo" src="/loghi/logo.png" class="logo-default h-25px h-lg-30px"/>
                             </a>
                             <!--end::Logo image-->
                         </div>
@@ -1750,7 +1750,7 @@
                     <div class="d-flex align-items-center order-2 order-md-1">
                         <!--begin::Logo-->
                         <a href="https://www.gestiio.it">
-                            <img alt="Logo" src="/loghi/pianetafibra.png" class="h-15px h-md-20px"/>
+                            <img alt="Logo" src="/loghi/logo.png" class="h-15px h-md-20px"/>
                         </a>
                         <!--end::Logo image-->
                         <!--begin::Logo image-->
