@@ -8,19 +8,17 @@ class StripeKey
 {
     public static function getPublicKey()
     {
-        if (env('APP_ENV') == 'local') {
-            return env('STRIPE_PUBLIC_KEY');
-        } else {
-            return config('configurazione.STRIPE_PUBLIC_KEY');
-        }
+        return env('STRIPE_KEY')
+            ?: env('STRIPE_PUBLIC_KEY')
+            ?: config('cashier.key')
+            ?: config('configurazione.STRIPE_PUBLIC_KEY');
     }
 
     public static function getSecretKey()
     {
-        if (env('APP_ENV') == 'local') {
-            return env('STRIPE_SECRET_KEY');
-        } else {
-            return config('configurazione.STRIPE_SECRET_KEY');
-        }
+        return env('STRIPE_SECRET')
+            ?: env('STRIPE_SECRET_KEY')
+            ?: config('cashier.secret')
+            ?: config('configurazione.STRIPE_SECRET_KEY');
     }
 }

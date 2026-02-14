@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\MovimentoPortafoglio;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class PortafoglioController extends Controller
 {
@@ -16,12 +17,14 @@ class PortafoglioController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
+        /** @var User $authUser */
+        $authUser = Auth::user();
 
         $ordinamenti = [
             'recente' => ['testo' => 'Più recente', 'filtro' => function ($q) {
@@ -34,7 +37,7 @@ class PortafoglioController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $authUser->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -46,7 +49,7 @@ class PortafoglioController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -60,7 +63,7 @@ class PortafoglioController extends Controller
                 'html' => base64_encode(view('Backend.Portafoglio.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -106,20 +109,23 @@ class PortafoglioController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function create()
     {
         $record = new MovimentoPortafoglio();
-        $intent = Auth::user()->createSetupIntent([
-            'payment_method_types' => ['card', 'bancontact']
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $intent = $authUser->createSetupIntent([
+            'payment_method_types' => ['card']
         ]);
         return view('Backend.Portafoglio.edit', [
             'record' => $record,
             'titoloPagina' => 'Carica ' . MovimentoPortafoglio::NOME_SINGOLARE,
             'controller' => get_class($this),
             'breadcrumbs' => [action([PortafoglioController::class, 'index']) => 'Torna a elenco movimenti'],
-            'intent' => $intent
+            'intent' => $intent,
+            'stripePublicKey' => config('cashier.key'),
 
         ]);
     }
@@ -128,7 +134,7 @@ class PortafoglioController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function store(Request $request)
     {
@@ -142,7 +148,7 @@ class PortafoglioController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function show($id)
     {
@@ -161,7 +167,7 @@ class PortafoglioController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function edit($id)
     {
@@ -187,7 +193,7 @@ class PortafoglioController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function update(Request $request, $id)
     {
@@ -202,7 +208,7 @@ class PortafoglioController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function destroy($id)
     {
