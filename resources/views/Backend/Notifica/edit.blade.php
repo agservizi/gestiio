@@ -30,6 +30,13 @@
                         @include('Backend._inputs.inputText',['campo'=>'titolo','testo'=>'Titolo','required'=>true,'col'=>2])
                     </div>
                     <div class="col-md-12 mb-12">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <label class="form-label mb-0">Contenuto notifica</label>
+                            <div class="form-check form-switch form-check-custom form-check-solid">
+                                <input class="form-check-input" type="checkbox" id="modalitaSorgente">
+                                <label class="form-check-label ms-2" for="modalitaSorgente">Modalità sorgente HTML</label>
+                            </div>
+                        </div>
                         @include('Backend._inputs.inputTextAreaCol',['campo'=>'testo','testo'=>'Testo','col'=>2])
                     </div>
                 </div>
@@ -78,11 +85,42 @@
             eliminaHandler('Questa voce verrà eliminata definitivamente');
 
             let editorInstance = null;
+            let sourceMode = false;
             const etichetteDestinatario = {
                 agente: 'Agenti',
                 operatore: 'Operatori',
                 admin: 'Admin',
                 tutti: 'Tutti gli utenti'
+            };
+
+            const createEditor = () => {
+                return ClassicEditor
+                    .create(document.querySelector('#testo'))
+                    .then(editor => {
+                        editorInstance = editor;
+                        editor.model.document.on('change:data', aggiornaAnteprima);
+                        aggiornaAnteprima();
+                    })
+                    .catch(error => {
+                        console.error(error);
+                    });
+            };
+
+            const setSourceMode = async (enabled) => {
+                sourceMode = enabled;
+
+                if (enabled) {
+                    if (editorInstance) {
+                        const html = editorInstance.getData();
+                        await editorInstance.destroy();
+                        editorInstance = null;
+                        $('#testo').val(html).show();
+                    }
+                } else {
+                    await createEditor();
+                }
+
+                aggiornaAnteprima();
             };
 
             const aggiornaAnteprima = () => {
@@ -95,19 +133,13 @@
                 $('#previewTesto').html(testo || '(testo)');
             };
 
-
-            ClassicEditor
-                .create( document.querySelector( '#testo' ) )
-                .then(editor => {
-                    editorInstance = editor;
-                    editor.model.document.on('change:data', aggiornaAnteprima);
-                    aggiornaAnteprima();
-                })
-                .catch( error => {
-                    console.error( error );
-                } );
+            createEditor();
 
             $('#destinatario, #titolo').on('change keyup', aggiornaAnteprima);
+            $('#testo').on('keyup change', aggiornaAnteprima);
+            $('#modalitaSorgente').on('change', function () {
+                setSourceMode(this.checked);
+            });
             aggiornaAnteprima();
 
 
