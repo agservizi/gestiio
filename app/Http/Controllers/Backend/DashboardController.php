@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use robertogallea\LaravelCodiceFiscale\CodiceFiscale;
 use function App\mese;
 
 class DashboardController extends Controller
@@ -27,6 +28,19 @@ class DashboardController extends Controller
         $user = Auth::user();
         $nome = trim((string)($user?->nome ?? ''));
         $genere = strtolower((string)($user?->genere ?? $user?->sesso ?? ''));
+
+        if ($genere === '') {
+            $codiceFiscale = strtoupper((string)($user?->codice_fiscale ?? ''));
+            if ($codiceFiscale !== '') {
+                try {
+                    $parserCodiceFiscale = new CodiceFiscale();
+                    if ($parserCodiceFiscale->parse($codiceFiscale) !== false) {
+                        $genere = strtolower((string)$parserCodiceFiscale->getGender());
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+        }
 
         $ora = now()->hour;
 
