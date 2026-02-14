@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Notifications\NotificaNuovoTicketAdAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Ticket;
 use DB;
 use Illuminate\Support\Str;
@@ -19,11 +21,19 @@ use Illuminate\Support\Str;
 class TicketController extends Controller
 {
 
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
+
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function create()
     {
@@ -58,7 +68,7 @@ class TicketController extends Controller
 
         dispatch(function () use ($record) {
 
-            Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $record->oggetto . '</span> da cliente <span class="fw-bold">' . Auth::user()->nominativo() . '</span>');
+            Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $record->oggetto . '</span> da cliente <span class="fw-bold">' . $this->currentUser()->nominativo() . '</span>');
 
             User::find(2)->notify(new NotificaNuovoTicketAdAdmin($record));
         })->afterResponse();
@@ -73,7 +83,7 @@ class TicketController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function show($id)
     {
@@ -100,7 +110,7 @@ class TicketController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function edit($id)
     {
@@ -237,6 +247,9 @@ class TicketController extends Controller
             $request->file('file')->storeAs($cartella, $fileName);
             $file->path_filename = $cartella . '/' . $fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
+            $file->mime_type = $filePath->getMimeType();
+            $contenuto = file_get_contents($filePath->getRealPath());
+            $file->file_contenuto_base64 = $contenuto !== false ? base64_encode($contenuto) : null;
             $file->uid = $request->input('uid');
             $file->dimensione_file = $filePath->getSize();
             $file->save();
@@ -255,7 +268,17 @@ class TicketController extends Controller
         abort_if(!$record, 404, 'Questo allegato non esiste');
         abort_if($record->messaggio_id != $messaggioId, 404, 'Questo allegato non esiste');
 
-        return response()->download(\Storage::path($record->path_filename), $record->filename_originale);
+        if ($record->file_contenuto_base64) {
+            $contenuto = base64_decode($record->file_contenuto_base64, true);
+            if ($contenuto !== false) {
+                return response($contenuto, 200, [
+                    'Content-Type' => $record->mime_type ?: 'application/octet-stream',
+                    'Content-Disposition' => 'attachment; filename="' . addslashes($record->filename_originale) . '"',
+                ]);
+            }
+        }
+
+        return response()->download(Storage::path($record->path_filename), $record->filename_originale);
 
     }
 
@@ -264,9 +287,9 @@ class TicketController extends Controller
     {
         $record = AllegatoMessaggioTicket::find($request->input('id'));
         abort_if(!$record, 404, 'File non trovato');
-        \Log::debug(__FUNCTION__, $record->toArray());
+        Log::debug(__FUNCTION__, $record->toArray());
 
-        \Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente' . $record->path_filename);
         $record->delete();
         return $record->path_filename;
     }

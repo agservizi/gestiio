@@ -26,6 +26,7 @@ class BackfillAllegatiDbContent extends Command
             'caf_patronato_allegati',
             'allegati_tutti_servizi',
             'visure_allegati',
+            'tickets_allegati',
         ];
 
         $selectedTables = collect((array)$this->option('table'))
