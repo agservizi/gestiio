@@ -12,8 +12,8 @@
         <!--begin::Input group=-->
         <div class="fv-row mb-8">
             <!--begin::Email-->
-            <input type="text" placeholder="Email" name="email" autocomplete="email" class="form-control bg-transparent @error('email') is-invalid @enderror"
-                   value="{{ old('email') }}" required/>
+                 <input type="text" placeholder="Email" name="email" autocomplete="email" class="form-control bg-transparent @error('email') is-invalid @enderror"
+                     value="{{ old('email', request('email')) }}" required/>
             <!--end::Email-->
             @error('email')
             <div class="fv-plugins-message-container invalid-feedback">{{ $message }}</div>
