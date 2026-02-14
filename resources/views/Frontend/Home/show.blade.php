@@ -22,6 +22,7 @@
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
     <link href="/assets_backend/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css"/>
     <link href="/assets_backend/css/style.bundle.css" rel="stylesheet" type="text/css"/>
+    <link href="/assets_backend/css-miei/responsive.css?v=1" rel="stylesheet" type="text/css"/>
     <!--end::Global Stylesheets Bundle-->
 </head>
 <!--end::Head-->

@@ -17,6 +17,7 @@
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
     <link href="/assets_backend/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css"/>
     <link href="/assets_backend/css/style10.bundle.css" rel="stylesheet" type="text/css"/>
+    <link href="/assets_backend/css-miei/responsive.css?v=1" rel="stylesheet" type="text/css"/>
     <!--end::Global Stylesheets Bundle-->
     @if(env('APP_ENV')=='production' && \Illuminate\Support\Facades\Auth::id()!=1 && config('configurazione.log_rocket'))
         <script src="https://cdn.lr-in.com/LogRocket.min.js" crossorigin="anonymous"></script>
@@ -86,7 +87,7 @@
                         @endif
                         <!--begin::Logo-->
                         <a href="/">
-                            <img alt="Logo" src="/loghi/logo.png" class="h-70px"/>
+                            <img alt="Logo" src="/loghi/logo.png" class="h-45px h-sm-55px h-md-70px"/>
                         </a>
                         <!--end::Logo-->
                     </div>
