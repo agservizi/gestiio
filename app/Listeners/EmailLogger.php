@@ -2,13 +2,12 @@
 
 namespace App\Listeners;
 
-use DB;
-use Illuminate\Auth\Events\Login;
-use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
-use Symfony\Component\Mime\Address;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\Mime\Header\MailboxListHeader;
+use Throwable;
 
 class EmailLogger
 {
@@ -22,56 +21,67 @@ class EmailLogger
         //
     }
 
-    /**
-     * Handle the event.
-     *
-     * @param Login $event
-     * @return void
-     */
     public function handle(MessageSent $event)
     {
-        //
-        $message = $event->message;
-
-
-        $allegati = [];
-        if ($message->getAttachments()) {
-            foreach ($message->getAttachments() as $att) {
-                $allegati[] = $att->getFilename();
+        try {
+            $message = $event->message;
+            if (!$message instanceof Email) {
+                return;
             }
+
+            $allegati = [];
+            $attachments = $message->getAttachments();
+            if (is_iterable($attachments)) {
+                foreach ($attachments as $att) {
+                    $filename = method_exists($att, 'getFilename') ? $att->getFilename() : null;
+                    if ($filename) {
+                        $allegati[] = $filename;
+                    }
+                }
+            }
+
+            $htmlBody = $message->getHtmlBody();
+            $textBody = $message->getTextBody();
+            $body = $htmlBody ?: $textBody ?: '';
+
+            DB::table('registro_email')->insert([
+                'data' => now()->format('Y-m-d H:i:s'),
+                'from' => Str::limit($this->formatAddressField($message->getFrom()), 250, ''),
+                'to' => Str::limit($this->formatAddressField($message->getTo()), 250, ''),
+                'cc' => Str::limit($this->formatAddressField($message->getCc()), 250, ''),
+                'bcc' => Str::limit($this->formatAddressField($message->getBcc()), 250, ''),
+                'subject' => Str::limit((string)($message->getSubject() ?? '(senza oggetto)'), 250, ''),
+                'body' => base64_encode(gzcompress((string)$body, 9)),
+                'attachments' => implode(', ', $allegati),
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('EmailLogger: impossibile salvare su registro_email', [
+                'errore' => $e->getMessage(),
+            ]);
+            return;
         }
-
-
-        DB::table('registro_email')->insert([
-            'data' => date('Y-m-d H:i:s'),
-            'from' => $this->formatAddressField($message->getFrom()),
-            'to' => $this->formatAddressField($message->getTo()),
-            'cc' => $this->formatAddressField($message->getCc()),
-            'bcc' => $this->formatAddressField($message->getBcc()),
-            'subject' => $message->getSubject(),
-            'body' => base64_encode(gzcompress($message->getHtmlBody(), 9)),
-            //'headers' => (string)$message->getHeaders(),
-            'attachments' => implode(', ', $allegati),
-        ]);
     }
 
     /**
-     * Format address strings for sender, to, cc, bcc.
-     *
-     * @param Address $message
-     * @param $field
-     * @return null|string
+     * @param iterable<\Symfony\Component\Mime\Address>|null $addresses
+     * @return string
      */
-    function formatAddressField($addresses)
+    protected function formatAddressField($addresses): string
     {
-
+        if (!is_iterable($addresses)) {
+            return '';
+        }
 
         $strings = [];
         foreach ($addresses as $address) {
-
-            $mailboxStr = $address->getAddress();
-            $strings[] = $mailboxStr;
+            if (method_exists($address, 'getAddress')) {
+                $mailboxStr = (string)$address->getAddress();
+                if ($mailboxStr !== '') {
+                    $strings[] = $mailboxStr;
+                }
+            }
         }
+
         return implode(', ', $strings);
     }
 

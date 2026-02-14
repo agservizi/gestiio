@@ -23,10 +23,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Agente;
-use DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
@@ -61,7 +63,7 @@ class AgenteController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function index(Request $request)
     {
@@ -79,7 +81,9 @@ class AgenteController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        $orderByUser = $authUser?->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -90,8 +94,8 @@ class AgenteController extends Controller
             $orderBy = 'recente';
         }
 
-        if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+        if ($authUser instanceof User && $orderByUser != $orderByString) {
+            $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -105,7 +109,7 @@ class AgenteController extends Controller
                 'html' => base64_encode(view('Backend.Agente.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -154,7 +158,7 @@ class AgenteController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function create()
     {
@@ -176,7 +180,7 @@ class AgenteController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function store(Request $request)
     {
@@ -201,7 +205,7 @@ class AgenteController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function show($id)
     {
@@ -226,7 +230,7 @@ class AgenteController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function edit($id)
     {
@@ -240,7 +244,9 @@ class AgenteController extends Controller
 
         }
 
-        if ($record->hasPermissionTo('admin') && !Auth::user()->hasPermissionTo('admin')) {
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        if ($record->can('admin') && !($authUser?->can('admin') ?? false)) {
             abort(403, 'Non hai il permesso per effettuare questa operazione');
         }
 
@@ -260,7 +266,7 @@ class AgenteController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function update(Request $request, $id)
     {
@@ -278,13 +284,15 @@ class AgenteController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function destroy($id)
     {
 
         $agente = Agente::firstWhere('user_id', $id);
-        if ($agente->visura_camerale) \Storage::delete($agente->visura_camerale);
+        if ($agente->visura_camerale) {
+            Storage::delete($agente->visura_camerale);
+        }
         $agente->delete();
 
         $record = User::find($id);
@@ -337,13 +345,10 @@ class AgenteController extends Controller
                 return $this->azioneImpersona($id);
 
             case 'invia-mail-password-reset':
-                return $this->azioneInviaMailPassowrdReset($id);
+                return $this->azioneInviaMailPasswordReset($id);
 
             case 'resetta-password':
-                $user = User::find($id);
-                $user->password = bcrypt('123456');
-                $user->save();
-                return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
+                return $this->azioneResettaPassword($id);
 
             case 'imposta_mandato':
                 $mandatoId = $request->input('mandato');
@@ -608,15 +613,93 @@ class AgenteController extends Controller
         return ['success' => true, 'redirect' => '/'];
     }
 
-    protected function azioneInviaMailPassowrdReset($id)
+    protected function azioneInviaMailPasswordReset($id)
     {
         $user = User::find($id);
-        dispatch(function () use ($user) {
-            $token = Password::broker('new_users')->createToken($user);
-            $user->notify(new PasswordResetNotification($token));
-        })->afterResponse();
-        return ['success' => true, 'title' => 'Email inviata', 'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo ' . $user->email];
 
+        if (!$user || !$user->email) {
+            Log::warning('AgenteController: invio reset password non eseguito, email non valida', [
+                'azione' => 'invia-mail-password-reset',
+                'agente_id' => $id,
+                'utente_trovato' => (bool)$user,
+            ]);
+            return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'agente non ha un indirizzo email valido.'];
+        }
+
+        try {
+            /** @var \Illuminate\Auth\Passwords\PasswordBroker $passwordBroker */
+            $passwordBroker = Password::broker('new_users');
+            $token = $passwordBroker->createToken($user);
+            $user->notify(new PasswordResetNotification($token));
+            $sentAt = now()->format('d/m/Y H:i:s');
+            Log::info('AgenteController: email reset password inviata', [
+                'azione' => 'invia-mail-password-reset',
+                'agente_id' => $user->id,
+                'email' => $user->email,
+                'sent_at' => $sentAt,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('AgenteController: errore invio email reset password', [
+                'azione' => 'invia-mail-password-reset',
+                'agente_id' => $user->id,
+                'email' => $user->email,
+                'errore' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'title' => 'Invio fallito', 'message' => 'Errore durante invio email: ' . $e->getMessage()];
+        }
+
+        return [
+            'success' => true,
+            'title' => 'Email inviata',
+            'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo ' . $user->email,
+            'sent_at' => $sentAt,
+        ];
+
+    }
+
+    protected function azioneResettaPassword($id)
+    {
+        $user = User::find($id);
+        if (!$user || !$user->email) {
+            Log::warning('AgenteController: reset password non eseguito, email non valida', [
+                'azione' => 'resetta-password',
+                'agente_id' => $id,
+                'utente_trovato' => (bool)$user,
+            ]);
+            return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'agente non ha un indirizzo email valido.'];
+        }
+
+        $nuovaPassword = '123456';
+        $user->password = bcrypt($nuovaPassword);
+        $user->save();
+
+        try {
+            $user->notify(new DatiAccessoNotification($nuovaPassword));
+            $sentAt = now()->format('d/m/Y H:i:s');
+            Log::info('AgenteController: password resettata e email inviata', [
+                'azione' => 'resetta-password',
+                'agente_id' => $user->id,
+                'email' => $user->email,
+                'sent_at' => $sentAt,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('AgenteController: errore invio email dopo reset password', [
+                'azione' => 'resetta-password',
+                'agente_id' => $user->id,
+                'email' => $user->email,
+                'errore' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: ' . $e->getMessage()];
+        }
+
+        return [
+            'success' => true,
+            'title' => 'Password impostata',
+            'message' => 'La password è stata impostata a 123456 e inviata via email a ' . $user->email,
+            'sent_at' => $sentAt,
+        ];
     }
 
 

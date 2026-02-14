@@ -132,15 +132,49 @@ class RegistriController extends Controller
         $filtro = false;
         $recordsQB = RegistroEmail::orderBy('id', 'desc');
         if ($request->input('giorno')) {
-            $recordsQB->whereDate('data', Carbon::createFromFormat('d/m/Y', $request->input('giorno')));
-            $filtro = true;
+            try {
+                $recordsQB->whereDate('data', Carbon::createFromFormat('d/m/Y', $request->input('giorno')));
+                $filtro = true;
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $modulo = (string)$request->input('modulo', '');
+        if ($modulo !== '') {
+            if ($modulo === 'telefonia') {
+                $recordsQB->where(function ($q) {
+                    $q->where('subject', 'like', '%contratto%')
+                        ->orWhere('subject', 'like', '%promemoria di scadenza offerta%')
+                        ->orWhere('subject', 'like', '%richiesta informazioni sullo stato di attivazione%');
+                })->where('subject', 'not like', '%energia%');
+                $filtro = true;
+            } elseif ($modulo === 'energia') {
+                $recordsQB->where('subject', 'like', '%energia%');
+                $filtro = true;
+            } elseif ($modulo === 'caf-patronato') {
+                $recordsQB->where(function ($q) {
+                    $q->where('subject', 'like', 'Richiesta % per %')
+                        ->orWhere('subject', 'like', 'Invio pratica %');
+                });
+                $filtro = true;
+            }
+        }
+
+        $records = $recordsQB->paginate(100);
+        if ($filtro) {
+            $records->appends($_GET);
         }
 
         return view('Backend.Registri.indexEmail')->with([
-            'records' => $recordsQB->paginate(100),
+            'records' => $records,
             'filtro' => $filtro,
             'controller' => RegistriController::class,
             'titoloPagina' => 'Registro email inviate',
+            'moduli' => [
+                'telefonia' => 'Contratti Telefonia',
+                'energia' => 'Contratti Energia',
+                'caf-patronato' => 'Caf / Patronato Agenti',
+            ],
 
         ]);
 

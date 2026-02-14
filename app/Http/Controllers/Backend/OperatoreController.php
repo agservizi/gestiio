@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Operatore;
 use App\Models\RegistroLogin;
 use App\Models\User;
-use App\Notifications\NuovoUtenteInfoNotification;
+use App\Notifications\DatiAccessoNotification;
 use App\Notifications\PasswordResetNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -30,7 +31,7 @@ class OperatoreController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function index(Request $request)
     {
@@ -50,7 +51,9 @@ class OperatoreController extends Controller
         ];
 
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        $orderByUser = $authUser?->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -61,8 +64,8 @@ class OperatoreController extends Controller
             $orderBy = 'recente';
         }
 
-        if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+        if ($authUser instanceof User && $orderByUser != $orderByString) {
+            $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -80,7 +83,7 @@ class OperatoreController extends Controller
                     'colonnaTeamleader' => $this->ruolo == 'operatore',
                     'colonnaOperatori' => $this->ruolo == 'teamleader'
 
-                ]))
+                ])->render())
             ];
 
 
@@ -137,7 +140,7 @@ class OperatoreController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function create()
     {
@@ -158,7 +161,7 @@ class OperatoreController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function store(Request $request)
     {
@@ -171,7 +174,7 @@ class OperatoreController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function show($id)
     {
@@ -209,7 +212,7 @@ class OperatoreController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function edit($id)
     {
@@ -218,7 +221,9 @@ class OperatoreController extends Controller
             abort(404, 'Questo operatore non esiste');
         }
 
-        if ($record->hasPermissionTo('admin') && !Auth::user()->hasPermissionTo('admin')) {
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        if ($record->can('admin') && !($authUser?->can('admin') ?? false)) {
             abort(403, 'Non hai il permesso per effettuare questa operazione');
         }
 
@@ -235,7 +240,7 @@ class OperatoreController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function update(Request $request, $id)
     {
@@ -282,13 +287,10 @@ class OperatoreController extends Controller
                 return $this->azioneImpersona($id);
 
             case 'invia-mail-password-reset':
-                return $this->azioneInviaMailPassowrdReset($id);
+                return $this->azioneInviaMailPasswordReset($id);
 
             case 'resetta-password':
-                $user = User::find($id);
-                $user->password = bcrypt('123456');
-                $user->save();
-                return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
+                return $this->azioneResettaPassword($id);
 
 
         }
@@ -335,8 +337,10 @@ class OperatoreController extends Controller
 
         if ($nuovo) {
             dispatch(function () use ($model) {
-                $token = Password::broker('new_users')->createToken($model);
-                $model->notify(new NuovoUtenteInfoNotification($token));
+                /** @var \Illuminate\Auth\Passwords\PasswordBroker $passwordBroker */
+                $passwordBroker = Password::broker('new_users');
+                $token = $passwordBroker->createToken($model);
+                $model->notify(new PasswordResetNotification($token));
 
             })->afterResponse();
 
@@ -402,18 +406,95 @@ class OperatoreController extends Controller
         return ['success' => true, 'redirect' => '/'];
     }
 
-    protected function azioneInviaMailPassowrdReset($id)
+    protected function azioneInviaMailPasswordReset($id)
     {
 
         $user = User::find($id);
 
-        dispatch(function () use ($user) {
-            $token = Password::broker('new_users')->createToken($user);
+        if (!$user || !$user->email) {
+            Log::warning('OperatoreController: invio reset password non eseguito, email non valida', [
+                'azione' => 'invia-mail-password-reset',
+                'operatore_id' => $id,
+                'utente_trovato' => (bool)$user,
+            ]);
+            return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'operatore non ha un indirizzo email valido.'];
+        }
+
+        try {
+            /** @var \Illuminate\Auth\Passwords\PasswordBroker $passwordBroker */
+            $passwordBroker = Password::broker('new_users');
+            $token = $passwordBroker->createToken($user);
             $user->notify(new PasswordResetNotification($token));
+            $sentAt = now()->format('d/m/Y H:i:s');
+            Log::info('OperatoreController: email reset password inviata', [
+                'azione' => 'invia-mail-password-reset',
+                'operatore_id' => $user->id,
+                'email' => $user->email,
+                'sent_at' => $sentAt,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('OperatoreController: errore invio email reset password', [
+                'azione' => 'invia-mail-password-reset',
+                'operatore_id' => $user->id,
+                'email' => $user->email,
+                'errore' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'title' => 'Invio fallito', 'message' => 'Errore durante invio email: ' . $e->getMessage()];
+        }
 
-        })->afterResponse();
-        return ['success' => true, 'title' => 'Email inviata', 'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo ' . $user->email];
+        return [
+            'success' => true,
+            'title' => 'Email inviata',
+            'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo ' . $user->email,
+            'sent_at' => $sentAt,
+        ];
 
+
+    }
+
+    protected function azioneResettaPassword($id)
+    {
+        $user = User::find($id);
+        if (!$user || !$user->email) {
+            Log::warning('OperatoreController: reset password non eseguito, email non valida', [
+                'azione' => 'resetta-password',
+                'operatore_id' => $id,
+                'utente_trovato' => (bool)$user,
+            ]);
+            return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'operatore non ha un indirizzo email valido.'];
+        }
+
+        $nuovaPassword = '123456';
+        $user->password = bcrypt($nuovaPassword);
+        $user->save();
+
+        try {
+            $user->notify(new DatiAccessoNotification($nuovaPassword));
+            $sentAt = now()->format('d/m/Y H:i:s');
+            Log::info('OperatoreController: password resettata e email inviata', [
+                'azione' => 'resetta-password',
+                'operatore_id' => $user->id,
+                'email' => $user->email,
+                'sent_at' => $sentAt,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('OperatoreController: errore invio email dopo reset password', [
+                'azione' => 'resetta-password',
+                'operatore_id' => $user->id,
+                'email' => $user->email,
+                'errore' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: ' . $e->getMessage()];
+        }
+
+        return [
+            'success' => true,
+            'title' => 'Password impostata',
+            'message' => 'La password è stata impostata a 123456 e inviata via email a ' . $user->email,
+            'sent_at' => $sentAt,
+        ];
 
     }
 
@@ -433,7 +514,7 @@ class OperatoreController extends Controller
         $record = User::find($id);
         return view('Backend.Operatore.show.tabOreMese', [
             'record' => $record,
-            'records' => \App\Models\OraLavorata::orderBy('data')->where('user_id', $record->id)->whereDate('data', '>=', $dataDa)->whereDate('data', '<=', $dataA)->get(),
+            'records' => collect(),
             'titoloPagina' => 'Ore lavorate ' . mese($dataDa->month) . ' ' . $dataDa->year
         ]);
     }
@@ -443,9 +524,11 @@ class OperatoreController extends Controller
 
         return Permission::get()->pluck('name')->toArray();
         $ruoli = $this->ruoli;
-        if (Auth::user()->hasPermissionTo('teamleader')) {
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        if ($authUser?->can('teamleader')) {
             $ruoli = [];
-        } elseif (Auth::user()->hasPermissionTo('supervisore')) {
+        } elseif ($authUser?->can('supervisore')) {
             unset($ruoli['admin']);
             unset($ruoli['supervisore']);
         }

@@ -3,6 +3,26 @@
 @section('content')
     <div class="card">
         <div class="card-body">
+            <form method="get" action="{{action([$controller,'index'],['cosa'=>'email'])}}" class="row g-3 mb-6">
+                <div class="col-md-3">
+                    <label class="form-label">Giorno</label>
+                    <input type="text" class="form-control" name="giorno" value="{{request('giorno')}}" placeholder="gg/mm/aaaa">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Modulo</label>
+                    <select name="modulo" class="form-select">
+                        <option value="">Tutti i moduli</option>
+                        @foreach(($moduli ?? []) as $key => $label)
+                            <option value="{{$key}}" @selected(request('modulo')===$key)>{{$label}}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-5 d-flex align-items-end gap-3">
+                    <button type="submit" class="btn btn-primary">Filtra</button>
+                    <a href="{{action([$controller,'index'],['cosa'=>'email'])}}" class="btn btn-light">Reset</a>
+                </div>
+            </form>
+
             <div class="table-responsive">
                 <table class="table table-row-bordered ">
                     <thead>
