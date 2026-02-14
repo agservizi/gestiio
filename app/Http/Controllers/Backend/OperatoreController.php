@@ -440,7 +440,7 @@ class OperatoreController extends Controller
                 'email' => $user->email,
                 'errore' => $e->getMessage(),
             ]);
-            return ['success' => false, 'title' => 'Invio fallito', 'message' => 'Errore durante invio email: ' . $e->getMessage()];
+            return ['success' => false, 'title' => 'Invio fallito', 'message' => $this->friendlyMailError($e)];
         }
 
         return [
@@ -486,7 +486,7 @@ class OperatoreController extends Controller
                 'email' => $user->email,
                 'errore' => $e->getMessage(),
             ]);
-            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: ' . $e->getMessage()];
+            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: ' . $this->friendlyMailError($e)];
         }
 
         return [
@@ -556,6 +556,18 @@ class OperatoreController extends Controller
                 return 'sospesi';
 
         }
+    }
+
+    protected function friendlyMailError(\Throwable $e): string
+    {
+        $message = (string)$e->getMessage();
+        $lower = strtolower($message);
+
+        if (str_contains($lower, 'you can only send testing emails') || str_contains($lower, 'verify a domain at resend.com/domains')) {
+            return 'Il provider Resend è in modalità test: puoi inviare solo verso l\'indirizzo autorizzato. Per inviare ad altri destinatari devi verificare un dominio su resend.com/domains e usare un mittente FROM su quel dominio.';
+        }
+
+        return 'Errore durante invio email: ' . $message;
     }
 
 
