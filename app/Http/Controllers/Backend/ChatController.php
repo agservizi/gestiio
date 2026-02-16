@@ -186,7 +186,7 @@ class ChatController extends Controller
                 })
                 ->orderBy('cognome')
                 ->orderBy('nome')
-                ->get(['id', 'nome', 'cognome', 'name']);
+                ->get(['id', 'nome', 'cognome']);
         }
 
         return User::query()
@@ -196,7 +196,7 @@ class ChatController extends Controller
             })
             ->orderBy('cognome')
             ->orderBy('nome')
-            ->get(['id', 'nome', 'cognome', 'name']);
+            ->get(['id', 'nome', 'cognome']);
     }
 
     protected function puoConversare(User $utenteA, User $utenteB): bool
@@ -238,7 +238,7 @@ class ChatController extends Controller
                 $join->on('mia_partecipazione.thread_id', '=', 'chat_threads.id')
                     ->where('mia_partecipazione.user_id', '=', $userId);
             })
-            ->with(['partecipanti:id,nome,cognome,name', 'ultimoMessaggio.mittente:id,nome,cognome,name'])
+            ->with(['partecipanti:id,nome,cognome', 'ultimoMessaggio.mittente:id,nome,cognome'])
             ->selectSub(function ($query) use ($userId) {
                 $query->from('chat_messages')
                     ->selectRaw('COUNT(*)')
@@ -269,7 +269,7 @@ class ChatController extends Controller
     {
         return ChatMessage::query()
             ->where('thread_id', $threadId)
-            ->with('mittente:id,nome,cognome,name')
+            ->with('mittente:id,nome,cognome')
             ->latest('id')
             ->limit(200)
             ->get()
