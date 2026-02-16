@@ -321,7 +321,7 @@
                                     <tbody>
                                     @forelse($logins as $login)
                                         <tr>
-                                            <td>{{dataOraUtente($login->created_at)}}</td>
+                                            <td>{{\Carbon\Carbon::parse($login->created_at)->format(config('app.user_date_format', 'd/m/Y') . ' H:i')}}</td>
                                             <td>
                                                 @if($login->riuscito)
                                                     <span class="badge badge-light-success">Riuscito</span>
