@@ -137,26 +137,6 @@ function intero($valore, $zeroSeNull = false)
     }
 }
 
-function dataUtente($value, bool $withTime = false)
-{
-    if (!$value) {
-        return null;
-    }
-
-    $date = $value instanceof Carbon ? $value : Carbon::parse($value);
-    $format = config('app.user_date_format', 'd/m/Y');
-    if ($withTime) {
-        $format .= ' H:i';
-    }
-
-    return $date->format($format);
-}
-
-function dataOraUtente($value)
-{
-    return dataUtente($value, true);
-}
-
 function applicaIva($valore, $aliquotaIva)
 {
     return $valore * (1 + $aliquotaIva / 100);
