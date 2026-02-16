@@ -1,5 +1,5 @@
 @php
-    $container = 'container-xxl';
+    $container = 'container-fluid';
 @endphp
 @extends('Backend._layout._main')
 
