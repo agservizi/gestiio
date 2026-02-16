@@ -307,7 +307,7 @@ class TicketsController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return never
+     * @return void
      */
     public function edit($id)
     {
@@ -374,7 +374,7 @@ class TicketsController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return never
+     * @return void
      */
     public function destroy($id)
     {

@@ -66,6 +66,56 @@
 
 @section('content')
     @include('Backend.Agente.show.topBar')
+    <div class="row g-5 mb-7">
+        <div class="col-md-2">
+            <div class="card card-flush h-100">
+                <div class="card-body">
+                    <div class="text-gray-400 fw-semibold fs-8">Ticket aperti</div>
+                    <div class="fs-2 fw-bold text-warning">{{$kpiAgente['ticket_aperti']}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card card-flush h-100">
+                <div class="card-body">
+                    <div class="text-gray-400 fw-semibold fs-8">Ticket chiusi</div>
+                    <div class="fs-2 fw-bold text-success">{{$kpiAgente['ticket_chiusi']}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card card-flush h-100">
+                <div class="card-body">
+                    <div class="text-gray-400 fw-semibold fs-8">Ticket totali</div>
+                    <div class="fs-2 fw-bold">{{$kpiAgente['ticket_totali']}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card card-flush h-100">
+                <div class="card-body">
+                    <div class="text-gray-400 fw-semibold fs-8">Login 30gg</div>
+                    <div class="fs-2 fw-bold text-primary">{{$kpiAgente['login_30gg']}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card card-flush h-100">
+                <div class="card-body">
+                    <div class="text-gray-400 fw-semibold fs-8">Portafoglio servizi</div>
+                    <div class="fs-4 fw-bold">{!! \App\importo($kpiAgente['portafoglio_servizi']) !!}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card card-flush h-100">
+                <div class="card-body">
+                    <div class="text-gray-400 fw-semibold fs-8">Portafoglio spedizioni</div>
+                    <div class="fs-4 fw-bold">{!! \App\importo($kpiAgente['portafoglio_spedizioni']) !!}</div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="d-flex flex-column flex-xl-row">
         <!--begin::Sidebar-->
         <div class="flex-column flex-lg-row-auto w-100 w-xl-400px mb-10">

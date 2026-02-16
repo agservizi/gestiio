@@ -9,6 +9,7 @@ use App\Models\MovimentoPortafoglio;
 use App\Models\ProduzioneOperatore;
 use App\Models\RegistroLogin;
 use App\Models\TipoContratto;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\DatiAccessoNotification;
 use App\Notifications\NuovoUtenteInfoNotification;
@@ -101,6 +102,13 @@ class AgenteController extends Controller
         //Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
+        $totali = [
+            'totale' => (clone $recordsQB)->count(),
+            'attivi' => (clone $recordsQB)->whereHas('permissions')->count(),
+            'sospesi' => (clone $recordsQB)->whereDoesntHave('permissions')->count(),
+            'con2fa' => (clone $recordsQB)->whereNotNull('two_factor_secret')->count(),
+        ];
+
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
         if ($request->ajax()) {
@@ -109,7 +117,10 @@ class AgenteController extends Controller
                 'html' => base64_encode(view('Backend.Agente.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
+                'kpi' => base64_encode(view('Backend.Agente._kpi', [
+                    'totali' => $totali,
+                ])->render()),
             ];
 
         }
@@ -124,7 +135,8 @@ class AgenteController extends Controller
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => 'Nuovo ' . \App\Models\Agente::NOME_SINGOLARE,
-            'testoCerca' => 'cerca in nominativo, email, telefono'
+            'testoCerca' => 'cerca in nominativo, email, telefono',
+            'totali' => $totali,
 
         ]);
 
@@ -141,16 +153,55 @@ class AgenteController extends Controller
         $queryBuilder = User::where('id', '>', 1)
             ->with('permissions')
             ->with('agente')
-            ->has('permissions');
+            ->whereHas('agente');
+
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
             foreach ($arrTerm as $t) {
                 $queryBuilder->where(DB::raw('concat_ws(\' \',alias,nome,cognome,email,telefono)'), 'like', "%$t%");
             }
+            $this->conFiltro = true;
         }
 
-        //$this->conFiltro = true;
+        $ruolo = $request->input('ruolo');
+        if ($ruolo) {
+            $queryBuilder->whereHas('permissions', function ($query) use ($ruolo) {
+                $query->where('name', $ruolo);
+            });
+            $this->conFiltro = true;
+        }
+
+        $statoUtenza = $request->input('stato_utenza');
+        if ($statoUtenza === 'attivo') {
+            $queryBuilder->whereHas('permissions');
+            $this->conFiltro = true;
+        } elseif ($statoUtenza === 'sospeso') {
+            $queryBuilder->whereDoesntHave('permissions');
+            $this->conFiltro = true;
+        }
+
+        $filtro2fa = $request->input('filtro_2fa');
+        if ($filtro2fa === 'attivo') {
+            $queryBuilder->whereNotNull('two_factor_secret');
+            $this->conFiltro = true;
+        } elseif ($filtro2fa === 'non_attivo') {
+            $queryBuilder->whereNull('two_factor_secret');
+            $this->conFiltro = true;
+        }
+
+        $ultimoAccesso = $request->input('ultimo_accesso');
+        if ($ultimoAccesso === '7gg') {
+            $queryBuilder->where('ultimo_accesso', '>=', now()->subDays(7));
+            $this->conFiltro = true;
+        } elseif ($ultimoAccesso === '30gg') {
+            $queryBuilder->where('ultimo_accesso', '>=', now()->subDays(30));
+            $this->conFiltro = true;
+        } elseif ($ultimoAccesso === 'mai') {
+            $queryBuilder->whereNull('ultimo_accesso');
+            $this->conFiltro = true;
+        }
+
         return $queryBuilder;
     }
 
@@ -215,6 +266,12 @@ class AgenteController extends Controller
 
         $questoMese = now();
         $mesePrecedente = $questoMese->copy()->subMonths(1);
+
+        $ticketTotali = Ticket::where('agente_id', $id)->count();
+        $ticketAperti = Ticket::where('agente_id', $id)->where('stato', '<>', 'chiuso')->count();
+        $ticketChiusi = Ticket::where('agente_id', $id)->where('stato', 'chiuso')->count();
+        $loginUltimi30 = RegistroLogin::where('user_id', $id)->where('riuscito', 1)->where('created_at', '>=', now()->subDays(30))->count();
+
         return view('Backend.Agente.show', [
             'record' => $record,
             'titoloPagina' => $record->nominativo(),
@@ -223,6 +280,14 @@ class AgenteController extends Controller
             'records' => $this->queryProduzione($id),
             'produzioneMese' => ProduzioneOperatore::findByIdAnnoMese($id, $questoMese->year, $questoMese->month),
             'produzioneMesePrecedente' => ProduzioneOperatore::findByIdAnnoMese($id, $mesePrecedente->year, $mesePrecedente->month),
+            'kpiAgente' => [
+                'ticket_totali' => $ticketTotali,
+                'ticket_aperti' => $ticketAperti,
+                'ticket_chiusi' => $ticketChiusi,
+                'login_30gg' => $loginUltimi30,
+                'portafoglio_servizi' => (float)($record->agente?->portafoglio_servizi ?? 0),
+                'portafoglio_spedizioni' => (float)($record->agente?->portafoglio_spedizioni ?? 0),
+            ],
         ]);
     }
 

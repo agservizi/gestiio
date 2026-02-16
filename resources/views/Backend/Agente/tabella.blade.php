@@ -8,6 +8,7 @@
             <th class="d-none d-md-table-cell">Ultimo accesso</th>
             <th class="d-none d-md-table-cell text-end">Portafoglio Servizi</th>
             <th class="d-none d-md-table-cell text-end">Portafoglio Spedizioni</th>
+            <th class="d-none d-lg-table-cell text-center">Stato</th>
             <th class="d-none d-lg-table-cell text-center">Ruolo</th>
             <th class="d-none d-lg-table-cell text-center">2fa</th>
             <th class="text-end">
@@ -20,12 +21,26 @@
                 <td class="fw-bolder">{{$record->codiceAgente()}}</td>
                 <td class="fw-bolder">{{$record->aliasAgente()}}</td>
                 <td>{!! $record->contatti() !!}</td>
-                <td class="d-none d-md-table-cell">{{$record->ultimo_accesso?$record->ultimo_accesso->format('d/m/Y H:i'):''}}</td>
-                <td class="d-none d-lg-table-cell text-end">
-                    {!! \App\importo($record->agente->portafoglio_servizi) !!}
+                <td class="d-none d-md-table-cell">
+                    @if($record->ultimo_accesso)
+                        {{$record->ultimo_accesso->format('d/m/Y H:i')}}
+                        <div class="text-muted fs-8">{{$record->ultimo_accesso->diffForHumans()}}</div>
+                    @else
+                        <span class="text-muted">Mai</span>
+                    @endif
                 </td>
                 <td class="d-none d-lg-table-cell text-end">
-                    {!! \App\importo($record->agente->portafoglio_spedizioni) !!}
+                    {!! \App\importo($record->agente?->portafoglio_servizi) !!}
+                </td>
+                <td class="d-none d-lg-table-cell text-end">
+                    {!! \App\importo($record->agente?->portafoglio_spedizioni) !!}
+                </td>
+                <td class="d-none d-lg-table-cell text-center">
+                    @if($record->permissions->count())
+                        <span class="badge badge-light-success">Attivo</span>
+                    @else
+                        <span class="badge badge-light-warning">Sospeso</span>
+                    @endif
                 </td>
                 <td class="d-none d-lg-table-cell  text-center">
                     {!! $record->userLevel(false,$record) !!}
