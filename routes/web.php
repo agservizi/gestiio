@@ -45,6 +45,7 @@ Route::group(['middleware' => ['auth']], function () {
     //Dati utente
     Route::get('/area-utente/{tab?}', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'index']);
     Route::get('/dati-utente', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'show']);
+    Route::get('/dati-utente/export', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'exportDatiPersonali']);
     Route::patch('/dati-utente/{cosa}', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'update']);
 
 

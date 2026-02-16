@@ -58,6 +58,12 @@
             @endif
 
 
+            <div class="d-flex justify-content-end mb-4">
+                <a class="btn btn-sm btn-light-primary" href="{{action([$controller,'exportDatiPersonali'])}}">
+                    Esporta dati personali (JSON)
+                </a>
+            </div>
+
             <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6" id="myTab">
                 <li class="nav-item">
                     <a class="nav-link {{$two?'':'active'}}" data-bs-toggle="tab" href="#tab_dati">Dati utente</a>
@@ -67,6 +73,15 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" data-bs-toggle="tab" href="#tab_email">Email</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tab_preferenze">Preferenze</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tab_sicurezza">Sessioni</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tab_attivita">Attività</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{$two?'active':''}}" data-bs-toggle="tab" href="#tab_two_factor">Autenticazione a due fattori</a>
@@ -181,6 +196,155 @@
                     </div>
 
                 </div>
+                <div class="tab-pane" id="tab_preferenze" role="tabpanel">
+                    <div class="row">
+                        <div class="col-lg-8 px-lg-2 py-lg-2">
+                            <h3 class="mb-1">Preferenze notifiche e localizzazione</h3>
+                            <div class="text-muted mb-4">Configura come ricevere comunicazioni e il formato di visualizzazione.</div>
+
+                            <form method="POST" action="{{ action([$controller,'update'],'preferenze-notifiche') }}" class="mb-10">
+                                @csrf
+                                @method('PATCH')
+                                <h5 class="mb-4">Notifiche</h5>
+                                <div class="form-check form-switch form-check-custom form-check-solid mb-4">
+                                    <input class="form-check-input" type="checkbox" id="notifiche_email_ticket" name="notifiche_email_ticket" value="1" {{$user->getExtra('notifiche_email_ticket') ? 'checked' : ''}} />
+                                    <label class="form-check-label" for="notifiche_email_ticket">Email su ticket</label>
+                                </div>
+                                <div class="form-check form-switch form-check-custom form-check-solid mb-4">
+                                    <input class="form-check-input" type="checkbox" id="notifiche_email_spedizioni" name="notifiche_email_spedizioni" value="1" {{$user->getExtra('notifiche_email_spedizioni') ? 'checked' : ''}} />
+                                    <label class="form-check-label" for="notifiche_email_spedizioni">Email su spedizioni</label>
+                                </div>
+                                <div class="form-check form-switch form-check-custom form-check-solid mb-4">
+                                    <input class="form-check-input" type="checkbox" id="notifiche_email_amministrative" name="notifiche_email_amministrative" value="1" {{$user->getExtra('notifiche_email_amministrative') ? 'checked' : ''}} />
+                                    <label class="form-check-label" for="notifiche_email_amministrative">Email amministrative</label>
+                                </div>
+                                <div class="form-check form-switch form-check-custom form-check-solid mb-6">
+                                    <input class="form-check-input" type="checkbox" id="notifiche_browser" name="notifiche_browser" value="1" {{$user->getExtra('notifiche_browser') ? 'checked' : ''}} />
+                                    <label class="form-check-label" for="notifiche_browser">Notifiche browser in piattaforma</label>
+                                </div>
+
+                                <div class="w-100 text-center">
+                                    <button class="btn btn-primary" type="submit">Salva preferenze notifiche</button>
+                                </div>
+                            </form>
+
+                            <form method="POST" action="{{ action([$controller,'update'],'preferenze-locale') }}">
+                                @csrf
+                                @method('PATCH')
+                                <h5 class="mb-4">Localizzazione</h5>
+                                <div class="row mb-6">
+                                    <div class="col-lg-4 col-form-label text-lg-end">
+                                        <label class="fw-bold fs-6 required" for="lingua">Lingua</label>
+                                    </div>
+                                    <div class="col-lg-8 fv-row">
+                                        <select id="lingua" name="lingua" class="form-select form-select-solid @error('lingua') is-invalid @enderror" required>
+                                            <option value="it" {{$user->getExtra('lingua') === 'it' || !$user->getExtra('lingua') ? 'selected' : ''}}>Italiano</option>
+                                            <option value="en" {{$user->getExtra('lingua') === 'en' ? 'selected' : ''}}>English</option>
+                                        </select>
+                                        @error('lingua')<div class="invalid-feedback">{{$message}}</div>@enderror
+                                    </div>
+                                </div>
+                                <div class="row mb-6">
+                                    <div class="col-lg-4 col-form-label text-lg-end">
+                                        <label class="fw-bold fs-6 required" for="fuso_orario">Fuso orario</label>
+                                    </div>
+                                    <div class="col-lg-8 fv-row">
+                                        <select id="fuso_orario" name="fuso_orario" class="form-select form-select-solid @error('fuso_orario') is-invalid @enderror" required>
+                                            <option value="Europe/Rome" {{$user->getExtra('fuso_orario') === 'Europe/Rome' || !$user->getExtra('fuso_orario') ? 'selected' : ''}}>Europe/Rome</option>
+                                            <option value="UTC" {{$user->getExtra('fuso_orario') === 'UTC' ? 'selected' : ''}}>UTC</option>
+                                        </select>
+                                        @error('fuso_orario')<div class="invalid-feedback">{{$message}}</div>@enderror
+                                    </div>
+                                </div>
+                                <div class="row mb-6">
+                                    <div class="col-lg-4 col-form-label text-lg-end">
+                                        <label class="fw-bold fs-6 required" for="formato_data">Formato data</label>
+                                    </div>
+                                    <div class="col-lg-8 fv-row">
+                                        <select id="formato_data" name="formato_data" class="form-select form-select-solid @error('formato_data') is-invalid @enderror" required>
+                                            <option value="d/m/Y" {{$user->getExtra('formato_data') === 'd/m/Y' || !$user->getExtra('formato_data') ? 'selected' : ''}}>gg/mm/aaaa</option>
+                                            <option value="Y-m-d" {{$user->getExtra('formato_data') === 'Y-m-d' ? 'selected' : ''}}>aaaa-mm-gg</option>
+                                        </select>
+                                        @error('formato_data')<div class="invalid-feedback">{{$message}}</div>@enderror
+                                    </div>
+                                </div>
+                                <div class="w-100 text-center">
+                                    <button class="btn btn-primary" type="submit">Salva preferenze locali</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="tab_sicurezza" role="tabpanel">
+                    <div class="row">
+                        <div class="col-lg-8 px-lg-2 py-lg-2">
+                            <h3 class="mb-1">Sessioni attive</h3>
+                            <div class="text-muted mb-4">Disconnetti tutte le altre sessioni aperte su altri dispositivi.</div>
+                            <form method="POST" action="{{ action([$controller,'update'],'sicurezza-sessioni') }}">
+                                @csrf
+                                @method('PATCH')
+                                <div class="row mb-6">
+                                    <div class="col-lg-4 col-form-label text-lg-end">
+                                        <label for="password_sessioni" class="fw-bold fs-6 required">Conferma password</label>
+                                    </div>
+                                    <div class="col-lg-8 fv-row">
+                                        <input type="password" class="form-control form-control-solid @error('password_sessioni') is-invalid @enderror" id="password_sessioni" name="password_sessioni" required autocomplete="current-password">
+                                        @error('password_sessioni')<div class="invalid-feedback">{{$message}}</div>@enderror
+                                    </div>
+                                </div>
+                                <div class="w-100 text-center">
+                                    <button class="btn btn-danger" type="submit">Termina tutte le altre sessioni</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="tab_attivita" role="tabpanel">
+                    <div class="row">
+                        <div class="col-12 px-lg-2 py-lg-2">
+                            <h3 class="mb-1">Attività account</h3>
+                            <div class="text-muted mb-4">Ultimi accessi registrati sul tuo account.</div>
+                            @php($logins = $recentLogin ?? collect())
+                            <div class="table-responsive">
+                                <table class="table table-row-bordered">
+                                    <thead>
+                                    <tr class="fw-bolder fs-7 text-uppercase">
+                                        <th>Data/Ora</th>
+                                        <th>Esito</th>
+                                        <th>IP</th>
+                                        <th>Remember me</th>
+                                        <th>User agent</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @forelse($logins as $login)
+                                        <tr>
+                                            <td>{{\Carbon\Carbon::parse($login->created_at)->format('d/m/Y H:i:s')}}</td>
+                                            <td>
+                                                @if($login->riuscito)
+                                                    <span class="badge badge-light-success">Riuscito</span>
+                                                @else
+                                                    <span class="badge badge-light-danger">Fallito</span>
+                                                @endif
+                                            </td>
+                                            <td>{{$login->ip}}</td>
+                                            <td>{{$login->remember ? 'Sì' : 'No'}}</td>
+                                            <td class="text-muted">{{\Illuminate\Support\Str::limit($login->user_agent, 100)}}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">Nessuna attività disponibile</td>
+                                        </tr>
+                                    @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="tab-pane  {{$two?'active show':''}}" id="tab_two_factor" role="tabpanel">
                     <div class="row">
                         <div class="col-lg-8 px-lg-2 py-lg-2">
