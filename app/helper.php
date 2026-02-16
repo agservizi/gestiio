@@ -113,7 +113,12 @@ function importo($valore, $conEuro = false, $zeroSeNull = false)
     }
 
     if ($valore !== null) {
-        return ($conEuro ? '€ ' : '') . number_format($valore, 2, ',', '.');
+        $numberFormat = config('app.user_number_format', 'it_IT');
+        $decimalSeparator = $numberFormat === 'en_US' ? '.' : ',';
+        $thousandsSeparator = $numberFormat === 'en_US' ? ',' : '.';
+        $currencySymbol = $numberFormat === 'en_US' ? '$' : '€';
+
+        return ($conEuro ? $currencySymbol . ' ' : '') . number_format($valore, 2, $decimalSeparator, $thousandsSeparator);
     }
 }
 
@@ -126,8 +131,30 @@ function intero($valore, $zeroSeNull = false)
     }
 
     if ($valore !== null) {
-        return number_format($valore, 0, ',', '.');
+        $numberFormat = config('app.user_number_format', 'it_IT');
+        $thousandsSeparator = $numberFormat === 'en_US' ? ',' : '.';
+        return number_format($valore, 0, '', $thousandsSeparator);
     }
+}
+
+function dataUtente($value, bool $withTime = false)
+{
+    if (!$value) {
+        return null;
+    }
+
+    $date = $value instanceof Carbon ? $value : Carbon::parse($value);
+    $format = config('app.user_date_format', 'd/m/Y');
+    if ($withTime) {
+        $format .= ' H:i';
+    }
+
+    return $date->format($format);
+}
+
+function dataOraUtente($value)
+{
+    return dataUtente($value, true);
 }
 
 function applicaIva($valore, $aliquotaIva)

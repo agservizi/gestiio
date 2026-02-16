@@ -234,18 +234,6 @@
                                 <h5 class="mb-4">Localizzazione</h5>
                                 <div class="row mb-6">
                                     <div class="col-lg-4 col-form-label text-lg-end">
-                                        <label class="fw-bold fs-6 required" for="lingua">Lingua</label>
-                                    </div>
-                                    <div class="col-lg-8 fv-row">
-                                        <select id="lingua" name="lingua" class="form-select form-select-solid @error('lingua') is-invalid @enderror" required>
-                                            <option value="it" {{$user->getExtra('lingua') === 'it' || !$user->getExtra('lingua') ? 'selected' : ''}}>Italiano</option>
-                                            <option value="en" {{$user->getExtra('lingua') === 'en' ? 'selected' : ''}}>English</option>
-                                        </select>
-                                        @error('lingua')<div class="invalid-feedback">{{$message}}</div>@enderror
-                                    </div>
-                                </div>
-                                <div class="row mb-6">
-                                    <div class="col-lg-4 col-form-label text-lg-end">
                                         <label class="fw-bold fs-6 required" for="fuso_orario">Fuso orario</label>
                                     </div>
                                     <div class="col-lg-8 fv-row">
@@ -266,6 +254,18 @@
                                             <option value="Y-m-d" {{$user->getExtra('formato_data') === 'Y-m-d' ? 'selected' : ''}}>aaaa-mm-gg</option>
                                         </select>
                                         @error('formato_data')<div class="invalid-feedback">{{$message}}</div>@enderror
+                                    </div>
+                                </div>
+                                <div class="row mb-6">
+                                    <div class="col-lg-4 col-form-label text-lg-end">
+                                        <label class="fw-bold fs-6 required" for="formato_numeri_valuta">Formato numeri/valuta</label>
+                                    </div>
+                                    <div class="col-lg-8 fv-row">
+                                        <select id="formato_numeri_valuta" name="formato_numeri_valuta" class="form-select form-select-solid @error('formato_numeri_valuta') is-invalid @enderror" required>
+                                            <option value="it_IT" {{$user->getExtra('formato_numeri_valuta') === 'it_IT' || !$user->getExtra('formato_numeri_valuta') ? 'selected' : ''}}>Italiano (1.234,56 €)</option>
+                                            <option value="en_US" {{$user->getExtra('formato_numeri_valuta') === 'en_US' ? 'selected' : ''}}>English/US (1,234.56 $)</option>
+                                        </select>
+                                        @error('formato_numeri_valuta')<div class="invalid-feedback">{{$message}}</div>@enderror
                                     </div>
                                 </div>
                                 <div class="w-100 text-center">
@@ -321,7 +321,7 @@
                                     <tbody>
                                     @forelse($logins as $login)
                                         <tr>
-                                            <td>{{\Carbon\Carbon::parse($login->created_at)->format('d/m/Y H:i:s')}}</td>
+                                            <td>{{dataOraUtente($login->created_at)}}</td>
                                             <td>
                                                 @if($login->riuscito)
                                                     <span class="badge badge-light-success">Riuscito</span>

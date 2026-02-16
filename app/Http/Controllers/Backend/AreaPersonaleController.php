@@ -130,9 +130,9 @@ class AreaPersonaleController extends Controller
 
             case 'preferenze-locale':
                 Validator::make($request->input(), [
-                    'lingua' => ['required', Rule::in(['it', 'en'])],
                     'fuso_orario' => ['required', 'timezone'],
                     'formato_data' => ['required', Rule::in(['d/m/Y', 'Y-m-d'])],
+                    'formato_numeri_valuta' => ['required', Rule::in(['it_IT', 'en_US'])],
                 ])->validate();
                 $this->updatePreferenzeLocale($request);
                 $alert = new AlertMessage();
@@ -240,9 +240,9 @@ class AreaPersonaleController extends Controller
     {
         $user = $this->currentUser();
         $user->setExtra([
-            'lingua' => $request->input('lingua'),
             'fuso_orario' => $request->input('fuso_orario'),
             'formato_data' => $request->input('formato_data'),
+            'formato_numeri_valuta' => $request->input('formato_numeri_valuta'),
         ]);
     }
 
