@@ -7,10 +7,14 @@ use App\Models\CafPatronato;
 use App\Models\ContrattoEnergia;
 use App\Models\ClienteAssistenza;
 use App\Models\ContrattoTelefonia;
+use App\Models\EsitoCafPatronato;
+use App\Models\EsitoVisura;
 use App\Models\ProduzioneOperatore;
 use App\Models\RichiestaAssistenza;
+use App\Models\RegistroLogin;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Models\Visura;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -84,7 +88,7 @@ class DashboardController extends Controller
         } else if ($user->hasPermissionTo('supervisore')) {
             return $this->showSupervisore($request);
         } else {
-            return $this->showAgente();
+            return $this->showAgente($request);
         }
 
     }
@@ -343,26 +347,288 @@ class DashboardController extends Controller
         return $arr;
     }
 
-    protected function showAgente()
+    protected function showAgente(Request $request)
     {
         $id = Auth::user()->id;
+
+        $periodo = $request->input('periodo', '7d');
+        $priorita = $request->input('priorita', '');
+        $stato = $request->input('stato', 'aperto');
+        $cliente = trim((string)$request->input('cliente', ''));
+
+        $days = match ($periodo) {
+            'oggi' => 0,
+            '30d' => 30,
+            default => 7,
+        };
+
+        $dataRiferimento = $days === 0 ? now()->startOfDay() : now()->subDays($days);
 
         $questoMese = now();
         $mesePrecedente = $questoMese->copy()->subMonths(1);
 
-        $kpiAgente = [
-            'miei_ticket_aperti' => Ticket::where('user_id', $id)->where('stato', '<>', 'chiuso')->count(),
-            'miei_ticket_oggi' => Ticket::where('user_id', $id)->whereDate('created_at', now())->count(),
-            'ticket_aperti_totali' => Ticket::where('stato', '<>', 'chiuso')->count(),
+        $ticketDaPrendereInCaricoQb = Ticket::query()
+            ->with(['utente:id,nome,cognome', 'causaleTicket:id,descrizione_causale'])
+            ->where('agente_id', $id);
+
+        $visureInAttesaQb = Visura::query()
+            ->with(['agente:id,nome,cognome'])
+            ->withCount('allegati')
+            ->withCount('allegatiPerCliente')
+            ->where('agente_id', $id)
+            ->whereNull('esito_finale');
+
+        $cafInAttesaQb = CafPatronato::query()
+            ->with(['agente:id,nome,cognome'])
+            ->withCount('allegati')
+            ->withCount('allegatiPerCliente')
+            ->where('agente_id', $id)
+            ->whereNull('esito_finale');
+
+        if ($days === 0) {
+            $ticketDaPrendereInCaricoQb->whereDate('created_at', now());
+            $visureInAttesaQb->whereDate('data', now());
+            $cafInAttesaQb->whereDate('data', now());
+        } else {
+            $ticketDaPrendereInCaricoQb->where('created_at', '>=', $dataRiferimento);
+            $visureInAttesaQb->where('created_at', '>=', $dataRiferimento);
+            $cafInAttesaQb->where('created_at', '>=', $dataRiferimento);
+        }
+
+        if ($stato === 'aperto') {
+            $ticketDaPrendereInCaricoQb->where('stato', '<>', 'chiuso');
+        } elseif ($stato === 'chiuso') {
+            $ticketDaPrendereInCaricoQb->where('stato', 'chiuso');
+        }
+
+        if ($cliente !== '') {
+            $ticketDaPrendereInCaricoQb->where(function ($query) use ($cliente) {
+                $query
+                    ->where('oggetto', 'like', '%' . $cliente . '%')
+                    ->orWhere('uid', 'like', '%' . $cliente . '%')
+                    ->orWhereHas('utente', function ($utenteQuery) use ($cliente) {
+                        $utenteQuery->where(DB::raw('concat_ws(\' \',nome,cognome)'), 'like', '%' . $cliente . '%');
+                    });
+            });
+
+            $visureInAttesaQb->where(function ($query) use ($cliente) {
+                $query
+                    ->where(DB::raw('concat_ws(\' \',nome,cognome,ragione_sociale,partita_iva,codice_fiscale)'), 'like', '%' . $cliente . '%');
+            });
+
+            $cafInAttesaQb->where(function ($query) use ($cliente) {
+                $query
+                    ->where(DB::raw('concat_ws(\' \',nome,cognome,codice_fiscale,email)'), 'like', '%' . $cliente . '%');
+            });
+        }
+
+        if ($priorita !== '') {
+            $ticketDaPrendereInCaricoQb->where(function ($query) use ($priorita) {
+                if ($priorita === 'alta') {
+                    $query->where('created_at', '<=', now()->subDays(3));
+                } elseif ($priorita === 'media') {
+                    $query->whereBetween('created_at', [now()->subDays(3), now()->subDay()]);
+                } elseif ($priorita === 'bassa') {
+                    $query->where('created_at', '>=', now()->subDay());
+                }
+            });
+
+            $visureInAttesaQb->where(function ($query) use ($priorita) {
+                if ($priorita === 'alta') {
+                    $query->where('created_at', '<=', now()->subDays(5));
+                } elseif ($priorita === 'media') {
+                    $query->whereBetween('created_at', [now()->subDays(5), now()->subDays(2)]);
+                } elseif ($priorita === 'bassa') {
+                    $query->where('created_at', '>=', now()->subDays(2));
+                }
+            });
+
+            $cafInAttesaQb->where(function ($query) use ($priorita) {
+                if ($priorita === 'alta') {
+                    $query->where('created_at', '<=', now()->subDays(5));
+                } elseif ($priorita === 'media') {
+                    $query->whereBetween('created_at', [now()->subDays(5), now()->subDays(2)]);
+                } elseif ($priorita === 'bassa') {
+                    $query->where('created_at', '>=', now()->subDays(2));
+                }
+            });
+        }
+
+        $ticketDaPrendereInCarico = (clone $ticketDaPrendereInCaricoQb)
+            ->orderByDesc('created_at')
+            ->limit(8)
+            ->get();
+
+        $visureInAttesaDocumenti = (clone $visureInAttesaQb)
+            ->havingRaw('(allegati_count + allegati_per_cliente_count) = 0')
+            ->orderByDesc('created_at')
+            ->limit(8)
+            ->get();
+
+        $cafInAttesaDocumenti = (clone $cafInAttesaQb)
+            ->havingRaw('(allegati_count + allegati_per_cliente_count) = 0')
+            ->orderByDesc('created_at')
+            ->limit(8)
+            ->get();
+
+        $scadenzeOggi = collect();
+
+        $visureOggi = Visura::query()
+            ->where('agente_id', $id)
+            ->whereDate('data', now())
+            ->whereNull('esito_finale')
+            ->limit(6)
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'tipo' => 'visura',
+                    'id' => $record->id,
+                    'cliente' => $record->nominativo(),
+                    'data' => $record->data,
+                    'apri_url' => action([VisuraController::class, 'edit'], $record->id),
+                    'assegna_url' => action([VisuraController::class, 'edit'], $record->id),
+                    'completa_url' => action([VisuraController::class, 'edit'], $record->id),
+                ];
+            });
+
+        $cafOggi = CafPatronato::query()
+            ->where('agente_id', $id)
+            ->whereDate('data', now())
+            ->whereNull('esito_finale')
+            ->limit(6)
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'tipo' => 'caf',
+                    'id' => $record->id,
+                    'cliente' => $record->nominativo(),
+                    'data' => $record->data,
+                    'apri_url' => action([CafPatronatoController::class, 'edit'], $record->id),
+                    'assegna_url' => action([CafPatronatoController::class, 'edit'], $record->id),
+                    'completa_url' => action([CafPatronatoController::class, 'edit'], $record->id),
+                ];
+            });
+
+        $scadenzeOggi = $scadenzeOggi->merge($visureOggi)->merge($cafOggi)->take(10);
+
+        $praticheFerme = Visura::query()
+            ->where('agente_id', $id)
+            ->whereNull('esito_finale')
+            ->where('created_at', '<=', now()->subDays(3))
+            ->count()
+            + CafPatronato::query()
+                ->where('agente_id', $id)
+                ->whereNull('esito_finale')
+                ->where('created_at', '<=', now()->subDays(3))
+                ->count();
+
+        $attivitaOggi = Ticket::query()->where('agente_id', $id)->whereDate('created_at', now())->count()
+            + Visura::query()->where('agente_id', $id)->whereDate('created_at', now())->count()
+            + CafPatronato::query()->where('agente_id', $id)->whereDate('created_at', now())->count();
+
+        $mediaRispostaOre = (float) Ticket::query()
+            ->where('agente_id', $id)
+            ->where('stato', 'chiuso')
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, updated_at)) as media_ore')
+            ->value('media_ore');
+
+        $monitorOperativo = [
+            'trend_7d' => Ticket::query()->where('agente_id', $id)->where('created_at', '>=', now()->subDays(7))->count()
+                + Visura::query()->where('agente_id', $id)->where('created_at', '>=', now()->subDays(7))->count()
+                + CafPatronato::query()->where('agente_id', $id)->where('created_at', '>=', now()->subDays(7))->count(),
+            'trend_30d' => Ticket::query()->where('agente_id', $id)->where('created_at', '>=', now()->subDays(30))->count()
+                + Visura::query()->where('agente_id', $id)->where('created_at', '>=', now()->subDays(30))->count()
+                + CafPatronato::query()->where('agente_id', $id)->where('created_at', '>=', now()->subDays(30))->count(),
+            'pratiche_attenzione' => $praticheFerme,
+            'ferme_oltre_x_giorni' => Ticket::query()->where('agente_id', $id)->where('stato', '<>', 'chiuso')->where('created_at', '<=', now()->subDays(2))->count(),
+            'tempo_medio_risposta_ore' => round($mediaRispostaOre, 1),
+            'soglia_rossa' => 10,
+            'soglia_gialla' => 5,
         ];
 
-        $ticketDaGestire = Ticket::query()
-            ->with(['utente:id,nome,cognome', 'causaleTicket:id,nome'])
-            ->where('user_id', $id)
-            ->where('stato', '<>', 'chiuso')
-            ->latest('id')
+        $timelineAttivita = collect();
+
+        $timelineTicket = Ticket::query()
+            ->where('agente_id', $id)
+            ->latest('updated_at')
             ->limit(5)
-            ->get();
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'quando' => $record->updated_at,
+                    'tipo' => 'Ticket',
+                    'descrizione' => $record->oggetto,
+                    'prossima_azione' => $record->stato === 'chiuso' ? 'Monitorare eventuali riaperture' : 'Aggiorna ticket',
+                    'url' => action([TicketsController::class, 'show'], $record->id),
+                ];
+            });
+
+        $timelineVisure = Visura::query()
+            ->where('agente_id', $id)
+            ->latest('updated_at')
+            ->limit(5)
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'quando' => $record->updated_at,
+                    'tipo' => 'Visura',
+                    'descrizione' => $record->nominativo(),
+                    'prossima_azione' => $record->esito_finale ? 'Pratica completata' : 'Verifica documenti / aggiorna esito',
+                    'url' => action([VisuraController::class, 'edit'], $record->id),
+                ];
+            });
+
+        $timelineCaf = CafPatronato::query()
+            ->where('agente_id', $id)
+            ->latest('updated_at')
+            ->limit(5)
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'quando' => $record->updated_at,
+                    'tipo' => 'CAF',
+                    'descrizione' => $record->nominativo(),
+                    'prossima_azione' => $record->esito_finale ? 'Pratica completata' : 'Contatta cliente / completa allegati',
+                    'url' => action([CafPatronatoController::class, 'edit'], $record->id),
+                ];
+            });
+
+        $timelineLogins = RegistroLogin::query()
+            ->where('user_id', $id)
+            ->latest('created_at')
+            ->limit(3)
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'quando' => $record->created_at,
+                    'tipo' => 'Accesso',
+                    'descrizione' => 'Accesso piattaforma da ' . ($record->ip ?: 'IP non disponibile'),
+                    'prossima_azione' => 'Continua lavorazione attività prioritarie',
+                    'url' => action([ProfiloController::class, 'show']),
+                ];
+            });
+
+        $timelineAttivita = $timelineAttivita
+            ->merge($timelineTicket)
+            ->merge($timelineVisure)
+            ->merge($timelineCaf)
+            ->merge($timelineLogins)
+            ->sortByDesc('quando')
+            ->take(15)
+            ->values();
+
+        $heroOperativo = [
+            'ticket_aperti_miei' => Ticket::query()->where('agente_id', $id)->where('stato', '<>', 'chiuso')->count(),
+            'pratiche_ferme' => $praticheFerme,
+            'attivita_oggi' => $attivitaOggi,
+        ];
+
+        $filtriGlobali = [
+            'periodo' => $periodo,
+            'priorita' => $priorita,
+            'stato' => $stato,
+            'cliente' => $cliente,
+        ];
 
         $produzioneMese = $this->produzioneDisponibile()
             ? ProduzioneOperatore::findByIdAnnoMese($id, $questoMese->year, $questoMese->month)
@@ -379,8 +645,14 @@ class DashboardController extends Controller
             'produzioneMese' => $produzioneMese,
             'produzioneMesePrecedente' => $produzioneMesePrecedente,
             'datiBarreOrdini' => $this->datiBarreOrdini(now()->year),
-            'kpiAgente' => $kpiAgente,
-            'ticketDaGestire' => $ticketDaGestire,
+            'heroOperativo' => $heroOperativo,
+            'filtriGlobali' => $filtriGlobali,
+            'ticketDaPrendereInCarico' => $ticketDaPrendereInCarico,
+            'visureInAttesaDocumenti' => $visureInAttesaDocumenti,
+            'cafInAttesaDocumenti' => $cafInAttesaDocumenti,
+            'scadenzeOggi' => $scadenzeOggi,
+            'monitorOperativo' => $monitorOperativo,
+            'timelineAttivita' => $timelineAttivita,
 
         ]);
 
@@ -412,6 +684,110 @@ class DashboardController extends Controller
             'labels' => $arrTesti,
             'totale' => $totale
         ];
+    }
+
+    public function bulkAction(Request $request)
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        abort_if(!$user, 403);
+
+        $dati = $request->validate([
+            'azione' => ['required', 'in:open,assign,complete'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.type' => ['required', 'in:ticket,visura,caf'],
+            'items.*.id' => ['required', 'integer'],
+        ]);
+
+        $azione = $dati['azione'];
+        $items = collect($dati['items']);
+
+        if ($azione === 'open') {
+            $first = $items->first();
+            return [
+                'success' => true,
+                'redirect' => $this->resolveBulkOpenUrl($first['type'], (int)$first['id']),
+                'message' => 'Apertura elemento selezionato',
+            ];
+        }
+
+        $processed = 0;
+        $esitoVisuraOkId = EsitoVisura::query()->where('esito_finale', 'ok')->value('id');
+        $esitoCafOkId = EsitoCafPatronato::query()->where('esito_finale', 'ok')->value('id');
+
+        $items->each(function ($item) use ($user, $azione, $esitoVisuraOkId, $esitoCafOkId, &$processed) {
+            $id = (int)$item['id'];
+            $type = $item['type'];
+
+            if ($type === 'ticket') {
+                $record = Ticket::query()->where('id', $id)->where('agente_id', $user->id)->first();
+                if (!$record) {
+                    return;
+                }
+
+                if ($azione === 'assign') {
+                    $record->agente_id = $user->id;
+                    $record->save();
+                    $processed++;
+                } elseif ($azione === 'complete' && $record->stato !== 'chiuso') {
+                    $record->stato = 'chiuso';
+                    $record->save();
+                    $processed++;
+                }
+            }
+
+            if ($type === 'visura') {
+                $record = Visura::query()->where('id', $id)->where('agente_id', $user->id)->first();
+                if (!$record) {
+                    return;
+                }
+
+                if ($azione === 'assign') {
+                    $record->agente_id = $user->id;
+                    $record->save();
+                    $processed++;
+                } elseif ($azione === 'complete' && $esitoVisuraOkId) {
+                    $record->esito_id = $esitoVisuraOkId;
+                    $record->esito_finale = 'ok';
+                    $record->save();
+                    $processed++;
+                }
+            }
+
+            if ($type === 'caf') {
+                $record = CafPatronato::query()->where('id', $id)->where('agente_id', $user->id)->first();
+                if (!$record) {
+                    return;
+                }
+
+                if ($azione === 'assign') {
+                    $record->agente_id = $user->id;
+                    $record->save();
+                    $processed++;
+                } elseif ($azione === 'complete' && $esitoCafOkId) {
+                    $record->esito_id = $esitoCafOkId;
+                    $record->esito_finale = 'ok';
+                    $record->save();
+                    $processed++;
+                }
+            }
+        });
+
+        return [
+            'success' => true,
+            'processed' => $processed,
+            'message' => 'Azione completata su ' . $processed . ' elementi',
+        ];
+    }
+
+    protected function resolveBulkOpenUrl(string $type, int $id): string
+    {
+        return match ($type) {
+            'ticket' => action([TicketsController::class, 'show'], $id),
+            'visura' => action([VisuraController::class, 'edit'], $id),
+            'caf' => action([CafPatronatoController::class, 'edit'], $id),
+            default => action([DashboardController::class, 'show']),
+        };
     }
 
     protected function datiBarreOrdini($anno)

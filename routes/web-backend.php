@@ -9,6 +9,7 @@ Route::middleware(['auth', 'role_or_permission:admin|agente|supervisore|operator
 
 Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa']], function () {
     Route::get('/', [\App\Http\Controllers\Backend\DashboardController::class, 'show']);
+    Route::post('/dashboard/bulk-action', [\App\Http\Controllers\Backend\DashboardController::class, 'bulkAction']);
 
     //Contratto
     Route::post('/allegato-contratto', [\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'uploadAllegato']);
