@@ -17,7 +17,28 @@
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextReadonly',['campo'=>'esito','testo'=>'Esito','valore'=> $record->esito() ])
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Stato tracking</label>
+                        <div>{!! $record->trackingStatusBadge() !!}</div>
+                        <div class="text-muted mt-1">Ultimo aggiornamento: {{$record->trackingUpdatedAtLabel() ?: '-'}}</div>
+                    </div>
                 </div>
+                @if($record->tracking())
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Tracking</label>
+                            <div class="form-control form-control-sm" style="height:auto; min-height: 80px;">{!! $record->tracking() !!}</div>
+                        </div>
+                    </div>
+                @endif
+                @if($record->trackingTimelineHtml())
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Timeline tracking</label>
+                            {!! $record->trackingTimelineHtml() !!}
+                        </div>
+                    </div>
+                @endif
                 <div class="row">
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextReadonly',['campo'=>'ragione_sociale_destinatario','testo'=>'Ragione sociale destinatario','autocomplete'=>'off'])

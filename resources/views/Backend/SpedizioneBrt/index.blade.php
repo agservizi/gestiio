@@ -56,6 +56,9 @@
         @endisset
         <a class="btn btn-sm btn-primary fw-bold me-2 disabled" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
            href="{{action([$controller,'bordero'])}}" id="bordero">Crea borderò</a>
+        <button class="btn btn-sm btn-primary fw-bold me-2 disabled" id="tracking-refresh-bulk"
+            data-url="{{action([$controller,'trackingRefreshBulk'])}}" type="button">Aggiorna tracking selezionati
+        </button>
         @can('agente')
             <a class="btn btn-sm btn-primary fw-bold me-2"
                href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_type'=>'spedizione-brt'])}}">Apri
@@ -77,12 +80,35 @@
     <script>
         var indexUrl = '{{action([$controller,'index'])}}';
         var array = [];
+        var csrfToken = '{{csrf_token()}}';
 
         $(function () {
             searchHandler();
 
-            $('.sel').change(function () {
-                calcola();
+            function notify(icon, title, text) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2500,
+                        timerProgressBar: true,
+                        icon: icon,
+                        title: title,
+                        text: text || ''
+                    });
+                    return;
+                }
+
+                if (text) {
+                    console.log(title + ': ' + text);
+                } else {
+                    console.log(title);
+                }
+            }
+
+            $(document).on('change', '.sel', function () {
+                aggiornaSelezione();
             });
 
             $('#bordero').click(function (e) {
@@ -90,15 +116,85 @@
                 location.href = $(this).attr('href') + '?id=' + array.join(',');
             });
 
-            $('#tutti').click(function () {
+            $(document).on('click', '#tutti', function () {
                 const checked = $(this).is(':checked');
                 $('.sel').prop('checked', checked);
-                calcola();
+                aggiornaSelezione();
 
             });
 
+            $(document).on('click', '.tracking-refresh-row', function () {
+                var button = $(this);
+                var row = button.closest('tr');
+                var url = button.data('url');
+                if (!url) {
+                    return;
+                }
 
-            function calcola() {
+                button.prop('disabled', true).addClass('disabled');
+
+                $.post(url, {_token: csrfToken})
+                    .done(function (res) {
+                        if (!res || !res.success) {
+                            notify('error', 'Errore', (res && res.message) ? res.message : 'Errore durante aggiornamento tracking');
+                            return;
+                        }
+
+                        row.find('.tracking-cell').html(res.trackingHtml || '-');
+                        row.find('.tracking-status-cell').html(res.trackingStatusHtml || '<span class="badge badge-light">-</span>');
+                        row.find('.tracking-updated-cell').text(res.trackingUpdatedAt || '-');
+                        notify('success', 'Tracking aggiornato', res.message || 'Aggiornamento completato');
+                    })
+                    .fail(function () {
+                        notify('error', 'Errore', 'Errore durante aggiornamento tracking');
+                    })
+                    .always(function () {
+                        button.prop('disabled', false).removeClass('disabled');
+                    });
+            });
+
+            $('#tracking-refresh-bulk').click(function () {
+                if (!array.length) {
+                    return;
+                }
+
+                var button = $(this);
+                button.prop('disabled', true).addClass('disabled');
+
+                $.post(button.data('url'), {
+                    _token: csrfToken,
+                    ids: array
+                }).done(function (res) {
+                    if (!res || !res.success) {
+                        notify('error', 'Errore', (res && res.message) ? res.message : 'Errore durante aggiornamento tracking massivo');
+                        return;
+                    }
+
+                    if (res.rows) {
+                        Object.keys(res.rows).forEach(function (id) {
+                            var rowData = res.rows[id] || {};
+                            var row = $('tr[data-id="' + id + '"]');
+                            if (!row.length) {
+                                return;
+                            }
+                            row.find('.tracking-cell').html(rowData.trackingHtml || '-');
+                            row.find('.tracking-status-cell').html(rowData.trackingStatusHtml || '<span class="badge badge-light">-</span>');
+                            row.find('.tracking-updated-cell').text(rowData.trackingUpdatedAt || '-');
+                        });
+                    }
+
+                    notify('success', 'Tracking aggiornato', res.message || 'Aggiornamento tracking completato');
+                }).fail(function () {
+                    notify('error', 'Errore', 'Errore durante aggiornamento tracking massivo');
+                }).always(function () {
+                    button.prop('disabled', false).removeClass('disabled');
+                });
+            });
+
+            aggiornaSelezione();
+
+
+            function aggiornaSelezione() {
                 array = []
                 $('.sel:checked').each(function () {
                     array.push($(this).val());
@@ -108,8 +204,10 @@
 
                 if (quantio) {
                     $('#bordero').removeClass('disabled');
+                    $('#tracking-refresh-bulk').removeClass('disabled').prop('disabled', false);
                 } else {
                     $('#bordero').addClass('disabled');
+                    $('#tracking-refresh-bulk').addClass('disabled').prop('disabled', true);
                 }
             }
         });

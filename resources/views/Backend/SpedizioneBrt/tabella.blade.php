@@ -20,6 +20,8 @@
             <th class="">Prezzo</th>
             <th class="">Esito</th>
             <th class="">Tracking</th>
+            <th class="">Stato tracking</th>
+            <th class="">Agg. tracking</th>
             <th class="">Borderò</th>
             <th class="">Agente</th>
             <th></th>
@@ -27,7 +29,7 @@
         </thead>
         <tbody>
         @foreach($records as $record)
-            <tr class="">
+            <tr class="" data-id="{{$record->id}}">
                 <td>
                     @if(!$record->bordero_id)
                         <div class="form-check">
@@ -47,7 +49,9 @@
                 <td class="text-end">{{$record->peso_totale}}</td>
                 <td class="">{{\App\importo($record->prezzo_spedizione)}}</td>
                 <td>{!! $record->esitoBall() !!}</td>
-                <td>{!! $record->tracking() !!}</td>
+                <td class="tracking-cell">{!! $record->tracking() ?: '-' !!}</td>
+                <td class="tracking-status-cell">{!! $record->trackingStatusBadge() !!}</td>
+                <td class="tracking-updated-cell">{{$record->trackingUpdatedAtLabel() ?: '-'}}</td>
                 <td>
                     @if($record->bordero_id)
                         <a href="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'bordero'],$record->bordero_id)}}"
@@ -81,6 +85,16 @@
                             <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
                         </svg>
                     </a>
+
+                    <button type="button"
+                            class="btn btn-icon btn-sm btn-light btn-active-light-primary tracking-refresh-row"
+                            data-url="{{action([$controller,'trackingRefresh'],$record->id)}}"
+                            data-bs-toggle="tooltip" data-bs-placement="top" title="Aggiorna tracking">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 1 1 .908-.418A6 6 0 1 1 8 2v1z"/>
+                            <path d="M8 0a.5.5 0 0 1 .5.5V3h2.5a.5.5 0 0 1 0 1H8A.5.5 0 0 1 7.5 3V.5A.5.5 0 0 1 8 0z"/>
+                        </svg>
+                    </button>
 
                     @if($record->esito=='ERROR' || !$record->esito)
                         <a class="btn btn-icon btn-sm btn-light btn-active-light-primary"
