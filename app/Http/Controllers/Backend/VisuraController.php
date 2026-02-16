@@ -78,6 +78,14 @@ class VisuraController extends Controller
         //Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
+        $totali = [
+            'totale' => (clone $recordsQB)->count(),
+            'in_lavorazione' => (clone $recordsQB)->whereNull('esito_finale')->count(),
+            'ok' => (clone $recordsQB)->where('esito_finale', 'ok')->count(),
+            'ko' => (clone $recordsQB)->where('esito_finale', 'ko')->count(),
+            'sla_attention' => (clone $recordsQB)->whereNull('esito_finale')->where('created_at', '<=', now()->subDays(3))->count(),
+        ];
+
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
         $puoModificare = $this->puoModificare();
@@ -89,9 +97,26 @@ class VisuraController extends Controller
                 'html' => base64_encode(view('Backend.Visura.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
+                    'puoModificare' => $puoModificare,
+                    'puoModificareEsito' => $puoModificareEsito,
+                ])->render())
+                ,
+                'kpi' => base64_encode(view('Backend.Visura._kpi', [
+                    'totali' => $totali,
                 ])->render())
             ];
 
+        }
+
+        $agentiFiltro = collect();
+        if ($this->currentUser()->hasAnyPermission(['admin', 'supervisore'])) {
+            $agentiFiltro = User::query()
+                ->whereHas('permissions', function ($query) {
+                    $query->where('name', 'agente');
+                })
+                ->orderBy('cognome')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'cognome']);
         }
 
 
@@ -104,9 +129,11 @@ class VisuraController extends Controller
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => 'Nuova ' . \App\Models\Visura::NOME_SINGOLARE,
-            'testoCerca' => null,
+            'testoCerca' => 'Cerca in nominativo, P.IVA/CF, agente',
             'puoModificare' => $puoModificare,
             'puoModificareEsito' => $puoModificareEsito,
+            'agentiFiltro' => $agentiFiltro,
+            'totali' => $totali,
 
 
         ]);
@@ -131,11 +158,57 @@ class VisuraController extends Controller
         if ($term) {
             $arrTerm = explode(' ', $term);
             foreach ($arrTerm as $t) {
-                $queryBuilder->where(DB::raw('concat_ws(\' \',nome)'), 'like', "%$t%");
+                $queryBuilder->where(function ($query) use ($t) {
+                    $query
+                        ->where(DB::raw('concat_ws(\' \',nome,cognome,ragione_sociale,partita_iva,codice_fiscale)'), 'like', "%$t%")
+                        ->orWhereHas('agente', function ($agenteQuery) use ($t) {
+                            $agenteQuery->where(DB::raw('concat_ws(\' \',alias,nome,cognome,email)'), 'like', "%$t%");
+                        });
+                });
             }
+            $this->conFiltro = true;
         }
 
-        //$this->conFiltro = true;
+        if ($request->filled('esito_id')) {
+            $queryBuilder->where('esito_id', $request->input('esito_id'));
+            $this->conFiltro = true;
+        }
+
+        if ($request->filled('tipo_visura_id')) {
+            $queryBuilder->where('tipo_visura_id', $request->input('tipo_visura_id'));
+            $this->conFiltro = true;
+        }
+
+        if ($request->filled('agente_id') && $this->currentUser()->hasAnyPermission(['admin', 'supervisore'])) {
+            $queryBuilder->where('agente_id', $request->input('agente_id'));
+            $this->conFiltro = true;
+        }
+
+        if ($request->filled('data_da')) {
+            $queryBuilder->whereDate('data', '>=', $request->input('data_da'));
+            $this->conFiltro = true;
+        }
+
+        if ($request->filled('data_a')) {
+            $queryBuilder->whereDate('data', '<=', $request->input('data_a'));
+            $this->conFiltro = true;
+        }
+
+        if ($request->input('filtro_sla') === 'attenzione') {
+            $queryBuilder->whereNull('esito_finale')->where('created_at', '<=', now()->subDays(3));
+            $this->conFiltro = true;
+        }
+
+        if ($request->input('con_allegati') === '1') {
+            $queryBuilder->havingRaw('(allegati_count + allegati_per_cliente_count) > 0');
+            $this->conFiltro = true;
+        }
+
+        if ($request->input('con_allegati') === '0') {
+            $queryBuilder->havingRaw('(allegati_count + allegati_per_cliente_count) = 0');
+            $this->conFiltro = true;
+        }
+
         return $queryBuilder;
     }
 

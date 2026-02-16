@@ -21,6 +21,24 @@
                 {{$record->agente->aliasAgente()}}
             @endif
         </td>
+        <td class="text-center">
+            @php($totaleAllegati = (int)$record->allegati_count + (int)$record->allegati_per_cliente_count)
+            @if($totaleAllegati>0)
+                <span class="badge badge-light-success">{{$totaleAllegati}}</span>
+            @else
+                <span class="badge badge-light-secondary">0</span>
+            @endif
+        </td>
+        <td class="text-center">
+            @php($giorniAperti = $record->created_at ? $record->created_at->diffInDays(now()) : 0)
+            @if(!$record->esito_finale && $giorniAperti >= 3)
+                <span class="badge badge-light-warning">{{$giorniAperti}} gg</span>
+            @elseif(!$record->esito_finale)
+                <span class="badge badge-light-primary">{{$giorniAperti}} gg</span>
+            @else
+                <span class="badge badge-light-success">Chiusa</span>
+            @endif
+        </td>
         <td class="text-end">
             {{\App\importo($record->prezzo_pratica)}}
         </td>

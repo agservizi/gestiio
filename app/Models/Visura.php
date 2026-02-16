@@ -35,7 +35,8 @@ class Visura extends Model
     {
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
-            if (Auth::check() && Auth::user()->hasPermissionTo('agente')) {
+            $authUser = Auth::user();
+            if ($authUser instanceof User && $authUser->hasPermissionTo('agente')) {
                 $builder->where('agente_id', Auth::id());
             }
         });

@@ -8,6 +8,8 @@
             <th class="">Partita Iva/Codice fiscale</th>
             <th class="">Denominazione</th>
             <th class="">Agente</th>
+            <th class="text-center">Allegati</th>
+            <th class="text-center">SLA</th>
             <th class="text-end">Prezzo</th>
             <th class="text-center">Azioni</th>
         </tr>
