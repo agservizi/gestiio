@@ -71,16 +71,16 @@
     <script>
         $(function () {
             let activeThreadId = @json($threadAttivo?->id);
-            const messagesUrlTemplate = @json(url('/chat-interna/THREAD_ID/messages'));
-            const sendUrlTemplate = @json(url('/chat-interna/THREAD_ID/messages'));
+            let ultimoTotaleNonLetti = parseInt($('.js-chat-unread-total').first().text() || '0', 10);
+            const chatBaseUrl = @json(rtrim(action([$controller, 'index']), '/'));
             const pollUrl = @json(action([$controller, 'poll']));
 
             function messagesUrl(threadId) {
-                return messagesUrlTemplate.replace('THREAD_ID', threadId);
+                return chatBaseUrl + '/' + threadId + '/messages';
             }
 
             function sendUrl(threadId) {
-                return sendUrlTemplate.replace('THREAD_ID', threadId);
+                return chatBaseUrl + '/' + threadId + '/messages';
             }
 
             function scrollToBottom() {
@@ -126,12 +126,26 @@
                         scrollToBottom();
                     }
                     if (response.nonLettiTotali !== undefined) {
-                        $('.js-chat-unread-total').text(response.nonLettiTotali);
-                        if (parseInt(response.nonLettiTotali, 10) > 0) {
+                        const nuovoTotale = parseInt(response.nonLettiTotali, 10) || 0;
+                        $('.js-chat-unread-total').text(nuovoTotale);
+                        if (nuovoTotale > 0) {
                             $('.js-chat-unread-wrap').removeClass('d-none');
                         } else {
                             $('.js-chat-unread-wrap').addClass('d-none');
                         }
+
+                        if (nuovoTotale > ultimoTotaleNonLetti) {
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'info',
+                                title: 'Nuovo messaggio in chat',
+                                showConfirmButton: false,
+                                timer: 3500,
+                                timerProgressBar: true,
+                            });
+                        }
+                        ultimoTotaleNonLetti = nuovoTotale;
                     }
                 });
             }
@@ -168,7 +182,8 @@
                     },
                     error: function (error) {
                         console.error(error);
-                        Swal.fire('Errore', 'Invio messaggio non riuscito', 'error');
+                        const erroreBackend = error?.responseJSON?.message || error?.responseText || 'Invio messaggio non riuscito';
+                        Swal.fire('Errore', erroreBackend, 'error');
                     }
                 });
             });

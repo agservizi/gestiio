@@ -6,6 +6,7 @@ use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
 use App\Models\CafPatronato;
 use App\Models\ContrattoEnergia;
 use App\Models\ClienteAssistenza;
+use App\Models\ChatThreadUser;
 use App\Models\ContrattoTelefonia;
 use App\Models\EsitoCafPatronato;
 use App\Models\EsitoVisura;
@@ -623,6 +624,12 @@ class DashboardController extends Controller
             'attivita_oggi' => $attivitaOggi,
         ];
 
+        $chatAttive = ChatThreadUser::conteggioNonLetti($id);
+        $chatOperativa = [
+            'count' => $chatAttive,
+            'url' => action([ChatController::class, 'index']),
+        ];
+
         $filtriGlobali = [
             'periodo' => $periodo,
             'priorita' => $priorita,
@@ -646,6 +653,7 @@ class DashboardController extends Controller
             'produzioneMesePrecedente' => $produzioneMesePrecedente,
             'datiBarreOrdini' => $this->datiBarreOrdini(now()->year),
             'heroOperativo' => $heroOperativo,
+            'chatOperativa' => $chatOperativa,
             'filtriGlobali' => $filtriGlobali,
             'ticketDaPrendereInCarico' => $ticketDaPrendereInCarico,
             'visureInAttesaDocumenti' => $visureInAttesaDocumenti,

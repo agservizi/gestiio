@@ -11,6 +11,10 @@
             'pratiche_ferme' => 0,
             'attivita_oggi' => 0,
         ];
+        $chatOperativa = $chatOperativa ?? [
+            'count' => 0,
+            'url' => action([\App\Http\Controllers\Backend\ChatController::class, 'index']),
+        ];
         $filtriGlobali = $filtriGlobali ?? ['periodo' => '7d', 'priorita' => '', 'stato' => 'aperto', 'cliente' => ''];
         $ticketDaPrendereInCarico = $ticketDaPrendereInCarico ?? collect();
         $visureInAttesaDocumenti = $visureInAttesaDocumenti ?? collect();
@@ -59,6 +63,10 @@
                         <div class="text-muted">Pannello operativo personale</div>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                        <a href="{{$chatOperativa['url']}}" class="btn btn-sm btn-warning {{ (int)$chatOperativa['count'] > 0 ? 'animation-blink' : '' }}">
+                            Chat interna
+                            <span class="badge badge-dark ms-2">{{(int)$chatOperativa['count']}}</span>
+                        </a>
                         @can('servizio_ticket')
                             <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'index'])}}" class="btn btn-sm btn-primary">Ticket</a>
                         @endcan

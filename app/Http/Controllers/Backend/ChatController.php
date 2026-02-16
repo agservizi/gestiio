@@ -8,6 +8,7 @@ use App\Models\ChatMessage;
 use App\Models\ChatThread;
 use App\Models\ChatThreadUser;
 use App\Models\User;
+use App\Notifications\NotificaPrimoMessaggioChatInterna;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -108,16 +109,46 @@ class ChatController extends Controller
             'messaggio' => ['required', 'string', 'max:3000'],
         ]);
 
+        $destinatariEmailPrimoNonLetto = [];
+        $partecipazioniDestinatari = ChatThreadUser::query()
+            ->where('thread_id', $thread->id)
+            ->where('user_id', '<>', $authUser->id)
+            ->get(['user_id', 'last_read_at']);
+
+        foreach ($partecipazioniDestinatari as $partecipazioneDestinatario) {
+            $queryNonLettiPreEsistenti = ChatMessage::query()
+                ->where('thread_id', $thread->id)
+                ->where('user_id', '<>', (int)$partecipazioneDestinatario->user_id);
+
+            if ($partecipazioneDestinatario->last_read_at) {
+                $queryNonLettiPreEsistenti->where('created_at', '>', $partecipazioneDestinatario->last_read_at);
+            }
+
+            if (!$queryNonLettiPreEsistenti->exists()) {
+                $destinatariEmailPrimoNonLetto[] = (int)$partecipazioneDestinatario->user_id;
+            }
+        }
+
         $messaggio = new ChatMessage();
         $messaggio->thread_id = $thread->id;
         $messaggio->user_id = $authUser->id;
         $messaggio->messaggio = $request->input('messaggio');
         $messaggio->save();
+        $messaggio->load('mittente');
 
         $thread->touch();
         $this->segnaComeLetto($thread->id, $authUser->id);
 
-        broadcast(new ChatMessageSent($messaggio->load('mittente')))->toOthers();
+        broadcast(new ChatMessageSent($messaggio))->toOthers();
+
+        if (!empty($destinatariEmailPrimoNonLetto)) {
+            User::query()
+                ->whereIn('id', $destinatariEmailPrimoNonLetto)
+                ->get()
+                ->each(function (User $destinatario) use ($messaggio) {
+                    $destinatario->notify(new NotificaPrimoMessaggioChatInterna($messaggio));
+                });
+        }
 
         return response()->json([
             'ok' => true,
