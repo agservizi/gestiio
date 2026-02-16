@@ -3,6 +3,33 @@
 @endsection
 
 @section('content')
+    @php($user = Auth::user())
+    <div class="card mb-6">
+        <div class="card-body d-flex flex-column flex-md-row align-items-md-center gap-4">
+            <div class="symbol symbol-70px symbol-circle">
+                <div class="symbol-label fs-2 fw-bold bg-light-primary text-primary">{{$user->iniziali()}}</div>
+            </div>
+            <div class="flex-grow-1">
+                <h2 class="mb-1">{{$user->nominativo()}}</h2>
+                <div class="text-muted mb-2">Gestione dati personali e sicurezza account</div>
+                <div class="d-flex flex-wrap gap-2">
+                    {!! $user->userLevel(true, $user) !!}
+                    <span class="badge badge-light">ID: {{$user->id}}</span>
+                    <span class="badge badge-light">Ultimo accesso: {{$user->ultimo_accesso?->format('d/m/Y H:i') ?? '-'}}</span>
+                    @if($user->email_verified_at)
+                        <span class="badge badge-light-success">Email verificata</span>
+                    @else
+                        <span class="badge badge-light-warning">Email non verificata</span>
+                    @endif
+                    @if($user->two_factor_secret)
+                        <span class="badge badge-light-success">2FA attiva</span>
+                    @else
+                        <span class="badge badge-light-danger">2FA non attiva</span>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="card">
         <div class="card-body">
@@ -33,7 +60,7 @@
 
             <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6" id="myTab">
                 <li class="nav-item">
-                    <a class="nav-link {{$two?'':'active'}}" data-bs-toggle="tab" href="#tab_dati">Dai utente</a>
+                    <a class="nav-link {{$two?'':'active'}}" data-bs-toggle="tab" href="#tab_dati">Dati utente</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" data-bs-toggle="tab" href="#tab_password">Password</a>
@@ -49,15 +76,24 @@
                 <div class="tab-pane  {{$two?'':'active show'}} " id="tab_dati" role="tabpanel">
                     <div class="row">
                         <div class="col-lg-8 px-lg-2 py-lg-2">
-                            <h3>Modifica i tuoi dati</h3>
+                            <h3 class="mb-1">Dati personali</h3>
+                            <div class="text-muted">Mantieni sempre aggiornate le informazioni di contatto.</div>
                             <div class="pt-5"></div>
                             <form method="POST" action="{{ action([$controller,'update'],'dati-utente') }}" enctype="multipart/form-data">
                                 @csrf
                                 @method('PATCH')
-                                @php($record=Auth::user())
+                                @php($record=$user)
                                 @include('Backend._inputs.inputText',['campo'=>'cognome','testo'=>'Cognome','placeholder'=>'Il tuo cognome','required'=>true,'autocomplete'=>'family-name'])
                                 @include('Backend._inputs.inputText',['campo'=>'nome','testo'=>'Nome','placeholder'=>'Il tuo nome','required'=>true,'autocomplete'=>'given-name'])
                                 @include('Backend._inputs.inputText',['campo'=>'telefono','testo'=>'Telefono','placeholder'=>'Il tuo numero di telefono','required'=>true])
+                                <div class="row mb-6">
+                                    <div class="col-lg-4 col-form-label text-lg-end">
+                                        <label class="fw-bold fs-6">Codice agente</label>
+                                    </div>
+                                    <div class="col-lg-8 fv-row">
+                                        <input type="text" class="form-control form-control-solid" value="{{$user->codiceAgente()}}" readonly>
+                                    </div>
+                                </div>
                                 <div class="w-100 text-center">
                                     <button class="btn btn-primary" type="submit">Salva modifiche</button>
                                 </div>
@@ -68,12 +104,13 @@
                 <div class="tab-pane " id="tab_password" role="tabpanel">
                     <div class="row">
                         <div class="col-lg-8 px-lg-2 py-lg-2">
-                            <h3>Modifica la tua password</h3>
+                            <h3 class="mb-1">Sicurezza password</h3>
+                            <div class="text-muted">Usa una password robusta e non riutilizzata su altri servizi.</div>
                             <div class="pt-5"></div>
                             <form method="POST" action="{{ action([$controller,'update'],'dati-password') }}">
                                 @csrf
                                 @method('PATCH')
-                                @php($record=Auth::user())
+                                @php($record=$user)
                                 <div class="row mb-6">
                                     <!--begin::Label-->
                                     <div class="col-lg-4 col-form-label text-lg-end">
@@ -127,11 +164,13 @@
                 <div class="tab-pane " id="tab_email" role="tabpanel">
                     <div class="row">
                         <div class="col-lg-8 px-lg-2 py-lg-2">
-                            <h3>Modifica il tuo indirizzo email</h3>
+                            <h3 class="mb-1">Indirizzo email</h3>
+                            <div class="text-muted">L'email è usata per login, notifiche operative e recupero account.</div>
                             <div class="pt-5"></div>
                             <form method="POST" action="{{ action([$controller,'update'],'dati-email') }}">
                                 @csrf
                                 @method('PATCH')
+                                @php($record=$user)
                                 @include('Backend._inputs.inputText',['campo'=>'email','testo'=>'Email','placeholder'=>'Il tuo indirizzo email','required'=>true,'autocomplete'=>'email'])
                                 @include('Backend._inputs.inputText',['campo'=>'email_confirmation','testo'=>'Conferma email','placeholder'=>'Conferma il tuo indirizzo email','required'=>true,'autocomplete'=>'email'])
                                 <div class="w-100 text-center">
@@ -145,6 +184,8 @@
                 <div class="tab-pane  {{$two?'active show':''}}" id="tab_two_factor" role="tabpanel">
                     <div class="row">
                         <div class="col-lg-8 px-lg-2 py-lg-2">
+                            <h3 class="mb-1">Autenticazione a due fattori (2FA)</h3>
+                            <div class="text-muted mb-4">Aggiungi un secondo livello di sicurezza per proteggere il tuo account.</div>
                             <form method="POST" action="/user/two-factor-authentication">
                                 @csrf
                                 @if(auth()->user()->two_factor_secret)
@@ -160,7 +201,7 @@
                                     </ul>
                                     <button class="btn btn-danger">Disabilita autenticazione a due fattori</button>
                                 @else
-                                    <button class="btn btn-primary">Abilita</button>
+                                    <button class="btn btn-primary">Abilita 2FA</button>
                                 @endif
                             </form>
                         </div>
