@@ -59,9 +59,27 @@
                         <div class="text-muted">Pannello operativo personale</div>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'index'])}}" class="btn btn-sm btn-primary">Apri ticket</a>
-                        <a href="{{action([\App\Http\Controllers\Backend\VisuraController::class,'index'])}}" class="btn btn-sm btn-light-primary">Apri visure</a>
-                        <a href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'index'])}}" class="btn btn-sm btn-light-primary">Apri CAF</a>
+                        @can('servizio_ticket')
+                            <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'index'])}}" class="btn btn-sm btn-primary">Ticket</a>
+                        @endcan
+                        @can('servizio_visure')
+                            <a href="{{action([\App\Http\Controllers\Backend\VisuraController::class,'index'])}}" class="btn btn-sm btn-light-primary">Visure</a>
+                        @endcan
+                        @can('servizio_caf_patronato')
+                            <a href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'index'])}}" class="btn btn-sm btn-light-primary">CAF/Patronato</a>
+                        @endcan
+                        @can('servizio_contratti_telefonia')
+                            <a href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'index'])}}" class="btn btn-sm btn-light-primary">Telefonia</a>
+                        @endcan
+                        @can('servizio_contratti_energia')
+                            <a href="{{action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class,'index'])}}" class="btn btn-sm btn-light-primary">Energia</a>
+                        @endcan
+                        @can('servizio_spedizioni')
+                            <a href="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'index'])}}" class="btn btn-sm btn-light-primary">Spedizioni</a>
+                        @endcan
+                        @can('servizio_documentazione')
+                            <a href="{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'index'])}}" class="btn btn-sm btn-light-primary">Documentazione</a>
+                        @endcan
                     </div>
                 </div>
                 <div class="row g-4">
@@ -337,29 +355,6 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Accesso rapido moduli</h3>
-                </div>
-                <div class="card-body pt-0 d-flex flex-wrap gap-2">
-                    @can('servizio_ticket')
-                        <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'index'])}}" class="btn btn-sm btn-light">Ticket</a>
-                    @endcan
-                    @can('servizio_visure')
-                        <a href="{{action([\App\Http\Controllers\Backend\VisuraController::class,'index'])}}" class="btn btn-sm btn-light">Visure</a>
-                    @endcan
-                    @can('servizio_caf_patronato')
-                        <a href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'index'])}}" class="btn btn-sm btn-light">CAF/Patronato</a>
-                    @endcan
-                    @can('servizio_contratti_telefonia')
-                        <a href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'index'])}}" class="btn btn-sm btn-light">Telefonia</a>
-                    @endcan
-                    @can('servizio_contratti_energia')
-                        <a href="{{action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class,'index'])}}" class="btn btn-sm btn-light">Energia</a>
-                    @endcan
-                    <a href="{{action([\App\Http\Controllers\Backend\PortafoglioController::class,'index'])}}" class="btn btn-sm btn-light">Portafoglio</a>
-                </div>
-            </div>
         </div>
     </div>
 @endsection
