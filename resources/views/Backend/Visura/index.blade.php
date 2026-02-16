@@ -53,10 +53,10 @@
                     </div>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label fw-bold">SLA</label>
+                    <label class="form-label fw-bold">Attenzione pratica</label>
                     <select id="filtro_sla" class="form-select form-select-sm form-select-solid">
                         <option value="">Tutte</option>
-                        <option value="attenzione">Solo pratiche oltre 3 giorni</option>
+                        <option value="attenzione">Solo pratiche aperte da oltre 3 giorni</option>
                     </select>
                 </div>
                 <div class="mb-0">

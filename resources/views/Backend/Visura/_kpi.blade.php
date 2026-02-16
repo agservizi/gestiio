@@ -34,7 +34,7 @@
     <div class="col-md-6 col-lg-4">
         <div class="card card-flush h-100">
             <div class="card-body">
-                <div class="text-gray-400 fw-semibold fs-7">SLA attenzione (&gt; 3 giorni)</div>
+                <div class="text-gray-400 fw-semibold fs-7">Pratiche in attenzione (&gt; 3 giorni)</div>
                 <div class="fs-2hx fw-bold text-warning">{{$totali['sla_attention']}}</div>
             </div>
         </div>
