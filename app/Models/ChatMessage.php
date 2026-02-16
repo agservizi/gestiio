@@ -26,4 +26,9 @@ class ChatMessage extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function allegati()
+    {
+        return $this->hasMany(ChatMessageAttachment::class, 'message_id');
+    }
 }

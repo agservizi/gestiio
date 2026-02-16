@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Events\ChatMessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
+use App\Models\ChatMessageAttachment;
 use App\Models\ChatThread;
 use App\Models\ChatThreadUser;
 use App\Models\User;
@@ -13,7 +14,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ChatController extends Controller
@@ -106,7 +109,9 @@ class ChatController extends Controller
         $this->ensureThreadAccesso($thread->id, $authUser->id);
 
         $request->validate([
-            'messaggio' => ['required', 'string', 'max:3000'],
+            'messaggio' => ['nullable', 'string', 'max:3000', 'required_without:allegati'],
+            'allegati' => ['nullable', 'array'],
+            'allegati.*' => ['file', 'max:10240'],
         ]);
 
         $destinatariEmailPrimoNonLetto = [];
@@ -135,6 +140,23 @@ class ChatController extends Controller
         $messaggio->messaggio = $request->input('messaggio');
         $messaggio->save();
         $messaggio->load('mittente');
+
+        $allegati = $request->file('allegati', []);
+        foreach ($allegati as $allegato) {
+            if (!$allegato) {
+                continue;
+            }
+
+            $path = $allegato->store('chat-allegati', 'public');
+
+            $recordAllegato = new ChatMessageAttachment();
+            $recordAllegato->message_id = $messaggio->id;
+            $recordAllegato->filename_originale = $allegato->getClientOriginalName();
+            $recordAllegato->path_filename = $path;
+            $recordAllegato->mime_type = $allegato->getClientMimeType();
+            $recordAllegato->dimensione_file = $allegato->getSize();
+            $recordAllegato->save();
+        }
 
         $thread->touch();
         $this->segnaComeLetto($thread->id, $authUser->id);
@@ -167,6 +189,11 @@ class ChatController extends Controller
         $messaggi = collect();
 
         $threadId = $request->integer('thread_id');
+        $typingStatus = [
+            'active' => false,
+            'name' => null,
+        ];
+
         if ($threadId) {
             $threadAttivo = $threads->firstWhere('id', $threadId);
         }
@@ -174,6 +201,7 @@ class ChatController extends Controller
         if ($threadAttivo) {
             $this->segnaComeLetto($threadAttivo->id, $authUser->id);
             $messaggi = $this->messaggiThread($threadAttivo->id);
+            $typingStatus = $this->typingStatus($threadAttivo->id, $authUser->id);
         }
 
         return response()->json([
@@ -185,7 +213,26 @@ class ChatController extends Controller
                 'messaggi' => $messaggi,
             ])->render(),
             'nonLettiTotali' => ChatThreadUser::conteggioNonLetti($authUser->id),
+            'typing' => $typingStatus,
         ]);
+    }
+
+    public function typing(Request $request, ChatThread $thread): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureThreadAccesso($thread->id, $authUser->id);
+
+        $typing = $request->boolean('typing');
+        $key = $this->typingCacheKey($thread->id, $authUser->id);
+
+        if ($typing) {
+            Cache::put($key, $authUser->nominativo(), now()->addSeconds(8));
+        } else {
+            Cache::forget($key);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     protected function ensureRuoloConsentito(User $authUser): void
@@ -301,10 +348,39 @@ class ChatController extends Controller
         return ChatMessage::query()
             ->where('thread_id', $threadId)
             ->with('mittente:id,nome,cognome')
+            ->with('allegati')
             ->latest('id')
             ->limit(200)
             ->get()
             ->reverse()
             ->values();
+    }
+
+    protected function typingStatus(int $threadId, int $currentUserId): array
+    {
+        $partecipanti = ChatThreadUser::query()
+            ->where('thread_id', $threadId)
+            ->where('user_id', '<>', $currentUserId)
+            ->pluck('user_id');
+
+        foreach ($partecipanti as $participantId) {
+            $typingName = Cache::get($this->typingCacheKey($threadId, (int)$participantId));
+            if ($typingName) {
+                return [
+                    'active' => true,
+                    'name' => $typingName,
+                ];
+            }
+        }
+
+        return [
+            'active' => false,
+            'name' => null,
+        ];
+    }
+
+    protected function typingCacheKey(int $threadId, int $userId): string
+    {
+        return 'chat_typing_' . $threadId . '_' . $userId;
     }
 }
