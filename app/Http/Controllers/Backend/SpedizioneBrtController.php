@@ -46,6 +46,7 @@ class SpedizioneBrtController extends Controller
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'));
         $records->appends($request->query());
+        $this->aggiornaTrackingTabella($records);
 
         if ($request->ajax()) {
 
@@ -590,6 +591,73 @@ class SpedizioneBrtController extends Controller
     protected function backToIndex()
     {
         return redirect()->action([get_class($this), 'index']);
+    }
+
+    protected function aggiornaTrackingTabella($records): void
+    {
+        if (!config('services.brt.tracking_enabled', true)) {
+            return;
+        }
+
+        $batchSize = (int)config('services.brt.tracking_batch_size', 10);
+        if ($batchSize <= 0) {
+            return;
+        }
+
+        $staleMinutes = (int)config('services.brt.tracking_stale_minutes', 180);
+        $maxAgeDays = (int)config('services.brt.tracking_max_age_days', 15);
+        $maxCreatedAt = now()->subDays($maxAgeDays);
+
+        $service = new BrtService();
+
+        $items = collect($records->items())
+            ->filter(fn ($record) => $record instanceof SpedizioneBrt)
+            ->take($batchSize);
+
+        foreach ($items as $record) {
+            if ($record->esito === 'ANNULLATA') {
+                continue;
+            }
+
+            if ($record->created_at && $record->created_at->lt($maxCreatedAt)) {
+                continue;
+            }
+
+            $response = $record->response ?? [];
+            $labels = data_get($response, 'createResponse.labels.label', []);
+            if (!is_array($labels) || !count($labels)) {
+                continue;
+            }
+
+            $updatedAt = data_get($response, 'trackingUpdatedAt');
+            if ($updatedAt) {
+                try {
+                    if (now()->diffInMinutes(\Carbon\Carbon::parse($updatedAt)) < $staleMinutes) {
+                        continue;
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+
+            $trackingResponse = [];
+            foreach ($labels as $label) {
+                $parcelId = data_get($label, 'parcelID');
+                if (!$parcelId) {
+                    continue;
+                }
+
+                $trackingResponse[$parcelId] = $service->parcelId($parcelId);
+            }
+
+            if (!count($trackingResponse)) {
+                continue;
+            }
+
+            $response['trackingResponse'] = $trackingResponse;
+            $response['trackingUpdatedAt'] = now()->toIso8601String();
+            $record->response = $response;
+            $record->saveQuietly();
+        }
     }
 
     protected function aggiornaEsitoDaResponse(SpedizioneBrt $record, array $response, string $root)

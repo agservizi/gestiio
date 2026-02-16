@@ -35,10 +35,16 @@ class SpedizioneBrt extends Model
     {
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
-            if (Auth::user()->hasPermissionTo('agente')) {
-                $builder->where('agente_id', Auth::id());
-            } elseif (Auth::user()->hasPermissionTo('supervisore')) {
-                $builder->where('agente_id', Auth::id());
+            /** @var User|null $authUser */
+            $authUser = Auth::user();
+            if (!$authUser) {
+                return;
+            }
+
+            if ($authUser->hasPermissionTo('agente')) {
+                $builder->where('agente_id', $authUser->id);
+            } elseif ($authUser->hasPermissionTo('supervisore')) {
+                $builder->where('agente_id', $authUser->id);
             }
         });
 
@@ -119,15 +125,74 @@ class SpedizioneBrt extends Model
 
     public function tracking()
     {
-        if (($this->response['createResponse'] ?? false) && $this->response['createResponse']['labels']['label'] ?? false) {
+        if (!($this->response['createResponse'] ?? false) || !($this->response['createResponse']['labels']['label'] ?? false)) {
+            return null;
+        }
 
-            $parcel = [];
-            foreach ($this->response['createResponse']['labels']['label'] as $label) {
-                $parcel[] = "<a href='https://www.mybrt.it/it/mybrt/my-parcels/incoming?parcelNumber={$label['trackingByParcelID']}' target='_blank'>{$label['trackingByParcelID']}</a>";
+        $trackingResponse = $this->response['trackingResponse'] ?? [];
+        $parcel = [];
+        foreach ($this->response['createResponse']['labels']['label'] as $label) {
+            $trackingByParcelId = $label['trackingByParcelID'] ?? null;
+            $parcelId = $label['parcelID'] ?? null;
+            if (!$trackingByParcelId) {
+                continue;
             }
 
-            return implode(' ', $parcel);
+            $status = $parcelId ? $this->trackingStatusFromApi($trackingResponse[$parcelId] ?? []) : null;
+            $text = $trackingByParcelId;
+            if ($status) {
+                $text .= ' - ' . e($status);
+            }
+
+            $parcel[] = "<a href='https://www.mybrt.it/it/mybrt/my-parcels/incoming?parcelNumber={$trackingByParcelId}' target='_blank'>{$text}</a>";
         }
+
+        return implode('<br>', $parcel);
+    }
+
+    protected function trackingStatusFromApi(array $apiResponse): ?string
+    {
+        $possiblePaths = [
+            'parcelIDResult.spedizione.statoSpedizione',
+            'ttParcelIdResponse.spedizione.statoSpedizione',
+            'spedizione.statoSpedizione',
+            'status.description',
+            'status',
+        ];
+
+        foreach ($possiblePaths as $path) {
+            $value = data_get($apiResponse, $path);
+            if (is_string($value) && trim($value) !== '') {
+                return $value;
+            }
+        }
+
+        $possibleEventPaths = [
+            'parcelIDResult.spedizione.eventi.evento',
+            'ttParcelIdResponse.spedizione.eventi.evento',
+            'spedizione.eventi.evento',
+        ];
+
+        foreach ($possibleEventPaths as $path) {
+            $event = data_get($apiResponse, $path);
+            if (!is_array($event)) {
+                continue;
+            }
+
+            $first = isset($event[0]) ? $event[0] : $event;
+            if (!is_array($first)) {
+                continue;
+            }
+
+            foreach (['descrizione', 'description', 'statusDescription', 'testo'] as $key) {
+                $value = $first[$key] ?? null;
+                if (is_string($value) && trim($value) !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
 
     }
 
