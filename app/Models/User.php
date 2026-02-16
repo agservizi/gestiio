@@ -87,6 +87,18 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(CafPatronato::class, 'agente_id');
     }
 
+    public function chatThreads()
+    {
+        return $this->belongsToMany(ChatThread::class, 'chat_thread_users', 'user_id', 'thread_id')
+            ->withPivot(['last_read_at'])
+            ->withTimestamps();
+    }
+
+    public function chatMessaggi()
+    {
+        return $this->hasMany(ChatMessage::class, 'user_id');
+    }
+
 
     /*
     |--------------------------------------------------------------------------

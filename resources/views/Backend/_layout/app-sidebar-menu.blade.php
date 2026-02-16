@@ -1,4 +1,4 @@
-@if(Auth::user()->hasAnyPermission(['admin','agente']))
+@if(Auth::user()->hasAnyPermission(['admin','agente','supervisore']))
     <div class="app-sidebar-menu overflow-hidden flex-column-fluid">
         <!--begin::Menu wrapper-->
         <div id="kt_app_sidebar_menu_wrapper" class="app-sidebar-wrapper hover-scroll-overlay-y my-5"
@@ -381,6 +381,32 @@
                         </a>
                     </div>
                 @endcan
+
+                <div class="menu-item">
+                    <a class="menu-link"
+                       href="{{action([\App\Http\Controllers\Backend\ChatController::class,'index'])}}">
+											<span class="menu-icon">
+												<span class="svg-icon svg-icon-2">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                             xmlns="http://www.w3.org/2000/svg">
+                                                    <path opacity="0.3"
+                                                          d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V13C20 14.1046 19.1046 15 18 15H8L4 19V5Z"
+                                                          fill="currentColor"/>
+                                                    <path d="M7 8C7 7.44772 7.44772 7 8 7H16C16.5523 7 17 7.44772 17 8C17 8.55228 16.5523 9 16 9H8C7.44772 9 7 8.55228 7 8Z"
+                                                          fill="currentColor"/>
+                                                    <path d="M7 11C7 10.4477 7.44772 10 8 10H14C14.5523 10 15 10.4477 15 11C15 11.5523 14.5523 12 14 12H8C7.44772 12 7 11.5523 7 11Z"
+                                                          fill="currentColor"/>
+                                                    </svg>
+                                                    </span>
+                                            </span>
+                        <span class="menu-title">Chat interna
+                            @php($chatDaLeggere=\App\Models\ChatThreadUser::conteggioNonLetti(Auth::id()))
+                            <span class="badge badge-danger fw-bolder my-2 ms-2 js-chat-unread-wrap {{$chatDaLeggere ? '' : 'd-none'}}">
+                                <span class="js-chat-unread-total">{{$chatDaLeggere}}</span>
+                            </span>
+                        </span>
+                    </a>
+                </div>
 
                 <div class="menu-item">
 

@@ -109,6 +109,13 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     //Tickets
     Route::resource('/ticket', \App\Http\Controllers\Backend\TicketsController::class, ['as' => 'ticket-admin']);
 
+    //Chat interna
+    Route::get('/chat-interna', [\App\Http\Controllers\Backend\ChatController::class, 'index']);
+    Route::post('/chat-interna/thread', [\App\Http\Controllers\Backend\ChatController::class, 'storeThread']);
+    Route::get('/chat-interna/poll', [\App\Http\Controllers\Backend\ChatController::class, 'poll']);
+    Route::get('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'messages']);
+    Route::post('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'sendMessage']);
+
     Route::get('select2', [\App\Http\Controllers\Backend\Select2::class, 'response']);
 
     Route::post('/contratto-stato/{id}', [\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'aggiornaStato']);
