@@ -211,7 +211,7 @@
                 }
                 typingTimeout = setTimeout(function () {
                     sendTypingStatus(false);
-                }, 2200);
+                }, 4500);
             }
 
             function loadMessages(threadId, pushState = false) {
@@ -397,7 +397,7 @@
                 setComposerEnabled(false);
             }
 
-            setInterval(refreshPoll, 12000);
+            setInterval(refreshPoll, 3000);
         });
     </script>
 @endpush
