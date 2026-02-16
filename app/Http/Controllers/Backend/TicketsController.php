@@ -33,14 +33,17 @@ class TicketsController extends Controller
      */
     public function index(Request $request)
     {
-        $records = $this->applicaFiltri($request);
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $records = $this->applicaFiltri($request)->paginate();
+        $records->appends($request->query());
 
         return view('Backend.Tickets.index')->with([
-            'records' => $records->paginate()->withQueryString(),
+            'records' => $records,
             'filtro' => false,
             'controller' => get_class($this),
             'titoloPagina' => ucfirst(Ticket::NOME_PLURALE),
-            'admin' => Auth::user()->hasPermissionTo('admin'),
+            'admin' => $authUser->hasPermissionTo('admin'),
             'conFiltro' => $this->conFiltro
 
         ]);
@@ -60,7 +63,9 @@ class TicketsController extends Controller
             ->with('lettura')
             ->orderByDesc('id');
 
-        if (Auth::user()->hasPermissionTo('agente')) {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        if ($authUser->hasPermissionTo('agente')) {
             $queryBuilder->where('agente_id', Auth::id());
         }
 
@@ -127,13 +132,16 @@ class TicketsController extends Controller
         ]);
 
 
+        /** @var User $authUser */
+        $authUser = Auth::user();
+
         $ticket = new Ticket();
         $ticket->servizio_id = $request->input('servizio_id');
         $ticket->servizio_type = $request->input('servizio_type');
 
         $ticket->user_id = Auth::id();
 
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($authUser->hasPermissionTo('agente')) {
             $ticket->agente_id = Auth::id();
         } else {
             $ticket->agente_id = $ticket->servizio->agente_id;
@@ -169,10 +177,11 @@ class TicketsController extends Controller
 
         AllegatoMessaggioTicket::where('uid', $messaggio->uid)->whereNull('messaggio_id')->update(['messaggio_id' => $messaggio->id, 'uid' => null]);
 
-        dispatch(function () use ($ticket) {
+        $authUserNominativo = $authUser->nominativo();
+        dispatch(function () use ($ticket, $authUserNominativo) {
 
             if ($ticket->da_tipo_utente == 'admin') {
-                Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $ticket->oggetto . '</span> da agente <span class="fw-bold">' . Auth::user()->nominativo() . '</span>');
+                Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $ticket->oggetto . '</span> da agente <span class="fw-bold">' . $authUserNominativo . '</span>');
                 $utente = User::find($ticket->user_id);
                 $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
             } else {
@@ -194,6 +203,8 @@ class TicketsController extends Controller
      */
     public function show($id)
     {
+        /** @var User $authUser */
+        $authUser = Auth::user();
 
         $record = Ticket::with('messaggi.utente')
             ->with('messaggi.allegati')
@@ -223,7 +234,7 @@ class TicketsController extends Controller
             'controller' => get_class($this),
             'record' => $record,
             'titoloPagina' => $record->oggetto,
-            'admin' => Auth::user()->hasPermissionTo('admin'),
+            'admin' => $authUser->hasPermissionTo('admin'),
         ]);
     }
 
@@ -247,7 +258,10 @@ class TicketsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (Auth::user()->hasPermissionTo('admin')) {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+
+        if ($authUser->hasPermissionTo('admin')) {
 
         } else {
             $request->validate([
@@ -310,9 +324,12 @@ class TicketsController extends Controller
 
     protected function determinaDaTipoUtente()
     {
-        if (Auth::user()->hasPermissionTo('admin')) {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+
+        if ($authUser->hasPermissionTo('admin')) {
             return 'admin';
-        } elseif (Auth::user()->hasAnyPermission(['agente', 'supervisore'])) {
+        } elseif ($authUser->hasAnyPermission(['agente', 'supervisore'])) {
             return 'agente';
         }
     }

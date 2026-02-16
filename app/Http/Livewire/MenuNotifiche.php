@@ -4,6 +4,10 @@ namespace App\Http\Livewire;
 
 use App\Models\Notifica;
 use App\Models\NotificaLettura;
+use App\Models\User;
+use App\Support\UserNotificationPreferences;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class MenuNotifiche extends Component
@@ -11,6 +15,7 @@ class MenuNotifiche extends Component
     public $notifiche;
     public $conteggio;
     public $nuove = false;
+    public $ora;
     protected $listeners = ['aggiornaNotifiche' => 'aggiornaNotifiche'];
 
     public function mount()
@@ -33,17 +38,19 @@ class MenuNotifiche extends Component
 
     public function aggiornaNotifiche()
     {
-        $destinatario = \Auth::user()->hasPermissionTo('admin') ? 'admin' : 'agente';
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $destinatario = $authUser->hasPermissionTo('admin') ? 'admin' : 'agente';
 
         $this->notifiche = Notifica::query()
-            ->whereDate('created_at', '>=', \Auth::user()->created_at)
+            ->whereDate('created_at', '>=', $authUser->created_at)
             ->where('destinatario', $destinatario)
             ->orderByDesc('id')
             ->whereDoesntHave('letture', function ($q) {
-                $q->where('user_id', \Auth::id());
+                $q->where('user_id', Auth::id());
             })
             ->withCount(['letture' => function ($q) {
-                $q->where('user_id', \Auth::id());
+                $q->where('user_id', Auth::id());
             }])
             ->get();
 
@@ -54,7 +61,11 @@ class MenuNotifiche extends Component
             $this->nuove = false;
         } else {
             if (!$this->nuove) {
-                $this->dispatchBrowserEvent('beep');
+                /** @var User $user */
+                $user = Auth::user();
+                if (UserNotificationPreferences::wantsBrowserNotifications($user)) {
+                    $this->dispatchBrowserEvent('beep');
+                }
                 $this->nuove = true;
             }
         }
@@ -71,17 +82,17 @@ class MenuNotifiche extends Component
                 ->where('destinatario', $destinatario)
                 ->orderByDesc('id')
                 ->whereHas('letture', function ($q) {
-                    $q->where('user_id', \Auth::id());
+                    $q->where('user_id', Auth::id());
                 })
                 ->withCount(['letture' => function ($q) {
-                    $q->where('user_id', \Auth::id());
+                    $q->where('user_id', Auth::id());
                 }])
                 ->limit(6 - $this->conteggio)
                 ->get());
         }
 
         dispatch(function () {
-            \Artisan::call("queue:work --once");
+            Artisan::call("queue:work --once");
         })->afterResponse();
 
     }
@@ -97,7 +108,7 @@ class MenuNotifiche extends Component
     {
         $visto = new NotificaLettura();
         $visto->notifica_id = $id;
-        $visto->user_id = \Auth::id();
+        $visto->user_id = Auth::id();
         $visto->save();
         $this->aggiornaNotifiche();
     }
@@ -107,7 +118,7 @@ class MenuNotifiche extends Component
         foreach ($this->notifiche as $notifica) {
             $visto = new NotificaLettura();
             $visto->notifica_id = $notifica->id;
-            $visto->user_id = \Auth::id();
+            $visto->user_id = Auth::id();
             $visto->save();
         }
         $this->aggiornaNotifiche();

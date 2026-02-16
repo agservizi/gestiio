@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Listeners\EmailLogger;
 use App\Listeners\LogSuccessfulLogin;
 use App\Listeners\RecordFailedLoginAttempt;
+use App\Listeners\RespectUserNotificationPreferences;
 use App\Listeners\SendTwoFactorCodeListener;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -12,6 +13,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\Facades\Event;
 use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
 use Laravel\Fortify\Events\TwoFactorAuthenticationEnabled;
@@ -35,6 +37,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         MessageSent::class=>[
             EmailLogger::class
+        ],
+        NotificationSending::class => [
+            RespectUserNotificationPreferences::class,
         ],
         /*
         TwoFactorAuthenticationChallenged::class => [

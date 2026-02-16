@@ -207,19 +207,19 @@
                                 @method('PATCH')
                                 <h5 class="mb-4">Notifiche</h5>
                                 <div class="form-check form-switch form-check-custom form-check-solid mb-4">
-                                    <input class="form-check-input" type="checkbox" id="notifiche_email_ticket" name="notifiche_email_ticket" value="1" {{$user->getExtra('notifiche_email_ticket') ? 'checked' : ''}} />
+                                    <input class="form-check-input" type="checkbox" id="notifiche_email_ticket" name="notifiche_email_ticket" value="1" {{$user->getExtra('notifiche_email_ticket') !== false ? 'checked' : ''}} />
                                     <label class="form-check-label" for="notifiche_email_ticket">Email su ticket</label>
                                 </div>
                                 <div class="form-check form-switch form-check-custom form-check-solid mb-4">
-                                    <input class="form-check-input" type="checkbox" id="notifiche_email_spedizioni" name="notifiche_email_spedizioni" value="1" {{$user->getExtra('notifiche_email_spedizioni') ? 'checked' : ''}} />
+                                    <input class="form-check-input" type="checkbox" id="notifiche_email_spedizioni" name="notifiche_email_spedizioni" value="1" {{$user->getExtra('notifiche_email_spedizioni') !== false ? 'checked' : ''}} />
                                     <label class="form-check-label" for="notifiche_email_spedizioni">Email su spedizioni</label>
                                 </div>
                                 <div class="form-check form-switch form-check-custom form-check-solid mb-4">
-                                    <input class="form-check-input" type="checkbox" id="notifiche_email_amministrative" name="notifiche_email_amministrative" value="1" {{$user->getExtra('notifiche_email_amministrative') ? 'checked' : ''}} />
+                                    <input class="form-check-input" type="checkbox" id="notifiche_email_amministrative" name="notifiche_email_amministrative" value="1" {{$user->getExtra('notifiche_email_amministrative') !== false ? 'checked' : ''}} />
                                     <label class="form-check-label" for="notifiche_email_amministrative">Email amministrative</label>
                                 </div>
                                 <div class="form-check form-switch form-check-custom form-check-solid mb-6">
-                                    <input class="form-check-input" type="checkbox" id="notifiche_browser" name="notifiche_browser" value="1" {{$user->getExtra('notifiche_browser') ? 'checked' : ''}} />
+                                    <input class="form-check-input" type="checkbox" id="notifiche_browser" name="notifiche_browser" value="1" {{$user->getExtra('notifiche_browser') !== false ? 'checked' : ''}} />
                                     <label class="form-check-label" for="notifiche_browser">Notifiche browser in piattaforma</label>
                                 </div>
 
