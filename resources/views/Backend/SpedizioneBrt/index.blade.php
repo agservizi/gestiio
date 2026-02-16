@@ -1,5 +1,6 @@
 @extends('Backend._layout._main')
 @section('toolbar')
+    @php($trackingRefreshBulkAvailable = method_exists($controller, 'trackingRefreshBulk'))
     <div class="d-flex align-items-center py-1">
         <a class="btn btn-sm btn-primary fw-bold me-2"
            href="{{action([\App\Http\Controllers\Backend\ContattoBrtController::class,'index'])}}">Preferiti</a>
@@ -56,9 +57,11 @@
         @endisset
         <a class="btn btn-sm btn-primary fw-bold me-2 disabled" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
            href="{{action([$controller,'bordero'])}}" id="bordero">Crea borderò</a>
-        <button class="btn btn-sm btn-primary fw-bold me-2 disabled" id="tracking-refresh-bulk"
-            data-url="{{action([$controller,'trackingRefreshBulk'])}}" type="button">Aggiorna tracking selezionati
-        </button>
+        @if($trackingRefreshBulkAvailable)
+            <button class="btn btn-sm btn-primary fw-bold me-2 disabled" id="tracking-refresh-bulk"
+                data-url="{{action([$controller,'trackingRefreshBulk'])}}" type="button">Aggiorna tracking selezionati
+            </button>
+        @endif
         @can('agente')
             <a class="btn btn-sm btn-primary fw-bold me-2"
                href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_type'=>'spedizione-brt'])}}">Apri
@@ -204,10 +207,14 @@
 
                 if (quantio) {
                     $('#bordero').removeClass('disabled');
-                    $('#tracking-refresh-bulk').removeClass('disabled').prop('disabled', false);
+                    if ($('#tracking-refresh-bulk').length) {
+                        $('#tracking-refresh-bulk').removeClass('disabled').prop('disabled', false);
+                    }
                 } else {
                     $('#bordero').addClass('disabled');
-                    $('#tracking-refresh-bulk').addClass('disabled').prop('disabled', true);
+                    if ($('#tracking-refresh-bulk').length) {
+                        $('#tracking-refresh-bulk').addClass('disabled').prop('disabled', true);
+                    }
                 }
             }
         });

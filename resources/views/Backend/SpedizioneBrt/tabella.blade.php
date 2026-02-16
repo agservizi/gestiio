@@ -86,15 +86,17 @@
                         </svg>
                     </a>
 
-                    <button type="button"
-                            class="btn btn-icon btn-sm btn-light btn-active-light-primary tracking-refresh-row"
-                            data-url="{{action([$controller,'trackingRefresh'],$record->id)}}"
-                            data-bs-toggle="tooltip" data-bs-placement="top" title="Aggiorna tracking">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 1 1 .908-.418A6 6 0 1 1 8 2v1z"/>
-                            <path d="M8 0a.5.5 0 0 1 .5.5V3h2.5a.5.5 0 0 1 0 1H8A.5.5 0 0 1 7.5 3V.5A.5.5 0 0 1 8 0z"/>
-                        </svg>
-                    </button>
+                    @if(method_exists($controller, 'trackingRefresh'))
+                        <button type="button"
+                                class="btn btn-icon btn-sm btn-light btn-active-light-primary tracking-refresh-row"
+                                data-url="{{action([$controller,'trackingRefresh'],$record->id)}}"
+                                data-bs-toggle="tooltip" data-bs-placement="top" title="Aggiorna tracking">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 1 1 .908-.418A6 6 0 1 1 8 2v1z"/>
+                                <path d="M8 0a.5.5 0 0 1 .5.5V3h2.5a.5.5 0 0 1 0 1H8A.5.5 0 0 1 7.5 3V.5A.5.5 0 0 1 8 0z"/>
+                            </svg>
+                        </button>
+                    @endif
 
                     @if($record->esito=='ERROR' || !$record->esito)
                         <a class="btn btn-icon btn-sm btn-light btn-active-light-primary"
