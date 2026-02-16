@@ -22,20 +22,59 @@
                     <input type="hidden" name="uid" id="uid" value="{{$uid}}">
                     @include('Backend._inputs.inputHidden',['campo'=>'servizio_id'])
                     @include('Backend._inputs.inputHidden',['campo'=>'servizio_type'])
-                    @include('Backend._inputs_v.inputText',['campo'=>'oggetto','testo'=>'Oggetto','required'=>true,'autocomplete'=>'off'])
-                    <label class="fw-bold fs-6 required pt-2">Causale</label>
-                    <div class="mt-5 mb-10">
-                        @php($selected=old('causale_ticket_id',$record->causale_ticket_id))
-                        @foreach(\App\Models\CausaleTicket::where('servizio_type',$record->servizio_type)->get() as $causale)
+                    @if($admin)
+                        <label class="fw-bold fs-6 required pt-2">Destinatario</label>
+                        <div class="mt-5 mb-3">
+                            @php($destinatarioTipo=old('destinatario_tipo','agente'))
                             <div class="form-check form-check-custom form-check-solid mx-5" style="display: inline;">
-                                <input class="form-check-input gestori" type="radio" value="{{$causale->id}}"
-                                       id="tipo{{$causale->id}}" name="causale_ticket_id"
-                                       required {{$selected==$causale->id?'checked':''}}>
-                                <label class="form-check-label fw-bolder"
-                                       for="tipo{{$causale->id}}">{{$causale->descrizione_causale}}</label>
+                                <input class="form-check-input destinatario-tipo" type="radio" value="agente"
+                                       id="destinatarioTipoAgente" name="destinatario_tipo"
+                                       {{$destinatarioTipo==='agente'?'checked':''}}>
+                                <label class="form-check-label fw-bolder" for="destinatarioTipoAgente">Agente</label>
                             </div>
-                        @endforeach
-                    </div>
+                            <div class="form-check form-check-custom form-check-solid mx-5" style="display: inline;">
+                                <input class="form-check-input destinatario-tipo" type="radio" value="supervisore"
+                                       id="destinatarioTipoSupervisore" name="destinatario_tipo"
+                                       {{$destinatarioTipo==='supervisore'?'checked':''}}>
+                                <label class="form-check-label fw-bolder" for="destinatarioTipoSupervisore">Supervisore</label>
+                            </div>
+                        </div>
+
+                        <div id="destinatari-options" class="mb-8">
+                            <select class="form-select form-select-solid" name="destinatario_id" id="destinatario_id">
+                                <option value="">Seleziona destinatario</option>
+                                @foreach($agentiDestinatari as $agenteDestinatario)
+                                    <option value="{{$agenteDestinatario->id}}" data-tipo="agente" {{(string)old('destinatario_id')===(string)$agenteDestinatario->id?'selected':''}}>
+                                        {{$agenteDestinatario->cognome}} {{$agenteDestinatario->nome}}
+                                    </option>
+                                @endforeach
+                                @foreach($supervisoriDestinatari as $supervisoreDestinatario)
+                                    <option value="{{$supervisoreDestinatario->id}}" data-tipo="supervisore" {{(string)old('destinatario_id')===(string)$supervisoreDestinatario->id?'selected':''}}>
+                                        {{$supervisoreDestinatario->cognome}} {{$supervisoreDestinatario->nome}}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div id="destinatario-empty-alert" class="alert alert-warning mt-3 mb-0" style="display:none;">
+                                Nessun destinatario disponibile per il tipo selezionato.
+                            </div>
+                        </div>
+                    @endif
+                    @include('Backend._inputs_v.inputText',['campo'=>'oggetto','testo'=>'Oggetto','required'=>true,'autocomplete'=>'off'])
+                    @if($record->servizio_type)
+                        <label class="fw-bold fs-6 required pt-2">Causale</label>
+                        <div class="mt-5 mb-10">
+                            @php($selected=old('causale_ticket_id',$record->causale_ticket_id))
+                            @foreach(\App\Models\CausaleTicket::where('servizio_type',$record->servizio_type)->get() as $causale)
+                                <div class="form-check form-check-custom form-check-solid mx-5" style="display: inline;">
+                                    <input class="form-check-input gestori" type="radio" value="{{$causale->id}}"
+                                           id="tipo{{$causale->id}}" name="causale_ticket_id"
+                                           required {{$selected==$causale->id?'checked':''}}>
+                                    <label class="form-check-label fw-bolder"
+                                           for="tipo{{$causale->id}}">{{$causale->descrizione_causale}}</label>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                     @include('Backend._inputs.inputTextArea',['campo'=>'messaggio','testo'=>'Messaggio','required'=>true,'autocomplete'=>'off'])
                     <div class="fv-row mt-2">
                         <div class="dropzone" id="kt_dropzonejs_example_1">
@@ -55,7 +94,7 @@
                     </div>
 
                     <div class="w-100 text-center mt-4">
-                        <input type="submit" value="Invia segnalazione" class="btn btn-primary">
+                        <input type="submit" value="Invia segnalazione" class="btn btn-primary" id="invia-ticket-btn">
                     </div>
                     <!-- /.col-md-4 -->
                 </form>
@@ -67,6 +106,47 @@
 @push('customScript')
     <script>
         $(function () {
+
+            const filtraDestinatari = function () {
+                const tipo = $('input[name="destinatario_tipo"]:checked').val();
+                const select = $('#destinatario_id');
+                if (!select.length) {
+                    return;
+                }
+
+                const submitButton = $('#invia-ticket-btn');
+                const emptyAlert = $('#destinatario-empty-alert');
+
+                let selectedVisibile = false;
+                let opzioniVisibili = 0;
+                select.find('option').each(function () {
+                    const optionTipo = $(this).data('tipo');
+                    if (!optionTipo) {
+                        $(this).prop('hidden', false);
+                        return;
+                    }
+
+                    const visibile = optionTipo === tipo;
+                    $(this).prop('hidden', !visibile);
+                    if (visibile) {
+                        opzioniVisibili++;
+                    }
+                    if (visibile && $(this).is(':selected')) {
+                        selectedVisibile = true;
+                    }
+                });
+
+                if (!selectedVisibile) {
+                    select.val('');
+                }
+
+                const senzaDestinatari = opzioniVisibili === 0;
+                emptyAlert.toggle(senzaDestinatari);
+                submitButton.prop('disabled', senzaDestinatari);
+            };
+
+            filtraDestinatari();
+            $(document).on('change', 'input[name="destinatario_tipo"]', filtraDestinatari);
 
             var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
                 url: "{{action([\App\Http\Controllers\Frontend\TicketController::class,'uploadAllegato'])}}", // Set the url for your upload script location

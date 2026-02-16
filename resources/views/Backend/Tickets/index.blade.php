@@ -15,9 +15,7 @@
                 @include('Backend.Tickets.indexFiltri')
             </div>
         </div>
-        @if(!$admin)
-            <a class="btn btn-sm btn-primary" href="{{action([$controller,'create'])}}">Nuovo {{\App\Models\Ticket::NOME_SINGOLARE}}</a>
-        @endif
+        <a class="btn btn-sm btn-primary" href="{{action([$controller,'create'])}}">Nuovo {{\App\Models\Ticket::NOME_SINGOLARE}}</a>
     </div>
 @endsection
 @section('content')

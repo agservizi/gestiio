@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class TicketsController extends Controller
 {
@@ -29,7 +30,7 @@ class TicketsController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Contracts\View\View
      */
     public function index(Request $request)
     {
@@ -82,11 +83,13 @@ class TicketsController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Contracts\View\View
      */
     public function create(Request $request)
     {
 
+        /** @var User $authUser */
+        $authUser = Auth::user();
 
         $record = new Ticket();
 
@@ -109,11 +112,34 @@ class TicketsController extends Controller
             }
         }
 
+        $agentiDestinatari = collect();
+        $supervisoriDestinatari = collect();
+        if ($authUser->hasPermissionTo('admin')) {
+            $agentiDestinatari = User::query()
+                ->whereHas('permissions', function ($query) {
+                    $query->where('name', 'agente');
+                })
+                ->orderBy('cognome')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'cognome']);
+
+            $supervisoriDestinatari = User::query()
+                ->whereHas('permissions', function ($query) {
+                    $query->where('name', 'supervisore');
+                })
+                ->orderBy('cognome')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'cognome']);
+        }
+
 
         return view('Backend.Tickets.create', [
             'controller' => get_class($this),
             'record' => $record,
             'titoloPagina' => 'Nuovo ' . Ticket::NOME_SINGOLARE,
+            'admin' => $authUser->hasPermissionTo('admin'),
+            'agentiDestinatari' => $agentiDestinatari,
+            'supervisoriDestinatari' => $supervisoriDestinatari,
         ]);
     }
 
@@ -121,19 +147,40 @@ class TicketsController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'oggetto' => ['required'],
-            'messaggio' => ['required'],
-            'servizio_type' => ['required'],
-        ]);
-
-
         /** @var User $authUser */
         $authUser = Auth::user();
+
+        $regole = [
+            'oggetto' => ['required'],
+            'messaggio' => ['required'],
+        ];
+        if ($authUser->hasPermissionTo('admin')) {
+            $regole['destinatario_tipo'] = ['required_without:servizio_type', Rule::in(['agente', 'supervisore'])];
+            $regole['destinatario_id'] = ['required_without:servizio_type', 'nullable', 'integer', 'exists:users,id'];
+        } else {
+            $regole['servizio_type'] = ['required'];
+        }
+
+        $request->validate($regole);
+
+        if ($authUser->hasPermissionTo('admin') && $request->filled('destinatario_id') && $request->filled('destinatario_tipo')) {
+            $destinatarioValido = User::query()
+                ->where('id', $request->input('destinatario_id'))
+                ->whereHas('permissions', function ($query) use ($request) {
+                    $query->where('name', $request->input('destinatario_tipo'));
+                })
+                ->exists();
+
+            if (!$destinatarioValido) {
+                return back()
+                    ->withErrors(['destinatario_id' => 'Il destinatario selezionato non è valido per il tipo scelto.'])
+                    ->withInput();
+            }
+        }
 
         $ticket = new Ticket();
         $ticket->servizio_id = $request->input('servizio_id');
@@ -141,10 +188,17 @@ class TicketsController extends Controller
 
         $ticket->user_id = Auth::id();
 
+        $destinatarioTipo = $request->input('destinatario_tipo');
+        $destinatarioId = $request->input('destinatario_id');
+
         if ($authUser->hasPermissionTo('agente')) {
             $ticket->agente_id = Auth::id();
         } else {
-            $ticket->agente_id = $ticket->servizio->agente_id;
+            if ($authUser->hasPermissionTo('admin') && $destinatarioId) {
+                $ticket->agente_id = $destinatarioId;
+            } else {
+                $ticket->agente_id = $ticket->servizio?->agente_id;
+            }
         }
 
         $ticket->oggetto = $request->input('oggetto');
@@ -152,7 +206,7 @@ class TicketsController extends Controller
         $ticket->causale_ticket_id = $request->input('causale_ticket_id');
         $ticket->uid = $request->input('uid');
         $ticket->da_tipo_utente = $this->determinaDaTipoUtente();
-        $ticket->a_tipo_utente = $this->determinaATipoUtente($ticket->da_tipo_utente);
+        $ticket->a_tipo_utente = $this->determinaATipoUtente($ticket->da_tipo_utente, $destinatarioTipo);
         $ticket->save();
 
         $messaggio = new MessaggioTicket();
@@ -168,24 +222,35 @@ class TicketsController extends Controller
         $lettura->messaggio_letto = 1;
         $lettura->save();
 
-        $lettura = new LetturaTicket();
-        $lettura->ticket_id = $ticket->id;
-        $lettura->user_id = 2;
-        $lettura->messaggio_letto = 0;
-        $lettura->save();
+        $destinatarioNotificaId = null;
+        if ($ticket->da_tipo_utente === 'admin') {
+            $destinatarioNotificaId = $ticket->agente_id;
+        } else {
+            $destinatarioNotificaId = $this->trovaAdminDestinatarioId(Auth::id());
+        }
+
+        if ($destinatarioNotificaId && (int)$destinatarioNotificaId !== (int)Auth::id()) {
+            $lettura = new LetturaTicket();
+            $lettura->ticket_id = $ticket->id;
+            $lettura->user_id = $destinatarioNotificaId;
+            $lettura->messaggio_letto = 0;
+            $lettura->save();
+        }
 
 
         AllegatoMessaggioTicket::where('uid', $messaggio->uid)->whereNull('messaggio_id')->update(['messaggio_id' => $messaggio->id, 'uid' => null]);
 
         $authUserNominativo = $authUser->nominativo();
-        dispatch(function () use ($ticket, $authUserNominativo) {
+        dispatch(function () use ($ticket, $authUserNominativo, $destinatarioNotificaId) {
 
-            if ($ticket->da_tipo_utente == 'admin') {
+            if ($ticket->da_tipo_utente === 'admin') {
+                $utente = User::find($destinatarioNotificaId);
+                if ($utente) {
+                    $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
+                }
+            } elseif ($destinatarioNotificaId) {
                 Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $ticket->oggetto . '</span> da agente <span class="fw-bold">' . $authUserNominativo . '</span>');
-                $utente = User::find($ticket->user_id);
-                $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
-            } else {
-                $utente = User::find($ticket->agente_id);
+                $utente = User::find($destinatarioNotificaId);
                 $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
             }
 
@@ -199,7 +264,7 @@ class TicketsController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Contracts\View\View
      */
     public function show($id)
     {
@@ -242,11 +307,11 @@ class TicketsController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return never
      */
     public function edit($id)
     {
-
+        abort(404);
     }
 
     /**
@@ -254,7 +319,7 @@ class TicketsController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
@@ -309,11 +374,11 @@ class TicketsController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return never
      */
     public function destroy($id)
     {
-        //
+        abort(404);
     }
 
 
@@ -335,9 +400,21 @@ class TicketsController extends Controller
     }
 
 
-    protected function determinaATipoUtente($daTipoUtente)
+    protected function determinaATipoUtente($daTipoUtente, ?string $destinatarioTipo = null)
     {
-        return $daTipoUtente == 'admin' ? 'agente' : 'admin';
+        return $daTipoUtente == 'admin' ? ($destinatarioTipo ?: 'agente') : 'admin';
+    }
+
+    protected function trovaAdminDestinatarioId(?int $escludiId = null): ?int
+    {
+        return User::query()
+            ->whereHas('permissions', function ($query) {
+                $query->where('name', 'admin');
+            })
+            ->when($escludiId, function ($query) use ($escludiId) {
+                $query->where('id', '<>', $escludiId);
+            })
+            ->value('id');
     }
 
 }
