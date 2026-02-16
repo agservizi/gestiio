@@ -5,55 +5,76 @@ namespace App\Http\Services;
 use App\Models\ChiamataApi;
 use App\Models\SpedizioneBrt;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 
 class BrtService
 {
-    const URL = 'https://api.brt.it/rest/v1';
-    const USER_ID = 1020110;
-    const PASSWORD = "brt1454st";
+    const DEFAULT_BASE_URL = 'https://api.brt.it/rest/v1';
+    const DEFAULT_PUDO_URL = 'https://api.brt.it/pudo/v1/open/pickup/get-pudo-by-address';
 
     protected $userId;
     protected $password;
+    protected $baseUrl;
+    protected $pudoUrl;
+    protected $pudoToken;
+    protected $departureDepot;
+    protected $senderCustomerCode;
+    protected $defaultNetwork;
+    protected $defaultServiceType;
+    protected $defaultPudoId;
+    protected $defaultDeliveryFreightTypeCode;
+    protected $labelRequired;
+    protected $labelOutputType;
+    protected $labelOffsetX;
+    protected $labelOffsetY;
+    protected $labelBorder;
+    protected $labelLogo;
+    protected $labelBarcodeRow;
 
     public function __construct()
     {
         $this->userId = config('services.brt.user');
         $this->password = config('services.brt.password');
+        $this->baseUrl = rtrim(config('services.brt.base_url', self::DEFAULT_BASE_URL), '/');
+        $this->pudoUrl = $this->normalizePudoUrl((string)config('services.brt.pudo_base_url', self::DEFAULT_PUDO_URL));
+        $this->pudoToken = config('services.brt.pudo_auth_token');
+        $this->departureDepot = (int)config('services.brt.departure_depot', 122);
+        $this->senderCustomerCode = (string)config('services.brt.sender_customer_code', $this->userId);
+        $this->defaultNetwork = (string)config('services.brt.default_network', ' ');
+        $this->defaultServiceType = (string)config('services.brt.default_service_type', '');
+        $this->defaultPudoId = (string)config('services.brt.default_pudo_id', '');
+        $this->defaultDeliveryFreightTypeCode = (string)config('services.brt.default_delivery_freight_type_code', 'DAP');
+        $this->labelRequired = $this->toBool(config('services.brt.label_required', true));
+        $this->labelOutputType = (string)config('services.brt.label_output_type', 'PDF');
+        $this->labelOffsetX = config('services.brt.label_offset_x', 0);
+        $this->labelOffsetY = config('services.brt.label_offset_y', 0);
+        $this->labelBorder = $this->toBool(config('services.brt.label_border', false));
+        $this->labelLogo = $this->toBool(config('services.brt.label_logo', false));
+        $this->labelBarcodeRow = $this->toBool(config('services.brt.label_barcode_row', false));
     }
 
 
     public function shipment(SpedizioneBrt $record)
     {
-        $url = self::URL . '/shipments/shipment';
+        $url = $this->baseUrl . '/shipments/shipment';
 
-        $pricingConditionCode = config('services.brt.pricing');
-        if ($pricingConditionCode != "000") {
-            $pricingConditionCode = "360";
-            if ($record->nazione_destinazione !== 'IT') {
-                //estero
-                $pricingConditionCode = "390";
-            } else if ($record->pudo_id) {
-                //Italia pudo
-                $pricingConditionCode = "363";
-            }
-        }
+        $pricingConditionCode = $this->determinePricingConditionCode($record);
 
 
-        $jayParsedAry = [
+        $payload = [
             "account" => [
                 "userID" => $this->userId,
                 "password" => $this->password,
             ],
             "createData" => [
-                "network" => " ",
-                "departureDepot" => 122,
-                "senderCustomerCode" => $this->userId,
-                "deliveryFreightTypeCode" => $record->tipo_porto,
+                "network" => $this->normalizeNetwork($this->defaultNetwork),
+                "departureDepot" => $this->departureDepot,
+                "senderCustomerCode" => $this->senderCustomerCode,
+                "deliveryFreightTypeCode" => $record->tipo_porto ?: $this->defaultDeliveryFreightTypeCode,
                 "consigneeCompanyName" => $record->ragione_sociale_destinatario,
                 "consigneeAddress" => $record->indirizzo_destinatario,
                 "consigneeZIPCode" => $record->cap_destinatario,
                 "consigneeCity" => $record->localita_destinazione,
+                "consigneeProvinceAbbreviation" => $record->provincia_destinatario,
                 "consigneeCountryAbbreviationISOAlpha2" => $record->nazione_destinazione,
                 "consigneeContactName" => "",
                 "consigneeTelephone" => "",
@@ -64,7 +85,7 @@ class BrtService
                 "consigneeVATNumberCountryISOAlpha2" => "",
                 "consigneeItalianFiscalCode" => "",
                 "pricingConditionCode" => $pricingConditionCode,
-                "serviceType" => "",
+                "serviceType" => $this->defaultServiceType,
                 "insuranceAmount" => 0,
                 "insuranceAmountCurrency" => "",
                 "senderParcelType" => "",
@@ -99,118 +120,245 @@ class BrtService
                 "numberOfParcels" => $record->numero_pacchi,
                 "weightKG" => $record->peso_totale,
                 "volumeM3" => $record->volume_totale,
-                "pudoId" => $record->pudo_id,
+                "pudoId" => $record->pudo_id ?: $this->defaultPudoId,
             ],
-            "isLabelRequired" => 1,
-            "labelParameters" => [
-                "outputType" => "PDF",
-                "offsetX" => 0,
-                "offsetY" => 0,
-                "isBorderRequired" => "0",
-                "isLogoRequired" => "0",
-                "isBarcodeControlRowRequired" => "0"
+            "isLabelRequired" => $this->labelRequired ? 1 : 0,
+            "labelParameters" => $this->labelParametersFromConfig(),
+        ];
+
+        $parcelInfos = $this->mapParcelInfos($record);
+        if ($parcelInfos) {
+            $payload['createData']['parcelInfos'] = $parcelInfos;
+        }
+
+        return $this->requestJson('post', $url, $payload, $record);
+    }
+
+    public function confirm(SpedizioneBrt $record)
+    {
+        $url = $this->baseUrl . '/shipments/shipment';
+
+        $payload = [
+            "account" => [
+                "userID" => $this->userId,
+                "password" => $this->password,
+            ],
+            "confirmData" => [
+                "senderCustomerCode" => $this->senderCustomerCode,
+                "numericSenderReference" => $record->id,
             ]
         ];
 
-        $log = new ChiamataApi();
-        $log->servizio = 'brt';
-        $log->url = $url;
-        $log->request = $jayParsedAry;
-        $log->method = 'post';
-        $log->service_id = $record->id;
-        $log->service_type = get_class($record);
-        $log->save();
+        return $this->requestJson('put', $url, $payload, $record);
+    }
 
+    public function routing(SpedizioneBrt $record)
+    {
+        $url = $this->baseUrl . '/shipments/routing';
 
-        $res = Http::post($url, $jayParsedAry);
-        $log->status = $res->status();
-        \Log::debug($res->reason());
-        $log->response = $res->json();
-        $log->save();
+        $payload = [
+            "account" => [
+                "userID" => $this->userId,
+                "password" => $this->password,
+            ],
+            "routingData" => [
+                "network" => $this->normalizeNetwork($this->defaultNetwork),
+                "departureDepot" => $this->departureDepot,
+                "senderCustomerCode" => $this->senderCustomerCode,
+                "deliveryFreightTypeCode" => $record->tipo_porto ?: $this->defaultDeliveryFreightTypeCode,
+                "consigneeCompanyName" => $record->ragione_sociale_destinatario,
+                "consigneeAddress" => $record->indirizzo_destinatario,
+                "consigneeZIPCode" => $record->cap_destinatario,
+                "consigneeCity" => $record->localita_destinazione,
+                "consigneeProvinceAbbreviation" => $record->provincia_destinatario,
+                "consigneeCountryAbbreviationISOAlpha2" => $record->nazione_destinazione,
+                "numberOfParcels" => $record->numero_pacchi,
+                "weightKG" => $record->peso_totale,
+                "volumeM3" => $record->volume_totale,
+            ]
+        ];
 
-        return $res->json();
+        return $this->requestJson('put', $url, $payload, $record);
     }
 
     public function delete(SpedizioneBrt $record)
     {
-        $url = self::URL . '/shipments/delete';
+        $url = $this->baseUrl . '/shipments/delete';
 
 
-        $jayParsedAry = [
+        $payload = [
             "account" => [
                 "userID" => $this->userId,
                 "password" => $this->password,
             ],
             "deleteData" => [
-                "senderCustomerCode" => $this->userId,
+                "senderCustomerCode" => $this->senderCustomerCode,
                 "numericSenderReference" => $record->id,
                // "alphanumericSenderReference" => $record->nome_mittente,
             ]
         ];
 
-        $log = new ChiamataApi();
-        $log->servizio = 'brt';
-        $log->url = $url;
-        $log->request = $jayParsedAry;
-        $log->method = 'put';
-        $log->service_id = $record->id;
-        $log->service_type = get_class($record);
-        $log->save();
-
-        $res = Http::put($url, $jayParsedAry);
-        $log->status = $res->status();
-        \Log::debug($res->reason());
-        $log->response = $res->json();
-        $log->save();
-
-        return $res->json();
+        return $this->requestJson('put', $url, $payload, $record);
     }
 
 
     public function parcelId($parcelId)
     {
-        $url = self::URL . '/tracking/parcelID/' . $parcelId;
+        $url = $this->baseUrl . '/tracking/parcelID/' . $parcelId;
 
-        $log = new ChiamataApi();
-        $log->servizio = 'brt';
-        $log->url = $url;
-        $log->request = [];
-        $log->method = 'get';
-        $log->save();
-        $res = Http::withHeaders([
+        return $this->requestJson('get', $url, [], null, [
             "userID" => $this->userId,
             "password" => $this->password
-        ])->get($url);
-        $log->status = $res->status();
-        $log->response = $res->json();
-        $log->save();
-
-        return $res->json();
+        ]);
     }
 
 
     public function pudo($countryCode, $city, $zipCode)
     {
-        $url = 'https://api.brt.it/pudo/v1/open/pickup/get-pudo-by-address';
+        $url = $this->pudoUrl;
         $dati = [
             'zipCode' => $zipCode,
             'city' => $city,
             'countryCode' => $countryCode
         ];
 
+        $headers = [];
+        if ($this->pudoToken) {
+            $headers['X-API-Auth'] = $this->pudoToken;
+        }
+
+        return $this->requestJson('get', $url, $dati, null, $headers);
+
+    }
+
+    protected function requestJson(string $method, string $url, array $payload = [], ?SpedizioneBrt $record = null, array $headers = [])
+    {
         $log = new ChiamataApi();
         $log->servizio = 'brt';
         $log->url = $url;
-        $log->request = $dati;
-        $log->method = 'get';
+        $log->request = $payload;
+        $log->method = $method;
+        if ($record) {
+            $log->service_id = $record->id;
+            $log->service_type = get_class($record);
+        }
         $log->save();
-        $res = Http::withHeaders(['X-API-Auth' => '548391ec-e75a-4a9a-a9a2-72ae305519ea'])->get($url, $dati);
+
+        $request = Http::withHeaders($headers);
+
+        if ($method === 'get') {
+            $res = $request->get($url, $payload);
+        } else {
+            $res = $request->{$method}($url, $payload);
+        }
+
+        $json = $res->json();
         $log->status = $res->status();
-        $log->response = $res->json();
+        $log->response = is_array($json) ? $json : ['raw' => $res->body()];
         $log->save();
 
-        return $res->json();
+        return is_array($json) ? $json : ['raw' => $res->body()];
+    }
 
+    protected function mapParcelInfos(SpedizioneBrt $record): array
+    {
+        $colli = $record->dati_colli;
+        if (!is_array($colli) || !count($colli)) {
+            return [];
+        }
+
+        $parcelInfos = [];
+        foreach ($colli as $collo) {
+            $length = (float)($collo['profondita'] ?? 0);
+            $width = (float)($collo['larghezza'] ?? 0);
+            $height = (float)($collo['altezza'] ?? 0);
+            $weightGrams = (float)($collo['peso_reale'] ?? 0) * 1000;
+
+            if (!$length || !$width || !$height || !$weightGrams) {
+                continue;
+            }
+
+            $parcelInfos[] = [
+                'declaredWeight' => [
+                    'value' => (int)round($weightGrams),
+                    'unit' => 'g',
+                ],
+                'dimensions' => [
+                    'length' => $length / 100,
+                    'width' => $width / 100,
+                    'height' => $height / 100,
+                    'unit' => 'm',
+                ],
+            ];
+        }
+
+        return $parcelInfos;
+
+    }
+
+    protected function normalizePudoUrl(string $url): string
+    {
+        $url = rtrim($url, '/');
+        if (str_ends_with($url, '/get-pudo-by-address')) {
+            return $url;
+        }
+
+        return $url . '/get-pudo-by-address';
+    }
+
+    protected function determinePricingConditionCode(SpedizioneBrt $record): string
+    {
+        $fallback = (string)config('services.brt.pricing_condition_code', config('services.brt.pricing', '360'));
+        $italia = (string)config('services.brt.pricing_condition_code_italia', $fallback ?: '360');
+        $pudo = (string)config('services.brt.pricing_condition_code_pudo', $italia);
+        $europe = (string)config('services.brt.pricing_condition_code_europe', $fallback ?: '390');
+        $swiss = (string)config('services.brt.pricing_condition_code_swiss', $europe);
+
+        if ($record->nazione_destinazione === 'IT') {
+            return $record->pudo_id ? $pudo : $italia;
+        }
+
+        if ($record->nazione_destinazione === 'CH') {
+            return $swiss;
+        }
+
+        return $europe;
+    }
+
+    protected function labelParametersFromConfig(): array
+    {
+        return [
+            'outputType' => $this->labelOutputType,
+            'offsetX' => $this->labelOffsetX === '' ? 0 : (int)$this->labelOffsetX,
+            'offsetY' => $this->labelOffsetY === '' ? 0 : (int)$this->labelOffsetY,
+            'isBorderRequired' => $this->boolToApiFlag($this->labelBorder),
+            'isLogoRequired' => $this->boolToApiFlag($this->labelLogo),
+            'isBarcodeControlRowRequired' => $this->boolToApiFlag($this->labelBarcodeRow),
+        ];
+    }
+
+    protected function boolToApiFlag(bool $value): string
+    {
+        return $value ? '1' : '0';
+    }
+
+    protected function toBool($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOL);
+    }
+
+    protected function normalizeNetwork(string $network): string
+    {
+        $network = trim($network);
+        if ($network === '' || strtoupper($network) === 'ITALIA') {
+            return ' ';
+        }
+
+        return $network;
     }
 
 

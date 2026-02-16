@@ -1,0 +1,132 @@
+ORM API / Pickup API - Ordini Ritiro Merce
+-----------------------------------------
+
+Protocolli
+~~~~~~~~~~
+* HTTP 1.1 / REST
+* HTTP 2 / REST
+
+Utilizzo
+~~~~~~~~
+* API Key: Header HTTP con chiave 'X-Api-Key' e valore l'API Key staccata in fase di sottoscrizione.
+
+Inserimento
+~~~~~~~~~~~
+Request
+^^^^^^^
+La request rappresenta l'input generico di Geopost con l'aggiunta di campi specifici per la Business Unit BRT (vedi `brtSpec`).
+La request (in formato JSON) permette l'inserimento di più ordini: _[{..ordine 1..}, {..ordine 2..}]_. Di seguito il dettaglio dei campi della request (per singolo ordine).
+
+[options="header,footer"]
+|=======================
+|Field name|Field description|Mandatory
+|requestInfos.parcelCount    |Numero di colli | Obbligatorio se non è specificato `brtSpec.palletCount`
+|requestInfos.collectionDate    |Data di ritiro richiesta. Formato: yyyy-MM-dd     |Obbligatorio
+|customerInfos.custAccNumber|Codice cliente BRT|Obbligatorio
+|sendingDepot    |Filiale mittente    |
+|requestingDepot |Filiale dell'ordinante |
+|recipientDepot  |Filiale di consegna |
+|stakeholders[] | Stakeholder: array di oggetti che possono rappresentare, in base al sottocampo `type`: SE Sender/Mittente, RQ Requester/Ordinante, RE Receiver/Destinatario | Obbligatorio
+|stakeholders[].type | Tipo: RQ, RE, SE | Obbligatorio. Gli stakeholder obbligatori sono RQ e SE.
+|stakeholders[].customerInfos.custAccNumber |Codice cliente dell'Anagrafica Ritiro. Rappresenta un luogo censito nei sistemi di BRT al fine di velocizzare il processo dei ritiri ed evitare la valorizzazione degli indirizzi per ORM ripetuti |Obbligatorio per stakeholder di tipo RQ. Per SE e RE se non specificato devono allora essere valorizzati tutti i campi dell'indirizzo nell'oggetto: `stakeholders[].address`
+|stakeholders[].address | Indirizzo. Se presente deve avere tutti i sottocampi valorizzati: `compName`, `state`, `countryCode`, `zipCode`, `city`, `street` | Obbligatorio se non è specificato `stakeholders[].customerInfos.custAccNumber` (vedi sopra) 
+|stakeholders[].contact | Contatti di riferimento per lo stakeholder. Se presente deve avere i sottocampi valorizzati: `contactPerson` e `phone` | Obbligatorio per il tipo SE
+|brtSpec.goodDescription | Natura merce | Obbligatorio
+|brtSpec.payerType | Pagante: "Ordering", "Sender" o "Consignee" | Obbligatorio
+|brtSpec.collectionTime | Ora di ritiro richiesta. Formato HH:mm | Obbligatorio
+|brtSpec.network | "DPD" nel caso in cui si vuole specificare il network DPD per gli ordini esteri. Vuoto altrimenti | 
+|brtSpec.commissioned | ORM Commissionato |
+|brtSpec.notes|Eventuali note da aggiungere per l'ordine|
+|brtSpec.alerts[] | Avvisi |
+|brtSpec.alerts[].type | "COMMISSIONED" (sul commissionato) o "CONFIRM" (alla conferma) | Obbligatorio se si specifica un alert
+|brtSpec.alerts[].mail | Mail per gli avvisi. | Obbligatorio in alternativa a `brtSpec[].alerts.sms`
+|brtSpec.alerts[].sms | Numero di telefono per gli avvisi via SMS. | Obbligatorio in alternativa a `brtSpec[].alerts.mail`
+|brtSpec.palletCount | Numero di bancali | Obbligatorio se non specificato `requestInfos.parcelCount`
+|brtSpec.hydraulicTailgateAvailable | Se richiesta sponda idraulica per il ritiro | 
+|brtSpec.requestRef | Riferimento interno del cliente |
+|brtSpec.volumeMC | Volume in metri cubi (vedi sezione dedicata a peso e volume) |
+|mpsWeightAndDimension.weight | Dimensioni totali in metri (lunghezza, altezza e larghezza) (vedi sezione dedicata a peso e volume) |
+|parcelInfos[].dimensions | Dimensioni per collo/bancale in metri (lunghezza, altezza e larghezza) (vedi sezione dedicata a peso e volume) | 
+|brtSpec.weightKG | Peso totale in chili | * (vedi sezione dedicata a peso e volume)
+|mpsWeightAndDimension.weight | Peso totale in grammi | * (vedi sezione dedicata a peso e volume)
+|parcelInfos[].declaredWeight | Peso per collo/bancale in grammi | * (vedi sezione dedicata a peso e volume)
+|brtSpec.insuredAmount | Importo dell'assicurazione. Se lo si vuol specificare allora è necessario valorizzare i sottocampi `value` e `currency` (formato ISO-4127) |
+|brtSpec.cashOnDeliveryAmount | Importo del contrassegno. Se lo si vuol specificare allora è necessario valorizzare i sottocampi `value` e `currency` (formato ISO-4127) |
+|brtSpec.payeeType | Beneficiario del contrassegno: "Sender" o "Ordering" | Obbligatorio se presente `brtSpec.cashOnDeliveryAmount`
+|brtSpec.cashType | Tipo di pagamento del contrassegno | 
+|brtSpec.openingHours[] | Orari di apertura per il ritiro |
+|brtSpec.serviceCode | Service Code BRT | Obbligatorio solo per ritiri Fresh (vedi sezione Fresh)
+|brtSpec.parcelIDFrom | |
+|brtSpec.parcelIDTo | |
+|brtSpec.parcelInfos[] | Dettaglio dei colli o bancali: indicare in alternativa `id` (id collo) o `number` (numero bancale) e inoltre `expirationDate` (data scadenza) | Obbligatorio per ritiri Fresh (vedi sezione Fresh)
+|=======================
+
+Peso e volume
+^^^^^^^^^^^^^
+Il peso è un dato obbligatorio ai fini della richiesta. È possibile specificarlo, in alternativa, in tre modi:
+
+* `brtSpec.weightKG`: peso totale dei colli/bancali in chili
+* `mpsWeightAndDimension.weight.value`: peso totale dei colli/bancali in grammi
+* `parcelInfos[].declaredWeight.value`: peso per collo/bancale in grammi
+
+Uno di questi deve essere obbligatoriamente presente (per collo/bancale devono essere specificati tutti). Si consiglia l'utilizzo di `brtSpec.weightKG`.
+
+Il volume non è obbligatorio. La sua eventuale valorizzazione segue analogamente quanto già descritto per il peso:
+
+* `brtSpec.volumeMC`: volume totale dei colli/bancali in metri cubi
+* `mpsWeightAndDimension.dimensions.length`, `mpsWeightAndDimension.dimensions.width`, `mpsWeightAndDimension.dimensions.height`: le dimensioni totali, in metri, dei colli/bancali
+* `parcelInfos[].dimensions.length`, `parcelInfos[].dimensions.width`, `parcelInfos[].dimensions.height`: le dimensioni, in metri, per ogni singolo collo/bancale
+
+Fresh
+^^^^^
+Per richiedere un ritiro di tipo Fresh è necessario:
+
+* valorizzare `brtSpec.serviceCode`: "B20"
+* indicare il dettaglio dei colli/bancali con relative date di scadenza
+
+Response
+^^^^^^^^
+Anche la response, ovviamente, è un array: _[{..resp. ordine 1..}, {..resp. ordine 2..}]_. Di seguito il dettaglio:
+[options="header,footer"]
+|=======================
+|Field name|Field description
+|ormReservationNumber|Numero prenotazione ritiro
+|sendingDepot|Filiale di partenza
+|collectionDate|Data di ritiro applicata
+|serviceTime|Orari di servizio
+|commissioned|Commissionato
+|parcels|Elenco dei colli/dettagli
+|errors|Errori (vedi sezione Errori)
+|=======================
+
+Errori
+^^^^^^
+Gli errori sono gestiti in base al numero di ordini inseriti:
+
+* Ordine singolo (un solo oggetto nell'array della request): l'errore verrà restituito come errore HTTP:
+[source,json]
+-----------------
+{
+ "timestamp": "2023-11-07T10:20:36.430489744",
+ "status": 400,
+ "error": "Bad Request",
+ "message": "Message...",
+ "path": "/api/geodata/v410/colreqs"
+}
+-----------------
+
+* Più ordini: gli errori per l'ordine che li ha causati sono indicati nel campo `errors`
+
+In entrambi i casi, se ci sono errori di validazione (es. formato date, incongruenza campi, ...) viene restituito subito un errore HTTP.
+
+Cancellazione (solo per ORM Fresh, B20)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Request
+^^^^^^^
+La request, senza body, prevede la valorizzazione del numero prenotazione ritiro nel path (sostituendo {id}):
+
+- /api/geodata/v410/colreqs/{id}
+
+Response
+^^^^^^^
+true/false

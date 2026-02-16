@@ -1,0 +1,44 @@
+{
+    "createResponse": {
+        "currentTimeUTC": "2025-07-02-12.56.39.284167+02:00",
+        "executionMessage": {
+            "code": 0,
+            "severity": "INFO",
+            "codeDesc": "SHIPMENT DATA RECEIVED",
+            "message": "BRT has received shipment information properly"
+        },
+        "arrivalTerminal": "078",
+        "arrivalDepot": "078",
+        "deliveryZone": "22",
+        "parcelNumberFrom": "0004530",
+        "parcelNumberTo": "0004530",
+        "departureDepot": 102,
+        "seriesNumber": 10,
+        "serviceType": "C",
+        "consigneeCompanyName": "SPED TEST POC",
+        "consigneeAddress": "VIA ROMA 1",
+        "consigneeZIPCode": "84125",
+        "consigneeCity": "SALERNO",
+        "consigneeProvinceAbbreviation": "SA",
+        "consigneeCountryAbbreviationBRT": "",
+        "numberOfParcels": 1,
+        "weightKG": 1.0,
+        "volumeM3": 0.000,
+        "alphanumericSenderReference": "TEST POC",
+        "senderCompanyName": "BRT TEST 6",
+        "senderProvinceAbbreviation": "BO",
+        "labels": {
+            "label": [
+                {
+                    "dataLength": 2620,
+                    "parcelID": "102078100004530225",
+                    "trackingByParcelID": "102078100004530",
+                    "parcelNumberGeoPost": "",
+                    "stream": "JVBERi0xLjMKekdf1fnfSqQYt7AjczYfpmRSIEyEcx8KMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMyAwIFIKL09wZW5BY3Rpb24gWzAgL1hZWiAwIDMyNzY3IDEuMDAwMDAwMF0KL091dGxpbmVzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9PdXRsaW5lcwovQ291bnQgMAo+PgplbmRvYmoKMyAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWyA1IDAgUiBdCi9Db3VudCAxCj4+CmVuZG9iago0IDAgb2JqClsvUERGIC9UZXh0XQplbmRvYmoKNSAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9SZXNvdXJjZXMgPDwKL0ZvbnQgPDwKL0ZjcGRmMCA3IDAgUgovRmNwZGYxIDggMCBSCj4+Ci9Qcm9jU2V0IDQgMCBSID4+Ci9NZWRpYUJveCBbMCAwIDI5OCAyMTBdCi9Dcm9wQm94IFswIDAgMjk4IDIxMF0KL1JvdGF0ZSAwCi9Db250ZW50cyA2IDAgUgo+PgplbmRvYmoKNiAwIG9iago8PAovTGVuZ3RoIDY5OAovRmlsdGVyIFsvRmxhdGVEZWNvZGVdCj4+CnN0cmVhbQp4nO1Wy27bMBC88yt4bIGI5lJ8qTcndYOiTZ3YQn4grftAA7S55Pe7pEhLshVHsmg7CCofRK7Imd3Z5dLAOD6Ut17QmgkIg7t7EkbfCe/a9/CEfXH5f33i9eQvga5PWacVMycs0wqHj0RIzgoc5YIZfOEnCUzXht/kB1mSm+EU3G1vMoBlRnkGY/woGNIxSB1jCAzBsDdDQ6aAWMuEBq62ZTovyeTD3Z+vKzwq1gHRcrXBmrUPlpCC5Y4lk7kLA3fckzdCvKXlLzIrh3uNLulKGKWd/zSXwWllHFOcjxc+4K8zCwCeIFlmA4Hi/lUTBMPeBLVEEXGtEQBvirZ/7Yi6PH0d2ILl4YR55DBPUf4e39iAH6o+zJPhA+dtgmhIIFFAXEuE84ZkexNAzquj5YLQzI1A5ExUbUgaJhqW/cNgUHHo0OhUwawPQxfVcQiGEU1CWQbejGFYHnoEN3bdJJqQohckgKwcz7ABSfUMpurXy1SFlBW+XVaQF12AoHw6nm+OUXwBzEZE4KLTyb4NN2Ia7np4xNyGBKoHemltLeXi54q9o+VsWdLreYcIfdHB3chqC56LCTcTwYUaoYXJI3RTC/wiu0Al71dZeJHxgCrqrKl8t8QbKPG8RbOQKtyTLRnOF2WlsR4FrlRXCpfXs/frDFK6nI7i0Llbuclx+3FKF/OrKQXqGD7PFl/mo2iMrFpEm+bqglF+5uzhAZp5Svd8umQUztbpOfj/z077wRdjifumFJspLkfPw5pHHAC31RbcUUhJTeFviIdvZLPi28B4gciWF00ozqxOBIXHSvSHwl7Mn4QaFqBkuUgUYEKonVqdLMCEGdzp1bAANZM2UYD4f0e/6gy+zBI9llYv8+AkzODJtDpWZzhZk3mZUMe6UhN20dfQ+o6VwWFQOzOY8OActBhu8PcP2JiKugplbmRzdHJlYW0KZW5kb2JqCjcgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9OYW1lIC9GY3BkZjAKL0Jhc2VGb250IC9IZWx2ZXRpY2EtQm9sZAovRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZwo+PgplbmRvYmoKOCAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL05hbWUgL0ZjcGRmMQovQmFzZUZvbnQgL0hlbHZldGljYQovRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZwo+PgplbmRvYmoKOSAwIG9iago8PAovQ3JlYXRvciAoSUJNIGFmcDJwZGYgVHJhbnNmb3JtIFZlcnNpb246IDEuNi4wKQovQ3JlYXRpb25EYXRlIChEOjIwMjUwNzAyMTQ1NjM5KQovUHJvZHVjZXIgKFtDbGliUERGIExpYnJhcnkgMi4wMi1yMS0yXSAxLjYuMCBBSVgpCi9BdXRob3IgKFZBUzExNDRDKQovVGl0bGUgKE5vIFRpdGxlKQovU3ViamVjdCAoTm9uZSkKL0tleXdvcmRzIChDbGliUERGKQo+PgplbmRvYmoKeHJlZgowIDEwCjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAzMyAwMDAwMCBuIAowMDAwMDAwMTM3IDAwMDAwIG4gCjAwMDAwMDAxODMgMDAwMDAgbiAKMDAwMDAwMDI0MiAwMDAwMCBuIAowMDAwMDAwMjcwIDAwMDAwIG4gCjAwMDAwMDA0NjIgMDAwMDAgbiAKMDAwMDAwMTIzNCAwMDAwMCBuIAowMDAwMDAxMzUwIDAwMDAwIG4gCjAwMDAwMDE0NjEgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSAxMAovUm9vdCAxIDAgUgovSW5mbyA5IDAgUgo+PgpzdGFydHhyZWYKMTY4NgolJUVPRgo=",
+                    "streamDigitalLabel": ""
+                }
+            ]
+        },
+        "disclaimer": ""
+    }
+}

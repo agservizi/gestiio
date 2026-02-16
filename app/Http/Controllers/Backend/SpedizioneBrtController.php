@@ -16,14 +16,15 @@ use App\Models\ListinoBrtEuropa;
 use App\Models\MovimentoPortafoglio;
 use App\Models\NazioneEuropaBrt;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\SpedizioneBrt;
-use DB;
 use Illuminate\Support\Facades\Response;
 use Faker\Generator;
 use Illuminate\Container\Container;
-use PDF;
 use function App\getInputNumero;
 
 
@@ -35,7 +36,7 @@ class SpedizioneBrtController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function index(Request $request)
     {
@@ -43,7 +44,8 @@ class SpedizioneBrtController extends Controller
         $recordsQB = $this->applicaFiltri($request);
 
 
-        $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
+        $records = $recordsQB->paginate(config('configurazione.paginazione'));
+        $records->appends($request->query());
 
         if ($request->ajax()) {
 
@@ -51,7 +53,7 @@ class SpedizioneBrtController extends Controller
                 'html' => base64_encode(view('Backend.SpedizioneBrt.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -99,7 +101,7 @@ class SpedizioneBrtController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function create($zona = null)
     {
@@ -114,7 +116,9 @@ class SpedizioneBrtController extends Controller
         if ($zona === 'ITALIA') {
             $record->nazione_destinazione = 'IT';
         }
-        if (Auth::user()->hasPermissionTo('agente')) {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        if ($authUser->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         }
         return view('Backend.SpedizioneBrt.edit', [
@@ -131,7 +135,7 @@ class SpedizioneBrtController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function store(Request $request)
     {
@@ -160,12 +164,12 @@ class SpedizioneBrtController extends Controller
             $record->labels = $res['createResponse']['labels'];
         }
         if ($record->response['createResponse'] ?? false) {
-            $esito = \Arr::get($record->response['createResponse'], 'executionMessage');
+            $esito = Arr::get($record->response['createResponse'], 'executionMessage');
             if ($esito) {
-                $record->esito = \Arr::get($esito, 'severity');
-                $message = \Arr::get($esito, 'message');
+                $record->esito = Arr::get($esito, 'severity');
+                $message = Arr::get($esito, 'message');
                 if ($message) {
-                    $record->esito_testo = \Arr::get($esito, 'code') . ' ' . $message;
+                    $record->esito_testo = Arr::get($esito, 'code') . ' ' . $message;
                 }
             }
             $record->save();
@@ -179,7 +183,7 @@ class SpedizioneBrtController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function show($id)
     {
@@ -200,7 +204,7 @@ class SpedizioneBrtController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function edit($id)
     {
@@ -233,7 +237,7 @@ class SpedizioneBrtController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function update(Request $request, $id)
     {
@@ -250,12 +254,12 @@ class SpedizioneBrtController extends Controller
             $record->labels = $res['createResponse']['labels'];
         }
         if ($record->response['createResponse'] ?? false) {
-            $esito = \Arr::get($record->response['createResponse'], 'executionMessage');
+            $esito = Arr::get($record->response['createResponse'], 'executionMessage');
             if ($esito) {
-                $record->esito = \Arr::get($esito, 'severity');
-                $message = \Arr::get($esito, 'message');
+                $record->esito = Arr::get($esito, 'severity');
+                $message = Arr::get($esito, 'message');
                 if ($message) {
-                    $record->esito_testo = \Arr::get($esito, 'code') . ' ' . $message;
+                    $record->esito_testo = Arr::get($esito, 'code') . ' ' . $message;
                 }
             }
             $record->save();
@@ -267,7 +271,7 @@ class SpedizioneBrtController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function destroy($id)
     {
@@ -288,7 +292,7 @@ class SpedizioneBrtController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+        * @return mixed
      */
     public function annulla($id)
     {
@@ -302,9 +306,9 @@ class SpedizioneBrtController extends Controller
 
 
         if ($res['deleteResponse'] ?? false) {
-            $esito = \Arr::get($res['deleteResponse'], 'executionMessage');
+            $esito = Arr::get($res['deleteResponse'], 'executionMessage');
             if ($esito) {
-                if (\Arr::get($esito, 'codeDesc') == 'SHIPMENT DELETED') {
+                if (Arr::get($esito, 'codeDesc') == 'SHIPMENT DELETED') {
                     $record->esito = 'ANNULLATA';
                     $record->save();
 
@@ -319,6 +323,66 @@ class SpedizioneBrtController extends Controller
         return [
             'success' => true,
             'redirect' => action([SpedizioneBrtController::class, 'index']),
+        ];
+    }
+
+    public function conferma($id)
+    {
+        $record = SpedizioneBrt::find($id);
+        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+
+        $service = new BrtService();
+        $res = $service->confirm($record);
+
+        $record->response = array_merge($record->response ?? [], $res);
+        $this->aggiornaEsitoDaResponse($record, $res, 'confirmResponse');
+        $record->save();
+
+        return redirect()->back();
+    }
+
+    public function routing($id)
+    {
+        $record = SpedizioneBrt::find($id);
+        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+
+        $service = new BrtService();
+        $res = $service->routing($record);
+
+        $record->response = array_merge($record->response ?? [], $res);
+        $this->aggiornaEsitoDaResponse($record, $res, 'routingResponse');
+        $record->save();
+
+        return redirect()->back();
+    }
+
+    public function tracking($id)
+    {
+        $record = SpedizioneBrt::find($id);
+        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+
+        $labels = data_get($record->response, 'createResponse.labels.label', []);
+        if (!$labels || !is_array($labels)) {
+            return [
+                'success' => false,
+                'message' => 'Nessuna label disponibile per interrogare il tracking',
+                'tracking' => [],
+            ];
+        }
+
+        $service = new BrtService();
+        $tracking = [];
+        foreach ($labels as $label) {
+            $parcelId = data_get($label, 'parcelID');
+            if (!$parcelId) {
+                continue;
+            }
+            $tracking[$parcelId] = $service->parcelId($parcelId);
+        }
+
+        return [
+            'success' => true,
+            'tracking' => $tracking,
         ];
     }
 
@@ -358,7 +422,7 @@ class SpedizioneBrtController extends Controller
             $recordsQb->where('bordero_id', $id);
             $bordero = BorderoBrt::find($id);
 
-            $pdf = PDF::loadView('Backend.SpedizioneBrt.borderoPdf', [
+            $pdf = Pdf::loadView('Backend.SpedizioneBrt.borderoPdf', [
                 'records' => $recordsQb->get(),
                 'bordero' => $bordero
             ]);
@@ -379,7 +443,7 @@ class SpedizioneBrtController extends Controller
                     $record->bordero_id = $bordero->id;
                     $record->save();
                 }
-                $pdf = PDF::loadView('Backend.SpedizioneBrt.borderoPdf', [
+                $pdf = Pdf::loadView('Backend.SpedizioneBrt.borderoPdf', [
                     'records' => $records,
                     'bordero' => $bordero
                 ]);
@@ -526,6 +590,20 @@ class SpedizioneBrtController extends Controller
     protected function backToIndex()
     {
         return redirect()->action([get_class($this), 'index']);
+    }
+
+    protected function aggiornaEsitoDaResponse(SpedizioneBrt $record, array $response, string $root)
+    {
+        $esito = data_get($response, $root . '.executionMessage');
+        if (!$esito) {
+            return;
+        }
+
+        $record->esito = data_get($esito, 'severity');
+        $message = data_get($esito, 'message');
+        if ($message) {
+            $record->esito_testo = data_get($esito, 'code') . ' ' . $message;
+        }
     }
 
     /** Query per index

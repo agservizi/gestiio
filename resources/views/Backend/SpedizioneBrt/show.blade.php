@@ -2,6 +2,16 @@
 @section('toolbar')
     <a class="btn btn-danger btn-sm" id="elimina"
        href="{{action([$controller,'annulla'],$record->id)}}">Annulla spedizione</a>
+    <form method="POST" action="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'conferma'],$record->id)}}" class="d-inline">
+        @csrf
+        <button class="btn btn-warning btn-sm" type="submit">Conferma BRT</button>
+    </form>
+    <form method="POST" action="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'routing'],$record->id)}}" class="d-inline">
+        @csrf
+        <button class="btn btn-info btn-sm" type="submit">Routing BRT</button>
+    </form>
+    <a class="btn btn-primary btn-sm"
+       href="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'tracking'],$record->id)}}">Tracking API</a>
 @endsection
 
 @section('content')

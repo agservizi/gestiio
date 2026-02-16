@@ -1,0 +1,71 @@
+// ORM multiplo con 2 parcels, con mittente codificato
+
+[{
+	
+	"requestInfos" : {
+		
+		"parcelCount" : 2,
+		"collectionDate" : "2024-03-08"
+		
+	},
+	"customerInfos": {
+		"custAccNumber" : "xxxxxxx" // codice cliente
+	},
+	"stakeholders" : [
+		
+		{
+			"type" : "RQ",
+			"customerInfos" : {
+				"custAccNumber" : "xxxxxxx000" // codice cliente ordinante
+			}
+		},
+		{
+			"type" : "SE",
+			"customerInfos" : {
+				"custAccNumber" : "xxxxxxxYYY" // codice cliente mittente
+			},
+			"contact" : {
+				"contactDetails" : {
+					"phone" : "3333333333",
+					"contactPerson" : "Biagio"
+				}
+
+			}
+		}
+	
+		
+	],
+	"brtSpec" : {
+		"goodDescription" : "Alimenti",
+		"payerType" : "Ordering",
+		"collectionTime" : "10:00",
+		"alerts": [
+			{
+				"type" : "COMMISSIONED",
+				"mail" : "mail@mail.brt"
+			},
+			{
+				"type" : "CONFIRM",
+				"sms" : "3333333333",
+				"mail" : "mail@mail.brt"
+			},
+			{
+				"type" : "CONFIRM",
+				"mail" : "mail@mail.geopost"
+			}
+		],
+		"weightKG" : 22.3,
+		"openingHours" : [
+			
+			{
+				"from" : "10:00",
+				"to" : "13:00"
+			},
+			{
+				"from" : "15:00",
+				"to" : "17:00"
+			}
+			
+		]
+	}
+}]

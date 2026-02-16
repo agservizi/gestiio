@@ -51,8 +51,13 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('/spedizione-brt/create/{zona?}', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'create']);
     Route::resource('spedizione-brt', \App\Http\Controllers\Backend\SpedizioneBrtController::class)->except(['create']);
     Route::delete('spedizione-brt-annulla/{id}', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'annulla']);
+    Route::post('spedizione-brt/{id}/conferma', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'conferma']);
+    Route::post('spedizione-brt/{id}/routing', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'routing']);
+    Route::get('spedizione-brt/{id}/tracking', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'tracking']);
     Route::get('spedizione-brt/{id}/etichetta/{index}', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'etichetta']);
     Route::get('spedizione-brt/{id}/pdf/{tipopdf}', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'pdf']);
+    Route::post('brt-orm', [\App\Http\Controllers\Backend\BrtOrmController::class, 'store']);
+    Route::delete('brt-orm/{reservationId}', [\App\Http\Controllers\Backend\BrtOrmController::class, 'destroy']);
 
 
 //Allegati tutti servizi
