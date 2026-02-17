@@ -12,8 +12,13 @@ use Illuminate\Support\Facades\Route;
 | contains the "web" middleware group. Now create something great!
 |
 */
-//Route::get('/', [\App\Http\Controllers\Frontend\VariePagineController::class, 'showHome']);
-Route::get('/', [\App\Http\Controllers\Frontend\HomeController::class, 'show']);
+Route::get('/', function () {
+    if (\Illuminate\Support\Facades\Auth::check()) {
+        return redirect('/backend');
+    }
+
+    return redirect('/login');
+});
 
 Route::get('select2front', [\App\Http\Controllers\Backend\Select2::class, 'response']);
 
