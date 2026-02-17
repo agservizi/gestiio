@@ -170,7 +170,7 @@
                         @endif
                     </h3>
                 </div>
-                <div class="card-body d-flex flex-column pt-0">
+                <div class="card-body d-flex flex-column pt-0 px-5 pb-5">
                     {{-- Pannello ricerca --}}
                     <div id="chat-search-panel" class="d-none mb-3">
                         <div class="input-group input-group-sm">
@@ -196,11 +196,9 @@
                         <div id="chat-dropzone-overlay">
                             <span class="fw-bold text-primary fs-5">Rilascia i file qui</span>
                         </div>
-                        <div id="chat-messages" class="overflow-auto pe-2" style="max-height: 56vh; height: 56vh;">
+                        <div id="chat-messages" class="overflow-auto pe-2 px-2 py-2" style="max-height: 56vh; height: 56vh;">
                             @include('Backend.Chat._messages', ['messaggi' => $messaggi, 'altroLastReadAt' => $altroLastReadAt])
                         </div>
-                    </div>
-                        @include('Backend.Chat._messages', ['messaggi' => $messaggi])
                     </div>
                     <div id="chat-typing-indicator" class="text-muted fs-8 mt-3 d-none">
                         <span class="fw-bold" id="chat-typing-name"></span> sta scrivendo
