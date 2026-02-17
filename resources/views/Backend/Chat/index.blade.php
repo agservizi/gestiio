@@ -119,6 +119,28 @@
             max-height: 300px;
             overflow-y: auto;
         }
+
+        #chat-mention-suggest {
+            position: absolute;
+            z-index: 30;
+            background: #fff;
+            border: 1px solid #e4e6ef;
+            border-radius: 8px;
+            min-width: 220px;
+            max-height: 220px;
+            overflow-y: auto;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .12);
+        }
+
+        #chat-mention-suggest .chat-mention-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: .85rem;
+        }
+
+        #chat-mention-suggest .chat-mention-item:hover {
+            background: #f1f1f2;
+        }
     </style>
 @endpush
 
@@ -185,6 +207,7 @@
                             <div class="col-md-3 d-flex align-items-center gap-3">
                                 <label class="form-check form-check-sm m-0"><input class="form-check-input" type="checkbox" id="chat-search-attachments"><span class="form-check-label">Allegati</span></label>
                                 <label class="form-check form-check-sm m-0"><input class="form-check-input" type="checkbox" id="chat-search-favorites"><span class="form-check-label">Preferiti</span></label>
+                                <label class="form-check form-check-sm m-0"><input class="form-check-input" type="checkbox" id="chat-search-mentions"><span class="form-check-label">Menzioni</span></label>
                             </div>
                         </div>
                         <div id="chat-search-results" class="mt-2"></div>
@@ -261,6 +284,7 @@
                             <div class="flex-grow-1">
                                 <label class="form-label fw-bold fs-7 mb-2">Messaggio</label>
                                 <textarea name="messaggio" id="chat-messaggio" class="form-control" rows="3" placeholder="Scrivi qui..." {{$threadAttivo ? '' : 'disabled'}}></textarea>
+                                <div id="chat-mention-suggest" class="d-none"></div>
                                 <div class="mt-3">
                                     <input type="file" id="chat-allegati" name="allegati[]" class="form-control form-control-sm" multiple {{$threadAttivo ? '' : 'disabled'}}>
                                     <div id="chat-allegati-info" class="text-muted fs-8 mt-1"></div>
@@ -309,6 +333,7 @@
             let loadingHistory = false;
             let selectedForwardIds = [];
             let activeLastMessageId = null;
+            const mentionUsers = @json($mentionUsers ?? []);
 
             /* ================= SUONO NOTIFICA ================= */
             const notificationSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBFSAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
@@ -350,6 +375,45 @@
                 const pos = start + text.length;
                 el.selectionStart = el.selectionEnd = pos;
                 el.focus();
+            }
+
+            function hideMentionSuggest() {
+                $('#chat-mention-suggest').addClass('d-none').empty();
+            }
+
+            function renderMentionSuggest(matches, replaceToken) {
+                const $box = $('#chat-mention-suggest');
+                if (!matches.length) {
+                    hideMentionSuggest();
+                    return;
+                }
+
+                $box.empty();
+                matches.slice(0, 6).forEach(function (user) {
+                    $box.append('<div class="chat-mention-item" data-tag="' + $('<span>').text(user.tag).html() + '" data-replace="' + $('<span>').text(replaceToken).html() + '">@' + $('<span>').text(user.tag).html() + ' <span class="text-muted">(' + $('<span>').text(user.name).html() + ')</span></div>');
+                });
+                $box.removeClass('d-none');
+            }
+
+            function suggestMentions(textarea) {
+                const cursorPos = textarea.selectionStart ?? textarea.value.length;
+                const before = textarea.value.slice(0, cursorPos);
+                const match = before.match(/(?:^|\s)@([a-zA-Z0-9._-]{1,40})$/);
+
+                if (!match) {
+                    hideMentionSuggest();
+                    return;
+                }
+
+                const needle = (match[1] || '').toLowerCase();
+                const replaceToken = '@' + match[1];
+                const matches = mentionUsers.filter(function (u) {
+                    const tag = (u.tag || '').toLowerCase();
+                    const name = (u.name || '').toLowerCase();
+                    return tag.includes(needle) || name.includes(needle);
+                });
+
+                renderMentionSuggest(matches, replaceToken);
             }
 
             /* ================= TYPING STATUS ================= */
@@ -658,10 +722,36 @@
                 } else {
                     sendTypingStatus(false);
                 }
+
+                suggestMentions(this);
             });
 
             $('#chat-messaggio').on('blur', function () {
                 sendTypingStatus(false);
+                setTimeout(hideMentionSuggest, 150);
+            });
+
+            $(document).on('click', '.chat-mention-item', function () {
+                const mentionTag = $(this).data('tag');
+                const replaceToken = $(this).data('replace');
+                const textarea = document.getElementById('chat-messaggio');
+                if (!textarea || !mentionTag || !replaceToken) return;
+
+                const cursorPos = textarea.selectionStart ?? textarea.value.length;
+                const before = textarea.value.slice(0, cursorPos);
+                const after = textarea.value.slice(cursorPos);
+                const idx = before.lastIndexOf(replaceToken);
+                if (idx === -1) {
+                    hideMentionSuggest();
+                    return;
+                }
+
+                const nextBefore = before.slice(0, idx) + '@' + mentionTag + ' ';
+                textarea.value = nextBefore + after;
+                textarea.focus();
+                textarea.selectionStart = textarea.selectionEnd = nextBefore.length;
+                $('#chat-messaggio').trigger('input');
+                hideMentionSuggest();
             });
 
             /* ================= ALLEGATI ================= */
@@ -936,6 +1026,7 @@
                     date_to: $('#chat-search-to').val(),
                     with_attachments: $('#chat-search-attachments').is(':checked') ? 1 : 0,
                     favorites_only: $('#chat-search-favorites').is(':checked') ? 1 : 0,
+                    mentions_only: $('#chat-search-mentions').is(':checked') ? 1 : 0,
                     priority: $('#chat-search-priority').val(),
                 }, function (response) {
                     const $container = $('#chat-search-results');

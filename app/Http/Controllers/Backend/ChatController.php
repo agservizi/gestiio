@@ -66,13 +66,25 @@ class ChatController extends Controller
         // Aggiorna stato online dell'utente corrente
         $this->aggiornaStatoOnline($authUser->id);
 
+        $utentiDisponibili = $this->utentiDisponibili($authUser);
+        $mentionUsers = $utentiDisponibili
+            ->map(function (User $utente) {
+                return [
+                    'id' => (int) $utente->id,
+                    'name' => $utente->nominativo(),
+                    'tag' => Str::slug($utente->nominativo(), '.'),
+                ];
+            })
+            ->values();
+
         return view('Backend.Chat.index', [
             'controller' => get_class($this),
             'titoloPagina' => 'Chat interna',
             'threads' => $threads,
             'threadAttivo' => $threadAttivo,
             'messaggi' => $messaggi,
-            'utentiDisponibili' => $this->utentiDisponibili($authUser),
+            'utentiDisponibili' => $utentiDisponibili,
+            'mentionUsers' => $mentionUsers,
             'altroLastReadAt' => $altroLastReadAt,
             'quickTemplates' => $this->quickTemplatesData($authUser->id),
             'pinnedMessages' => $pinnedMessages,
@@ -780,6 +792,7 @@ class ChatController extends Controller
             'date_to' => ['nullable', 'date'],
             'with_attachments' => ['nullable', 'boolean'],
             'favorites_only' => ['nullable', 'boolean'],
+            'mentions_only' => ['nullable', 'boolean'],
             'priority' => ['nullable', 'integer', 'in:0,1,2'],
         ]);
 
@@ -790,6 +803,7 @@ class ChatController extends Controller
         $dateTo = $request->input('date_to');
         $withAttachments = $request->boolean('with_attachments');
         $favoritesOnly = $request->boolean('favorites_only');
+        $mentionsOnly = $request->boolean('mentions_only');
         $priority = $request->input('priority');
 
         // Cerca solo nei thread dell'utente
@@ -830,6 +844,12 @@ class ChatController extends Controller
         if ($favoritesOnly) {
             $query->whereHas('preferiti', function ($builder) use ($authUser) {
                 $builder->where('user_id', $authUser->id);
+            });
+        }
+
+        if ($mentionsOnly && $this->haTabella('chat_message_mentions')) {
+            $query->whereHas('menzioni', function ($builder) use ($authUser) {
+                $builder->where('mentioned_user_id', $authUser->id);
             });
         }
 

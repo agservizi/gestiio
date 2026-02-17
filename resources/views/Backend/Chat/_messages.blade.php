@@ -32,7 +32,11 @@
                     </div>
                 @endif
 
-                <div class="fs-6 text-gray-900">{!! nl2br(e($messaggio->messaggio)) !!}</div>
+                @php
+                    $escapedMessage = e($messaggio->messaggio ?? '');
+                    $messageWithMentions = preg_replace('/@([a-zA-Z0-9._-]{2,40})/u', '<span class="text-primary fw-bold">@$1</span>', $escapedMessage);
+                @endphp
+                <div class="fs-6 text-gray-900">{!! nl2br($messageWithMentions) !!}</div>
 
                 @if($messaggio->allegati->isNotEmpty())
                     <div class="mt-2">
