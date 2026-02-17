@@ -34,7 +34,14 @@
 
                 @php
                     $escapedMessage = e($messaggio->messaggio ?? '');
-                    $messageWithMentions = preg_replace('/@([a-zA-Z0-9._-]{2,40})/u', '<span class="text-primary fw-bold">@$1</span>', $escapedMessage);
+                    $messageWithMentions = preg_replace_callback(
+                        '/@([a-zA-Z0-9._-]{2,40})/u',
+                        function ($match) {
+                            $tag = \Illuminate\Support\Str::lower($match[1]);
+                            return '<span class="text-primary fw-bold chat-mention-link" data-tag="' . e($tag) . '" title="Apri chat con @' . e($tag) . '">@' . e($match[1]) . '</span>';
+                        },
+                        $escapedMessage
+                    );
                 @endphp
                 <div class="fs-6 text-gray-900">{!! nl2br($messageWithMentions) !!}</div>
 

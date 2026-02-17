@@ -141,6 +141,11 @@
         #chat-mention-suggest .chat-mention-item:hover {
             background: #f1f1f2;
         }
+
+        .chat-mention-link {
+            cursor: pointer;
+            text-decoration: underline;
+        }
     </style>
 @endpush
 
@@ -354,6 +359,7 @@
             function favoriteUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId + '/favorite'); }
             function messageUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId); }
             function templatesUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/templates'); }
+            function resolveMentionUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/mention/resolve'); }
 
             /* ================= UTILITY ================= */
             function scrollToBottom() {
@@ -752,6 +758,26 @@
                 textarea.selectionStart = textarea.selectionEnd = nextBefore.length;
                 $('#chat-messaggio').trigger('input');
                 hideMentionSuggest();
+            });
+
+            $(document).on('click', '.chat-mention-link', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const tag = ($(this).data('tag') || '').toString().trim();
+                if (!tag) return;
+
+                $.post(resolveMentionUrl(), {
+                    _token: $('meta[name="_token"]').attr('content'),
+                    tag: tag,
+                }, function (response) {
+                    if (response && response.thread_id) {
+                        loadMessages(parseInt(response.thread_id, 10), true);
+                    }
+                }).fail(function (error) {
+                    const message = error?.responseJSON?.message || 'Impossibile aprire la chat della menzione';
+                    Swal.fire('Attenzione', message, 'warning');
+                });
             });
 
             /* ================= ALLEGATI ================= */

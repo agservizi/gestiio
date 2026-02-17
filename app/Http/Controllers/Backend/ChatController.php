@@ -588,6 +588,51 @@ class ChatController extends Controller
         ]);
     }
 
+    public function resolveMention(Request $request): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureRuoloConsentito($authUser);
+
+        $request->validate([
+            'tag' => ['required', 'string', 'min:2', 'max:80'],
+        ]);
+
+        $rawTag = trim((string) $request->input('tag'));
+        $tag = ltrim(Str::lower($rawTag), '@');
+
+        $destinatario = $this->utentiDisponibili($authUser)
+            ->first(function (User $utente) use ($tag) {
+                return $this->mentionTagForUser($utente) === $tag;
+            });
+
+        if (!$destinatario) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Utente menzionato non trovato o non disponibile',
+            ], 404);
+        }
+
+        $thread = $this->trovaThreadDueUtenti($authUser->id, $destinatario->id);
+
+        if (!$thread) {
+            $thread = new ChatThread();
+            $thread->created_by = $authUser->id;
+            $thread->save();
+
+            $thread->partecipanti()->attach([
+                $authUser->id => ['last_read_at' => now()],
+                $destinatario->id => ['last_read_at' => null],
+            ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'thread_id' => (int) $thread->id,
+            'utente' => $destinatario->nominativo(),
+        ]);
+    }
+
     protected function ensureRuoloConsentito(User $authUser): void
     {
         abort_unless(
@@ -1006,6 +1051,11 @@ class ChatController extends Controller
             ->orderByDesc('is_global')
             ->orderBy('titolo')
             ->get(['id', 'titolo', 'contenuto', 'is_global']);
+    }
+
+    protected function mentionTagForUser(User $user): string
+    {
+        return Str::lower(Str::slug($user->nominativo(), '.'));
     }
 
     protected function messaggiPinnatiThread(int $threadId)
