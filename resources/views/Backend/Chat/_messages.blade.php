@@ -8,7 +8,9 @@
     </div>
 @else
     @foreach($messaggi as $messaggio)
-        @php($mio = (int)$messaggio->user_id === (int)Auth::id())
+        @php
+            $mio = (int) $messaggio->user_id === (int) Auth::id();
+        @endphp
         <div class="d-flex mb-4 {{$mio ? 'justify-content-end' : 'justify-content-start'}} chat-msg-row" data-msg-id="{{$messaggio->id}}">
             <div class="rounded px-4 py-3 {{$mio ? 'bg-light-primary' : 'bg-light'}} position-relative chat-bubble-wrap" style="max-width: 75%;">
                 <div class="fw-bolder fs-8 text-gray-700 mb-1">{{$mio ? 'Tu' : ($messaggio->mittente?->nominativo() ?? 'Utente')}}</div>
@@ -26,8 +28,10 @@
                 @if($messaggio->allegati->isNotEmpty())
                     <div class="mt-2">
                         @foreach($messaggio->allegati as $allegato)
-                            @php($allegatoUrl = asset('storage/'.$allegato->path_filename))
-                            @php($isImage = \Illuminate\Support\Str::startsWith((string)$allegato->mime_type, 'image/'))
+                            @php
+                                $allegatoUrl = asset('storage/' . $allegato->path_filename);
+                                $isImage = \Illuminate\Support\Str::startsWith((string) $allegato->mime_type, 'image/');
+                            @endphp
                             <div>
                                 @if($isImage)
                                     <a href="{{$allegatoUrl}}" class="d-inline-block mt-2 chat-image-preview" data-full="{{$allegatoUrl}}" data-name="{{$allegato->filename_originale}}">
