@@ -277,6 +277,24 @@ class ChatController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    public function closeThread(ChatThread $thread): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureThreadAccesso($thread->id, $authUser->id);
+
+        $thread->partecipanti()->detach($authUser->id);
+
+        if (!$thread->partecipanti()->exists()) {
+            $thread->delete();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Conversazione chiusa',
+        ]);
+    }
+
     protected function ensureRuoloConsentito(User $authUser): void
     {
         abort_unless(

@@ -277,6 +277,7 @@
             function messagesUrl(threadId) { return chatBaseUrl + '/' + threadId + '/messages'; }
             function sendUrl(threadId) { return chatBaseUrl + '/' + threadId + '/messages'; }
             function typingUrl(threadId) { return chatBaseUrl + '/' + threadId + '/typing'; }
+            function closeThreadUrl(threadId) { return chatBaseUrl + '/' + threadId + '/close'; }
             function reactionUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId + '/reaction'); }
 
             /* ================= UTILITY ================= */
@@ -422,6 +423,30 @@
             $(document).on('click', '.chat-thread-item', function () {
                 const threadId = parseInt($(this).data('thread-id'), 10);
                 loadMessages(threadId, true);
+            });
+
+            $(document).on('click', '.chat-thread-close', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const threadId = parseInt($(this).data('thread-id'), 10);
+                if (!threadId) return;
+
+                $.post(closeThreadUrl(threadId), {
+                    _token: $('meta[name="_token"]').attr('content')
+                }, function () {
+                    if (activeThreadId === threadId) {
+                        activeThreadId = null;
+                        const nextUrl = new URL(window.location.href);
+                        nextUrl.searchParams.delete('thread');
+                        window.history.replaceState({}, '', nextUrl.toString());
+                        loadMessages(null, false);
+                    }
+                    refreshPoll();
+                }).fail(function (error) {
+                    const erroreBackend = error?.responseJSON?.message || 'Chiusura conversazione non riuscita';
+                    Swal.fire('Errore', erroreBackend, 'error');
+                });
             });
 
             /* ================= SEND MESSAGE ================= */
