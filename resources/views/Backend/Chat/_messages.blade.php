@@ -57,7 +57,15 @@
                         @foreach($grouped as $emoji => $reazioniGruppo)
                             @php
                                 $myReaction = $reazioniGruppo->contains('user_id', Auth::id());
-                                $nomi = $reazioniGruppo->map(fn($r) => $r->utente?->nominativo() ?? 'Utente')->implode(', ');
+                                $nomiArray = [];
+                                foreach ($reazioniGruppo as $reazione) {
+                                    $nomeUtente = 'Utente';
+                                    if (isset($reazione->utente) && $reazione->utente) {
+                                        $nomeUtente = $reazione->utente->nominativo();
+                                    }
+                                    $nomiArray[] = $nomeUtente;
+                                }
+                                $nomi = implode(', ', $nomiArray);
                             @endphp
                             <button type="button"
                                     class="btn btn-sm px-2 py-0 chat-reaction-toggle {{$myReaction ? 'btn-light-primary border-primary' : 'btn-light'}}"
