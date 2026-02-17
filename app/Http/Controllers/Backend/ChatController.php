@@ -6,6 +6,7 @@ use App\Events\ChatMessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
 use App\Models\ChatMessageAttachment;
+use App\Models\ChatMessageReaction;
 use App\Models\ChatThread;
 use App\Models\ChatThreadUser;
 use App\Models\User;
@@ -46,6 +47,15 @@ class ChatController extends Controller
             $messaggi = $this->messaggiThread($threadAttivo->id);
         }
 
+        // Timestamp di lettura dell'altro partecipante (per le conferme di lettura)
+        $altroLastReadAt = null;
+        if ($threadAttivo) {
+            $altroLastReadAt = $this->altroLastReadAt($threadAttivo->id, $authUser->id);
+        }
+
+        // Aggiorna stato online dell'utente corrente
+        $this->aggiornaStatoOnline($authUser->id);
+
         return view('Backend.Chat.index', [
             'controller' => get_class($this),
             'titoloPagina' => 'Chat interna',
@@ -53,6 +63,7 @@ class ChatController extends Controller
             'threadAttivo' => $threadAttivo,
             'messaggi' => $messaggi,
             'utentiDisponibili' => $this->utentiDisponibili($authUser),
+            'altroLastReadAt' => $altroLastReadAt,
         ]);
     }
 
@@ -93,10 +104,12 @@ class ChatController extends Controller
 
         $this->segnaComeLetto($thread->id, $authUser->id);
         $messaggi = $this->messaggiThread($thread->id);
+        $altroLastReadAt = $this->altroLastReadAt($thread->id, $authUser->id);
 
         return response()->json([
             'html' => view('Backend.Chat._messages', [
                 'messaggi' => $messaggi,
+                'altroLastReadAt' => $altroLastReadAt,
             ])->render(),
             'ultimoId' => $messaggi->last()?->id,
         ]);
@@ -112,6 +125,7 @@ class ChatController extends Controller
             'messaggio' => ['nullable', 'string', 'max:3000', 'required_without:allegati'],
             'allegati' => ['nullable', 'array'],
             'allegati.*' => ['file', 'max:10240'],
+            'reply_to_id' => ['nullable', 'integer', 'exists:chat_messages,id'],
         ]);
 
         $destinatariEmailPrimoNonLetto = [];
@@ -138,6 +152,7 @@ class ChatController extends Controller
         $messaggio->thread_id = $thread->id;
         $messaggio->user_id = $authUser->id;
         $messaggio->messaggio = $request->input('messaggio');
+        $messaggio->reply_to_id = $request->input('reply_to_id');
         $messaggio->save();
         $messaggio->load('mittente');
 
@@ -184,6 +199,9 @@ class ChatController extends Controller
         $authUser = Auth::user();
         $this->ensureRuoloConsentito($authUser);
 
+        // Aggiorna stato online
+        $this->aggiornaStatoOnline($authUser->id);
+
         $threads = $this->threadsPerUtente($authUser->id);
         $threadAttivo = null;
         $messaggi = collect();
@@ -198,22 +216,44 @@ class ChatController extends Controller
             $threadAttivo = $threads->firstWhere('id', $threadId);
         }
 
+        $altroLastReadAt = null;
+        $altroOnline = false;
+
         if ($threadAttivo) {
             $this->segnaComeLetto($threadAttivo->id, $authUser->id);
             $messaggi = $this->messaggiThread($threadAttivo->id);
             $typingStatus = $this->typingStatus($threadAttivo->id, $authUser->id);
+            $altroLastReadAt = $this->altroLastReadAt($threadAttivo->id, $authUser->id);
+
+            // Stato online dell'altro partecipante
+            $altroPartecipante = $threadAttivo->partecipanti->firstWhere('id', '!=', $authUser->id);
+            if ($altroPartecipante) {
+                $altroOnline = $this->isOnline($altroPartecipante->id);
+            }
+        }
+
+        // Stato online di tutti i partecipanti per i thread nella lista
+        $onlineMap = [];
+        foreach ($threads as $thread) {
+            $altro = $thread->getRelation('altroPartecipante');
+            if ($altro) {
+                $onlineMap[$altro->id] = $this->isOnline($altro->id);
+            }
         }
 
         return response()->json([
             'threadsHtml' => view('Backend.Chat._threads', [
                 'threads' => $threads,
                 'threadAttivo' => $threadAttivo,
+                'onlineMap' => $onlineMap,
             ])->render(),
             'messaggiHtml' => view('Backend.Chat._messages', [
                 'messaggi' => $messaggi,
+                'altroLastReadAt' => $altroLastReadAt,
             ])->render(),
             'nonLettiTotali' => ChatThreadUser::conteggioNonLetti($authUser->id),
             'typing' => $typingStatus,
+            'altroOnline' => $altroOnline,
         ]);
     }
 
@@ -343,19 +383,6 @@ class ChatController extends Controller
             ->update(['last_read_at' => now()]);
     }
 
-    protected function messaggiThread(int $threadId)
-    {
-        return ChatMessage::query()
-            ->where('thread_id', $threadId)
-            ->with('mittente:id,nome,cognome')
-            ->with('allegati')
-            ->latest('id')
-            ->limit(200)
-            ->get()
-            ->reverse()
-            ->values();
-    }
-
     protected function typingStatus(int $threadId, int $currentUserId): array
     {
         $partecipanti = ChatThreadUser::query()
@@ -382,5 +409,130 @@ class ChatController extends Controller
     protected function typingCacheKey(int $threadId, int $userId): string
     {
         return 'chat_typing_' . $threadId . '_' . $userId;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  REAZIONE EMOJI                                                     */
+    /* ------------------------------------------------------------------ */
+
+    public function toggleReaction(Request $request, ChatMessage $message): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureThreadAccesso($message->thread_id, $authUser->id);
+
+        $request->validate([
+            'emoji' => ['required', 'string', 'max:10'],
+        ]);
+
+        $emoji = $request->input('emoji');
+
+        $existing = ChatMessageReaction::query()
+            ->where('message_id', $message->id)
+            ->where('user_id', $authUser->id)
+            ->where('emoji', $emoji)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+        } else {
+            ChatMessageReaction::create([
+                'message_id' => $message->id,
+                'user_id' => $authUser->id,
+                'emoji' => $emoji,
+            ]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  RICERCA MESSAGGI                                                   */
+    /* ------------------------------------------------------------------ */
+
+    public function search(Request $request): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureRuoloConsentito($authUser);
+
+        $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:200'],
+            'thread_id' => ['nullable', 'integer'],
+        ]);
+
+        $q = $request->input('q');
+        $threadId = $request->integer('thread_id');
+
+        // Cerca solo nei thread dell'utente
+        $threadIds = ChatThreadUser::query()
+            ->where('user_id', $authUser->id)
+            ->pluck('thread_id');
+
+        $query = ChatMessage::query()
+            ->whereIn('thread_id', $threadIds)
+            ->where('messaggio', 'LIKE', '%' . $q . '%')
+            ->with('mittente:id,nome,cognome')
+            ->latest('id')
+            ->limit(50);
+
+        if ($threadId) {
+            $query->where('thread_id', $threadId);
+        }
+
+        $results = $query->get()->map(function (ChatMessage $msg) {
+            return [
+                'id' => $msg->id,
+                'thread_id' => $msg->thread_id,
+                'mittente' => $msg->mittente?->nominativo() ?? 'Utente',
+                'messaggio' => $msg->messaggio,
+                'data' => $msg->created_at?->format('d/m/Y H:i'),
+            ];
+        });
+
+        return response()->json(['risultati' => $results]);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  ONLINE STATUS                                                      */
+    /* ------------------------------------------------------------------ */
+
+    protected function aggiornaStatoOnline(int $userId): void
+    {
+        Cache::put('chat_online_' . $userId, true, now()->addSeconds(60));
+    }
+
+    protected function isOnline(int $userId): bool
+    {
+        return (bool) Cache::get('chat_online_' . $userId, false);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  READ RECEIPT HELPER                                                */
+    /* ------------------------------------------------------------------ */
+
+    protected function altroLastReadAt(int $threadId, int $currentUserId): ?string
+    {
+        $record = ChatThreadUser::query()
+            ->where('thread_id', $threadId)
+            ->where('user_id', '<>', $currentUserId)
+            ->first(['last_read_at']);
+
+        return $record?->last_read_at?->toDateTimeString();
+    }
+
+    protected function messaggiThread(int $threadId)
+    {
+        return ChatMessage::query()
+            ->where('thread_id', $threadId)
+            ->with('mittente:id,nome,cognome')
+            ->with('allegati')
+            ->with('reazioni')
+            ->with('replyTo.mittente:id,nome,cognome')
+            ->latest('id')
+            ->limit(200)
+            ->get()
+            ->reverse()
+            ->values();
     }
 }

@@ -15,6 +15,7 @@ class ChatMessage extends Model
         'thread_id',
         'user_id',
         'messaggio',
+        'reply_to_id',
     ];
 
     public function thread()
@@ -30,5 +31,15 @@ class ChatMessage extends Model
     public function allegati()
     {
         return $this->hasMany(ChatMessageAttachment::class, 'message_id');
+    }
+
+    public function replyTo()
+    {
+        return $this->belongsTo(self::class, 'reply_to_id');
+    }
+
+    public function reazioni()
+    {
+        return $this->hasMany(ChatMessageReaction::class, 'message_id');
     }
 }

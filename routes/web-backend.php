@@ -113,9 +113,11 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('/chat-interna', [\App\Http\Controllers\Backend\ChatController::class, 'index']);
     Route::post('/chat-interna/thread', [\App\Http\Controllers\Backend\ChatController::class, 'storeThread']);
     Route::get('/chat-interna/poll', [\App\Http\Controllers\Backend\ChatController::class, 'poll']);
+    Route::get('/chat-interna/search', [\App\Http\Controllers\Backend\ChatController::class, 'search']);
     Route::get('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'messages']);
     Route::post('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'sendMessage']);
     Route::post('/chat-interna/{thread}/typing', [\App\Http\Controllers\Backend\ChatController::class, 'typing']);
+    Route::post('/chat-interna/message/{message}/reaction', [\App\Http\Controllers\Backend\ChatController::class, 'toggleReaction']);
 
     Route::get('select2', [\App\Http\Controllers\Backend\Select2::class, 'response']);
 

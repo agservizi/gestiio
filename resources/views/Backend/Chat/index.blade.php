@@ -41,6 +41,84 @@
             0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
             40% { opacity: 1; transform: translateY(-2px); }
         }
+
+        /* Stato online/offline */
+        .chat-online-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .chat-online-dot.online { background: #50cd89; box-shadow: 0 0 0 2px rgba(80,205,137,.3); }
+        .chat-online-dot.offline { background: #b5b5c3; }
+
+        /* Header stato online */
+        #chat-header-online-status {
+            font-size: 0.78rem;
+            margin-left: 8px;
+        }
+
+        /* Hover azioni sui messaggi */
+        .chat-bubble-wrap:hover .chat-msg-actions {
+            opacity: 1 !important;
+        }
+
+        /* Reply banner */
+        #chat-reply-banner {
+            background: #f1f1f2;
+            border-left: 3px solid #009ef7;
+            border-radius: 0 6px 6px 0;
+        }
+
+        /* Reaction picker popup */
+        .chat-reaction-picker {
+            position: absolute;
+            z-index: 10;
+            background: #fff;
+            border: 1px solid #e4e6ef;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.12);
+            padding: 4px;
+            display: flex;
+            gap: 2px;
+        }
+        .chat-reaction-picker button {
+            font-size: 1.1rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 3px 5px;
+            border-radius: 4px;
+            transition: background .15s;
+        }
+        .chat-reaction-picker button:hover {
+            background: #f1f1f2;
+        }
+
+        /* Drag & drop overlay */
+        #chat-dropzone-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 158, 247, 0.08);
+            border: 2px dashed #009ef7;
+            border-radius: 8px;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        #chat-dropzone-overlay.active {
+            display: flex;
+        }
+
+        /* Ricerca */
+        #chat-search-results {
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 @endpush
 
@@ -55,6 +133,9 @@
         </select>
         <button type="submit" class="btn btn-sm btn-primary">Avvia</button>
     </form>
+    <button type="button" class="btn btn-sm btn-light-info ms-3" id="chat-search-toggle" title="Cerca messaggi">
+        <i class="fas fa-search"></i> Cerca
+    </button>
 @endsection
 
 @section('content')
@@ -83,13 +164,42 @@
                     <h3 class="card-title m-0 fw-bolder fs-4">
                         @if($threadAttivo && $threadAttivo->getRelation('altroPartecipante'))
                             Chat con {{$threadAttivo->getRelation('altroPartecipante')->nominativo()}}
+                            <span id="chat-header-online-status" class="fw-normal text-muted"></span>
                         @else
                             Chat interna
                         @endif
                     </h3>
                 </div>
                 <div class="card-body d-flex flex-column pt-0">
-                    <div id="chat-messages" class="flex-grow-1 overflow-auto pe-2" style="max-height: 56vh;">
+                    {{-- Pannello ricerca --}}
+                    <div id="chat-search-panel" class="d-none mb-3">
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="chat-search-input" class="form-control" placeholder="Cerca nei messaggi...">
+                            <button type="button" class="btn btn-light-info" id="chat-search-btn"><i class="fas fa-search"></i></button>
+                            <button type="button" class="btn btn-light" id="chat-search-close"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div id="chat-search-results" class="mt-2"></div>
+                    </div>
+
+                    {{-- Reply banner --}}
+                    <div id="chat-reply-banner" class="d-none px-3 py-2 mb-2 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="fw-bold text-primary fs-8" id="chat-reply-author"></div>
+                            <div class="text-gray-600 fs-8" id="chat-reply-text"></div>
+                        </div>
+                        <button type="button" class="btn btn-icon btn-sm btn-light" id="chat-reply-close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div id="chat-messages-wrap" class="position-relative flex-grow-1">
+                        <div id="chat-dropzone-overlay">
+                            <span class="fw-bold text-primary fs-5">Rilascia i file qui</span>
+                        </div>
+                        <div id="chat-messages" class="overflow-auto pe-2" style="max-height: 56vh; height: 56vh;">
+                            @include('Backend.Chat._messages', ['messaggi' => $messaggi, 'altroLastReadAt' => $altroLastReadAt])
+                        </div>
+                    </div>
                         @include('Backend.Chat._messages', ['messaggi' => $messaggi])
                     </div>
                     <div id="chat-typing-indicator" class="text-muted fs-8 mt-3 d-none">
@@ -153,21 +263,25 @@
             let ultimoTotaleNonLetti = parseInt($('.js-chat-unread-total').first().text() || '0', 10);
             const chatBaseUrl = @json(rtrim(action([$controller, 'index']), '/'));
             const pollUrl = @json(action([$controller, 'poll']));
+            const searchApiUrl = @json(action([$controller, 'search']));
             let typingTimeout = null;
             let typingSent = false;
+            let replyToId = null;
 
-            function messagesUrl(threadId) {
-                return chatBaseUrl + '/' + threadId + '/messages';
+            /* ================= SUONO NOTIFICA ================= */
+            const notificationSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBFSAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+
+            function playNotificationSound() {
+                try { notificationSound.currentTime = 0; notificationSound.play().catch(()=>{}); } catch(e) {}
             }
 
-            function sendUrl(threadId) {
-                return chatBaseUrl + '/' + threadId + '/messages';
-            }
+            /* ================= URL HELPERS ================= */
+            function messagesUrl(threadId) { return chatBaseUrl + '/' + threadId + '/messages'; }
+            function sendUrl(threadId) { return chatBaseUrl + '/' + threadId + '/messages'; }
+            function typingUrl(threadId) { return chatBaseUrl + '/' + threadId + '/typing'; }
+            function reactionUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId + '/reaction'); }
 
-            function typingUrl(threadId) {
-                return chatBaseUrl + '/' + threadId + '/typing';
-            }
-
+            /* ================= UTILITY ================= */
             function scrollToBottom() {
                 const box = $('#chat-messages');
                 box.scrollTop(box[0].scrollHeight);
@@ -189,15 +303,10 @@
                 el.focus();
             }
 
+            /* ================= TYPING STATUS ================= */
             function sendTypingStatus(isTyping) {
-                if (!activeThreadId) {
-                    return;
-                }
-
-                if (isTyping === typingSent) {
-                    return;
-                }
-
+                if (!activeThreadId) return;
+                if (isTyping === typingSent) return;
                 typingSent = isTyping;
                 $.post(typingUrl(activeThreadId), {
                     _token: $('meta[name="_token"]').attr('content'),
@@ -206,14 +315,29 @@
             }
 
             function scheduleTypingOff() {
-                if (typingTimeout) {
-                    clearTimeout(typingTimeout);
-                }
+                if (typingTimeout) clearTimeout(typingTimeout);
                 typingTimeout = setTimeout(function () {
                     sendTypingStatus(false);
                 }, 4500);
             }
 
+            /* ================= REPLY ================= */
+            function setReply(msgId, author, text) {
+                replyToId = msgId;
+                $('#chat-reply-author').text(author);
+                $('#chat-reply-text').text(text);
+                $('#chat-reply-banner').removeClass('d-none');
+                $('#chat-messaggio').focus();
+            }
+
+            function clearReply() {
+                replyToId = null;
+                $('#chat-reply-banner').addClass('d-none');
+                $('#chat-reply-author').text('');
+                $('#chat-reply-text').text('');
+            }
+
+            /* ================= LOAD MESSAGES ================= */
             function loadMessages(threadId, pushState = false) {
                 if (!threadId) {
                     $('#chat-messages').html('<div class="h-100 d-flex align-items-center justify-content-center text-muted fs-6 py-10">Seleziona o crea una conversazione.</div>');
@@ -228,6 +352,7 @@
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
                     setComposerEnabled(true);
                     sendTypingStatus(false);
+                    clearReply();
                     scrollToBottom();
 
                     if (pushState) {
@@ -238,6 +363,7 @@
                 });
             }
 
+            /* ================= POLLING ================= */
             function refreshPoll() {
                 $.get(pollUrl, {thread_id: activeThreadId}, function (response) {
                     if (response.threadsHtml !== undefined) {
@@ -257,6 +383,7 @@
                         }
 
                         if (nuovoTotale > ultimoTotaleNonLetti) {
+                            playNotificationSound();
                             Swal.fire({
                                 toast: true,
                                 position: 'top-end',
@@ -270,6 +397,7 @@
                         ultimoTotaleNonLetti = nuovoTotale;
                     }
 
+                    // Typing
                     if (response.typing !== undefined) {
                         if (response.typing.active) {
                             $('#chat-typing-name').text(response.typing.name || 'Utente');
@@ -279,33 +407,44 @@
                             $('#chat-typing-name').text('');
                         }
                     }
+
+                    // Online status nell'header
+                    if (response.altroOnline !== undefined) {
+                        const $onlineEl = $('#chat-header-online-status');
+                        if (response.altroOnline) {
+                            $onlineEl.html('<span class="chat-online-dot online"></span> online');
+                        } else {
+                            $onlineEl.html('<span class="chat-online-dot offline"></span> offline');
+                        }
+                    }
                 });
             }
 
+            /* ================= THREAD SELECTION ================= */
             $(document).on('click', '.chat-thread-item', function () {
                 const threadId = parseInt($(this).data('thread-id'), 10);
                 loadMessages(threadId, true);
             });
 
+            /* ================= SEND MESSAGE ================= */
             $('#chat-send-form').on('submit', function (event) {
                 event.preventDefault();
-
-                if (!activeThreadId) {
-                    return;
-                }
+                if (!activeThreadId) return;
 
                 const textarea = $('#chat-messaggio');
                 const text = textarea.val().trim();
                 const allegatiInput = $('#chat-allegati')[0];
                 const allegatiCount = allegatiInput?.files?.length || 0;
 
-                if (!text && allegatiCount === 0) {
-                    return;
-                }
+                if (!text && allegatiCount === 0) return;
 
                 const formData = new FormData(document.getElementById('chat-send-form'));
                 formData.set('messaggio', text);
                 formData.set('_token', $('meta[name="_token"]').attr('content'));
+
+                if (replyToId) {
+                    formData.set('reply_to_id', replyToId);
+                }
 
                 $.ajax({
                     type: 'POST',
@@ -318,6 +457,7 @@
                         $('#chat-allegati').val('');
                         $('#chat-allegati-info').text('');
                         sendTypingStatus(false);
+                        clearReply();
                         loadMessages(activeThreadId);
                         refreshPoll();
                     },
@@ -329,6 +469,7 @@
                 });
             });
 
+            /* ================= KEYBOARD ================= */
             $('#chat-messaggio').on('keydown', function (event) {
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
@@ -350,6 +491,7 @@
                 sendTypingStatus(false);
             });
 
+            /* ================= ALLEGATI ================= */
             $('#chat-allegati').on('change', function () {
                 const count = this.files ? this.files.length : 0;
                 if (count > 0) {
@@ -359,6 +501,7 @@
                 }
             });
 
+            /* ================= EMOJI PICKER (composizione) ================= */
             $('#chat-emoji-toggle').on('click', function () {
                 $('#chat-emoji-panel').toggleClass('d-none');
             });
@@ -372,24 +515,217 @@
                 }
             });
 
+            /* ================= LIGHTBOX IMMAGINI ================= */
             $(document).on('click', '.chat-image-preview', function (event) {
                 event.preventDefault();
-
                 const imageUrl = $(this).data('full');
                 const imageName = $(this).data('name') || 'Anteprima immagine';
-
-                if (!imageUrl) {
-                    return;
-                }
+                if (!imageUrl) return;
 
                 $('#chatImageModalTitle').text(imageName);
                 $('#chatImageModalPreview').attr('src', imageUrl).attr('alt', imageName);
-
                 const modalElement = document.getElementById('chatImageModal');
                 const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
                 modal.show();
             });
 
+            /* ================= REPLY ================= */
+            $(document).on('click', '.chat-reply-btn', function () {
+                const msgId = $(this).data('msg-id');
+                const author = $(this).data('author');
+                const text = $(this).data('text');
+                setReply(msgId, author, text);
+            });
+
+            $('#chat-reply-close').on('click', function () {
+                clearReply();
+            });
+
+            /* ================= REAZIONI EMOJI ================= */
+            const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+            $(document).on('click', '.chat-react-btn', function (e) {
+                e.stopPropagation();
+                // Rimuove picker precedenti
+                $('.chat-reaction-picker').remove();
+
+                const msgId = $(this).data('msg-id');
+                const $btn = $(this);
+                const $picker = $('<div class="chat-reaction-picker"></div>');
+
+                reactionEmojis.forEach(function (emoji) {
+                    $picker.append(
+                        $('<button type="button"></button>')
+                            .text(emoji)
+                            .on('click', function () {
+                                $.post(reactionUrl(msgId), {
+                                    _token: $('meta[name="_token"]').attr('content'),
+                                    emoji: emoji,
+                                }, function () {
+                                    $picker.remove();
+                                    refreshPoll();
+                                });
+                            })
+                    );
+                });
+
+                $btn.closest('.chat-bubble-wrap').append($picker);
+
+                // Chiudi il picker cliccando altrove
+                setTimeout(function () {
+                    $(document).one('click', function () {
+                        $picker.remove();
+                    });
+                }, 50);
+            });
+
+            // Toggle reaction esistente
+            $(document).on('click', '.chat-reaction-toggle', function () {
+                const msgId = $(this).data('msg-id');
+                const emoji = $(this).data('emoji');
+                $.post(reactionUrl(msgId), {
+                    _token: $('meta[name="_token"]').attr('content'),
+                    emoji: emoji,
+                }, function () {
+                    refreshPoll();
+                });
+            });
+
+            /* ================= RICERCA MESSAGGI ================= */
+            $('#chat-search-toggle').on('click', function () {
+                $('#chat-search-panel').toggleClass('d-none');
+                if (!$('#chat-search-panel').hasClass('d-none')) {
+                    $('#chat-search-input').focus();
+                }
+            });
+
+            $('#chat-search-close').on('click', function () {
+                $('#chat-search-panel').addClass('d-none');
+                $('#chat-search-input').val('');
+                $('#chat-search-results').html('');
+            });
+
+            function eseguiRicerca() {
+                const q = $('#chat-search-input').val().trim();
+                if (q.length < 2) return;
+
+                $.get(searchApiUrl, {q: q, thread_id: activeThreadId || ''}, function (response) {
+                    const $container = $('#chat-search-results');
+                    $container.html('');
+
+                    if (!response.risultati || response.risultati.length === 0) {
+                        $container.html('<div class="text-muted fs-8 py-2">Nessun risultato trovato.</div>');
+                        return;
+                    }
+
+                    response.risultati.forEach(function (r) {
+                        const shortMsg = r.messaggio.length > 80 ? r.messaggio.substring(0, 80) + '...' : r.messaggio;
+                        $container.append(
+                            '<div class="chat-search-result border-bottom py-2 px-2 cursor-pointer" data-thread-id="' + r.thread_id + '" data-msg-id="' + r.id + '">' +
+                            '<div class="fw-bold fs-8">' + $('<span>').text(r.mittente).html() + ' <span class="text-muted fw-normal">' + $('<span>').text(r.data).html() + '</span></div>' +
+                            '<div class="fs-8 text-gray-700">' + $('<span>').text(shortMsg).html() + '</div>' +
+                            '</div>'
+                        );
+                    });
+                });
+            }
+
+            $('#chat-search-btn').on('click', eseguiRicerca);
+            $('#chat-search-input').on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    eseguiRicerca();
+                }
+            });
+
+            $(document).on('click', '.chat-search-result', function () {
+                const threadId = parseInt($(this).data('thread-id'), 10);
+                const msgId = $(this).data('msg-id');
+
+                // Naviga al thread se diverso
+                if (threadId !== activeThreadId) {
+                    loadMessages(threadId, true);
+                }
+
+                // Prova a scrollare al messaggio dopo un breve delay per loadMessages
+                setTimeout(function () {
+                    const $msg = $('.chat-msg-row[data-msg-id="' + msgId + '"]');
+                    if ($msg.length) {
+                        $msg[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                        $msg.find('.chat-bubble-wrap').css('box-shadow', '0 0 0 2px #009ef7');
+                        setTimeout(function () {
+                            $msg.find('.chat-bubble-wrap').css('box-shadow', '');
+                        }, 2000);
+                    }
+                }, 500);
+            });
+
+            /* ================= DRAG & DROP ================= */
+            const $messagesWrap = $('#chat-messages-wrap');
+            const $dropOverlay = $('#chat-dropzone-overlay');
+            let dragCounter = 0;
+
+            $messagesWrap.on('dragenter', function (e) {
+                e.preventDefault();
+                dragCounter++;
+                $dropOverlay.addClass('active');
+            });
+
+            $messagesWrap.on('dragleave', function (e) {
+                e.preventDefault();
+                dragCounter--;
+                if (dragCounter <= 0) {
+                    dragCounter = 0;
+                    $dropOverlay.removeClass('active');
+                }
+            });
+
+            $messagesWrap.on('dragover', function (e) {
+                e.preventDefault();
+            });
+
+            $messagesWrap.on('drop', function (e) {
+                e.preventDefault();
+                dragCounter = 0;
+                $dropOverlay.removeClass('active');
+
+                if (!activeThreadId) return;
+
+                const files = e.originalEvent.dataTransfer?.files;
+                if (!files || files.length === 0) return;
+
+                // Aggiungi i file al campo file
+                const allegatiInput = $('#chat-allegati')[0];
+                const dataTransfer = new DataTransfer();
+
+                // Aggiungi file precedenti
+                if (allegatiInput.files) {
+                    for (let i = 0; i < allegatiInput.files.length; i++) {
+                        dataTransfer.items.add(allegatiInput.files[i]);
+                    }
+                }
+
+                // Aggiungi file droppati
+                for (let i = 0; i < files.length; i++) {
+                    dataTransfer.items.add(files[i]);
+                }
+
+                allegatiInput.files = dataTransfer.files;
+                const count = dataTransfer.files.length;
+                $('#chat-allegati-info').text(count + (count === 1 ? ' file selezionato' : ' file selezionati'));
+
+                // Feedback visivo
+                Swal.fire({
+                    toast: true,
+                    position: 'bottom-end',
+                    icon: 'success',
+                    title: count + ' file aggiunt' + (count === 1 ? 'o' : 'i'),
+                    showConfirmButton: false,
+                    timer: 2000,
+                });
+            });
+
+            /* ================= INIT ================= */
             if (activeThreadId) {
                 setComposerEnabled(true);
                 scrollToBottom();
