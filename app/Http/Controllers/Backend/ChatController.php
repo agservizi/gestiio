@@ -125,7 +125,7 @@ class ChatController extends Controller
             'messaggio' => ['nullable', 'string', 'max:3000', 'required_without:allegati'],
             'allegati' => ['nullable', 'array'],
             'allegati.*' => ['file', 'max:10240'],
-            'reply_to_id' => ['nullable', 'integer', 'exists:chat_messages,id'],
+            'reply_to_id' => ['nullable', 'integer'],
         ]);
 
         $destinatariEmailPrimoNonLetto = [];
@@ -152,7 +152,9 @@ class ChatController extends Controller
         $messaggio->thread_id = $thread->id;
         $messaggio->user_id = $authUser->id;
         $messaggio->messaggio = $request->input('messaggio');
-        $messaggio->reply_to_id = $request->input('reply_to_id');
+        if ($this->haReactionsTable() && $request->filled('reply_to_id')) {
+            $messaggio->reply_to_id = $request->input('reply_to_id');
+        }
         $messaggio->save();
         $messaggio->load('mittente');
 
@@ -421,6 +423,10 @@ class ChatController extends Controller
         $authUser = Auth::user();
         $this->ensureThreadAccesso($message->thread_id, $authUser->id);
 
+        if (!$this->haReactionsTable()) {
+            return response()->json(['ok' => false, 'error' => 'Funzionalità non ancora disponibile. Eseguire la migrazione.'], 422);
+        }
+
         $request->validate([
             'emoji' => ['required', 'string', 'max:10'],
         ]);
@@ -523,16 +529,35 @@ class ChatController extends Controller
 
     protected function messaggiThread(int $threadId)
     {
-        return ChatMessage::query()
+        $query = ChatMessage::query()
             ->where('thread_id', $threadId)
             ->with('mittente:id,nome,cognome')
-            ->with('allegati')
-            ->with('reazioni')
-            ->with('replyTo.mittente:id,nome,cognome')
-            ->latest('id')
+            ->with('allegati');
+
+        // Carica reazioni e reply solo se la migrazione è stata eseguita
+        if ($this->haReactionsTable()) {
+            $query->with('reazioni')
+                  ->with('replyTo.mittente:id,nome,cognome');
+        }
+
+        return $query->latest('id')
             ->limit(200)
             ->get()
             ->reverse()
             ->values();
+    }
+
+    /**
+     * Controlla (con cache statica) se la tabella chat_message_reactions esiste.
+     */
+    protected function haReactionsTable(): bool
+    {
+        static $exists = null;
+
+        if ($exists === null) {
+            $exists = \Illuminate\Support\Facades\Schema::hasTable('chat_message_reactions');
+        }
+
+        return $exists;
     }
 }

@@ -14,7 +14,7 @@
                 <div class="fw-bolder fs-8 text-gray-700 mb-1">{{$mio ? 'Tu' : ($messaggio->mittente?->nominativo() ?? 'Utente')}}</div>
 
                 {{-- Risposte inline (quote del messaggio originale) --}}
-                @if($messaggio->replyTo)
+                @if($messaggio->relationLoaded('replyTo') && $messaggio->replyTo)
                     <div class="border-start border-3 border-primary ps-3 py-1 mb-2 bg-light-info rounded-end" style="font-size: 0.8rem;">
                         <div class="fw-bold text-primary">{{$messaggio->replyTo->mittente?->nominativo() ?? 'Utente'}}</div>
                         <div class="text-gray-600">{{\Illuminate\Support\Str::limit(strip_tags($messaggio->replyTo->messaggio ?? '📎 Allegato'), 100)}}</div>
@@ -49,7 +49,7 @@
                 @endif
 
                 {{-- Reazioni emoji sotto il messaggio --}}
-                @if($messaggio->reazioni->isNotEmpty())
+                @if($messaggio->relationLoaded('reazioni') && $messaggio->reazioni->isNotEmpty())
                     <div class="chat-reactions-display mt-2 d-flex flex-wrap gap-1">
                         @php
                             $grouped = $messaggio->reazioni->groupBy('emoji');
