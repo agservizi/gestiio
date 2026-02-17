@@ -284,11 +284,16 @@ class ChatController extends Controller
         $altroLastReadAt = null;
         $altroOnline = false;
         $threadMuted = false;
+        $activeLastMessageId = null;
+        $activeLastMessageSenderId = null;
 
         if ($threadAttivo) {
             $this->segnaComeLetto($threadAttivo->id, $authUser->id);
             $this->segnaComeConsegnato($threadAttivo->id, $authUser->id);
             $messaggi = $this->messaggiThread($threadAttivo->id, null, 50);
+            $ultimoMessaggio = $messaggi->last();
+            $activeLastMessageId = $ultimoMessaggio?->id;
+            $activeLastMessageSenderId = $ultimoMessaggio?->user_id;
             $typingStatus = $this->typingStatus($threadAttivo->id, $authUser->id);
             $altroLastReadAt = $this->altroLastReadAt($threadAttivo->id, $authUser->id);
             $threadMuted = $this->threadSilenziatoPerUtente($threadAttivo->id, $authUser->id);
@@ -323,6 +328,8 @@ class ChatController extends Controller
             'typing' => $typingStatus,
             'altroOnline' => $altroOnline,
             'threadMuted' => $threadMuted,
+            'activeLastMessageId' => $activeLastMessageId,
+            'activeLastMessageSenderId' => $activeLastMessageSenderId,
             'pinnedHtml' => view('Backend.Chat._pinned', [
                 'pinnedMessages' => $threadAttivo ? $this->messaggiPinnatiThread($threadAttivo->id) : collect(),
             ])->render(),

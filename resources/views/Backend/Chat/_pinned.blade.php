@@ -4,11 +4,11 @@
             <button type="button"
                     class="btn btn-sm btn-light-primary chat-pinned-jump"
                     data-msg-id="{{$pin->id}}"
-                    title="Vai al messaggio">
+                    title="Vai al messaggio in evidenza">
                 📌 {{$pin->mittente?->nominativo() ?? 'Utente'}}: {{\Illuminate\Support\Str::limit(strip_tags($pin->messaggio ?? ''), 45)}}
             </button>
         @endforeach
     </div>
 @else
-    <div class="text-muted fs-8">Nessun messaggio pinnato.</div>
+    <div class="text-muted fs-8">Nessun messaggio in evidenza.</div>
 @endif

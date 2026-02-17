@@ -100,7 +100,7 @@
                         <button type="button" class="btn btn-icon btn-sm btn-light chat-reply-btn" data-msg-id="{{$messaggio->id}}" data-author="{{$messaggio->mittente?->nominativo() ?? 'Utente'}}" data-text="{{Str::limit(strip_tags($messaggio->messaggio ?? '📎 Allegato'), 80)}}" title="Rispondi">
                             <i class="fas fa-reply fs-8"></i>
                         </button>
-                        <button type="button" class="btn btn-icon btn-sm btn-light chat-pin-btn" data-msg-id="{{$messaggio->id}}" title="Pin">
+                        <button type="button" class="btn btn-icon btn-sm btn-light chat-pin-btn" data-msg-id="{{$messaggio->id}}" title="Metti in evidenza">
                             <i class="fas fa-thumbtack fs-8"></i>
                         </button>
                         <button type="button" class="btn btn-icon btn-sm btn-light chat-favorite-btn" data-msg-id="{{$messaggio->id}}" title="Preferito">
@@ -142,7 +142,7 @@
                 @endphp
                 @if($pinned || $favorite)
                     <div class="mt-1 fs-8 text-muted">
-                        @if($pinned) 📌 Pinnato @endif
+                        @if($pinned) 📌 In evidenza @endif
                         @if($favorite) ⭐ Preferito @endif
                     </div>
                 @endif

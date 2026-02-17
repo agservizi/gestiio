@@ -200,7 +200,7 @@
                     </div>
 
                     <div id="chat-pinned-panel" class="mb-2 p-2 bg-light rounded">
-                        <div class="fw-bold fs-8 mb-1">Messaggi pinnati</div>
+                        <div class="fw-bold fs-8 mb-1">Messaggi in evidenza</div>
                         <div id="chat-pinned-content">
                             @include('Backend.Chat._pinned', ['pinnedMessages' => $pinnedMessages ?? collect()])
                         </div>
@@ -294,6 +294,7 @@
 @push('customScript')
     <script>
         $(function () {
+            const authUserId = @json((int) Auth::id());
             let activeThreadId = @json($threadAttivo?->id);
             let ultimoTotaleNonLetti = parseInt($('.js-chat-unread-total').first().text() || '0', 10);
             const chatBaseUrl = @json(rtrim(action([$controller, 'index']), '/'));
@@ -306,6 +307,7 @@
             let hasMoreHistory = true;
             let loadingHistory = false;
             let selectedForwardIds = [];
+            let activeLastMessageId = null;
 
             /* ================= SUONO NOTIFICA ================= */
             const notificationSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBFSAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
@@ -409,6 +411,7 @@
                     setComposerEnabled(false);
                     oldestLoadedMessageId = null;
                     hasMoreHistory = false;
+                    activeLastMessageId = null;
                     return;
                 }
 
@@ -417,6 +420,9 @@
 
                 $.get(messagesUrl(threadId), payload, function (response) {
                     activeThreadId = threadId;
+                    if (response.ultimoId !== undefined && response.ultimoId !== null) {
+                        activeLastMessageId = parseInt(response.ultimoId, 10) || null;
+                    }
                     if (response.isPrepend) {
                         appendHistory(response.html);
                     } else {
@@ -453,8 +459,21 @@
                         renderForwardTargets();
                     }
                     if (activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
+                        const incomingLastId = parseInt(response.activeLastMessageId || 0, 10) || null;
+                        const incomingSenderId = parseInt(response.activeLastMessageSenderId || 0, 10) || null;
+                        const isNewIncomingOnActiveThread = incomingLastId && activeLastMessageId && incomingLastId > activeLastMessageId;
+                        const fromAnotherUser = incomingSenderId && incomingSenderId !== authUserId;
+
                         $('#chat-messages').html(response.messaggiHtml);
                         scrollToBottom();
+
+                        if (isNewIncomingOnActiveThread && fromAnotherUser) {
+                            playNotificationSound();
+                        }
+
+                        if (incomingLastId) {
+                            activeLastMessageId = incomingLastId;
+                        }
                     }
                     if (response.nonLettiTotali !== undefined) {
                         const nuovoTotale = parseInt(response.nonLettiTotali, 10) || 0;
@@ -1033,6 +1052,10 @@
             if (activeThreadId) {
                 setComposerEnabled(true);
                 scrollToBottom();
+                const lastRenderedId = parseInt($('.chat-msg-row').last().data('msg-id') || 0, 10);
+                if (lastRenderedId > 0) {
+                    activeLastMessageId = lastRenderedId;
+                }
             } else {
                 setComposerEnabled(false);
             }
