@@ -1,5 +1,6 @@
 @php
     $altroReadAt = isset($altroLastReadAt) ? \Carbon\Carbon::parse($altroLastReadAt) : null;
+    $authId = (int) Auth::id();
 @endphp
 
 @if($messaggi->isEmpty())
@@ -14,6 +15,14 @@
         <div class="d-flex mb-4 {{$mio ? 'justify-content-end' : 'justify-content-start'}} chat-msg-row" data-msg-id="{{$messaggio->id}}">
             <div class="rounded px-4 py-3 {{$mio ? 'bg-light-primary' : 'bg-light'}} position-relative chat-bubble-wrap" style="max-width: 75%;">
                 <div class="fw-bolder fs-8 text-gray-700 mb-1">{{$mio ? 'Tu' : ($messaggio->mittente?->nominativo() ?? 'Utente')}}</div>
+
+                @if((int)($messaggio->priority ?? 0) > 0)
+                    <span class="badge badge-light-danger mb-2">Priorità alta</span>
+                @endif
+
+                @if($messaggio->inoltratoDa)
+                    <div class="fs-8 text-muted mb-2">↪ Messaggio inoltrato</div>
+                @endif
 
                 {{-- Risposte inline (quote del messaggio originale) --}}
                 @if($messaggio->relationLoaded('replyTo') && $messaggio->replyTo)
@@ -85,25 +94,58 @@
                 <div class="d-flex justify-content-between align-items-center mt-2 gap-3">
                     {{-- Pulsanti azioni --}}
                     <div class="chat-msg-actions d-flex gap-1" style="opacity: 0; transition: opacity .15s;">
+                        <button type="button" class="btn btn-icon btn-sm btn-light chat-forward-select-btn" data-msg-id="{{$messaggio->id}}" title="Seleziona per inoltro">
+                            <i class="fas fa-check-square fs-8"></i>
+                        </button>
                         <button type="button" class="btn btn-icon btn-sm btn-light chat-reply-btn" data-msg-id="{{$messaggio->id}}" data-author="{{$messaggio->mittente?->nominativo() ?? 'Utente'}}" data-text="{{Str::limit(strip_tags($messaggio->messaggio ?? '📎 Allegato'), 80)}}" title="Rispondi">
                             <i class="fas fa-reply fs-8"></i>
+                        </button>
+                        <button type="button" class="btn btn-icon btn-sm btn-light chat-pin-btn" data-msg-id="{{$messaggio->id}}" title="Pin">
+                            <i class="fas fa-thumbtack fs-8"></i>
+                        </button>
+                        <button type="button" class="btn btn-icon btn-sm btn-light chat-favorite-btn" data-msg-id="{{$messaggio->id}}" title="Preferito">
+                            <i class="fas fa-star fs-8"></i>
                         </button>
                         <button type="button" class="btn btn-icon btn-sm btn-light chat-react-btn" data-msg-id="{{$messaggio->id}}" title="Reagisci">
                             <i class="far fa-smile fs-8"></i>
                         </button>
+                        @if($mio || Auth::user()?->hasPermissionTo('admin'))
+                            <button type="button" class="btn btn-icon btn-sm btn-light chat-edit-btn" data-msg-id="{{$messaggio->id}}" data-text="{{e($messaggio->messaggio)}}" title="Modifica">
+                                <i class="fas fa-pen fs-8"></i>
+                            </button>
+                            <button type="button" class="btn btn-icon btn-sm btn-light chat-delete-btn" data-msg-id="{{$messaggio->id}}" title="Elimina">
+                                <i class="fas fa-trash fs-8"></i>
+                            </button>
+                        @endif
                     </div>
 
                     <div class="text-muted fs-8 text-end text-nowrap">
                         {{$messaggio->created_at?->format('d/m/Y H:i')}}
+                        @if($messaggio->edited_at)
+                            <span class="ms-1" title="Modificato">(mod.)</span>
+                        @endif
                         @if($mio)
                             @if($altroReadAt && $messaggio->created_at && $messaggio->created_at->lte($altroReadAt))
                                 <span class="text-primary ms-1" title="Letto">✓✓</span>
+                            @elseif($messaggio->delivered_at)
+                                <span class="text-info ms-1" title="Consegnato {{$messaggio->delivered_at?->format('d/m H:i')}}">✓✓</span>
                             @else
                                 <span class="text-muted ms-1" title="Inviato">✓</span>
                             @endif
                         @endif
                     </div>
                 </div>
+
+                @php
+                    $pinned = $messaggio->relationLoaded('pin') ? $messaggio->pin->contains('user_id', $authId) : false;
+                    $favorite = $messaggio->relationLoaded('preferiti') ? $messaggio->preferiti->contains('user_id', $authId) : false;
+                @endphp
+                @if($pinned || $favorite)
+                    <div class="mt-1 fs-8 text-muted">
+                        @if($pinned) 📌 Pinnato @endif
+                        @if($favorite) ⭐ Preferito @endif
+                    </div>
+                @endif
             </div>
         </div>
     @endforeach

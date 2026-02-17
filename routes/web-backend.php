@@ -116,9 +116,17 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('/chat-interna/search', [\App\Http\Controllers\Backend\ChatController::class, 'search']);
     Route::get('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'messages']);
     Route::post('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'sendMessage']);
+    Route::post('/chat-interna/{thread}/forward', [\App\Http\Controllers\Backend\ChatController::class, 'forwardMessages']);
     Route::post('/chat-interna/{thread}/typing', [\App\Http\Controllers\Backend\ChatController::class, 'typing']);
     Route::post('/chat-interna/{thread}/close', [\App\Http\Controllers\Backend\ChatController::class, 'closeThread']);
+    Route::post('/chat-interna/{thread}/mute', [\App\Http\Controllers\Backend\ChatController::class, 'toggleThreadMute']);
     Route::post('/chat-interna/message/{message}/reaction', [\App\Http\Controllers\Backend\ChatController::class, 'toggleReaction']);
+    Route::post('/chat-interna/message/{message}/pin', [\App\Http\Controllers\Backend\ChatController::class, 'togglePin']);
+    Route::post('/chat-interna/message/{message}/favorite', [\App\Http\Controllers\Backend\ChatController::class, 'toggleFavorite']);
+    Route::patch('/chat-interna/message/{message}', [\App\Http\Controllers\Backend\ChatController::class, 'updateMessage']);
+    Route::delete('/chat-interna/message/{message}', [\App\Http\Controllers\Backend\ChatController::class, 'deleteMessage']);
+    Route::get('/chat-interna/templates', [\App\Http\Controllers\Backend\ChatController::class, 'quickTemplates']);
+    Route::post('/chat-interna/templates', [\App\Http\Controllers\Backend\ChatController::class, 'saveQuickTemplate']);
 
     Route::get('select2', [\App\Http\Controllers\Backend\Select2::class, 'response']);
 

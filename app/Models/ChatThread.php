@@ -37,4 +37,11 @@ class ChatThread extends Model
     {
         return $this->hasOne(ChatMessage::class, 'thread_id')->latestOfMany();
     }
+
+    public function messaggiPinnati()
+    {
+        return $this->hasMany(ChatMessage::class, 'thread_id')
+            ->whereHas('pin')
+            ->latest('id');
+    }
 }

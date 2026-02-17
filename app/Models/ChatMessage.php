@@ -16,6 +16,17 @@ class ChatMessage extends Model
         'user_id',
         'messaggio',
         'reply_to_id',
+        'delivered_at',
+        'edited_at',
+        'deleted_at',
+        'priority',
+        'forwarded_from_id',
+    ];
+
+    protected $casts = [
+        'delivered_at' => 'datetime',
+        'edited_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function thread()
@@ -41,5 +52,30 @@ class ChatMessage extends Model
     public function reazioni()
     {
         return $this->hasMany(ChatMessageReaction::class, 'message_id');
+    }
+
+    public function inoltratoDa()
+    {
+        return $this->belongsTo(self::class, 'forwarded_from_id');
+    }
+
+    public function pin()
+    {
+        return $this->hasMany(ChatMessagePin::class, 'message_id');
+    }
+
+    public function preferiti()
+    {
+        return $this->hasMany(ChatMessageFavorite::class, 'message_id');
+    }
+
+    public function audit()
+    {
+        return $this->hasMany(ChatMessageAudit::class, 'message_id');
+    }
+
+    public function menzioni()
+    {
+        return $this->hasMany(ChatMessageMention::class, 'message_id');
     }
 }

@@ -20,6 +20,7 @@ class ChatThreadUser extends Model
 
     protected $casts = [
         'last_read_at' => 'datetime',
+        'muted_until' => 'datetime',
     ];
 
     public function thread()

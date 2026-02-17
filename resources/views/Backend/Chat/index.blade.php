@@ -178,7 +178,32 @@
                             <button type="button" class="btn btn-light-info" id="chat-search-btn"><i class="fas fa-search"></i></button>
                             <button type="button" class="btn btn-light" id="chat-search-close"><i class="fas fa-times"></i></button>
                         </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-md-3"><input type="date" id="chat-search-from" class="form-control form-control-sm"></div>
+                            <div class="col-md-3"><input type="date" id="chat-search-to" class="form-control form-control-sm"></div>
+                            <div class="col-md-3"><select id="chat-search-priority" class="form-select form-select-sm"><option value="">Priorità</option><option value="2">Alta</option><option value="1">Media</option><option value="0">Normale</option></select></div>
+                            <div class="col-md-3 d-flex align-items-center gap-3">
+                                <label class="form-check form-check-sm m-0"><input class="form-check-input" type="checkbox" id="chat-search-attachments"><span class="form-check-label">Allegati</span></label>
+                                <label class="form-check form-check-sm m-0"><input class="form-check-input" type="checkbox" id="chat-search-favorites"><span class="form-check-label">Preferiti</span></label>
+                            </div>
+                        </div>
                         <div id="chat-search-results" class="mt-2"></div>
+                    </div>
+
+                    <div id="chat-forward-toolbar" class="d-none mb-2 p-2 bg-light-primary rounded d-flex align-items-center justify-content-between">
+                        <div class="fs-8 fw-bold">Messaggi selezionati: <span id="chat-forward-count">0</span></div>
+                        <div class="d-flex align-items-center gap-2">
+                            <select id="chat-forward-target" class="form-select form-select-sm w-200px"></select>
+                            <button type="button" class="btn btn-sm btn-primary" id="chat-forward-send">Inoltra</button>
+                            <button type="button" class="btn btn-sm btn-light" id="chat-forward-cancel">Annulla</button>
+                        </div>
+                    </div>
+
+                    <div id="chat-pinned-panel" class="mb-2 p-2 bg-light rounded">
+                        <div class="fw-bold fs-8 mb-1">Messaggi pinnati</div>
+                        <div id="chat-pinned-content">
+                            @include('Backend.Chat._pinned', ['pinnedMessages' => $pinnedMessages ?? collect()])
+                        </div>
                     </div>
 
                     {{-- Reply banner --}}
@@ -209,6 +234,18 @@
                         @csrf
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <button type="button" id="chat-emoji-toggle" class="btn btn-sm btn-light-primary">😊 Emoticon</button>
+                            <select id="chat-template-select" class="form-select form-select-sm w-250px">
+                                <option value="">Template rapidi...</option>
+                                @foreach($quickTemplates as $template)
+                                    <option value="{{e($template->contenuto)}}">{{$template->titolo}}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" id="chat-template-save" class="btn btn-sm btn-light-info">Salva template</button>
+                            <select id="chat-priority" class="form-select form-select-sm w-150px">
+                                <option value="0">Priorità normale</option>
+                                <option value="1">Priorità media</option>
+                                <option value="2">Priorità alta</option>
+                            </select>
                             <div id="chat-emoji-panel" class="d-none">
                                 <button type="button" class="btn btn-sm btn-light chat-emoji-item">😀</button>
                                 <button type="button" class="btn btn-sm btn-light chat-emoji-item">😂</button>
@@ -265,6 +302,10 @@
             let typingTimeout = null;
             let typingSent = false;
             let replyToId = null;
+            let oldestLoadedMessageId = null;
+            let hasMoreHistory = true;
+            let loadingHistory = false;
+            let selectedForwardIds = [];
 
             /* ================= SUONO NOTIFICA ================= */
             const notificationSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBFSAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
@@ -278,7 +319,13 @@
             function sendUrl(threadId) { return chatBaseUrl + '/' + threadId + '/messages'; }
             function typingUrl(threadId) { return chatBaseUrl + '/' + threadId + '/typing'; }
             function closeThreadUrl(threadId) { return chatBaseUrl + '/' + threadId + '/close'; }
+            function muteThreadUrl(threadId) { return chatBaseUrl + '/' + threadId + '/mute'; }
+            function forwardUrl(threadId) { return chatBaseUrl + '/' + threadId + '/forward'; }
             function reactionUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId + '/reaction'); }
+            function pinUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId + '/pin'); }
+            function favoriteUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId + '/favorite'); }
+            function messageUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId); }
+            function templatesUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/templates'); }
 
             /* ================= UTILITY ================= */
             function scrollToBottom() {
@@ -336,23 +383,59 @@
                 $('#chat-reply-text').text('');
             }
 
+            function renderForwardTargets() {
+                const $select = $('#chat-forward-target');
+                $select.html('<option value="">Seleziona chat...</option>');
+                $('.chat-thread-item').each(function () {
+                    const id = $(this).data('thread-id');
+                    const label = $(this).find('.fw-bolder').text().trim();
+                    if (!id) return;
+                    $select.append('<option value="' + id + '">' + $('<span>').text(label).html() + '</option>');
+                });
+            }
+
+            function appendHistory(html) {
+                const $box = $('#chat-messages');
+                const prevHeight = $box[0].scrollHeight;
+                $box.prepend(html);
+                const newHeight = $box[0].scrollHeight;
+                $box.scrollTop(newHeight - prevHeight + $box.scrollTop());
+            }
+
             /* ================= LOAD MESSAGES ================= */
-            function loadMessages(threadId, pushState = false) {
+            function loadMessages(threadId, pushState = false, beforeId = null) {
                 if (!threadId) {
                     $('#chat-messages').html('<div class="h-100 d-flex align-items-center justify-content-center text-muted fs-6 py-10">Seleziona o crea una conversazione.</div>');
                     setComposerEnabled(false);
+                    oldestLoadedMessageId = null;
+                    hasMoreHistory = false;
                     return;
                 }
 
-                $.get(messagesUrl(threadId), function (response) {
+                const payload = {};
+                if (beforeId) payload.before_id = beforeId;
+
+                $.get(messagesUrl(threadId), payload, function (response) {
                     activeThreadId = threadId;
-                    $('#chat-messages').html(response.html);
+                    if (response.isPrepend) {
+                        appendHistory(response.html);
+                    } else {
+                        $('#chat-messages').html(response.html);
+                    }
+                    oldestLoadedMessageId = response.oldestId || oldestLoadedMessageId;
+                    hasMoreHistory = !!response.hasMore;
                     $('.chat-thread-item').removeClass('active');
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
                     setComposerEnabled(true);
                     sendTypingStatus(false);
                     clearReply();
-                    scrollToBottom();
+                    if (!response.isPrepend) {
+                        scrollToBottom();
+                    }
+                    if (response.pinnedHtml !== undefined) {
+                        $('#chat-pinned-content').html(response.pinnedHtml);
+                    }
+                    renderForwardTargets();
 
                     if (pushState) {
                         const nextUrl = new URL(window.location.href);
@@ -367,8 +450,9 @@
                 $.get(pollUrl, {thread_id: activeThreadId}, function (response) {
                     if (response.threadsHtml !== undefined) {
                         $('#chat-threads').html(response.threadsHtml);
+                        renderForwardTargets();
                     }
-                    if (activeThreadId && response.messaggiHtml !== undefined) {
+                    if (activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
                         $('#chat-messages').html(response.messaggiHtml);
                         scrollToBottom();
                     }
@@ -396,6 +480,10 @@
                         ultimoTotaleNonLetti = nuovoTotale;
                     }
 
+                    if (response.pinnedHtml !== undefined) {
+                        $('#chat-pinned-content').html(response.pinnedHtml);
+                    }
+
                     // Typing
                     if (response.typing !== undefined) {
                         if (response.typing.active) {
@@ -414,6 +502,9 @@
                             $onlineEl.html('<span class="chat-online-dot online"></span> online');
                         } else {
                             $onlineEl.html('<span class="chat-online-dot offline"></span> offline');
+                        }
+                        if (response.threadMuted) {
+                            $onlineEl.append(' <span class="ms-2">🔕 silenziata</span>');
                         }
                     }
                 });
@@ -449,6 +540,28 @@
                 });
             });
 
+            $(document).on('click', '.chat-thread-mute', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const threadId = parseInt($(this).data('thread-id'), 10);
+                if (!threadId) return;
+
+                $.post(muteThreadUrl(threadId), {
+                    _token: $('meta[name="_token"]').attr('content')
+                }, function (response) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: response.muted ? 'Conversazione silenziata' : 'Conversazione riattivata',
+                        showConfirmButton: false,
+                        timer: 1800,
+                    });
+                    refreshPoll();
+                });
+            });
+
             /* ================= SEND MESSAGE ================= */
             $('#chat-send-form').on('submit', function (event) {
                 event.preventDefault();
@@ -468,6 +581,7 @@
                 if (replyToId) {
                     formData.set('reply_to_id', replyToId);
                 }
+                formData.set('priority', $('#chat-priority').val() || '0');
 
                 $.ajax({
                     type: 'POST',
@@ -527,6 +641,44 @@
             /* ================= EMOJI PICKER (composizione) ================= */
             $('#chat-emoji-toggle').on('click', function () {
                 $('#chat-emoji-panel').toggleClass('d-none');
+            });
+
+            $('#chat-template-select').on('change', function () {
+                const templateText = $(this).val();
+                if (!templateText) return;
+                const textarea = document.getElementById('chat-messaggio');
+                if (!textarea) return;
+                insertAtCursor(textarea, (textarea.value ? "\n" : "") + templateText);
+                $(this).val('');
+                $('#chat-messaggio').trigger('input');
+            });
+
+            $('#chat-template-save').on('click', function () {
+                const testo = ($('#chat-messaggio').val() || '').trim();
+                if (!testo) {
+                    Swal.fire('Attenzione', 'Scrivi prima un testo da salvare come template', 'warning');
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Titolo template',
+                    input: 'text',
+                    inputPlaceholder: 'es. Conferma appuntamento',
+                    showCancelButton: true,
+                }).then(function (result) {
+                    if (!result.isConfirmed || !result.value) return;
+
+                    $.post(templatesUrl(), {
+                        _token: $('meta[name="_token"]').attr('content'),
+                        titolo: result.value,
+                        contenuto: testo,
+                    }, function (response) {
+                        if (response.template) {
+                            $('#chat-template-select').append('<option value="' + $('<span>').text(response.template.contenuto).html() + '">' + $('<span>').text(response.template.titolo).html() + '</option>');
+                        }
+                        Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Template salvato', showConfirmButton: false, timer: 1600});
+                    });
+                });
             });
 
             $(document).on('click', '.chat-emoji-item', function () {
@@ -614,6 +766,115 @@
                 });
             });
 
+            $(document).on('click', '.chat-pin-btn', function () {
+                const msgId = $(this).data('msg-id');
+                $.post(pinUrl(msgId), {
+                    _token: $('meta[name="_token"]').attr('content'),
+                }, function () {
+                    refreshPoll();
+                });
+            });
+
+            $(document).on('click', '.chat-favorite-btn', function () {
+                const msgId = $(this).data('msg-id');
+                $.post(favoriteUrl(msgId), {
+                    _token: $('meta[name="_token"]').attr('content'),
+                }, function () {
+                    refreshPoll();
+                });
+            });
+
+            $(document).on('click', '.chat-edit-btn', function () {
+                const msgId = $(this).data('msg-id');
+                const oldText = $(this).data('text') || '';
+
+                Swal.fire({
+                    title: 'Modifica messaggio',
+                    input: 'textarea',
+                    inputValue: oldText,
+                    showCancelButton: true,
+                }).then(function (result) {
+                    if (!result.isConfirmed) return;
+                    $.ajax({
+                        type: 'PATCH',
+                        url: messageUrl(msgId),
+                        data: {
+                            _token: $('meta[name="_token"]').attr('content'),
+                            messaggio: result.value || '',
+                        },
+                        success: function () { refreshPoll(); },
+                    });
+                });
+            });
+
+            $(document).on('click', '.chat-delete-btn', function () {
+                const msgId = $(this).data('msg-id');
+                Swal.fire({
+                    title: 'Eliminare messaggio?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                }).then(function (result) {
+                    if (!result.isConfirmed) return;
+                    $.ajax({
+                        type: 'DELETE',
+                        url: messageUrl(msgId),
+                        data: {
+                            _token: $('meta[name="_token"]').attr('content'),
+                        },
+                        success: function () { refreshPoll(); },
+                    });
+                });
+            });
+
+            $(document).on('click', '.chat-forward-select-btn', function () {
+                const msgId = parseInt($(this).data('msg-id'), 10);
+                if (!msgId) return;
+
+                if (selectedForwardIds.includes(msgId)) {
+                    selectedForwardIds = selectedForwardIds.filter(function (id) { return id !== msgId; });
+                    $(this).removeClass('btn-light-primary').addClass('btn-light');
+                } else {
+                    selectedForwardIds.push(msgId);
+                    $(this).removeClass('btn-light').addClass('btn-light-primary');
+                }
+
+                $('#chat-forward-count').text(selectedForwardIds.length);
+                $('#chat-forward-toolbar').toggleClass('d-none', selectedForwardIds.length === 0);
+            });
+
+            $('#chat-forward-cancel').on('click', function () {
+                selectedForwardIds = [];
+                $('#chat-forward-count').text('0');
+                $('#chat-forward-toolbar').addClass('d-none');
+                $('.chat-forward-select-btn').removeClass('btn-light-primary').addClass('btn-light');
+            });
+
+            $('#chat-forward-send').on('click', function () {
+                const targetThread = parseInt($('#chat-forward-target').val(), 10);
+                if (!activeThreadId || !targetThread || selectedForwardIds.length === 0) {
+                    Swal.fire('Attenzione', 'Seleziona almeno un messaggio e la chat di destinazione', 'warning');
+                    return;
+                }
+
+                $.post(forwardUrl(activeThreadId), {
+                    _token: $('meta[name="_token"]').attr('content'),
+                    target_thread_id: targetThread,
+                    message_ids: selectedForwardIds,
+                }, function () {
+                    Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Messaggi inoltrati', showConfirmButton: false, timer: 1800});
+                    $('#chat-forward-cancel').trigger('click');
+                });
+            });
+
+            $('#chat-messages').on('scroll', function () {
+                if (!activeThreadId || loadingHistory || !hasMoreHistory) return;
+                if ($(this).scrollTop() > 20) return;
+
+                loadingHistory = true;
+                loadMessages(activeThreadId, false, oldestLoadedMessageId);
+                setTimeout(function () { loadingHistory = false; }, 500);
+            });
+
             /* ================= RICERCA MESSAGGI ================= */
             $('#chat-search-toggle').on('click', function () {
                 $('#chat-search-panel').toggleClass('d-none');
@@ -630,9 +891,17 @@
 
             function eseguiRicerca() {
                 const q = $('#chat-search-input').val().trim();
-                if (q.length < 2) return;
+                if (q.length > 0 && q.length < 2) return;
 
-                $.get(searchApiUrl, {q: q, thread_id: activeThreadId || ''}, function (response) {
+                $.get(searchApiUrl, {
+                    q: q,
+                    thread_id: activeThreadId || '',
+                    date_from: $('#chat-search-from').val(),
+                    date_to: $('#chat-search-to').val(),
+                    with_attachments: $('#chat-search-attachments').is(':checked') ? 1 : 0,
+                    favorites_only: $('#chat-search-favorites').is(':checked') ? 1 : 0,
+                    priority: $('#chat-search-priority').val(),
+                }, function (response) {
                     const $container = $('#chat-search-results');
                     $container.html('');
 
@@ -681,6 +950,18 @@
                         }, 2000);
                     }
                 }, 500);
+            });
+
+            $(document).on('click', '.chat-pinned-jump', function () {
+                const msgId = $(this).data('msg-id');
+                const $msg = $('.chat-msg-row[data-msg-id="' + msgId + '"]');
+                if ($msg.length) {
+                    $msg[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                    $msg.find('.chat-bubble-wrap').css('box-shadow', '0 0 0 2px #009ef7');
+                    setTimeout(function () {
+                        $msg.find('.chat-bubble-wrap').css('box-shadow', '');
+                    }, 1600);
+                }
             });
 
             /* ================= DRAG & DROP ================= */
@@ -755,6 +1036,8 @@
             } else {
                 setComposerEnabled(false);
             }
+
+            renderForwardTargets();
 
             setInterval(refreshPoll, 3000);
         });

@@ -17,6 +17,13 @@ class ChatMessageAttachment extends Model
         'path_filename',
         'mime_type',
         'dimensione_file',
+        'scan_status',
+        'scan_note',
+        'is_blocked',
+    ];
+
+    protected $casts = [
+        'is_blocked' => 'boolean',
     ];
 
     public function messaggio()
