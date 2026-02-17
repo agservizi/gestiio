@@ -297,6 +297,7 @@
             const authUserId = @json((int) Auth::id());
             let activeThreadId = @json($threadAttivo?->id);
             let ultimoTotaleNonLetti = parseInt($('.js-chat-unread-total').first().text() || '0', 10);
+            let lastNotifiedMessageId = @json((int) ($lastNotificationMessageId ?? 0));
             const chatBaseUrl = @json(rtrim(action([$controller, 'index']), '/'));
             const pollUrl = @json(action([$controller, 'poll']));
             const searchApiUrl = @json(action([$controller, 'search']));
@@ -461,15 +462,9 @@
                     if (activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
                         const incomingLastId = parseInt(response.activeLastMessageId || 0, 10) || null;
                         const incomingSenderId = parseInt(response.activeLastMessageSenderId || 0, 10) || null;
-                        const isNewIncomingOnActiveThread = incomingLastId && activeLastMessageId && incomingLastId > activeLastMessageId;
-                        const fromAnotherUser = incomingSenderId && incomingSenderId !== authUserId;
 
                         $('#chat-messages').html(response.messaggiHtml);
                         scrollToBottom();
-
-                        if (isNewIncomingOnActiveThread && fromAnotherUser) {
-                            playNotificationSound();
-                        }
 
                         if (incomingLastId) {
                             activeLastMessageId = incomingLastId;
@@ -483,20 +478,42 @@
                         } else {
                             $('.js-chat-unread-wrap').addClass('d-none');
                         }
+                        ultimoTotaleNonLetti = nuovoTotale;
+                    }
 
-                        if (nuovoTotale > ultimoTotaleNonLetti) {
+                    if (response.notificationMessage && response.notificationMessage.id) {
+                        const notif = response.notificationMessage;
+                        const notifId = parseInt(notif.id, 10) || 0;
+                        const notifSenderId = parseInt(notif.sender_id || 0, 10) || null;
+
+                        if (notifId > lastNotifiedMessageId && notifSenderId !== authUserId) {
                             playNotificationSound();
                             Swal.fire({
                                 toast: true,
                                 position: 'top-end',
                                 icon: 'info',
-                                title: 'Nuovo messaggio in chat',
+                                title: (notif.sender || 'Utente') + ' · ' + (notif.thread_name || 'Conversazione'),
+                                text: notif.excerpt || 'Nuovo messaggio',
                                 showConfirmButton: false,
-                                timer: 3500,
+                                timer: 3800,
                                 timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.style.cursor = 'pointer';
+                                    toast.title = 'Apri conversazione';
+                                    toast.addEventListener('click', function () {
+                                        const threadId = parseInt(notif.thread_id || 0, 10);
+                                        if (threadId > 0) {
+                                            loadMessages(threadId, true);
+                                        }
+                                        Swal.close();
+                                    });
+                                },
                             });
                         }
-                        ultimoTotaleNonLetti = nuovoTotale;
+
+                        if (notifId > lastNotifiedMessageId) {
+                            lastNotifiedMessageId = notifId;
+                        }
                     }
 
                     if (response.pinnedHtml !== undefined) {

@@ -36,6 +36,7 @@ class ChatController extends Controller
         $this->ensureRuoloConsentito($authUser);
 
         $threads = $this->threadsPerUtente($authUser->id);
+        $lastNotificationMessageId = $this->ultimoMessaggioNotificaId($threads, $authUser->id);
 
         $threadId = $request->integer('thread');
         $threadAttivo = null;
@@ -75,6 +76,7 @@ class ChatController extends Controller
             'altroLastReadAt' => $altroLastReadAt,
             'quickTemplates' => $this->quickTemplatesData($authUser->id),
             'pinnedMessages' => $pinnedMessages,
+            'lastNotificationMessageId' => $lastNotificationMessageId,
         ]);
     }
 
@@ -314,6 +316,8 @@ class ChatController extends Controller
             }
         }
 
+        $notificationMessage = $this->buildNotificationMessage($threads, $authUser->id);
+
         return response()->json([
             'threadsHtml' => view('Backend.Chat._threads', [
                 'threads' => $threads,
@@ -330,6 +334,7 @@ class ChatController extends Controller
             'threadMuted' => $threadMuted,
             'activeLastMessageId' => $activeLastMessageId,
             'activeLastMessageSenderId' => $activeLastMessageSenderId,
+            'notificationMessage' => $notificationMessage,
             'pinnedHtml' => view('Backend.Chat._pinned', [
                 'pinnedMessages' => $threadAttivo ? $this->messaggiPinnatiThread($threadAttivo->id) : collect(),
             ])->render(),
@@ -996,6 +1001,45 @@ class ChatController extends Controller
             ->latest('id')
             ->limit(8)
             ->get();
+    }
+
+    protected function ultimoMessaggioNotificaId($threads, int $userId): int
+    {
+        $payload = $this->buildNotificationMessage($threads, $userId);
+
+        return (int) ($payload['id'] ?? 0);
+    }
+
+    protected function buildNotificationMessage($threads, int $userId): ?array
+    {
+        $threadIds = $threads->pluck('id')->filter()->values();
+        if ($threadIds->isEmpty()) {
+            return null;
+        }
+
+        $message = ChatMessage::query()
+            ->whereIn('thread_id', $threadIds)
+            ->where('user_id', '<>', $userId)
+            ->latest('id')
+            ->with('mittente:id,nome,cognome')
+            ->first();
+
+        if (!$message) {
+            return null;
+        }
+
+        $thread = $threads->firstWhere('id', $message->thread_id);
+        $threadName = $thread?->getRelation('altroPartecipante')?->nominativo() ?? 'Conversazione';
+
+        return [
+            'id' => (int) $message->id,
+            'thread_id' => (int) $message->thread_id,
+            'thread_name' => $threadName,
+            'sender_id' => (int) $message->user_id,
+            'sender' => $message->mittente?->nominativo() ?? 'Utente',
+            'excerpt' => Str::limit(strip_tags((string) ($message->messaggio ?? '📎 Allegato')), 90),
+            'created_at' => $message->created_at?->toDateTimeString(),
+        ];
     }
 
     protected function registraMenzioni(ChatMessage $messaggio): void
