@@ -113,6 +113,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('/chat-interna', [\App\Http\Controllers\Backend\ChatController::class, 'index']);
     Route::post('/chat-interna/thread', [\App\Http\Controllers\Backend\ChatController::class, 'storeThread']);
     Route::get('/chat-interna/poll', [\App\Http\Controllers\Backend\ChatController::class, 'poll']);
+    Route::get('/chat-interna/poll-global', [\App\Http\Controllers\Backend\ChatController::class, 'pollGlobalNotifications']);
     Route::get('/chat-interna/search', [\App\Http\Controllers\Backend\ChatController::class, 'search']);
     Route::get('/chat-interna/push/vapid-public-key', [\App\Http\Controllers\Backend\ChatController::class, 'pushVapidPublicKey']);
     Route::post('/chat-interna/push/subscribe', [\App\Http\Controllers\Backend\ChatController::class, 'subscribePush']);

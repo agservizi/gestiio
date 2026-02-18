@@ -135,6 +135,7 @@
 <script src="/assets_backend/js-miei/html2canvas.min.js"></script>
 <!--end::Global Javascript Bundle-->
 @include('Backend._components.flashToast')
+@include('Backend.Chat._globalNotifications')
 @stack('customScript')
 
 <script>

@@ -391,6 +391,28 @@ class ChatController extends Controller
         ]);
     }
 
+    public function pollGlobalNotifications(Request $request): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureRuoloConsentito($authUser);
+
+        $this->aggiornaStatoOnline($authUser->id);
+
+        $threads = $this->threadsPerUtente($authUser->id);
+        $notificationMessage = $this->buildNotificationMessage($threads, $authUser->id);
+        $sinceId = $request->integer('since_id');
+
+        if ($notificationMessage && $sinceId > 0 && (int) ($notificationMessage['id'] ?? 0) <= $sinceId) {
+            $notificationMessage = null;
+        }
+
+        return response()->json([
+            'nonLettiTotali' => ChatThreadUser::conteggioNonLetti($authUser->id),
+            'notificationMessage' => $notificationMessage,
+        ]);
+    }
+
     public function typing(Request $request, ChatThread $thread): JsonResponse
     {
         /** @var User $authUser */
