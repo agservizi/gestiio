@@ -57,23 +57,40 @@
 
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Economico mese</h3>
+                <div class="card-header border-0 pt-5 pb-0">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M4 19C4 17.8954 4.89543 17 6 17H20V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z" fill="currentColor"/>
+                                <path d="M6 3H18C19.1046 3 20 3.89543 20 5V15H6C4.89543 15 4 15.8954 4 17V5C4 3.89543 4.89543 3 6 3Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <h3 class="card-title m-0">Economico mese</h3>
+                    </div>
                 </div>
                 <div class="card-body pt-0">
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Entrate</span>
-                        <span class="fw-bolder">{{ \App\importo($guadagno->entrate,true) }}</span>
+                    <div class="bg-light-primary rounded p-4 mb-4">
+                        <div class="text-muted fw-semibold fs-8 mb-1">Utile stimato</div>
+                        <div class="fs-2 fw-bolder text-primary">{{ \App\importo($guadagno->utile,true) }}</div>
                     </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Uscite</span>
-                        <span class="fw-bolder">{{ \App\importo($guadagno->uscite,true) }}</span>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted fw-semibold">Entrate</span>
+                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ \App\importo($guadagno->entrate,true) }}</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Utile</span>
-                        <span class="fw-bolder">{{ \App\importo($guadagno->utile,true) }}</span>
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted fw-semibold">Uscite</span>
+                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ \App\importo($guadagno->uscite,true) }}</span>
                     </div>
-                    <div class="text-muted">Incidenza utile: {{ $percentualeUtile }}%</div>
+
+                    <div class="d-flex justify-content-between fw-semibold mb-2">
+                        <span class="text-muted">Incidenza utile</span>
+                        <span>{{ $percentualeUtile }}%</span>
+                    </div>
+                    <div class="progress h-8px bg-light-success">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $percentualeUtile }}%" aria-valuenow="{{ $percentualeUtile }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -134,27 +151,40 @@
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-xl-6">
             <div class="card card-flush h-lg-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <div class="card-title flex-column">
-                        <h3 class="fw-bolder mb-1">Esito finale</h3>
-                        <div class="fs-6 fw-bold text-gray-400">Tutti i contratti</div>
+                <div class="card-header border-0 pt-5 pb-0">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M3 13.2C3 9.32002 6.14 6.18002 10.02 6.18002C11.76 6.18002 13.36 6.82002 14.6 7.86002L16.32 6.14002C16.64 5.82002 17.18 5.98002 17.26 6.42002L17.84 9.76002C17.88 10.02 17.7 10.26 17.44 10.3L14.1 10.88C13.66 10.96 13.5 10.42 13.82 10.1L15.5 8.42002C14.48 7.56002 13.2 7.04002 11.78 7.04002C8.46002 7.04002 5.76002 9.74002 5.76002 13.06C5.76002 16.38 8.46002 19.08 11.78 19.08C14.1 19.08 16.12 17.76 17.12 15.84C17.3 15.5 17.74 15.36 18.08 15.54C18.42 15.72 18.56 16.16 18.38 16.5C17.14 18.88 14.62 20.52 11.78 20.52C7.90002 20.52 3 17.08 3 13.2Z" fill="currentColor"/>
+                                <path d="M20 5.00002C20 4.44002 19.56 4.00002 19 4.00002C18.44 4.00002 18 4.44002 18 5.00002V11C18 11.56 18.44 12 19 12C19.56 12 20 11.56 20 11V5.00002Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="fw-bolder mb-0">Esito finale</h3>
+                            <div class="fs-7 fw-semibold text-gray-400">Distribuzione complessiva ordini</div>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body p-9 pt-3">
-                    <div class="d-flex flex-wrap">
-                        <div class="position-relative d-flex flex-center h-150px w-150px me-5 mb-7">
+                <div class="card-body p-8 pt-4">
+                    <div class="bg-light-primary rounded p-4 mb-5 d-flex align-items-center justify-content-between">
+                        <span class="text-muted fw-semibold">Totale ordini analizzati</span>
+                        <span class="fs-2 fw-bolder text-primary">{{ number_format((int) $datiTortaEsiti['totale']) }}</span>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center">
+                        <div class="position-relative d-flex flex-center h-150px w-150px me-5 mb-7 mb-xl-0">
                             <div class="position-absolute translate-middle start-50 top-50 d-flex flex-column flex-center">
-                                <span class="fs-2qx fw-bolder">{{ $datiTortaEsiti['totale'] }}</span>
+                                <span class="fs-2qx fw-bolder">{{ number_format((int) $datiTortaEsiti['totale']) }}</span>
                                 <span class="fs-6 fw-bold text-gray-400">Ordini</span>
                             </div>
                             <canvas id="kt_card_widget_17_chart"></canvas>
                         </div>
-                        <div class="d-flex flex-column justify-content-center flex-row-fluid pe-5 mb-5">
+                        <div class="d-flex flex-column justify-content-center flex-row-fluid pe-0 pe-xl-5">
                             @for($n=0;$n<count($datiTortaEsiti['labels']);$n++)
-                                <div class="d-flex fs-6 fw-bold align-items-center mb-3">
-                                    <div class="bullet me-3 h-5px w-15px" style="background-color: {{ $datiTortaEsiti['backgroundColor'][$n] }};"></div>
-                                    <div class="text-gray-400">{{ $datiTortaEsiti['labels'][$n] }}</div>
-                                    <div class="ms-auto fw-bolder text-gray-700">{{ $datiTortaEsiti['data'][$n] }}</div>
+                                <div class="d-flex fs-6 fw-bold align-items-center mb-2 p-2 rounded bg-light">
+                                    <div class="bullet me-3 h-6px w-20px" style="background-color: {{ $datiTortaEsiti['backgroundColor'][$n] }};"></div>
+                                    <div class="text-gray-700">{{ $datiTortaEsiti['labels'][$n] }}</div>
+                                    <div class="ms-auto fw-bolder text-gray-900">{{ number_format((int) $datiTortaEsiti['data'][$n]) }}</div>
                                 </div>
                             @endfor
                         </div>
@@ -196,10 +226,16 @@
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-xxl-6">
             <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5">
-                    <h3 class="card-title align-items-start flex-column">
-                        <span class="card-label fw-bold fs-3 mb-1">Contratti recenti</span>
-                    </h3>
+                <div class="card-header border-0 pt-5 pb-2">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M5 4C5 3.44772 5.44772 3 6 3H18C18.5523 3 19 3.44772 19 4V20L12 17L5 20V4Z" fill="currentColor"/>
+                                <path d="M8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 8.55228 15.5523 9 15 9H9C8.44772 9 8 8.55228 8 8ZM8 12C8 11.4477 8.44772 11 9 11H13C13.5523 11 14 11.4477 14 12C14 12.5523 13.5523 13 13 13H9C8.44772 13 8 12.5523 8 12Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <h3 class="card-label fw-bold fs-3 mb-0">Contratti recenti</h3>
+                    </div>
                     <div class="card-toolbar">
                         <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax" href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'create'])}}">
                             <span class="d-md-none">+</span><span class="d-none d-md-block">Nuovo contratto</span>
@@ -207,18 +243,22 @@
                     </div>
                 </div>
                 <div class="card-body card-scroll py-3">
-                    <div class="table-responsive">
-                        <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                    <div class="bg-light-primary rounded p-3 mb-4 d-flex justify-content-between align-items-center">
+                        <span class="text-muted fw-semibold">Ultimi inserimenti</span>
+                        <span class="badge badge-light-primary fw-bolder">{{ count($contratti ?? []) }}</span>
+                    </div>
+                    <div class="table-responsive border rounded bg-light px-2 py-1">
+                        <table class="table table-row-dashed align-middle gs-0 gy-3 mb-0">
                             <thead>
-                            <tr class="fw-bold text-muted">
-                                <th>Data</th>
+                            <tr class="fw-bold text-muted text-uppercase fs-8">
+                                <th class="ps-3">Data</th>
                                 <th class="min-w-150px">Agente</th>
                                 <th class="min-w-140px">Prodotto</th>
                                 <th class="min-w-120px text-center">Esito</th>
-                                <th class="min-w-100px text-end"></th>
+                                <th class="min-w-100px text-end pe-3">Azioni</th>
                             </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="text-gray-700 fw-semibold">
                             @include('Backend.Dashboard.admin.contratti',['records'=>$contratti])
                             </tbody>
                         </table>
@@ -229,10 +269,16 @@
 
         <div class="col-xxl-6">
             <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5">
-                    <h3 class="card-title align-items-start flex-column">
-                        <span class="card-label fw-bold fs-3 mb-1">Caf / Patronato</span>
-                    </h3>
+                <div class="card-header border-0 pt-5 pb-2">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M4 7C4 5.89543 4.89543 5 6 5H18C19.1046 5 20 5.89543 20 7V17C20 18.1046 19.1046 19 18 19H6C4.89543 19 4 18.1046 4 17V7Z" fill="currentColor"/>
+                                <path d="M7 9C7 8.44772 7.44772 8 8 8H16C16.5523 8 17 8.44772 17 9C17 9.55228 16.5523 10 16 10H8C7.44772 10 7 9.55228 7 9ZM7 13C7 12.4477 7.44772 12 8 12H13C13.5523 12 14 12.4477 14 13C14 13.5523 13.5523 14 13 14H8C7.44772 14 7 13.5523 7 13Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <h3 class="card-label fw-bold fs-3 mb-0">Caf / Patronato</h3>
+                    </div>
                     <div class="card-toolbar">
                         <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax" href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'create'])}}">
                             <span class="d-md-none">+</span><span class="d-none d-md-block">Nuova pratica caf patronato</span>
@@ -240,18 +286,22 @@
                     </div>
                 </div>
                 <div class="card-body card-scroll py-3">
-                    <div class="table-responsive">
-                        <table class="table table-row-bordered" id="tabella-elenco">
+                    <div class="bg-light-primary rounded p-3 mb-4 d-flex justify-content-between align-items-center">
+                        <span class="text-muted fw-semibold">Pratiche recenti</span>
+                        <span class="badge badge-light-primary fw-bolder">{{ count($servizi ?? []) }}</span>
+                    </div>
+                    <div class="table-responsive border rounded bg-light px-2 py-1">
+                        <table class="table table-row-dashed align-middle gs-0 gy-3 mb-0" id="tabella-elenco">
                             <thead>
-                            <tr class="fw-bolder fs-6 text-gray-800">
-                                <th>Data</th>
+                            <tr class="fw-bold text-muted text-uppercase fs-8">
+                                <th class="ps-3">Data</th>
                                 <th>Tipo pratica</th>
                                 <th>Esito</th>
                                 <th>Nominativo</th>
-                                <th class="text-center">Azioni</th>
+                                <th class="text-center pe-3">Azioni</th>
                             </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="text-gray-700 fw-semibold">
                             @include('Backend.Dashboard.admin.cafPatronato',['records' => $servizi,'puoModificareEsito'=>\App\Models\CafPatronato::puoModificareEsito(),'puoModificare'=>\App\Models\CafPatronato::puoModificare(),'controller'=>\App\Http\Controllers\Backend\CafPatronatoController::class])
                             </tbody>
                         </table>
