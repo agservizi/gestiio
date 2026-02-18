@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Backend;
 
 use App\Events\ChatMessageSent;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendChatWebPushNotification;
 use App\Models\ChatMessage;
 use App\Models\ChatMessageAttachment;
 use App\Models\ChatMessageAudit;
 use App\Models\ChatMessageFavorite;
 use App\Models\ChatMessageMention;
 use App\Models\ChatMessagePin;
+use App\Models\ChatPushSubscription;
 use App\Models\ChatMessageReaction;
 use App\Models\ChatQuickTemplate;
 use App\Models\ChatThread;
@@ -264,6 +266,34 @@ class ChatController extends Controller
                     }
                     $destinatario->notify(new NotificaPrimoMessaggioChatInterna($messaggio));
                 });
+        }
+
+        $destinatariPush = ChatThreadUser::query()
+            ->where('thread_id', $thread->id)
+            ->where('user_id', '<>', $authUser->id)
+            ->pluck('user_id');
+
+        foreach ($destinatariPush as $destinatarioId) {
+            $destinatarioId = (int) $destinatarioId;
+            if ($this->threadSilenziatoPerUtente($thread->id, $destinatarioId)) {
+                continue;
+            }
+
+            $threadName = $thread->partecipanti()->where('users.id', $authUser->id)->exists()
+                ? ($authUser->nominativo() ?: 'Chat interna')
+                : 'Chat interna';
+
+            SendChatWebPushNotification::dispatch($destinatarioId, [
+                'title' => $authUser->nominativo() . ' · Chat interna',
+                'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: '📎 Nuovo allegato in chat')), 120),
+                'url' => url('/backend/chat-interna?thread=' . $thread->id),
+                'thread_id' => (int) $thread->id,
+                'message_id' => (int) $messaggio->id,
+                'tag' => 'chat-thread-' . $thread->id,
+                'icon' => url('/images/logo_small_icon_only.png'),
+                'badge' => url('/images/logo_small_icon_only.png'),
+                'thread_name' => $threadName,
+            ]);
         }
 
         return response()->json([
@@ -586,6 +616,63 @@ class ChatController extends Controller
             'ok' => true,
             'template' => $template,
         ]);
+    }
+
+    public function pushVapidPublicKey(): JsonResponse
+    {
+        return response()->json([
+            'publicKey' => (string) config('services.webpush.vapid.public_key'),
+            'configured' => !empty(config('services.webpush.vapid.public_key')),
+        ]);
+    }
+
+    public function subscribePush(Request $request): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureRuoloConsentito($authUser);
+
+        $request->validate([
+            'endpoint' => ['required', 'string', 'max:4000'],
+            'keys.p256dh' => ['required', 'string', 'max:255'],
+            'keys.auth' => ['required', 'string', 'max:255'],
+            'contentEncoding' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        ChatPushSubscription::query()->updateOrCreate(
+            [
+                'user_id' => $authUser->id,
+                'endpoint' => (string) $request->input('endpoint'),
+            ],
+            [
+                'public_key' => (string) $request->input('keys.p256dh'),
+                'auth_token' => (string) $request->input('keys.auth'),
+                'content_encoding' => (string) $request->input('contentEncoding', 'aesgcm'),
+                'user_agent' => (string) $request->userAgent(),
+                'is_enabled' => true,
+                'last_used_at' => now(),
+            ]
+        );
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function unsubscribePush(Request $request): JsonResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $this->ensureRuoloConsentito($authUser);
+
+        $request->validate([
+            'endpoint' => ['required', 'string', 'max:4000'],
+        ]);
+
+        ChatPushSubscription::query()
+            ->where('user_id', $authUser->id)
+            ->where('endpoint', (string) $request->input('endpoint'))
+            ->delete();
+
+        return response()->json(['ok' => true]);
     }
 
     public function resolveMention(Request $request): JsonResponse

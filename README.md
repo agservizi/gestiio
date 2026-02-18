@@ -64,3 +64,37 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Chat Web Push Setup
+
+Per abilitare le notifiche push browser della chat interna (Service Worker + VAPID + coda):
+
+1. Genera le chiavi VAPID:
+
+```bash
+php artisan chat:generate-vapid-keys
+```
+
+2. Inserisci nel `.env`:
+
+```env
+WEBPUSH_VAPID_PUBLIC_KEY=...
+WEBPUSH_VAPID_PRIVATE_KEY=...
+WEBPUSH_VAPID_SUBJECT=mailto:dev@example.com
+```
+
+3. Esegui migrazioni:
+
+```bash
+php artisan migrate --force
+```
+
+4. Avvia un worker queue (richiesto per invio push in coda):
+
+```bash
+php artisan queue:work
+```
+
+Note:
+- Le Web Push funzionano solo in HTTPS (o localhost in sviluppo).
+- Il Service Worker è pubblicato in `public/sw-chat-push.js`.

@@ -43,6 +43,14 @@ return [
         'sandbox' => env('OPENAPI_SANDBOX', false)
     ],
 
+    'webpush' => [
+        'vapid' => [
+            'public_key' => env('WEBPUSH_VAPID_PUBLIC_KEY'),
+            'private_key' => env('WEBPUSH_VAPID_PRIVATE_KEY'),
+            'subject' => env('WEBPUSH_VAPID_SUBJECT', 'mailto:dev@example.com'),
+        ],
+    ],
+
     'brt' => [
         'user' => env('BRT_USER', env('BRT_ACCOUNT_USER_ID')),
         'password' => env('BRT_PASSWORD', env('BRT_ACCOUNT_PASSWORD')),

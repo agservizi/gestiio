@@ -114,6 +114,9 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/chat-interna/thread', [\App\Http\Controllers\Backend\ChatController::class, 'storeThread']);
     Route::get('/chat-interna/poll', [\App\Http\Controllers\Backend\ChatController::class, 'poll']);
     Route::get('/chat-interna/search', [\App\Http\Controllers\Backend\ChatController::class, 'search']);
+    Route::get('/chat-interna/push/vapid-public-key', [\App\Http\Controllers\Backend\ChatController::class, 'pushVapidPublicKey']);
+    Route::post('/chat-interna/push/subscribe', [\App\Http\Controllers\Backend\ChatController::class, 'subscribePush']);
+    Route::post('/chat-interna/push/unsubscribe', [\App\Http\Controllers\Backend\ChatController::class, 'unsubscribePush']);
     Route::get('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'messages']);
     Route::post('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'sendMessage']);
     Route::post('/chat-interna/{thread}/forward', [\App\Http\Controllers\Backend\ChatController::class, 'forwardMessages']);

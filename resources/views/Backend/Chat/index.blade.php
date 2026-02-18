@@ -360,6 +360,97 @@
             function messageUrl(msgId) { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId); }
             function templatesUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/templates'); }
             function resolveMentionUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/mention/resolve'); }
+            function vapidPublicKeyUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/push/vapid-public-key'); }
+            function pushSubscribeUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/push/subscribe'); }
+            function pushUnsubscribeUrl() { return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/push/unsubscribe'); }
+
+            function urlBase64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+
+            async function initWebPushNotifications() {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    return;
+                }
+
+                try {
+                    const vapidResponse = await $.get(vapidPublicKeyUrl());
+                    if (!vapidResponse || !vapidResponse.configured || !vapidResponse.publicKey) {
+                        return;
+                    }
+
+                    const registration = await navigator.serviceWorker.register('/sw-chat-push.js');
+
+                    let permission = Notification.permission;
+                    if (permission === 'default') {
+                        permission = await Notification.requestPermission();
+                    }
+
+                    if (permission !== 'granted') {
+                        const existing = await registration.pushManager.getSubscription();
+                        if (existing) {
+                            await $.post(pushUnsubscribeUrl(), {
+                                _token: $('meta[name="_token"]').attr('content'),
+                                endpoint: existing.endpoint,
+                            });
+                        }
+                        return;
+                    }
+
+                    let subscription = await registration.pushManager.getSubscription();
+                    if (!subscription) {
+                        subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(vapidResponse.publicKey),
+                        });
+                    }
+
+                    const payload = subscription.toJSON();
+                    await $.post(pushSubscribeUrl(), {
+                        _token: $('meta[name="_token"]').attr('content'),
+                        endpoint: payload.endpoint,
+                        keys: payload.keys,
+                        contentEncoding: 'aesgcm',
+                    });
+                } catch (error) {
+                    console.warn('Web push init failed', error);
+                }
+            }
+
+            function showDesktopNotification(notif) {
+                if (!('Notification' in window) || Notification.permission !== 'granted') {
+                    return;
+                }
+
+                if (!document.hidden) {
+                    return;
+                }
+
+                try {
+                    const desktop = new Notification((notif.sender || 'Utente') + ' · ' + (notif.thread_name || 'Conversazione'), {
+                        body: notif.excerpt || 'Nuovo messaggio in chat',
+                        icon: '/images/logo_small_icon_only.png',
+                        tag: 'chat-thread-' + (notif.thread_id || 'generic'),
+                    });
+
+                    desktop.onclick = function () {
+                        window.focus();
+                        const threadId = parseInt(notif.thread_id || 0, 10);
+                        if (threadId > 0) {
+                            loadMessages(threadId, true);
+                        }
+                    };
+                } catch (error) {
+                    console.warn('Desktop notification error', error);
+                }
+            }
 
             /* ================= UTILITY ================= */
             function scrollToBottom() {
@@ -558,6 +649,7 @@
 
                         if (notifId > lastNotifiedMessageId && notifSenderId !== authUserId) {
                             playNotificationSound();
+                            showDesktopNotification(notif);
                             Swal.fire({
                                 toast: true,
                                 position: 'top-end',
@@ -1195,6 +1287,7 @@
             }
 
             renderForwardTargets();
+            initWebPushNotifications();
 
             setInterval(refreshPoll, 3000);
         });

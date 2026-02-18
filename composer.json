@@ -25,6 +25,7 @@
     "laravel/tinker": "^2.7",
     "livewire/livewire": "^2.10",
     "maatwebsite/excel": "^3.1",
+    "minishlink/web-push": "^9.0",
     "psr/simple-cache": "^2.0",
     "robertogallea/laravel-codicefiscale": "^1.12",
     "setasign/fpdf": "^1.8",
