@@ -146,6 +146,42 @@
             cursor: pointer;
             text-decoration: underline;
         }
+
+        .chat-layout {
+            height: calc(100vh - 230px);
+        }
+
+        .chat-layout .card {
+            height: 100%;
+        }
+
+        #chat-threads {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        #chat-messages-wrap {
+            min-height: 0;
+        }
+
+        #chat-messages {
+            height: 100%;
+            max-height: none !important;
+        }
+
+        #chat-send-form {
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 991.98px) {
+            .chat-layout {
+                height: auto;
+            }
+
+            #chat-messages {
+                min-height: 42vh;
+            }
+        }
     </style>
 @endpush
 
@@ -168,8 +204,8 @@
 @section('content')
     @include('Backend._components.alertErrori')
 
-    <div class="row g-5">
-        <div class="col-12 col-lg-4 col-xl-3">
+    <div class="row g-5 chat-layout">
+        <div class="col-12 col-lg-4 col-xl-3 h-100">
             <div class="card h-100">
                 <div class="card-header border-0 pt-5 pb-3">
                     <h3 class="card-title align-items-start flex-column m-0">
@@ -185,8 +221,8 @@
             </div>
         </div>
 
-        <div class="col-12 col-lg-8 col-xl-9">
-            <div class="card" style="min-height: 70vh;">
+        <div class="col-12 col-lg-8 col-xl-9 h-100">
+            <div class="card h-100 overflow-hidden">
                 <div class="card-header border-0 pt-5 pb-3">
                     <h3 class="card-title m-0 fw-bolder fs-4">
                         @if($threadAttivo && $threadAttivo->getRelation('altroPartecipante'))
@@ -197,7 +233,7 @@
                         @endif
                     </h3>
                 </div>
-                <div class="card-body d-flex flex-column pt-0 px-5 pb-5">
+                <div class="card-body d-flex flex-column pt-0 px-5 pb-5 overflow-hidden">
                     {{-- Pannello ricerca --}}
                     <div id="chat-search-panel" class="d-none mb-3">
                         <div class="input-group input-group-sm">
@@ -249,7 +285,7 @@
                         <div id="chat-dropzone-overlay">
                             <span class="fw-bold text-primary fs-5">Rilascia i file qui</span>
                         </div>
-                        <div id="chat-messages" class="overflow-auto pe-2 px-2 py-2" style="max-height: 56vh; height: 56vh;">
+                        <div id="chat-messages" class="overflow-auto pe-2 px-2 py-2">
                             @include('Backend.Chat._messages', ['messaggi' => $messaggi, 'altroLastReadAt' => $altroLastReadAt])
                         </div>
                     </div>
