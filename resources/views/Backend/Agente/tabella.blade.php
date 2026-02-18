@@ -6,8 +6,10 @@
             <th>Denominazione</th>
             <th>Contatti</th>
             <th class="d-none d-md-table-cell">Ultimo accesso</th>
-            <th class="d-none d-md-table-cell text-end">Portafoglio Servizi</th>
-            <th class="d-none d-md-table-cell text-end">Portafoglio Spedizioni</th>
+            @if(!Auth::user()->hasPermissionTo('supervisore'))
+                <th class="d-none d-md-table-cell text-end">Portafoglio Servizi</th>
+                <th class="d-none d-md-table-cell text-end">Portafoglio Spedizioni</th>
+            @endif
             <th class="d-none d-lg-table-cell text-center">Stato</th>
             <th class="d-none d-lg-table-cell text-center">Ruolo</th>
             <th class="d-none d-lg-table-cell text-center">2fa</th>
@@ -29,12 +31,14 @@
                         <span class="text-muted">Mai</span>
                     @endif
                 </td>
-                <td class="d-none d-lg-table-cell text-end">
-                    {!! \App\importo($record->agente?->portafoglio_servizi) !!}
-                </td>
-                <td class="d-none d-lg-table-cell text-end">
-                    {!! \App\importo($record->agente?->portafoglio_spedizioni) !!}
-                </td>
+                @if(!Auth::user()->hasPermissionTo('supervisore'))
+                    <td class="d-none d-lg-table-cell text-end">
+                        {!! \App\importo($record->agente?->portafoglio_servizi) !!}
+                    </td>
+                    <td class="d-none d-lg-table-cell text-end">
+                        {!! \App\importo($record->agente?->portafoglio_spedizioni) !!}
+                    </td>
+                @endif
                 <td class="d-none d-lg-table-cell text-center">
                     @if($record->permissions->count())
                         <span class="badge badge-light-success">Attivo</span>

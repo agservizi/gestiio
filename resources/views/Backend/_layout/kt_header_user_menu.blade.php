@@ -1,4 +1,4 @@
-@if(Auth::user()->agente)
+@if(Auth::user()->agente && !Auth::user()->hasPermissionTo('supervisore'))
     @php($saldoServizi = (float)(Auth::user()->agente->portafoglio_servizi ?? 0))
     @php($saldoSpedizioni = (float)(Auth::user()->agente->portafoglio_spedizioni ?? 0))
     @php($saldoTotale = $saldoServizi + $saldoSpedizioni)

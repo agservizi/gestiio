@@ -99,22 +99,24 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card card-flush h-100">
-                <div class="card-body">
-                    <div class="text-gray-400 fw-semibold fs-8">Portafoglio servizi</div>
-                    <div class="fs-4 fw-bold">{!! \App\importo($kpiAgente['portafoglio_servizi']) !!}</div>
+        @if(!Auth::user()->hasPermissionTo('supervisore'))
+            <div class="col-md-2">
+                <div class="card card-flush h-100">
+                    <div class="card-body">
+                        <div class="text-gray-400 fw-semibold fs-8">Portafoglio servizi</div>
+                        <div class="fs-4 fw-bold">{!! \App\importo($kpiAgente['portafoglio_servizi']) !!}</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card card-flush h-100">
-                <div class="card-body">
-                    <div class="text-gray-400 fw-semibold fs-8">Portafoglio spedizioni</div>
-                    <div class="fs-4 fw-bold">{!! \App\importo($kpiAgente['portafoglio_spedizioni']) !!}</div>
+            <div class="col-md-2">
+                <div class="card card-flush h-100">
+                    <div class="card-body">
+                        <div class="text-gray-400 fw-semibold fs-8">Portafoglio spedizioni</div>
+                        <div class="fs-4 fw-bold">{!! \App\importo($kpiAgente['portafoglio_spedizioni']) !!}</div>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
     </div>
     <div class="d-flex flex-column flex-xl-row">
         <!--begin::Sidebar-->

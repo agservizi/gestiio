@@ -281,32 +281,34 @@
                         <!--end::Wrapper-->
                         <!--begin::Progress-->
                         <div class="d-flex justify-content-end mt-3">
-                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 mb-3 me-2">
-                                <!--begin::Number-->
-                                <div class="d-flex align-items-center">
-                                    <div class="fs-2 fw-bold" data-kt-countup="true"
-                                         data-kt-countup-value="{{$record->agente->portafoglio_servizi}}"
-                                         data-kt-countup-prefix="€">0
+                            @if(!Auth::user()->hasPermissionTo('supervisore'))
+                                <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 mb-3 me-2">
+                                    <!--begin::Number-->
+                                    <div class="d-flex align-items-center">
+                                        <div class="fs-2 fw-bold" data-kt-countup="true"
+                                             data-kt-countup-value="{{$record->agente->portafoglio_servizi}}"
+                                             data-kt-countup-prefix="€">0
+                                        </div>
                                     </div>
+                                    <!--end::Number-->
+                                    <!--begin::Label-->
+                                    <div class="fw-semibold fs-6 text-gray-400">Portafoglio Servizi</div>
+                                    <!--end::Label-->
                                 </div>
-                                <!--end::Number-->
-                                <!--begin::Label-->
-                                <div class="fw-semibold fs-6 text-gray-400">Portafoglio Servizi</div>
-                                <!--end::Label-->
-                            </div>
-                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 mb-3">
-                                <!--begin::Number-->
-                                <div class="d-flex align-items-center">
-                                    <div class="fs-2 fw-bold" data-kt-countup="true"
-                                         data-kt-countup-value="{{$record->agente->portafoglio_spedizioni}}"
-                                         data-kt-countup-prefix="€">0
+                                <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 mb-3">
+                                    <!--begin::Number-->
+                                    <div class="d-flex align-items-center">
+                                        <div class="fs-2 fw-bold" data-kt-countup="true"
+                                             data-kt-countup-value="{{$record->agente->portafoglio_spedizioni}}"
+                                             data-kt-countup-prefix="€">0
+                                        </div>
                                     </div>
+                                    <!--end::Number-->
+                                    <!--begin::Label-->
+                                    <div class="fw-semibold fs-6 text-gray-400">Portafoglio Spedizioni</div>
+                                    <!--end::Label-->
                                 </div>
-                                <!--end::Number-->
-                                <!--begin::Label-->
-                                <div class="fw-semibold fs-6 text-gray-400">Portafoglio Spedizioni</div>
-                                <!--end::Label-->
-                            </div>
+                            @endif
                             @if(false)
                                 <div class="d-flex justify-content-between w-100 mt-auto mb-2">
                                     <span class="fw-semibold fs-6 text-gray-400">Profile Compleation</span>

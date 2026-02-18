@@ -142,32 +142,34 @@
                     <!--end::Wrapper-->
                     <!--begin::Progress-->
                     <div class="d-flex justify-content-end mt-3 position-relative">
-                        @php($saldoServizi = (float)($record->agente->portafoglio_servizi ?? 0))
-                        @php($saldoSpedizioni = (float)($record->agente->portafoglio_spedizioni ?? 0))
-                        @php($saldoTotale = $saldoServizi + $saldoSpedizioni)
-                        <div class="border border-gray-300 border-dashed rounded min-w-175px py-3 px-4 mb-3 position-relative">
-                            <div class="d-flex align-items-center justify-content-between cursor-pointer" data-kt-menu-trigger="hover" data-kt-menu-attach="parent"
-                                 data-kt-menu-placement="bottom-end" data-kt-menu-flip="bottom">
-                                <div>
-                                    <div class="fs-2 fw-bold">€ {{number_format($saldoTotale, 2, ',', '.')}}</div>
-                                    <div class="fw-semibold fs-6 text-gray-400">Plafond</div>
+                        @if(!$record->hasPermissionTo('supervisore'))
+                            @php($saldoServizi = (float)($record->agente->portafoglio_servizi ?? 0))
+                            @php($saldoSpedizioni = (float)($record->agente->portafoglio_spedizioni ?? 0))
+                            @php($saldoTotale = $saldoServizi + $saldoSpedizioni)
+                            <div class="border border-gray-300 border-dashed rounded min-w-175px py-3 px-4 mb-3 position-relative">
+                                <div class="d-flex align-items-center justify-content-between cursor-pointer" data-kt-menu-trigger="hover" data-kt-menu-attach="parent"
+                                     data-kt-menu-placement="bottom-end" data-kt-menu-flip="bottom">
+                                    <div>
+                                        <div class="fs-2 fw-bold">€ {{number_format($saldoTotale, 2, ',', '.')}}</div>
+                                        <div class="fw-semibold fs-6 text-gray-400">Plafond</div>
+                                    </div>
+                                    <i class="fa-solid fa-angle-down fs-4 text-gray-500"></i>
                                 </div>
-                                <i class="fa-solid fa-angle-down fs-4 text-gray-500"></i>
-                            </div>
 
-                            <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-primary fw-semibold py-3 fs-7 w-275px"
-                                 data-kt-menu="true">
-                                <div class="menu-item px-4 d-flex justify-content-between align-items-center">
-                                    <span class="text-gray-600">Portafoglio Servizi</span>
-                                    <span class="fw-bold fs-6 text-gray-800">€ {{number_format($saldoServizi, 2, ',', '.')}}</span>
-                                </div>
-                                <div class="separator my-2"></div>
-                                <div class="menu-item px-4 d-flex justify-content-between align-items-center">
-                                    <span class="text-gray-600">Portafoglio Spedizioni</span>
-                                    <span class="fw-bold fs-6 text-gray-800">€ {{number_format($saldoSpedizioni, 2, ',', '.')}}</span>
+                                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-primary fw-semibold py-3 fs-7 w-275px"
+                                     data-kt-menu="true">
+                                    <div class="menu-item px-4 d-flex justify-content-between align-items-center">
+                                        <span class="text-gray-600">Portafoglio Servizi</span>
+                                        <span class="fw-bold fs-6 text-gray-800">€ {{number_format($saldoServizi, 2, ',', '.')}}</span>
+                                    </div>
+                                    <div class="separator my-2"></div>
+                                    <div class="menu-item px-4 d-flex justify-content-between align-items-center">
+                                        <span class="text-gray-600">Portafoglio Spedizioni</span>
+                                        <span class="fw-bold fs-6 text-gray-800">€ {{number_format($saldoSpedizioni, 2, ',', '.')}}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @endif
                         @if(false)
                             <div class="d-flex justify-content-between w-100 mt-auto mb-2">
                                 <span class="fw-semibold fs-6 text-gray-400">Profile Compleation</span>
