@@ -165,7 +165,7 @@
 
         @if($canTicket)
             <div class="col-xl-4">
-                @include('Backend.Dashboard.admin.ticket', ['records' => $ticketRecenti])
+                @include('Backend.Dashboard.supervisore.ticket', ['records' => $ticketRecenti, 'conteggioTikets' => $conteggioTikets])
             </div>
         @endif
     </div>
@@ -280,43 +280,7 @@
 
         @if($canCafPatronato)
             <div class="{{($canTelefonia || $canEnergia) ? 'col-xxl-6' : 'col-xxl-12'}}">
-                <div class="card card-flush h-md-100">
-                    <div class="card-header border-0 pt-5">
-                        <div class="card-title d-flex align-items-center gap-2">
-                            <span class="svg-icon svg-icon-2 text-primary">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path opacity="0.3" d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19V5Z" fill="currentColor"/>
-                                    <path d="M8 8H16V10H8V8ZM8 12H16V14H8V12Z" fill="currentColor"/>
-                                </svg>
-                            </span>
-                            <div>
-                                <span class="card-label fw-bold fs-3 mb-1 d-block">Caf / Patronato recenti</span>
-                                <span class="text-muted fs-7">Ultime pratiche operative da supervisionare</span>
-                            </div>
-                        </div>
-                        <div class="card-toolbar">
-                            <a class="btn btn-sm btn-light-primary fw-bold" href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'index'])}}">Vedi tutti</a>
-                        </div>
-                    </div>
-                    <div class="card-body card-scroll py-3">
-                        <div class="table-responsive">
-                            <table class="table table-row-bordered" id="tabella-elenco">
-                                <thead>
-                                <tr class="fw-bolder fs-6 text-gray-800">
-                                    <th>Data</th>
-                                    <th>Tipo pratica</th>
-                                    <th>Esito</th>
-                                    <th>Nominativo</th>
-                                    <th class="text-center">Azioni</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @include('Backend.Dashboard.admin.cafPatronato',['records' => $serviziCafPatronato,'puoModificareEsito'=>\App\Models\CafPatronato::puoModificareEsito(),'puoModificare'=>\App\Models\CafPatronato::puoModificare(),'controller'=>\App\Http\Controllers\Backend\CafPatronatoController::class])
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                @include('Backend.Dashboard.supervisore.cafPatronato', ['records' => $serviziCafPatronato])
             </div>
         @endif
     </div>
