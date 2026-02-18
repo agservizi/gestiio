@@ -141,32 +141,32 @@
                     </div>
                     <!--end::Wrapper-->
                     <!--begin::Progress-->
-                    <div class="d-flex justify-content-end mt-3">
-                        <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 mb-3 me-2">
-                            <!--begin::Number-->
-                            <div class="d-flex align-items-center">
-                                <div class="fs-2 fw-bold" data-kt-countup="true"
-                                     data-kt-countup-value="{{$record->agente->portafoglio_servizi}}"
-                                     data-kt-countup-prefix="€">0
+                    <div class="d-flex justify-content-end mt-3 position-relative">
+                        @php($saldoServizi = (float)($record->agente->portafoglio_servizi ?? 0))
+                        @php($saldoSpedizioni = (float)($record->agente->portafoglio_spedizioni ?? 0))
+                        @php($saldoTotale = $saldoServizi + $saldoSpedizioni)
+                        <div class="border border-gray-300 border-dashed rounded min-w-175px py-3 px-4 mb-3 position-relative" style="cursor: pointer;"
+                             onmouseenter="this.querySelector('.plafond-hover-panel').classList.remove('d-none')"
+                             onmouseleave="this.querySelector('.plafond-hover-panel').classList.add('d-none')">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="fs-2 fw-bold">€ {{number_format($saldoTotale, 2, ',', '.')}}</div>
+                                    <div class="fw-semibold fs-6 text-gray-400">Plafond</div>
+                                </div>
+                                <i class="fa-solid fa-angle-down fs-4 text-gray-500"></i>
+                            </div>
+
+                            <div class="plafond-hover-panel d-none card shadow-sm border border-gray-300 rounded p-4 mt-3 position-absolute end-0" style="z-index: 20; min-width: 280px; background: #fff;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-semibold fs-7 text-gray-600">Portafoglio Servizi</span>
+                                    <span class="fw-bold fs-6">€ {{number_format($saldoServizi, 2, ',', '.')}}</span>
+                                </div>
+                                <div class="separator separator-dashed my-2"></div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-semibold fs-7 text-gray-600">Portafoglio Spedizioni</span>
+                                    <span class="fw-bold fs-6">€ {{number_format($saldoSpedizioni, 2, ',', '.')}}</span>
                                 </div>
                             </div>
-                            <!--end::Number-->
-                            <!--begin::Label-->
-                            <div class="fw-semibold fs-6 text-gray-400">Portafoglio Servizi</div>
-                            <!--end::Label-->
-                        </div>
-                        <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 mb-3">
-                            <!--begin::Number-->
-                            <div class="d-flex align-items-center">
-                                <div class="fs-2 fw-bold" data-kt-countup="true"
-                                     data-kt-countup-value="{{$record->agente->portafoglio_spedizioni}}"
-                                     data-kt-countup-prefix="€">0
-                                </div>
-                            </div>
-                            <!--end::Number-->
-                            <!--begin::Label-->
-                            <div class="fw-semibold fs-6 text-gray-400">Portafoglio Spedizioni</div>
-                            <!--end::Label-->
                         </div>
                         @if(false)
                             <div class="d-flex justify-content-between w-100 mt-auto mb-2">
