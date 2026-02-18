@@ -8,15 +8,20 @@
         $altro = $thread->getRelation('altroPartecipante');
         $isOnline = $altro && isset($onlineMap[$altro->id]) && $onlineMap[$altro->id];
         $isActive = $threadAttivoId === $thread->id;
+        $canChat = (bool) ($thread->can_chat ?? true);
     @endphp
     <div class="list-group-item list-group-item-action border-0 py-3 px-4 chat-thread-item {{$isActive ? 'active' : ''}}"
          data-thread-id="{{$thread->id}}"
-         style="cursor: pointer;">
+         data-chat-allowed="{{$canChat ? 1 : 0}}"
+         style="cursor: {{$canChat ? 'pointer' : 'not-allowed'}};">
         <div class="d-flex justify-content-between align-items-start gap-3">
             <div class="d-flex flex-column text-start">
                 <span class="fw-bolder fs-6 {{$isActive ? 'text-white' : 'text-gray-900'}}">
                     <span class="chat-online-dot {{$isOnline ? 'online' : 'offline'}}"></span>
                     {{$altro?->nominativo() ?? 'Conversazione'}}
+                    @if(!$canChat)
+                        <span class="badge badge-light-danger ms-1">Accesso revocato</span>
+                    @endif
                     @if(!empty($thread->is_muted))
                         <span class="badge badge-light ms-1">🔕</span>
                     @endif

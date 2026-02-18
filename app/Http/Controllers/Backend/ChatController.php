@@ -45,10 +45,15 @@ class ChatController extends Controller
 
         if ($threadId) {
             $threadAttivo = $threads->firstWhere('id', $threadId);
+            if ($threadAttivo && isset($threadAttivo->can_chat) && !$threadAttivo->can_chat) {
+                $threadAttivo = null;
+            }
         }
 
         if (!$threadAttivo) {
-            $threadAttivo = $threads->first();
+            $threadAttivo = $threads->first(function (ChatThread $thread) {
+                return !isset($thread->can_chat) || (bool) $thread->can_chat;
+            });
         }
 
         $messaggi = collect();
@@ -128,6 +133,7 @@ class ChatController extends Controller
         /** @var User $authUser */
         $authUser = Auth::user();
         $this->ensureThreadAccesso($thread->id, $authUser->id);
+        $this->ensureThreadConversazioneConsentita($thread->id, $authUser);
 
         $this->segnaComeLetto($thread->id, $authUser->id);
         $this->segnaComeConsegnato($thread->id, $authUser->id);
@@ -166,6 +172,7 @@ class ChatController extends Controller
         /** @var User $authUser */
         $authUser = Auth::user();
         $this->ensureThreadAccesso($thread->id, $authUser->id);
+        $this->ensureThreadConversazioneConsentita($thread->id, $authUser);
 
         $request->validate([
             'messaggio' => ['nullable', 'string', 'max:3000', 'required_without:allegati'],
@@ -332,6 +339,7 @@ class ChatController extends Controller
         $activeLastMessageSenderId = null;
 
         if ($threadAttivo) {
+            $this->ensureThreadConversazioneConsentita($threadAttivo->id, $authUser);
             $this->segnaComeLetto($threadAttivo->id, $authUser->id);
             $this->segnaComeConsegnato($threadAttivo->id, $authUser->id);
             $messaggi = $this->messaggiThread($threadAttivo->id, null, 50);
@@ -739,6 +747,26 @@ class ChatController extends Controller
         );
     }
 
+    protected function ensureThreadConversazioneConsentita(int $threadId, User $authUser): void
+    {
+        $altriPartecipanti = User::query()
+            ->whereIn('id', function ($query) use ($threadId, $authUser) {
+                $query->from('chat_thread_users')
+                    ->select('user_id')
+                    ->where('thread_id', $threadId)
+                    ->where('user_id', '<>', $authUser->id);
+            })
+            ->get(['id', 'nome', 'cognome']);
+
+        abort_unless(
+            $altriPartecipanti->every(function (User $utente) use ($authUser) {
+                return $this->puoConversare($authUser, $utente);
+            }),
+            403,
+            'Conversazione non consentita per i servizi attivi assegnati.'
+        );
+    }
+
     protected function utentiDisponibili(User $authUser)
     {
         if ($authUser->hasPermissionTo('admin')) {
@@ -754,12 +782,20 @@ class ChatController extends Controller
 
         return User::query()
             ->where('id', '<>', $authUser->id)
-            ->whereHas('permissions', function ($query) {
-                $query->where('name', 'admin');
+            ->where(function ($query) {
+                $query->whereHas('permissions', function ($permissionQuery) {
+                    $permissionQuery->where('name', 'admin');
+                })->orWhereHas('permissions', function ($permissionQuery) {
+                    $permissionQuery->whereIn('name', ['agente', 'supervisore']);
+                });
             })
             ->orderBy('cognome')
             ->orderBy('nome')
-            ->get(['id', 'nome', 'cognome']);
+            ->get(['id', 'nome', 'cognome'])
+            ->filter(function (User $utente) use ($authUser) {
+                return $this->puoConversare($authUser, $utente);
+            })
+            ->values();
     }
 
     protected function puoConversare(User $utenteA, User $utenteB): bool
@@ -774,7 +810,43 @@ class ChatController extends Controller
         $aOperativo = $utenteA->hasAnyPermission(['agente', 'supervisore']);
         $bOperativo = $utenteB->hasAnyPermission(['agente', 'supervisore']);
 
-        return ($aAdmin && $bOperativo) || ($bAdmin && $aOperativo);
+        if (($aAdmin && $bOperativo) || ($bAdmin && $aOperativo)) {
+            return true;
+        }
+
+        $aAgente = $utenteA->hasPermissionTo('agente');
+        $aSupervisore = $utenteA->hasPermissionTo('supervisore');
+        $bAgente = $utenteB->hasPermissionTo('agente');
+        $bSupervisore = $utenteB->hasPermissionTo('supervisore');
+
+        $isAgenteSupervisorePair = ($aAgente && $bSupervisore) || ($aSupervisore && $bAgente);
+        if (!$isAgenteSupervisorePair) {
+            return false;
+        }
+
+        return $this->condividonoServizioAttivo($utenteA, $utenteB);
+    }
+
+    protected function condividonoServizioAttivo(User $utenteA, User $utenteB): bool
+    {
+        $serviziA = $this->serviziAttiviUtente($utenteA);
+        $serviziB = $this->serviziAttiviUtente($utenteB);
+
+        if ($serviziA->isEmpty() || $serviziB->isEmpty()) {
+            return false;
+        }
+
+        return $serviziA->intersect($serviziB)->isNotEmpty();
+    }
+
+    protected function serviziAttiviUtente(User $utente)
+    {
+        return $utente->permissions
+            ->pluck('name')
+            ->filter(function ($name) {
+                return is_string($name) && Str::startsWith($name, 'servizio_');
+            })
+            ->values();
     }
 
     protected function trovaThreadDueUtenti(int $utenteA, int $utenteB): ?ChatThread
@@ -795,6 +867,8 @@ class ChatController extends Controller
 
     protected function threadsPerUtente(int $userId)
     {
+        $utenteCorrente = User::query()->find($userId, ['id', 'nome', 'cognome']);
+
         $threads = ChatThread::query()
             ->select('chat_threads.*')
             ->join('chat_thread_users as mia_partecipazione', function ($join) use ($userId) {
@@ -823,9 +897,15 @@ class ChatController extends Controller
             });
         }
 
-        $threads->each(function (ChatThread $thread) use ($userId) {
+        $threads->each(function (ChatThread $thread) use ($userId, $utenteCorrente) {
             $altro = $thread->partecipanti->firstWhere('id', '!=', $userId);
             $thread->setRelation('altroPartecipante', $altro);
+
+            if ($utenteCorrente && $altro instanceof User) {
+                $thread->can_chat = $this->puoConversare($utenteCorrente, $altro);
+            } else {
+                $thread->can_chat = false;
+            }
         });
 
         return $threads;

@@ -210,7 +210,7 @@
                 <div class="card-header border-0 pt-5 pb-3">
                     <h3 class="card-title align-items-start flex-column m-0">
                         <span class="card-label fw-bolder fs-4">Conversazioni</span>
-                        <span class="text-muted mt-1 fw-bold fs-7">Admin ↔ Agente/Supervisore</span>
+                        <span class="text-muted mt-1 fw-bold fs-7">Admin ↔ Agente/Supervisore · Agente ↔ Supervisore (servizio attivo condiviso)</span>
                     </h3>
                 </div>
                 <div class="card-body p-0">
@@ -501,6 +501,28 @@
                 $('#chat-allegati').prop('disabled', !enabled);
             }
 
+            function handleChatForbidden(error) {
+                const isForbidden = parseInt(error?.status || 0, 10) === 403;
+                if (!isForbidden) return false;
+
+                const backendMessage = error?.responseJSON?.message || 'Conversazione non consentita: verifica i servizi attivi assegnati nel profilo.';
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Conversazione bloccata',
+                    text: backendMessage,
+                });
+
+                activeThreadId = null;
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.delete('thread');
+                window.history.replaceState({}, '', nextUrl.toString());
+                loadMessages(null, false);
+                refreshPoll();
+
+                return true;
+            }
+
             function insertAtCursor(el, text) {
                 const start = el.selectionStart ?? el.value.length;
                 const end = el.selectionEnd ?? el.value.length;
@@ -646,6 +668,13 @@
                         nextUrl.searchParams.set('thread', threadId);
                         window.history.replaceState({}, '', nextUrl.toString());
                     }
+                }).fail(function (error) {
+                    if (handleChatForbidden(error)) {
+                        return;
+                    }
+
+                    const erroreBackend = error?.responseJSON?.message || 'Caricamento conversazione non riuscito';
+                    Swal.fire('Errore', erroreBackend, 'error');
                 });
             }
 
@@ -741,11 +770,20 @@
                             $onlineEl.append(' <span class="ms-2">🔕 silenziata</span>');
                         }
                     }
+                }).fail(function (error) {
+                    if (handleChatForbidden(error)) {
+                        return;
+                    }
                 });
             }
 
             /* ================= THREAD SELECTION ================= */
             $(document).on('click', '.chat-thread-item', function () {
+                const canChat = parseInt($(this).data('chat-allowed') || 0, 10) === 1;
+                if (!canChat) {
+                    Swal.fire('Attenzione', 'Conversazione non disponibile: servizio non attivo o non più condiviso.', 'warning');
+                    return;
+                }
                 const threadId = parseInt($(this).data('thread-id'), 10);
                 loadMessages(threadId, true);
             });
@@ -833,6 +871,9 @@
                         refreshPoll();
                     },
                     error: function (error) {
+                        if (handleChatForbidden(error)) {
+                            return;
+                        }
                         console.error(error);
                         const erroreBackend = error?.responseJSON?.message || error?.responseText || 'Invio messaggio non riuscito';
                         Swal.fire('Errore', erroreBackend, 'error');
