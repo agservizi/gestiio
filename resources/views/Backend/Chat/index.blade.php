@@ -383,6 +383,38 @@
             /* ================= SUONO NOTIFICA ================= */
             const notificationSound = new Audio('/sound/universfield-new-notification-036-485897.mp3');
             notificationSound.preload = 'auto';
+            let notificationSoundUnlocked = false;
+
+            function unlockNotificationSound() {
+                if (notificationSoundUnlocked) return;
+
+                const tryUnlock = function () {
+                    if (notificationSoundUnlocked) return;
+                    notificationSound.muted = true;
+                    notificationSound.currentTime = 0;
+
+                    const maybePromise = notificationSound.play();
+                    if (maybePromise && typeof maybePromise.then === 'function') {
+                        maybePromise.then(function () {
+                            notificationSound.pause();
+                            notificationSound.currentTime = 0;
+                            notificationSound.muted = false;
+                            notificationSoundUnlocked = true;
+                        }).catch(function () {
+                            notificationSound.muted = false;
+                        });
+                    } else {
+                        notificationSound.pause();
+                        notificationSound.currentTime = 0;
+                        notificationSound.muted = false;
+                        notificationSoundUnlocked = true;
+                    }
+                };
+
+                $(document).one('click', tryUnlock);
+                $(document).one('keydown', tryUnlock);
+                $(document).one('touchstart', tryUnlock);
+            }
 
             function playNotificationSound() {
                 try { notificationSound.currentTime = 0; notificationSound.play().catch(()=>{}); } catch(e) {}
@@ -1370,6 +1402,7 @@
 
             renderForwardTargets();
             initWebPushNotifications();
+            unlockNotificationSound();
 
             setInterval(refreshPoll, 3000);
         });
