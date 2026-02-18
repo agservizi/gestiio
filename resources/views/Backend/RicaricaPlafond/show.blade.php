@@ -35,6 +35,37 @@
                         </div>
                     </form>
                 </div>
+                <div class="col-md-6 pt-sm-8 pt-md-0">
+                    <h4>Ultime ricariche</h4>
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm table-row-dashed align-middle">
+                            <thead>
+                            <tr class="text-muted fw-bold fs-8 text-uppercase">
+                                <th>Data</th>
+                                <th>Agente</th>
+                                <th>Portafoglio</th>
+                                <th class="text-end">Importo</th>
+                                <th>Tipo ricarica</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @forelse(($ultimeRicariche ?? collect()) as $movimento)
+                                <tr>
+                                    <td class="fs-8">{{$movimento->created_at?->format('d/m/Y H:i')}}</td>
+                                    <td class="fs-8">{{$movimento->agente_nominativo}}</td>
+                                    <td class="fs-8">{{$movimento->portafoglio}}</td>
+                                    <td class="fs-8 text-end">€ {{number_format((float)$movimento->importo, 2, ',', '.')}}</td>
+                                    <td class="fs-8">{{$movimento->tipo_ricarica}}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-muted fs-8">Nessuna ricarica recente trovata.</td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
