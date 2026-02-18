@@ -58,7 +58,7 @@
                         </span>
                         <div>
                             <h3 class="card-title m-0">Controllo supervisione</h3>
-                            <div class="text-muted fs-7">Dashboard dinamica in base ai servizi abilitati</div>
+                            <div class="text-muted fs-7">Panoramica operativa in base ai servizi abilitati</div>
                         </div>
                     </div>
                 </div>
@@ -119,7 +119,7 @@
                             </span>
                             <div>
                                 <h3 class="card-title m-0">Priorità supervisione</h3>
-                                <div class="text-muted fs-7">Anomalie e carichi operativi da presidiare</div>
+                                <div class="text-muted fs-7">Anomalie e attività prioritarie da presidiare</div>
                             </div>
                         </div>
                     </div>
@@ -185,7 +185,7 @@
                             </span>
                             <div>
                                 <span class="card-label fw-bold fs-3 mb-1 d-block">Contratti telefonia recenti</span>
-                                <span class="text-muted fs-7">Ultimi inserimenti monitorati</span>
+                                <span class="text-muted fs-7">Ultimi inserimenti del periodo</span>
                             </div>
                         </div>
                         <div class="card-toolbar">
@@ -227,7 +227,7 @@
                             </span>
                             <div>
                                 <span class="card-label fw-bold fs-3 mb-1 d-block">Contratti energia recenti</span>
-                                <span class="text-muted fs-7">Ultime pratiche luce e gas</span>
+                                <span class="text-muted fs-7">Ultime pratiche luce e gas del periodo</span>
                             </div>
                         </div>
                         <div class="card-toolbar">
@@ -291,7 +291,7 @@
                             </span>
                             <div>
                                 <span class="card-label fw-bold fs-3 mb-1 d-block">Caf / Patronato recenti</span>
-                                <span class="text-muted fs-7">Ultime pratiche da supervisionare</span>
+                                <span class="text-muted fs-7">Ultime pratiche operative da supervisionare</span>
                             </div>
                         </div>
                         <div class="card-toolbar">
