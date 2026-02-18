@@ -75,18 +75,28 @@
 
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Ticket</h3>
+                <div class="card-header border-0 pt-5 pb-0">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V8C18.8954 8 18 8.89543 18 10C18 11.1046 18.8954 12 20 12V15C20 16.1046 19.1046 17 18 17H6C4.89543 17 4 16.1046 4 15V12C5.10457 12 6 11.1046 6 10C6 8.89543 5.10457 8 4 8V5Z" fill="currentColor"/>
+                                <path d="M9 7.5C9 6.67157 9.67157 6 10.5 6H13.5C14.3284 6 15 6.67157 15 7.5C15 8.32843 14.3284 9 13.5 9H10.5C9.67157 9 9 8.32843 9 7.5Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <h3 class="card-title m-0">Ticket</h3>
+                    </div>
                 </div>
                 <div class="card-body pt-0">
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Aperti / in lavorazione</span>
-                        <span class="fw-bolder">{{ number_format($ticketAperti) }}</span>
+                    <div class="bg-light-primary rounded p-4 mb-4">
+                        <div class="text-muted fw-semibold fs-8 mb-1">Aperti / in lavorazione</div>
+                        <div class="fs-2 fw-bolder text-primary">{{ number_format($ticketAperti) }}</div>
                     </div>
-                    <div class="d-flex justify-content-between mb-5">
-                        <span class="text-muted">Chiusi</span>
-                        <span class="fw-bolder">{{ number_format($ticketChiusi) }}</span>
+
+                    <div class="d-flex align-items-center justify-content-between mb-5">
+                        <span class="text-muted fw-semibold">Chiusi</span>
+                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ number_format($ticketChiusi) }}</span>
                     </div>
+
                     <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
                 </div>
             </div>
