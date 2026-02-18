@@ -102,6 +102,7 @@ class DashboardController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
         abort_if(!$user, 403);
+        $id = $user->id;
 
         $canTelefonia = $user->can('servizio_contratti_telefonia');
         $canEnergia = $user->can('servizio_contratti_energia');
@@ -308,6 +309,34 @@ class DashboardController extends Controller
             ],
         ])->where('enabled', true)->values();
 
+        $chatDashboard = [
+            'messaggi_non_letti' => 0,
+            'thread_attive' => 0,
+            'nuovi_messaggi_oggi' => 0,
+        ];
+
+        if (Schema::hasTable('chat_thread_users') && Schema::hasTable('chat_messages')) {
+            $threadIds = ChatThreadUser::query()
+                ->where('user_id', $id)
+                ->pluck('thread_id');
+
+            if ($threadIds->isNotEmpty()) {
+                $chatDashboard['messaggi_non_letti'] = ChatThreadUser::conteggioNonLetti($id);
+
+                $chatDashboard['thread_attive'] = ChatMessage::query()
+                    ->whereIn('thread_id', $threadIds)
+                    ->where('created_at', '>=', now()->subDays(7))
+                    ->distinct('thread_id')
+                    ->count('thread_id');
+
+                $chatDashboard['nuovi_messaggi_oggi'] = ChatMessage::query()
+                    ->whereIn('thread_id', $threadIds)
+                    ->where('user_id', '<>', $id)
+                    ->whereDate('created_at', now())
+                    ->count();
+            }
+        }
+
         return view('Backend.Dashboard.showSupervisore', [
             'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
@@ -331,6 +360,7 @@ class DashboardController extends Controller
             'canSpedizioni' => $canSpedizioni,
             'canDocumentazione' => $canDocumentazione,
             'serviziAbilitati' => $serviziAbilitati,
+            'chatDashboard' => $chatDashboard,
         ]);
     }
 

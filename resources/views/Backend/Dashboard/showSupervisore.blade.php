@@ -41,12 +41,17 @@
         $serviziCafPatronato = $serviziCafPatronato ?? collect();
         $ticketRecenti = $ticketRecenti ?? collect();
         $serviziAbilitati = $serviziAbilitati ?? collect();
+        $chatDashboard = $chatDashboard ?? [
+            'messaggi_non_letti' => 0,
+            'thread_attive' => 0,
+            'nuovi_messaggi_oggi' => 0,
+        ];
 
         $showPriorita = $canCafPatronato || $canTicket || $canVisure;
     @endphp
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-        <div class="col-12">
+        <div class="col-xl-8">
             <div class="card card-flush h-md-100">
                 <div class="card-header border-0 pt-5 pb-0">
                     <div class="card-title d-flex align-items-center gap-2">
@@ -99,6 +104,48 @@
                             @endforeach
                         </div>
                     @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card card-flush h-md-100">
+                <div class="card-header border-0 pt-5 pb-2">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M12 3C7.02944 3 3 6.80558 3 11.5C3 14.0409 4.18896 16.3218 6.07143 17.8898V21L9.02857 19.3716C9.94801 19.623 10.9482 19.75 12 19.75C16.9706 19.75 21 15.9444 21 11.25C21 6.55558 16.9706 3 12 3Z" fill="currentColor"/>
+                                <path d="M8.5 11.25C8.5 10.6977 8.94772 10.25 9.5 10.25H14.5C15.0523 10.25 15.5 10.6977 15.5 11.25C15.5 11.8023 15.0523 12.25 14.5 12.25H9.5C8.94772 12.25 8.5 11.8023 8.5 11.25Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="card-title m-0">Chat interna</h3>
+                            <div class="text-muted fs-7">Monitoraggio conversazioni operative</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="bg-light-primary rounded p-4 mb-4">
+                        <div class="text-muted fw-semibold fs-8 mb-1">Messaggi non letti</div>
+                        <a href="{{ action([\App\Http\Controllers\Backend\ChatController::class, 'index']) }}" class="fs-2 fw-bolder text-primary text-hover-primary">
+                            {{ number_format((int) $chatDashboard['messaggi_non_letti']) }}
+                        </a>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted fw-semibold">Thread attive (7 giorni)</span>
+                        <a href="{{ action([\App\Http\Controllers\Backend\ChatController::class, 'index']) }}" class="badge badge-light-primary fw-bolder px-4 py-2 text-hover-primary">
+                            {{ number_format((int) $chatDashboard['thread_attive']) }}
+                        </a>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-5">
+                        <span class="text-muted fw-semibold">Nuovi messaggi oggi</span>
+                        <a href="{{ action([\App\Http\Controllers\Backend\ChatController::class, 'index']) }}" class="badge badge-light-success fw-bolder px-4 py-2 text-hover-primary">
+                            {{ number_format((int) $chatDashboard['nuovi_messaggi_oggi']) }}
+                        </a>
+                    </div>
+
+                    <a href="{{ action([\App\Http\Controllers\Backend\ChatController::class, 'index']) }}" class="btn btn-light-primary btn-sm fw-bold">Apri chat interna</a>
                 </div>
             </div>
         </div>
