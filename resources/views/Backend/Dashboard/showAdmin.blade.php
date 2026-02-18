@@ -182,13 +182,13 @@
                         </span>
                         <div>
                             <h3 class="fw-bolder mb-0">Esito finale</h3>
-                            <div class="fs-7 fw-semibold text-gray-400">Distribuzione complessiva ordini</div>
+                            <div class="fs-7 fw-semibold text-gray-400">Monitoraggio esiti contratti</div>
                         </div>
                     </div>
                 </div>
                 <div class="card-body p-8 pt-4">
                     <div class="bg-light-primary rounded p-4 mb-5 d-flex align-items-center justify-content-between">
-                        <span class="text-muted fw-semibold">Totale ordini analizzati</span>
+                        <span class="text-muted fw-semibold">Ordini totali</span>
                         <span class="fs-2 fw-bolder text-primary">{{ number_format((int) $datiTortaEsiti['totale']) }}</span>
                     </div>
 
@@ -196,7 +196,7 @@
                         <div class="position-relative d-flex flex-center h-150px w-150px me-5 mb-7 mb-xl-0">
                             <div class="position-absolute translate-middle start-50 top-50 d-flex flex-column flex-center">
                                 <span class="fs-2qx fw-bolder">{{ number_format((int) $datiTortaEsiti['totale']) }}</span>
-                                <span class="fs-6 fw-bold text-gray-400">Ordini</span>
+                                <span class="fs-6 fw-bold text-gray-400">Totali</span>
                             </div>
                             <canvas id="kt_card_widget_17_chart"></canvas>
                         </div>
@@ -215,17 +215,26 @@
         </div>
         <div class="col-xl-3">
             <div class="card card-flush h-lg-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <div class="card-title flex-column">
-                        <h3 class="fw-bolder mb-1">Chat interna</h3>
-                        <div class="fs-6 fw-bold text-gray-400">Monitoraggio conversazioni</div>
+                <div class="card-header border-0 pt-5 pb-0">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V14C20 15.1046 19.1046 16 18 16H10L6 20V16C4.89543 16 4 15.1046 4 14V6Z" fill="currentColor"/>
+                                <path d="M8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 8.55228 15.5523 9 15 9H9C8.44772 9 8 8.55228 8 8ZM8 11.5C8 10.9477 8.44772 10.5 9 10.5H13C13.5523 10.5 14 10.9477 14 11.5C14 12.0523 13.5523 12.5 13 12.5H9C8.44772 12.5 8 12.0523 8 11.5Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="fw-bolder mb-0">Chat interna</h3>
+                            <div class="fs-7 fw-semibold text-gray-400">Monitoraggio conversazioni</div>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body pt-3">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <span class="text-muted fw-semibold">Messaggi non letti</span>
-                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ number_format((int) $chatDashboard['messaggi_non_letti']) }}</span>
+                    <div class="bg-light-primary rounded p-4 mb-4">
+                        <div class="text-muted fw-semibold fs-8 mb-1">Messaggi non letti</div>
+                        <div class="fs-2 fw-bolder text-primary">{{ number_format((int) $chatDashboard['messaggi_non_letti']) }}</div>
                     </div>
+
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <span class="text-muted fw-semibold">Thread attive (7 giorni)</span>
                         <span class="badge badge-light-primary fw-bolder px-4 py-2">{{ number_format((int) $chatDashboard['thread_attive']) }}</span>
