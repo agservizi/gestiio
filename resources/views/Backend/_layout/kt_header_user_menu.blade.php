@@ -2,19 +2,21 @@
     @php($saldoServizi = (float)(Auth::user()->agente->portafoglio_servizi ?? 0))
     @php($saldoSpedizioni = (float)(Auth::user()->agente->portafoglio_spedizioni ?? 0))
     @php($saldoTotale = $saldoServizi + $saldoSpedizioni)
-    <div class="d-flex align-items-center d-none d-md-inline-flex position-relative me-6"
-         onmouseenter="this.querySelector('.plafond-hover-panel').classList.remove('d-none')"
-         onmouseleave="this.querySelector('.plafond-hover-panel').classList.add('d-none')">
-        <span class="badge badge-danger p-2">Plafond {{\App\importo($saldoTotale,true)}}</span>
-        <div class="plafond-hover-panel d-none card shadow-sm border border-gray-300 rounded p-4 position-absolute end-0" style="z-index: 105; min-width: 280px; top: calc(100% + 8px);">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-semibold fs-7 text-gray-600">Portafoglio Servizi</span>
-                <span class="fw-bold fs-6">{{\App\importo($saldoServizi,true)}}</span>
+    <div class="d-flex align-items-center d-none d-md-inline-flex position-relative me-6">
+        <div class="cursor-pointer" data-kt-menu-trigger="hover" data-kt-menu-attach="parent"
+             data-kt-menu-placement="bottom-end" data-kt-menu-flip="bottom">
+            <span class="badge badge-danger p-2">Plafond {{\App\importo($saldoTotale,true)}}</span>
+        </div>
+        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-primary fw-semibold py-3 fs-7 w-275px"
+             data-kt-menu="true">
+            <div class="menu-item px-4 d-flex justify-content-between align-items-center">
+                <span class="text-gray-600">Portafoglio Servizi</span>
+                <span class="fw-bold fs-6 text-gray-800">{{\App\importo($saldoServizi,true)}}</span>
             </div>
-            <div class="separator separator-dashed my-2"></div>
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-semibold fs-7 text-gray-600">Portafoglio Spedizioni</span>
-                <span class="fw-bold fs-6">{{\App\importo($saldoSpedizioni,true)}}</span>
+            <div class="separator my-2"></div>
+            <div class="menu-item px-4 d-flex justify-content-between align-items-center">
+                <span class="text-gray-600">Portafoglio Spedizioni</span>
+                <span class="fw-bold fs-6 text-gray-800">{{\App\importo($saldoSpedizioni,true)}}</span>
             </div>
         </div>
     </div>
