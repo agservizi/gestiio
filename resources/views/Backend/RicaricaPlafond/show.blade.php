@@ -37,6 +37,17 @@
                 </div>
                 <div class="col-md-6 pt-sm-8 pt-md-0">
                     <h4>Ultime ricariche</h4>
+                    <form method="GET" action="{{action([\App\Http\Controllers\Backend\RicaricaPlafonController::class,'show'])}}" class="mt-3">
+                        <div class="row align-items-end">
+                            <div class="col-md-8">
+                                @include('Backend._inputs.inputSelect2',['campo'=>'filtro_agente_id','testo'=>'Filtra agente','required'=>false,'selected'=>\App\Models\User::selected(old('filtro_agente_id', $filtroAgenteId ?? null))])
+                            </div>
+                            <div class="col-md-4 d-flex gap-2 mb-4">
+                                <button class="btn btn-primary" type="submit">Filtra</button>
+                                <a href="{{action([\App\Http\Controllers\Backend\RicaricaPlafonController::class,'show'])}}" class="btn btn-light">Reset</a>
+                            </div>
+                        </div>
+                    </form>
                     <div class="table-responsive mt-3">
                         <table class="table table-sm table-row-dashed align-middle">
                             <thead>
@@ -65,6 +76,9 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="mt-4">
+                        {{$ultimeRicariche->appends(request()->query())->links()}}
+                    </div>
                 </div>
             </div>
         </div>
@@ -83,6 +97,7 @@
     <script>
         $(function () {
             select2UniversaleBackend('agente_id', 'un agente', 1, 'agente_id');
+            select2UniversaleBackend('filtro_agente_id', 'un agente', 1, 'filtro_agente_id');
         });
     </script>
 @endpush

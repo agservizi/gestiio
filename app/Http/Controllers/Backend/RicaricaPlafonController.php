@@ -13,29 +13,35 @@ class RicaricaPlafonController extends Controller
 {
     public function show()
     {
-        $agenteId = (int) request()->input('agente_id');
+        $filtroAgenteId = (int) request()->input('filtro_agente_id');
         $record = new MovimentoPortafoglio();
-        $record->agente_id = $agenteId ?: null;
+        $record->agente_id = null;
 
         $ultimeRicariche = MovimentoPortafoglio::query()
             ->withoutGlobalScopes()
-            ->when($agenteId > 0, function ($query) use ($agenteId) {
-                $query->where('agente_id', $agenteId);
+            ->when($filtroAgenteId > 0, function ($query) use ($filtroAgenteId) {
+                $query->where('agente_id', $filtroAgenteId);
             })
             ->where(function ($query) {
                 $query->where('descrizione', 'like', 'Ricarica%')
                     ->orWhere('descrizione', 'like', '%Stripe%');
             })
             ->latest('id')
-            ->limit(20)
-            ->get();
+            ->paginate(10);
+
+        $agenteIds = [];
+        foreach ($ultimeRicariche as $movimento) {
+            if (!empty($movimento->agente_id)) {
+                $agenteIds[] = (int) $movimento->agente_id;
+            }
+        }
 
         $agenti = User::query()
-            ->whereIn('id', $ultimeRicariche->pluck('agente_id')->filter()->unique()->values())
+            ->whereIn('id', array_values(array_unique($agenteIds)))
             ->get(['id', 'nome', 'cognome'])
             ->keyBy('id');
 
-        $ultimeRicariche = $ultimeRicariche->map(function (MovimentoPortafoglio $movimento) use ($agenti) {
+        foreach ($ultimeRicariche as $movimento) {
             $descrizione = (string) $movimento->descrizione;
             $tipo = 'Altro';
 
@@ -48,14 +54,13 @@ class RicaricaPlafonController extends Controller
             $agente = $agenti->get((int) $movimento->agente_id);
             $movimento->agente_nominativo = $agente ? $agente->nominativo() : ('Utente #' . $movimento->agente_id);
             $movimento->tipo_ricarica = $tipo;
-
-            return $movimento;
-        });
+        }
 
         return view('Backend.RicaricaPlafond.show', [
             'titoloPagina' => 'Ricarica plafond',
             'record' => $record,
             'ultimeRicariche' => $ultimeRicariche,
+            'filtroAgenteId' => $filtroAgenteId,
         ]);
     }
 
