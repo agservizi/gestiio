@@ -38,14 +38,24 @@
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Produzione mese</h3>
+                <div class="card-header border-0 pt-5 pb-0">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M4 19C4 17.8954 4.89543 17 6 17H20V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z" fill="currentColor"/>
+                                <path d="M6 3C4.89543 3 4 3.89543 4 5V15H20V5C20 3.89543 19.1046 3 18 3H6ZM7 12L10.2 8.8L12.4 11L16.5 6.9L18 8.4L12.4 14L10.2 11.8L8.5 13.5L7 12Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <h3 class="card-title m-0">Produzione mese</h3>
+                    </div>
                 </div>
                 <div class="card-body pt-0">
-                    <div class="fs-2hx fw-bold">{{ number_format($produzioneConteggio) }}</div>
-                    <div class="text-muted mb-4">Contratti totali</div>
+                    <div class="bg-light-primary rounded p-4 mb-4">
+                        <div class="text-muted fw-semibold fs-8 mb-1">Contratti totali</div>
+                        <div class="fs-2 fw-bolder text-primary">{{ number_format($produzioneConteggio) }}</div>
+                    </div>
                     <div class="d-flex justify-content-between fw-semibold mb-2">
-                        <span>In lavorazione</span>
+                        <span class="text-muted">In lavorazione</span>
                         <span>{{ number_format($produzioneInLavorazione) }} ({{ $percentualeProduzione }}%)</span>
                     </div>
                     <div class="progress h-8px bg-light-primary">
@@ -126,22 +136,33 @@
 
         <div class="col-md-6 col-lg-3">
             <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-2">
-                    <h3 class="card-title">Assistenza</h3>
+                <div class="card-header border-0 pt-5 pb-0">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M12 3C7.02944 3 3 6.80558 3 11.5C3 14.0409 4.18896 16.3218 6.07143 17.8898V21L9.02857 19.3716C9.94801 19.623 10.9482 19.75 12 19.75C16.9706 19.75 21 15.9444 21 11.25C21 6.55558 16.9706 3 12 3Z" fill="currentColor"/>
+                                <path d="M8.5 11.25C8.5 10.6977 8.94772 10.25 9.5 10.25H14.5C15.0523 10.25 15.5 10.6977 15.5 11.25C15.5 11.8023 15.0523 12.25 14.5 12.25H9.5C8.94772 12.25 8.5 11.8023 8.5 11.25Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <h3 class="card-title m-0">Assistenza</h3>
+                    </div>
                 </div>
                 <div class="card-body pt-0">
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Richieste totali</span>
-                        <span class="fw-bolder">{{ number_format($kpiDashboard['richieste_assistenza_totali']) }}</span>
+                    <div class="bg-light-primary rounded p-4 mb-4">
+                        <div class="text-muted fw-semibold fs-8 mb-1">Richieste totali</div>
+                        <div class="fs-2 fw-bolder text-primary">{{ number_format($kpiDashboard['richieste_assistenza_totali']) }}</div>
                     </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Nuove oggi</span>
-                        <span class="fw-bolder">{{ number_format($kpiDashboard['richieste_assistenza_oggi']) }}</span>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted fw-semibold">Nuove oggi</span>
+                        <span class="badge badge-light-primary fw-bolder px-4 py-2">{{ number_format($kpiDashboard['richieste_assistenza_oggi']) }}</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Senza credenziali</span>
-                        <span class="fw-bolder text-danger">{{ number_format($alertDashboard['richieste_senza_credenziali']) }}</span>
+
+                    <div class="d-flex justify-content-between align-items-center mb-5">
+                        <span class="text-muted fw-semibold">Senza credenziali</span>
+                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ number_format($alertDashboard['richieste_senza_credenziali']) }}</span>
                     </div>
+
                     <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'index']) }}" class="btn btn-light-warning btn-sm">Apri richieste</a>
                 </div>
             </div>
@@ -314,28 +335,39 @@
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-12">
             <div class="card card-flush h-100">
-                <div class="card-header border-0 pt-5">
-                    <h3 class="card-title align-items-start flex-column">
-                        <span class="card-label fw-bold fs-3 mb-1">Priorità assistenza</span>
-                        <span class="text-muted mt-1 fw-semibold fs-7">Richieste con credenziali mancanti</span>
-                    </h3>
+                <div class="card-header border-0 pt-5 pb-2">
+                    <div class="card-title d-flex align-items-center gap-2">
+                        <span class="svg-icon svg-icon-2 text-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path opacity="0.3" d="M12 2L3 6V12C3 17.55 6.84 22.74 12 24C17.16 22.74 21 17.55 21 12V6L12 2Z" fill="currentColor"/>
+                                <path d="M12 7C12.5523 7 13 7.44772 13 8V13C13 13.5523 12.5523 14 12 14C11.4477 14 11 13.5523 11 13V8C11 7.44772 11.4477 7 12 7ZM12 17C12.5523 17 13 16.5523 13 16C13 15.4477 12.5523 15 12 15C11.4477 15 11 15.4477 11 16C11 16.5523 11.4477 17 12 17Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="card-label fw-bold fs-3 mb-0">Priorità assistenza</h3>
+                            <div class="text-muted fw-semibold fs-7">Richieste con credenziali mancanti</div>
+                        </div>
+                    </div>
+                    <div class="card-toolbar">
+                        <span class="badge badge-light-danger fw-bolder">{{ count($azioniRapide ?? []) }}</span>
+                    </div>
                 </div>
                 <div class="card-body pt-0">
                     @if($azioniRapide->isEmpty())
                         <div class="text-muted py-5">Nessuna priorità operativa al momento.</div>
                     @else
-                        <div class="table-responsive">
-                            <table class="table table-row-dashed align-middle gs-0 gy-3">
+                        <div class="table-responsive border rounded bg-light px-2 py-1">
+                            <table class="table table-row-dashed align-middle gs-0 gy-3 mb-0">
                                 <thead>
-                                <tr class="fw-bold text-muted">
-                                    <th>ID</th>
+                                <tr class="fw-bold text-muted text-uppercase fs-8">
+                                    <th class="ps-3">ID</th>
                                     <th>Cliente</th>
                                     <th>Prodotto</th>
                                     <th>Creato il</th>
-                                    <th class="text-end">Azione</th>
+                                    <th class="text-end pe-3">Azione</th>
                                 </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="text-gray-700 fw-semibold">
                                 @foreach($azioniRapide as $azione)
                                     <tr>
                                         <td>{{ $azione->id }}</td>
