@@ -28,6 +28,11 @@
         $percentualeUtile = \App\percentuale($guadagno->utile, $guadagno->entrate);
         $ticketAperti = (int) data_get($conteggioTikets, 'aperto.conteggio', 0) + (int) data_get($conteggioTikets, 'in_lavorazione.conteggio', 0);
         $ticketChiusi = (int) data_get($conteggioTikets, 'chiuso.conteggio', 0);
+        $chatDashboard = $chatDashboard ?? [
+            'messaggi_non_letti' => 0,
+            'thread_attive' => 0,
+            'nuovi_messaggi_oggi' => 0,
+        ];
     @endphp
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
@@ -158,7 +163,30 @@
             </div>
         </div>
         <div class="col-xl-3">
-            @include('Backend.Dashboard.admin.ticket',['records'=>$tikets])
+            <div class="card card-flush h-lg-100">
+                <div class="card-header border-0 pt-5 pb-2">
+                    <div class="card-title flex-column">
+                        <h3 class="fw-bolder mb-1">Chat interna</h3>
+                        <div class="fs-6 fw-bold text-gray-400">Monitoraggio conversazioni</div>
+                    </div>
+                </div>
+                <div class="card-body pt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted fw-semibold">Messaggi non letti</span>
+                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ number_format((int) $chatDashboard['messaggi_non_letti']) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="text-muted fw-semibold">Thread attive (7 giorni)</span>
+                        <span class="badge badge-light-primary fw-bolder px-4 py-2">{{ number_format((int) $chatDashboard['thread_attive']) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-5">
+                        <span class="text-muted fw-semibold">Nuovi messaggi oggi</span>
+                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ number_format((int) $chatDashboard['nuovi_messaggi_oggi']) }}</span>
+                    </div>
+
+                    <a href="{{ action([\App\Http\Controllers\Backend\ChatController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri chat interna</a>
+                </div>
+            </div>
         </div>
         <div class="col-xl-3">
             @include('Backend.Dashboard.linksGestori',['altezza'=>'h-lg-100'])

@@ -6,6 +6,7 @@ use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
 use App\Models\CafPatronato;
 use App\Models\ContrattoEnergia;
 use App\Models\ClienteAssistenza;
+use App\Models\ChatMessage;
 use App\Models\ChatThreadUser;
 use App\Models\ContrattoTelefonia;
 use App\Models\EsitoCafPatronato;
@@ -310,6 +311,34 @@ class DashboardController extends Controller
             ? ProduzioneOperatore::find($id . '_' . $mese)
             : null;
 
+        $chatDashboard = [
+            'messaggi_non_letti' => 0,
+            'thread_attive' => 0,
+            'nuovi_messaggi_oggi' => 0,
+        ];
+
+        if (Schema::hasTable('chat_thread_users') && Schema::hasTable('chat_messages')) {
+            $threadIds = ChatThreadUser::query()
+                ->where('user_id', $id)
+                ->pluck('thread_id');
+
+            if ($threadIds->isNotEmpty()) {
+                $chatDashboard['messaggi_non_letti'] = ChatThreadUser::conteggioNonLetti($id);
+
+                $chatDashboard['thread_attive'] = ChatMessage::query()
+                    ->whereIn('thread_id', $threadIds)
+                    ->where('created_at', '>=', now()->subDays(7))
+                    ->distinct('thread_id')
+                    ->count('thread_id');
+
+                $chatDashboard['nuovi_messaggi_oggi'] = ChatMessage::query()
+                    ->whereIn('thread_id', $threadIds)
+                    ->where('user_id', '<>', $id)
+                    ->whereDate('created_at', now())
+                    ->count();
+            }
+        }
+
 
         return view('Backend.Dashboard.showAdmin', [
             'titoloPagina' => $this->salutoDashboard(),
@@ -327,6 +356,7 @@ class DashboardController extends Controller
             'kpiDashboard' => $kpiDashboard,
             'alertDashboard' => $alertDashboard,
             'azioniRapide' => $azioniRapide,
+            'chatDashboard' => $chatDashboard,
         ]);
 
     }
