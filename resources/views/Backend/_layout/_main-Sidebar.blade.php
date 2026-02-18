@@ -16,7 +16,7 @@
     <!--begin::Global Stylesheets Bundle(used by all pages)-->
     <link href="/assets_backend/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css"/>
     <link href="/assets_backend/css/style.bundle.css" rel="stylesheet" type="text/css"/>
-    <link href="/assets_backend/css-miei/mio.css?v=3" rel="stylesheet" type="text/css">
+    <link href="/assets_backend/css-miei/mio.css?v=4" rel="stylesheet" type="text/css">
     <link href="/assets_backend/css-miei/responsive.css?v=1" rel="stylesheet" type="text/css">
     <!--end::Global Stylesheets Bundle-->
 
