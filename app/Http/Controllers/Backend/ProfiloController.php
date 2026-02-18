@@ -9,18 +9,19 @@ use App\Models\ProduzioneOperatore;
 use App\Models\TipoContratto;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProfiloController extends Controller
 {
     public function show()
     {
-        $record = \Auth::user();
+        $record = Auth::user();
         abort_if(!$record, 404, 'Questo operatore non esiste');
         $controller = get_class($this);
 
         $questoMese = now();
 
-        $mandati = \App\Models\Mandato::with('gestore')->where('agente_id', \Auth::id())->get()->pluck('gestore_id')->toArray();
+        $mandati = \App\Models\Mandato::with('gestore')->where('agente_id', Auth::id())->get()->pluck('gestore_id')->toArray();
 
         $tipiContratto = TipoContratto::with('gestore')->whereIn('gestore_id', $mandati)->orderBy('nome')->get();
         return view('Backend.Profilo.show', [
@@ -35,7 +36,7 @@ class ProfiloController extends Controller
     {
 
 
-        $agente = Agente::firstWhere('user_id', \Auth::id());
+        $agente = Agente::firstWhere('user_id', Auth::id());
         $tipoContratto = TipoContratto::find($mandatoId);
         abort_if(!$tipoContratto,404);
         return view('Backend.Profilo.show.showListino', [
