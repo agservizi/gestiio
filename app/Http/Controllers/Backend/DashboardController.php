@@ -11,9 +11,11 @@ use App\Models\ChatThreadUser;
 use App\Models\ContrattoTelefonia;
 use App\Models\EsitoCafPatronato;
 use App\Models\EsitoVisura;
+use App\Models\File;
 use App\Models\ProduzioneOperatore;
 use App\Models\RichiestaAssistenza;
 use App\Models\RegistroLogin;
+use App\Models\SpedizioneBrt;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Visura;
@@ -105,14 +107,17 @@ class DashboardController extends Controller
         $canEnergia = $user->can('servizio_contratti_energia');
         $canCafPatronato = $user->can('servizio_caf_patronato');
         $canTicket = $user->can('servizio_ticket');
+        $canVisure = $user->can('servizio_visure');
+        $canSpedizioni = $user->can('servizio_spedizioni');
+        $canDocumentazione = $user->can('servizio_documentazione');
 
         $this->elencoMesi();
         $mese = $request->input('mese', now()->format('Y_m'));
         [$filtroAnno, $filtroMese] = explode('_', $mese);
 
-        $contratti = collect();
+        $contrattiTelefonia = collect();
         if ($canTelefonia) {
-            $contratti = ContrattoTelefonia::query()
+            $contrattiTelefonia = ContrattoTelefonia::query()
                 ->with('agente')
                 ->with('tipoContratto.gestore')
                 ->with('esito')
@@ -121,9 +126,20 @@ class DashboardController extends Controller
                 ->get();
         }
 
-        $servizi = collect();
+        $contrattiEnergia = collect();
+        if ($canEnergia) {
+            $contrattiEnergia = ContrattoEnergia::query()
+                ->with('agente')
+                ->with('tipoContratto.gestore')
+                ->with('esito')
+                ->limit(10)
+                ->orderByDesc('data')
+                ->get();
+        }
+
+        $serviziCafPatronato = collect();
         if ($canCafPatronato) {
-            $servizi = CafPatronato::query()
+            $serviziCafPatronato = CafPatronato::query()
                 ->with('esito')
                 ->with('agente')
                 ->with('tipo:id,nome')
@@ -181,6 +197,24 @@ class DashboardController extends Controller
                     ->whereDate('created_at', '<=', now()->subDays(7))
                     ->count()
                 : 0,
+            'visure_mese' => $canVisure
+                ? Visura::query()
+                    ->whereYear('created_at', $filtroAnno)
+                    ->whereMonth('created_at', $filtroMese)
+                    ->count()
+                : 0,
+            'spedizioni_mese' => $canSpedizioni
+                ? SpedizioneBrt::query()
+                    ->whereYear('created_at', $filtroAnno)
+                    ->whereMonth('created_at', $filtroMese)
+                    ->count()
+                : 0,
+            'documenti_mese' => $canDocumentazione
+                ? File::query()
+                    ->whereYear('created_at', $filtroAnno)
+                    ->whereMonth('created_at', $filtroMese)
+                    ->count()
+                : 0,
         ];
 
         $alertSupervisore = [
@@ -196,13 +230,90 @@ class DashboardController extends Controller
                     ->whereDate('created_at', '<=', now()->subDays(2))
                     ->count()
                 : 0,
+            'visure_senza_esito' => $canVisure
+                ? Visura::query()->whereNull('esito_finale')->count()
+                : 0,
         ];
+
+        $serviziAbilitati = collect([
+            [
+                'enabled' => $canTelefonia,
+                'permesso' => 'servizio_contratti_telefonia',
+                'titolo' => 'Contratti telefonia',
+                'descrizione' => 'Monitoraggio contratti telefonia del periodo selezionato',
+                'url' => action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'index']),
+                'cta' => 'Apri contratti',
+                'kpi_valore' => $kpiSupervisore['contratti_telefonia_mese'],
+                'kpi_testo' => 'Pratiche mese',
+            ],
+            [
+                'enabled' => $canEnergia,
+                'permesso' => 'servizio_contratti_energia',
+                'titolo' => 'Contratti energia',
+                'descrizione' => 'Monitoraggio contratti luce e gas del periodo',
+                'url' => action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'index']),
+                'cta' => 'Apri energia',
+                'kpi_valore' => $kpiSupervisore['contratti_energia_mese'],
+                'kpi_testo' => 'Pratiche mese',
+            ],
+            [
+                'enabled' => $canCafPatronato,
+                'permesso' => 'servizio_caf_patronato',
+                'titolo' => 'Caf / Patronato',
+                'descrizione' => 'Supervisione pratiche CAF e Patronato',
+                'url' => action([\App\Http\Controllers\Backend\CafPatronatoController::class, 'index']),
+                'cta' => 'Apri pratiche',
+                'kpi_valore' => $kpiSupervisore['pratiche_caf_mese'],
+                'kpi_testo' => 'Pratiche mese',
+            ],
+            [
+                'enabled' => $canTicket,
+                'permesso' => 'servizio_ticket',
+                'titolo' => 'Ticket assistenza',
+                'descrizione' => 'Gestione ticket aperti e priorità operative',
+                'url' => action([\App\Http\Controllers\Backend\TicketsController::class, 'index']),
+                'cta' => 'Apri ticket',
+                'kpi_valore' => $kpiSupervisore['ticket_aperti'],
+                'kpi_testo' => 'Ticket aperti',
+            ],
+            [
+                'enabled' => $canVisure,
+                'permesso' => 'servizio_visure',
+                'titolo' => 'Visure',
+                'descrizione' => 'Controllo visure in lavorazione e assegnazione',
+                'url' => action([\App\Http\Controllers\Backend\VisuraController::class, 'index']),
+                'cta' => 'Apri visure',
+                'kpi_valore' => $kpiSupervisore['visure_mese'],
+                'kpi_testo' => 'Visure mese',
+            ],
+            [
+                'enabled' => $canSpedizioni,
+                'permesso' => 'servizio_spedizioni',
+                'titolo' => 'Spedizioni BRT',
+                'descrizione' => 'Monitoraggio spedizioni gestite nel periodo',
+                'url' => action([\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'index']),
+                'cta' => 'Apri spedizioni',
+                'kpi_valore' => $kpiSupervisore['spedizioni_mese'],
+                'kpi_testo' => 'Spedizioni mese',
+            ],
+            [
+                'enabled' => $canDocumentazione,
+                'permesso' => 'servizio_documentazione',
+                'titolo' => 'Documentazione',
+                'descrizione' => 'Archivio documenti caricati nel periodo selezionato',
+                'url' => action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'index']),
+                'cta' => 'Apri documenti',
+                'kpi_valore' => $kpiSupervisore['documenti_mese'],
+                'kpi_testo' => 'File mese',
+            ],
+        ])->where('enabled', true)->values();
 
         return view('Backend.Dashboard.showSupervisore', [
             'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
-            'contratti' => $contratti,
-            'servizi' => $servizi,
+            'contrattiTelefonia' => $contrattiTelefonia,
+            'contrattiEnergia' => $contrattiEnergia,
+            'serviziCafPatronato' => $serviziCafPatronato,
             'ticketRecenti' => $ticketRecenti,
             'conteggioTikets' => $conteggioTikets,
             'kpiSupervisore' => $kpiSupervisore,
@@ -216,6 +327,10 @@ class DashboardController extends Controller
             'canEnergia' => $canEnergia,
             'canCafPatronato' => $canCafPatronato,
             'canTicket' => $canTicket,
+            'canVisure' => $canVisure,
+            'canSpedizioni' => $canSpedizioni,
+            'canDocumentazione' => $canDocumentazione,
+            'serviziAbilitati' => $serviziAbilitati,
         ]);
     }
 
