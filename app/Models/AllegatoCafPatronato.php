@@ -6,6 +6,8 @@ use App\Http\Funzioni\FunzioniAllegato;
 use App\Http\Funzioni\ThumbnailGenerationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AllegatoCafPatronato extends Model
@@ -32,10 +34,10 @@ class AllegatoCafPatronato extends Model
         });
 
         static::deleting(function ($model) {
-            \Storage::delete($model->path_filename);
-            \Log::debug('deleting;');
+            Storage::delete($model->path_filename);
+            Log::debug('deleting;');
             if ($model->thumbnail) {
-                \Storage::delete($model->thumbnail);
+                Storage::delete($model->thumbnail);
             }
 
         });
