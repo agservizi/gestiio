@@ -118,6 +118,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('/chat-interna/push/vapid-public-key', [\App\Http\Controllers\Backend\ChatController::class, 'pushVapidPublicKey']);
     Route::post('/chat-interna/push/subscribe', [\App\Http\Controllers\Backend\ChatController::class, 'subscribePush']);
     Route::post('/chat-interna/push/unsubscribe', [\App\Http\Controllers\Backend\ChatController::class, 'unsubscribePush']);
+    Route::get('/chat-interna/attachment/{attachment}', [\App\Http\Controllers\Backend\ChatController::class, 'attachment']);
     Route::get('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'messages']);
     Route::post('/chat-interna/{thread}/messages', [\App\Http\Controllers\Backend\ChatController::class, 'sendMessage']);
     Route::post('/chat-interna/{thread}/forward', [\App\Http\Controllers\Backend\ChatController::class, 'forwardMessages']);

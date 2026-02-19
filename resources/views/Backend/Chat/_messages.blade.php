@@ -49,7 +49,8 @@
                     <div class="mt-2">
                         @foreach($messaggio->allegati as $allegato)
                             @php
-                                $allegatoUrl = asset('storage/' . $allegato->path_filename);
+                                $allegatoUrl = action([\App\Http\Controllers\Backend\ChatController::class, 'attachment'], ['attachment' => $allegato->id]);
+                                $allegatoDownloadUrl = action([\App\Http\Controllers\Backend\ChatController::class, 'attachment'], ['attachment' => $allegato->id, 'download' => 1]);
                                 $isImage = \Illuminate\Support\Str::startsWith((string) $allegato->mime_type, 'image/');
                             @endphp
                             <div>
@@ -58,12 +59,12 @@
                                         <img src="{{$allegatoUrl}}" alt="{{$allegato->filename_originale}}" class="chat-image-thumb">
                                     </a>
                                     <div>
-                                        <a class="fs-8 fw-bold" href="{{$allegatoUrl}}" target="_blank" rel="noopener">
+                                        <a class="fs-8 fw-bold" href="{{$allegatoDownloadUrl}}" target="_blank" rel="noopener">
                                             📎 {{$allegato->filename_originale}}
                                         </a>
                                     </div>
                                 @else
-                                    <a class="fs-8 fw-bold" href="{{$allegatoUrl}}" target="_blank" rel="noopener">
+                                    <a class="fs-8 fw-bold" href="{{$allegatoDownloadUrl}}" target="_blank" rel="noopener">
                                         📎 {{$allegato->filename_originale}}
                                     </a>
                                 @endif

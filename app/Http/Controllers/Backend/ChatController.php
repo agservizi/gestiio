@@ -24,9 +24,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\View\View;
 
 class ChatController extends Controller
@@ -164,6 +166,46 @@ class ChatController extends Controller
             'pinnedHtml' => view('Backend.Chat._pinned', [
                 'pinnedMessages' => $pinnedMessages,
             ])->render(),
+        ]);
+    }
+
+    public function attachment(ChatMessageAttachment $attachment, Request $request): BinaryFileResponse
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        $messaggio = $attachment->messaggio;
+        abort_if(!$messaggio, 404);
+
+        $threadId = (int) $messaggio->thread_id;
+        $this->ensureThreadAccesso($threadId, (int) $authUser->id);
+        $this->ensureThreadConversazioneConsentita($threadId, $authUser);
+
+        if ((bool) $attachment->is_blocked) {
+            abort(403, 'Allegato non disponibile');
+        }
+
+        $relativePath = ltrim((string) $attachment->path_filename, '/');
+        abort_if($relativePath === '', 404);
+        if (!Storage::disk('public')->exists($relativePath)) {
+            Log::warning('Chat attachment file missing on disk', [
+                'attachment_id' => (int) $attachment->id,
+                'message_id' => (int) $messaggio->id,
+                'thread_id' => $threadId,
+                'requested_by_user_id' => (int) $authUser->id,
+                'relative_path' => $relativePath,
+            ]);
+            abort(404);
+        }
+
+        $absolutePath = storage_path('app/public/' . $relativePath);
+        $download = $request->boolean('download');
+
+        if ($download) {
+            return response()->download($absolutePath, (string) $attachment->filename_originale);
+        }
+
+        return response()->file($absolutePath, [
+            'Content-Disposition' => 'inline; filename="' . addslashes((string) $attachment->filename_originale) . '"',
         ]);
     }
 
