@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class Ticket extends Model
@@ -43,7 +44,7 @@ class Ticket extends Model
 
     public function lettura(): HasOne
     {
-        return $this->hasOne(LetturaTicket::class, 'ticket_id')->where('user_id', \Auth::id());
+        return $this->hasOne(LetturaTicket::class, 'ticket_id')->where('user_id', Auth::id());
     }
 
     public function messaggi()
@@ -59,6 +60,11 @@ class Ticket extends Model
     public function utente()
     {
         return $this->hasOne(User::class, 'id', 'user_id',);
+    }
+
+    public function assegnatario()
+    {
+        return $this->hasOne(User::class, 'id', 'agente_id');
     }
 
 

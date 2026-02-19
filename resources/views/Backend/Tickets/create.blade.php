@@ -38,6 +38,12 @@
                                        {{$destinatarioTipo==='supervisore'?'checked':''}}>
                                 <label class="form-check-label fw-bolder" for="destinatarioTipoSupervisore">Supervisore</label>
                             </div>
+                            <div class="form-check form-check-custom form-check-solid mx-5" style="display: inline;">
+                                <input class="form-check-input destinatario-tipo" type="radio" value="operatore"
+                                       id="destinatarioTipoOperatore" name="destinatario_tipo"
+                                       {{$destinatarioTipo==='operatore'?'checked':''}}>
+                                <label class="form-check-label fw-bolder" for="destinatarioTipoOperatore">Operatore</label>
+                            </div>
                         </div>
 
                         <div id="destinatari-options" class="mb-8">
@@ -51,6 +57,11 @@
                                 @foreach($supervisoriDestinatari as $supervisoreDestinatario)
                                     <option value="{{$supervisoreDestinatario->id}}" data-tipo="supervisore" {{(string)old('destinatario_id')===(string)$supervisoreDestinatario->id?'selected':''}}>
                                         {{$supervisoreDestinatario->cognome}} {{$supervisoreDestinatario->nome}}
+                                    </option>
+                                @endforeach
+                                @foreach($operatoriDestinatari as $operatoreDestinatario)
+                                    <option value="{{$operatoreDestinatario->id}}" data-tipo="operatore" {{(string)old('destinatario_id')===(string)$operatoreDestinatario->id?'selected':''}}>
+                                        {{$operatoreDestinatario->cognome}} {{$operatoreDestinatario->nome}}
                                     </option>
                                 @endforeach
                             </select>

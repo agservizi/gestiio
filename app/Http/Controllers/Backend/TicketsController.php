@@ -39,13 +39,27 @@ class TicketsController extends Controller
         $records = $this->applicaFiltri($request)->paginate();
         $records->appends($request->query());
 
+        $assegnatariFiltro = collect();
+        if ($authUser->hasAnyPermission(['admin', 'supervisore'])) {
+            $assegnatariFiltro = User::query()
+                ->where(function ($query) {
+                    $query->whereHas('permissions', function ($permissionQuery) {
+                        $permissionQuery->whereIn('name', ['agente', 'supervisore', 'operatore']);
+                    });
+                })
+                ->orderBy('cognome')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'cognome']);
+        }
+
         return view('Backend.Tickets.index')->with([
             'records' => $records,
             'filtro' => false,
             'controller' => get_class($this),
             'titoloPagina' => ucfirst(Ticket::NOME_PLURALE),
             'admin' => $authUser->hasPermissionTo('admin'),
-            'conFiltro' => $this->conFiltro
+            'conFiltro' => $this->conFiltro,
+            'assegnatariFiltro' => $assegnatariFiltro,
 
         ]);
 
@@ -60,14 +74,24 @@ class TicketsController extends Controller
     {
         $queryBuilder = Ticket::query()
             ->with('utente')
+            ->with('assegnatario:id,nome,cognome')
             ->with('causaleTicket:id,descrizione_causale')
             ->with('lettura')
             ->orderByDesc('id');
 
         /** @var User $authUser */
         $authUser = Auth::user();
-        if ($authUser->hasPermissionTo('agente')) {
+        if ($authUser->hasAnyPermission(['agente', 'operatore'])) {
             $queryBuilder->where('agente_id', Auth::id());
+        }
+
+        if ($request->filled('assegnatario_id')) {
+            if ($request->input('assegnatario_id') === '__non_assegnato') {
+                $queryBuilder->whereNull('agente_id');
+            } else {
+                $queryBuilder->where('agente_id', $request->integer('assegnatario_id'));
+            }
+            $this->conFiltro = true;
         }
 
         if ($request->input('stato')) {
@@ -114,6 +138,7 @@ class TicketsController extends Controller
 
         $agentiDestinatari = collect();
         $supervisoriDestinatari = collect();
+        $operatoriDestinatari = collect();
         if ($authUser->hasPermissionTo('admin')) {
             $agentiDestinatari = User::query()
                 ->whereHas('permissions', function ($query) {
@@ -130,6 +155,14 @@ class TicketsController extends Controller
                 ->orderBy('cognome')
                 ->orderBy('nome')
                 ->get(['id', 'nome', 'cognome']);
+
+            $operatoriDestinatari = User::query()
+                ->whereHas('permissions', function ($query) {
+                    $query->where('name', 'operatore');
+                })
+                ->orderBy('cognome')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'cognome']);
         }
 
 
@@ -140,6 +173,7 @@ class TicketsController extends Controller
             'admin' => $authUser->hasPermissionTo('admin'),
             'agentiDestinatari' => $agentiDestinatari,
             'supervisoriDestinatari' => $supervisoriDestinatari,
+            'operatoriDestinatari' => $operatoriDestinatari,
         ]);
     }
 
@@ -159,10 +193,10 @@ class TicketsController extends Controller
             'messaggio' => ['required'],
         ];
         if ($authUser->hasPermissionTo('admin')) {
-            $regole['destinatario_tipo'] = ['required_without:servizio_type', Rule::in(['agente', 'supervisore'])];
+            $regole['destinatario_tipo'] = ['required_without:servizio_type', Rule::in(['agente', 'supervisore', 'operatore'])];
             $regole['destinatario_id'] = ['required_without:servizio_type', 'nullable', 'integer', 'exists:users,id'];
         } else {
-            $regole['servizio_type'] = ['required'];
+            $regole['servizio_type'] = ['nullable'];
         }
 
         $request->validate($regole);
@@ -191,7 +225,7 @@ class TicketsController extends Controller
         $destinatarioTipo = $request->input('destinatario_tipo');
         $destinatarioId = $request->input('destinatario_id');
 
-        if ($authUser->hasPermissionTo('agente')) {
+        if ($authUser->hasAnyPermission(['agente', 'supervisore', 'operatore'])) {
             $ticket->agente_id = Auth::id();
         } else {
             if ($authUser->hasPermissionTo('admin') && $destinatarioId) {
@@ -249,7 +283,7 @@ class TicketsController extends Controller
                     $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
                 }
             } elseif ($destinatarioNotificaId) {
-                Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $ticket->oggetto . '</span> da agente <span class="fw-bold">' . $authUserNominativo . '</span>');
+                Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $ticket->oggetto . '</span> da ' . $ticket->da_tipo_utente . ' <span class="fw-bold">' . $authUserNominativo . '</span>');
                 $utente = User::find($destinatarioNotificaId);
                 $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
             }
@@ -273,9 +307,13 @@ class TicketsController extends Controller
 
         $record = Ticket::with('messaggi.utente')
             ->with('messaggi.allegati')
+            ->with('assegnatario:id,nome,cognome')
             ->find($id);
 
         abort_if(!$record, 404, 'Questo ticket non esiste');
+        if ($authUser->hasAnyPermission(['agente', 'operatore'])) {
+            abort_if((int)$record->agente_id !== (int)Auth::id() && (int)$record->user_id !== (int)Auth::id(), 403, 'Non autorizzato ad accedere a questo ticket');
+        }
         //abort_if(!$record->contratto, 404, 'Questo ticket non esiste');
 
         dispatch(function () use ($record) {
@@ -294,12 +332,32 @@ class TicketsController extends Controller
             MessaggioTicket::where('ticket_id', $record->id)->where('user_id', '<>', Auth::id())->whereNull('letto')->update(['letto' => now()]);
         })->afterResponse();
 
+        $assegnatariDestinatari = collect();
+        $canGestireAssegnazione = $authUser->hasAnyPermission(['admin', 'supervisore']);
+        if ($canGestireAssegnazione) {
+            $assegnatariDestinatari = User::query()
+                ->where(function ($query) {
+                    $query->whereHas('permissions', function ($permissionQuery) {
+                        $permissionQuery->where('name', 'agente');
+                    })->orWhereHas('permissions', function ($permissionQuery) {
+                        $permissionQuery->where('name', 'supervisore');
+                    })->orWhereHas('permissions', function ($permissionQuery) {
+                        $permissionQuery->where('name', 'operatore');
+                    });
+                })
+                ->orderBy('cognome')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'cognome']);
+        }
+
 
         return view('Backend.Tickets.show', [
             'controller' => get_class($this),
             'record' => $record,
             'titoloPagina' => $record->oggetto,
             'admin' => $authUser->hasPermissionTo('admin'),
+            'canGestireAssegnazione' => $canGestireAssegnazione,
+            'assegnatariDestinatari' => $assegnatariDestinatari,
         ]);
     }
 
@@ -325,8 +383,10 @@ class TicketsController extends Controller
     {
         /** @var User $authUser */
         $authUser = Auth::user();
+        $canGestireStato = $authUser->hasAnyPermission(['admin', 'supervisore']);
+        $canGestireAssegnazione = $authUser->hasAnyPermission(['admin', 'supervisore']);
 
-        if ($authUser->hasPermissionTo('admin')) {
+        if ($canGestireStato) {
 
         } else {
             $request->validate([
@@ -337,7 +397,39 @@ class TicketsController extends Controller
 
         $ticket = Ticket::find($id);
         abort_if(!$ticket, 404, 'Questo ' . Ticket::NOME_SINGOLARE . ' non esiste');
+        if ($authUser->hasAnyPermission(['agente', 'operatore'])) {
+            abort_if((int)$ticket->agente_id !== (int)Auth::id() && (int)$ticket->user_id !== (int)Auth::id(), 403, 'Non autorizzato ad aggiornare questo ticket');
+        }
+
+        if ($request->filled('agente_id')) {
+            abort_unless($canGestireAssegnazione, 403, 'Non autorizzato a riassegnare il ticket');
+
+            $request->validate([
+                'agente_id' => [
+                    'required',
+                    'integer',
+                    'exists:users,id',
+                    Rule::exists('users', 'id')->where(function ($query) {
+                        $query->whereHas('permissions', function ($permissionQuery) {
+                            $permissionQuery->whereIn('name', ['agente', 'supervisore', 'operatore']);
+                        });
+                    }),
+                ],
+            ]);
+
+            $ticket->agente_id = $request->integer('agente_id');
+            $ticket->save();
+
+            if ((int)$ticket->agente_id !== (int)Auth::id()) {
+                LetturaTicket::updateOrCreate(
+                    ['ticket_id' => $ticket->id, 'user_id' => $ticket->agente_id],
+                    ['messaggio_letto' => 0]
+                );
+            }
+        }
+
         if ($request->input('stato')) {
+            abort_unless($canGestireStato, 403, 'Non autorizzato a modificare lo stato del ticket');
             $ticket->stato = $request->input('stato');
             $ticket->save();
         }
@@ -394,7 +486,11 @@ class TicketsController extends Controller
 
         if ($authUser->hasPermissionTo('admin')) {
             return 'admin';
-        } elseif ($authUser->hasAnyPermission(['agente', 'supervisore'])) {
+        } elseif ($authUser->hasPermissionTo('supervisore')) {
+            return 'supervisore';
+        } elseif ($authUser->hasPermissionTo('operatore')) {
+            return 'operatore';
+        } elseif ($authUser->hasPermissionTo('agente')) {
             return 'agente';
         }
     }

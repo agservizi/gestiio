@@ -30,6 +30,7 @@
                         <th>Servizio</th>
                         <th>Oggetto</th>
                         <th>Da</th>
+                        <th>Assegnato a</th>
                         <th>Cliente</th>
                         <th>Ultimo aggiornamento</th>
                         <th>Stato</th>
@@ -59,6 +60,14 @@
                                 {{$record->utente->nominativo()}}
                             </td>
                             <td>
+                                {{$record->assegnatario?->nominativo() ?? '-'}}
+                                @if(!$record->agente_id)
+                                    <span class="badge badge-light-warning ms-1">Non assegnato</span>
+                                @elseif((int)$record->agente_id === (int)Auth::id())
+                                    <span class="badge badge-light-success ms-1">In carico a me</span>
+                                @endif
+                            </td>
+                            <td>
 
                             </td>
                             <td>
@@ -69,6 +78,29 @@
                             </td>
                             <td class="text-end" style="white-space: nowrap;">
                                 <a class="btn btn-sm btn-light btn-active-light-success" href="{{action([$controller,'show'],$record->id)}}">Vedi</a>
+                                @if(Auth::user()?->hasAnyPermission(['admin','supervisore']) && $assegnatariFiltro->count())
+                                    <form method="POST" action="{{action([$controller,'update'],$record->id)}}" class="d-inline-flex align-items-center ms-1 js-ticket-assign-form">
+                                        @csrf
+                                        @method('PATCH')
+                                        <select name="agente_id" class="form-select form-select-sm form-select-solid me-1" style="width: 170px;" required>
+                                            <option value="">Assegna a...</option>
+                                            @foreach($assegnatariFiltro as $assegnatario)
+                                                <option value="{{$assegnatario->id}}" {{(int)($record->agente_id ?? 0) === (int)$assegnatario->id ? 'selected' : ''}}>
+                                                    {{$assegnatario->cognome}} {{$assegnatario->nome}}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-light-primary">Assegna</button>
+                                    </form>
+                                @endif
+                                @if(Auth::user()?->hasAnyPermission(['admin','supervisore']) && (int)($record->agente_id ?? 0) !== (int)Auth::id())
+                                    <form method="POST" action="{{action([$controller,'update'],$record->id)}}" class="d-inline-block ms-1 js-ticket-takeover-form">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="agente_id" value="{{Auth::id()}}">
+                                        <button type="submit" class="btn btn-sm btn-light-warning">Prendi in carico</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -83,3 +115,53 @@
         </div>
     </div>
 @endsection
+
+@push('customScript')
+    <script>
+        $(function () {
+            $(document).on('submit', '.js-ticket-assign-form', function (event) {
+                event.preventDefault();
+                const form = this;
+
+                Swal.fire({
+                    text: 'Confermi la riassegnazione di questo ticket?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: 'Sì, assegna',
+                    cancelButtonText: 'Annulla',
+                    customClass: {
+                        confirmButton: 'btn btn-primary',
+                        cancelButton: 'btn btn-light'
+                    }
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+
+            $(document).on('submit', '.js-ticket-takeover-form', function (event) {
+                event.preventDefault();
+                const form = this;
+
+                Swal.fire({
+                    text: 'Confermi la presa in carico di questo ticket?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: 'Sì, conferma',
+                    cancelButtonText: 'Annulla',
+                    customClass: {
+                        confirmButton: 'btn btn-primary',
+                        cancelButton: 'btn btn-light'
+                    }
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
+@endpush

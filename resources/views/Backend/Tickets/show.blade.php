@@ -16,6 +16,7 @@
                         <div class="d-flex justify-content-start align-items-center">
                             <div class=" ">
                                 <span class="fw-bold text-gray-600 me-6">Creato da: <span class="text-gray-800 ">{{$record->utente->nominativo()}}</span></span>
+                                <span class="fw-bold text-gray-600 me-6">Assegnato a: <span class="text-gray-800 ">{{$record->assegnatario?->nominativo() ?? 'Non assegnato'}}</span></span>
                                 <span class="fw-bold text-gray-600">Creato il: <span class="fw-bolder text-gray-800 me-1">{{$record->created_at->diffForHumans()}}</span>({{$record->created_at->format('d/m/Y H:i')}})</span>
                             </div>
                             <div class=" ms-3">
@@ -102,7 +103,20 @@
                             @php($uid=old('uid',\Illuminate\Support\Str::ulid()))
                             <input type="hidden" name="uid" id="uid" value="{{$uid}}">
                             <div class="mb-0">
-                                @if($admin)
+                                @if($canGestireAssegnazione)
+                                    <label class="fw-bold fs-6">Assegna a</label>
+                                    <div class="mb-8 mt-2">
+                                        <select class="form-select form-select-solid" name="agente_id" id="agente_id">
+                                            <option value="">Seleziona assegnatario</option>
+                                            @foreach($assegnatariDestinatari as $assegnatarioDestinatario)
+                                                <option value="{{$assegnatarioDestinatario->id}}" {{(int)$record->agente_id === (int)$assegnatarioDestinatario->id ? 'selected' : ''}}>
+                                                    {{$assegnatarioDestinatario->cognome}} {{$assegnatarioDestinatario->nome}}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+                                @if($canGestireAssegnazione)
                                     <label class="fw-bold fs-6 required ">Stato</label>
                                     <div class="mt-5 mb-10">
                                         @php($selected=old('tipo',$record->stato))
@@ -120,7 +134,7 @@
                                     </div>
                                 @endif
                                 <textarea class="form-control form-control-solid placeholder-gray-600 fw-bolder fs-4 ps-9 pt-7" rows="6" name="messaggio"
-                                          placeholder="Testo del messaggio" {{$admin?'':'required'}} id="messaggio"></textarea>
+                                          placeholder="Testo del messaggio" {{$canGestireAssegnazione?'':'required'}} id="messaggio"></textarea>
                             </div>
                             <div class="w-100 text-center mt-6">
                                 <button type="submit" class="btn btn-primary">Aggiorna {{ucfirst(\App\Models\Ticket::NOME_SINGOLARE)}}</button>
@@ -150,11 +164,53 @@
     <script src="/assets_backend/js-progetto/ckeditor5/build/ckeditor.js"></script>
     <script>
         $(function () {
+            const statoAttualeTicket = @json($record->stato);
+            const assegnatarioAttualeTicket = @json((int)($record->agente_id ?? 0));
+
             ClassicEditor
                 .create( document.querySelector( '#messaggio' ) )
                 .catch( error => {
                     console.error( error );
                 } );
+
+            $('#segnala-form').on('submit', function (event) {
+                const form = this;
+                const nuovoStato = $('input[name="stato"]:checked').val() || null;
+                const nuovoAssegnatario = parseInt($('#agente_id').val() || '0', 10);
+
+                const confermaChiusura = nuovoStato === 'chiuso' && statoAttualeTicket !== 'chiuso';
+                const confermaRiassegnazione = nuovoAssegnatario > 0 && nuovoAssegnatario !== assegnatarioAttualeTicket;
+
+                if (!confermaChiusura && !confermaRiassegnazione) {
+                    return true;
+                }
+
+                event.preventDefault();
+                const messaggi = [];
+                if (confermaChiusura) {
+                    messaggi.push('stai chiudendo il ticket');
+                }
+                if (confermaRiassegnazione) {
+                    messaggi.push('stai riassegnando il ticket');
+                }
+
+                Swal.fire({
+                    text: 'Confermi? ' + messaggi.join(' e ') + '.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: 'Sì, conferma',
+                    cancelButtonText: 'Annulla',
+                    customClass: {
+                        confirmButton: 'btn btn-primary',
+                        cancelButton: 'btn btn-light'
+                    }
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
 
             var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
                 url: "{{action([\App\Http\Controllers\Frontend\TicketController::class,'uploadAllegato'])}}", // Set the url for your upload script location
