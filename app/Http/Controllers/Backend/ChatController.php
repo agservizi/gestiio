@@ -217,12 +217,22 @@ class ChatController extends Controller
         $this->ensureThreadConversazioneConsentita($thread->id, $authUser);
 
         $request->validate([
-            'messaggio' => ['nullable', 'string', 'max:3000', 'required_without:allegati'],
+            'messaggio' => ['nullable', 'string', 'max:3000'],
             'allegati' => ['nullable', 'array'],
             'allegati.*' => ['file', 'max:10240'],
             'reply_to_id' => ['nullable', 'integer'],
             'priority' => ['nullable', 'integer', 'in:0,1,2'],
         ]);
+
+        $testoMessaggio = trim((string) $request->input('messaggio', ''));
+        $allegati = array_values(array_filter($request->file('allegati', [])));
+
+        if ($testoMessaggio === '' && count($allegati) === 0) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Inserisci un messaggio o allega almeno un file.',
+            ], 422);
+        }
 
         $destinatariEmailPrimoNonLetto = [];
         $partecipazioniDestinatari = ChatThreadUser::query()
@@ -245,7 +255,7 @@ class ChatController extends Controller
         }
 
         $estensioniBloccate = ['php', 'phtml', 'phar', 'exe', 'bat', 'cmd', 'sh', 'js', 'jar', 'com', 'scr', 'msi'];
-        foreach ($request->file('allegati', []) as $allegato) {
+        foreach ($allegati as $allegato) {
             if (!$allegato) {
                 continue;
             }
@@ -262,7 +272,7 @@ class ChatController extends Controller
         $messaggio = new ChatMessage();
         $messaggio->thread_id = $thread->id;
         $messaggio->user_id = $authUser->id;
-        $messaggio->messaggio = $request->input('messaggio');
+        $messaggio->messaggio = $testoMessaggio;
         $messaggio->priority = $request->integer('priority', 0);
         if ($this->haReactionsTable() && $request->filled('reply_to_id')) {
             $messaggio->reply_to_id = $request->input('reply_to_id');
@@ -270,7 +280,6 @@ class ChatController extends Controller
         $messaggio->save();
         $messaggio->load('mittente');
 
-        $allegati = $request->file('allegati', []);
         foreach ($allegati as $allegato) {
             if (!$allegato) {
                 continue;

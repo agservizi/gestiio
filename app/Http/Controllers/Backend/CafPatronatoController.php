@@ -510,8 +510,68 @@ class CafPatronatoController extends Controller
             }
         }
 
-        return response()->download(Storage::path($record->path_filename), $record->filename_originale);
+        $path = (string) $record->path_filename;
+        abort_if($path === '', 404, 'Questo allegato non esiste');
 
+        if (!Storage::exists($path)) {
+            Log::warning('CAF allegato mancante su disco', [
+                'contratto_id' => (int) $contrattoId,
+                'allegato_id' => (int) $record->id,
+                'path_filename' => $path,
+                'user_id' => (int) Auth::id(),
+            ]);
+            abort(404, 'Allegato non disponibile');
+        }
+
+        return response()->download(Storage::path($path), $record->filename_originale);
+
+    }
+
+    public function allegatiOrfani(Request $request)
+    {
+        abort_unless($this->currentUser()->hasPermissionTo('admin'), 403);
+
+        $perPage = max(10, min(200, (int) $request->input('per_page', 50)));
+        $missingIds = [];
+
+        AllegatoCafPatronato::query()
+            ->whereNotNull('path_filename')
+            ->where('path_filename', '!=', '')
+            ->orderBy('id')
+            ->select(['id', 'path_filename'])
+            ->chunkById(500, function ($rows) use (&$missingIds) {
+                foreach ($rows as $row) {
+                    $path = trim((string) $row->path_filename);
+                    if ($path === '' || !Storage::exists($path)) {
+                        $missingIds[] = (int) $row->id;
+                    }
+                }
+            });
+
+        $records = AllegatoCafPatronato::query()
+            ->leftJoin('caf_patronato as pratica', 'pratica.id', '=', 'caf_patronato_allegati.caf_patronato_id')
+            ->whereIn('caf_patronato_allegati.id', $missingIds ?: [0])
+            ->orderByDesc('caf_patronato_allegati.id')
+            ->paginate($perPage, [
+                'caf_patronato_allegati.id',
+                'caf_patronato_allegati.caf_patronato_id',
+                'caf_patronato_allegati.filename_originale',
+                'caf_patronato_allegati.path_filename',
+                'caf_patronato_allegati.per_cliente',
+                'caf_patronato_allegati.created_at',
+                'pratica.nome as pratica_nome',
+                'pratica.cognome as pratica_cognome',
+                'pratica.codice_fiscale as pratica_codice_fiscale',
+            ]);
+
+        $records->appends($request->query());
+
+        return view('Backend.CafPatronato.allegatiOrfani', [
+            'titoloPagina' => 'Allegati CAF orfani',
+            'records' => $records,
+            'totaleOrfani' => count($missingIds),
+            'perPage' => $perPage,
+        ]);
     }
 
     public function downloadAllegatoCliente($contrattoId)
@@ -532,7 +592,20 @@ class CafPatronatoController extends Controller
             }
         }
 
-        return response()->download(Storage::path($record->path_filename), $record->filename_originale);
+        $path = (string) $record->path_filename;
+        abort_if($path === '', 404, 'Questo allegato non esiste');
+
+        if (!Storage::exists($path)) {
+            Log::warning('CAF allegato cliente mancante su disco', [
+                'contratto_id' => (int) $contrattoId,
+                'allegato_id' => (int) $record->id,
+                'path_filename' => $path,
+                'user_id' => (int) Auth::id(),
+            ]);
+            abort(404, 'Allegato non disponibile');
+        }
+
+        return response()->download(Storage::path($path), $record->filename_originale);
 
     }
 

@@ -52,6 +52,11 @@
                         class="d-md-none">+</span><span
                         class="d-none d-md-block">{{$testoNuovo}}</span></a>
         @endisset
+        @if(Auth::user()?->hasPermissionTo('admin'))
+            <a class="btn btn-sm btn-light-danger fw-bold ms-2" href="{{ action([\App\Http\Controllers\Backend\CafPatronatoController::class, 'allegatiOrfani']) }}">
+                Allegati orfani
+            </a>
+        @endif
     </div>
 @endsection
 @section('content')

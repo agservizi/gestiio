@@ -34,6 +34,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     //Caf patronato
     Route::get('/caf-patronato/{contrattoId}/allegato/{allegatoId}', [\App\Http\Controllers\Backend\CafPatronatoController::class, 'downloadAllegato']);
     Route::get('/caf-patronato-download/{contrattoId}', [\App\Http\Controllers\Backend\CafPatronatoController::class, 'downloadAllegatoCliente']);
+    Route::get('/caf-patronato-allegati-orfani', [\App\Http\Controllers\Backend\CafPatronatoController::class, 'allegatiOrfani']);
 
     Route::get('/caf-patronato/create/{servizio?}', [\App\Http\Controllers\Backend\CafPatronatoController::class, 'create']);
     Route::resource('/caf-patronato', \App\Http\Controllers\Backend\CafPatronatoController::class)->except(['create']);
