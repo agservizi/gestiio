@@ -123,6 +123,89 @@ class ContrattoEnergiaController extends Controller
         return response()->json(['ok' => true, 'message' => 'Segnalazione inviata in chat', 'thread_id' => $thread->id]);
     }
 
+    public function apriChat(Request $request, $id)
+    {
+        $contratto = ContrattoEnergia::find($id);
+        abort_if(!$contratto, 404, 'Questo contratto non esiste');
+
+        /** @var \App\Models\User $authUser */
+        $authUser = Auth::user();
+
+        // trova admin (preferisci id 2, altrimenti primo con permesso admin)
+        $admin = User::find(2);
+        if (!$admin) {
+            $admin = User::whereHas('permissions', function ($q) {
+                $q->where('name', 'admin');
+            })->first();
+        }
+        abort_if(!$admin, 404, 'Utente amministratore non trovato');
+
+        // trova o crea thread tra authUser e admin
+        $thread = ChatThread::query()
+            ->whereHas('partecipanti', function ($q) use ($authUser) {
+                $q->where('users.id', $authUser->id);
+            })
+            ->whereHas('partecipanti', function ($q) use ($admin) {
+                $q->where('users.id', $admin->id);
+            })
+            ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $admin) {
+                $q->whereNotIn('users.id', [$authUser->id, $admin->id]);
+            })
+            ->latest('id')
+            ->first();
+
+        if (!$thread) {
+            $thread = new ChatThread();
+            $thread->created_by = $authUser->id;
+            $thread->save();
+            $thread->partecipanti()->attach([
+                $authUser->id => ['last_read_at' => now()],
+                $admin->id => ['last_read_at' => null],
+            ]);
+        }
+
+        // crea messaggio con riferimento al contratto
+        $messaggio = new ChatMessage();
+        $messaggio->thread_id = $thread->id;
+        $messaggio->user_id = $authUser->id;
+        $messaggio->messaggio = "Segnalazione contratto #{$contratto->id} ({$contratto->codice_contratto}) da " . $authUser->nominativo();
+        $messaggio->save();
+        $messaggio->load('mittente');
+
+        // allega primo file del contratto, se presente
+        $allegato = AllegatoContrattoEnergia::where('contratto_energia_id', $contratto->id)->first();
+        if ($allegato) {
+            $attachment = new \App\Models\ChatMessageAttachment();
+            $attachment->message_id = $messaggio->id;
+            $attachment->filename_originale = $allegato->filename_originale;
+            $attachment->path_filename = ltrim($allegato->path_filename, '/');
+            $attachment->mime_type = $allegato->mime_type ?? 'application/octet-stream';
+            $attachment->dimensione_file = $allegato->dimensione_file;
+            $attachment->scan_status = 'clean';
+            $attachment->scan_note = 'Allegato contratto inviato in segnalazione';
+            $attachment->is_blocked = false;
+            $attachment->save();
+        }
+
+        $thread->touch();
+
+        broadcast(new ChatMessageSent($messaggio))->toOthers();
+
+        // notifica admin
+        $admin->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
+
+        SendChatWebPushNotification::dispatch($admin->id, [
+            'title' => $authUser->nominativo() . ' · Chat interna',
+            'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: 'Segnalazione in chat')), 120),
+            'url' => url('/backend/chat-interna?thread=' . $thread->id),
+            'thread_id' => (int) $thread->id,
+            'message_id' => (int) $messaggio->id,
+            'tag' => 'chat-thread-' . $thread->id,
+        ]);
+
+        return response()->json(['ok' => true, 'thread_id' => $thread->id]);
+    }
+
 
     /**
      * Display a listing of the resource.

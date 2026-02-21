@@ -100,11 +100,10 @@
                         </svg>
                     </a>
                 @endif
-                <a href="{{action([\App\Http\Controllers\Backend\ModalController::class,'show'],['segnala-chat-contratto-energia',$record->id])}}"
-                   class="btn btn-icon btn-sm btn-light btn-active-light-primary"
-                   data-target="kt_modal" data-toggle="modal-ajax"
-                   data-bs-toggle="tooltip" data-bs-placement="top" title="Segnala via chat"
-                >
+                <a href="#" class="btn btn-icon btn-sm btn-light btn-active-light-primary segnala-chat-btn"
+                   data-id="{{$record->id}}"
+                   data-url="{{url('/backend/contratto-energia/'.$record->id.'/apri-chat')}}"
+                   data-bs-toggle="tooltip" data-bs-placement="top" title="Segnala via chat">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chat-dots" viewBox="0 0 16 16">
                         <path d="M2 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1v2l3-2h5a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2z"/>
                         <path d="M5 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm3 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm3 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>

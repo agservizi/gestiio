@@ -174,6 +174,7 @@
 <script src="/assets_backend/js/scripts.bundle.js"></script>
 <script src="/assets_backend/js-miei/mieiScript.js?v=10"></script>
 <script src="/assets_backend/js-miei/html2canvas.min.js"></script>
+<script src="/assets_backend/js-miei/segnala-chat.js?v=1"></script>
 <!--end::Global Javascript Bundle-->
 @include('Backend._components.flashToast')
 @include('Backend.Chat._globalNotifications')

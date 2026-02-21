@@ -27,6 +27,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
 
     Route::resource('contratto-energia', \App\Http\Controllers\Backend\ContrattoEnergiaController::class)->except(['create']);
     Route::post('/contratto-energia/{id}/segnala-chat', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'segnalaChat']);
+    Route::post('/contratto-energia/{id}/apri-chat', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'apriChat']);
     //Route::post('/contratto-energia/{id}/azione/{azione}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'azioni']);
 
 
