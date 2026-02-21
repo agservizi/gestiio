@@ -122,6 +122,16 @@ class ModalController extends Controller
                     'titoloPagina' => 'Allegati contratto Energia',
                 ]);
 
+            case 'segnala-chat-contratto-energia':
+                $record = ContrattoEnergia::find($id);
+                abort_if(!$record, 404, 'Questo contratto non esiste');
+                return view('Backend.ContrattoEnergia.modalSegnalaChat', [
+                    'record' => $record,
+                    'id' => $id,
+                    'titoloPagina' => 'Segnala contratto in chat',
+                    'controller' => \App\Http\Controllers\Backend\ContrattoEnergiaController::class,
+                ]);
+
             case 'modal-allegati-attivazione':
                 $record = AttivazioneSim::with('allegati')->find($id);
                 return view('Backend.AttivazioneSim.modalDownload', [
@@ -152,7 +162,7 @@ class ModalController extends Controller
 
             case 'vedi-notifica':
                 $record = Notifica::find($id);
-                $visto = NotificaLettura::firstOrNew(['notifica_id' => $id, 'user_id' => \Auth::id()]);
+                $visto = NotificaLettura::firstOrNew(['notifica_id' => $id, 'user_id' => Auth::id()]);
                 $visto->save();
 
                 return view('Backend.Notifica.modalShow', [
@@ -169,7 +179,9 @@ class ModalController extends Controller
                     $statiQb->where('id', '<>', 'bozza');
                 }
 
-                if (Auth::user()->hasPermissionTo('supervisore')) {
+                /** @var \App\Models\User $authUser */
+                $authUser = Auth::user();
+                if ($authUser && method_exists($authUser, 'hasPermissionTo') && $authUser->hasPermissionTo('supervisore')) {
                     return view('Backend.ContrattoTelefonia.modalModificaStatoSupervisore', [
                         'record' => $record,
                         'titoloPagina' => 'Modifica stato contratto',
@@ -193,7 +205,9 @@ class ModalController extends Controller
                     $statiQb->where('id', '<>', 'bozza');
                 }
 
-                if (Auth::user()->hasPermissionTo('supervisore')) {
+                /** @var \App\Models\User $authUser */
+                $authUser = Auth::user();
+                if ($authUser && method_exists($authUser, 'hasPermissionTo') && $authUser->hasPermissionTo('supervisore')) {
                     return view('Backend.ContrattoEnergia.modalModificaStatoSupervisore', [
                         'record' => $record,
                         'titoloPagina' => 'Modifica stato contratto energia',

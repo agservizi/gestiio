@@ -31,6 +31,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
+use App\Models\ChatThread;
+use App\Models\ChatMessage;
+use App\Models\ChatThreadUser;
+use App\Events\ChatMessageSent;
+use App\Jobs\SendChatWebPushNotification;
 
 class ContrattoEnergiaController extends Controller
 {
@@ -42,6 +47,80 @@ class ContrattoEnergiaController extends Controller
         $user = Auth::user();
 
         return $user;
+    }
+
+    public function segnalaChat(Request $request, $id)
+    {
+        $request->validate([
+            'messaggio' => ['required', 'string', 'max:3000'],
+        ]);
+
+        $contratto = ContrattoEnergia::find($id);
+        abort_if(!$contratto, 404, 'Questo contratto non esiste');
+
+        /** @var \App\Models\User $authUser */
+        $authUser = Auth::user();
+
+        // Trova admin di riferimento: preferisci l'utente con id 2, altrimenti cerca un utente con permesso 'admin'
+        $admin = User::find(2);
+        if (!$admin) {
+            $admin = User::whereHas('permissions', function ($q) {
+                $q->where('name', 'admin');
+            })->first();
+        }
+        abort_if(!$admin, 404, 'Utente amministratore non trovato');
+
+        // Cerca thread esistente tra i due utenti
+        $thread = ChatThread::query()
+            ->whereHas('partecipanti', function ($q) use ($authUser) {
+                $q->where('users.id', $authUser->id);
+            })
+            ->whereHas('partecipanti', function ($q) use ($admin) {
+                $q->where('users.id', $admin->id);
+            })
+            ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $admin) {
+                $q->whereNotIn('users.id', [$authUser->id, $admin->id]);
+            })
+            ->latest('id')
+            ->first();
+
+        if (!$thread) {
+            $thread = new ChatThread();
+            $thread->created_by = $authUser->id;
+            $thread->save();
+            $thread->partecipanti()->attach([
+                $authUser->id => ['last_read_at' => now()],
+                $admin->id => ['last_read_at' => null],
+            ]);
+        }
+
+        $testo = trim((string)$request->input('messaggio'));
+        $messaggio = new ChatMessage();
+        $messaggio->thread_id = $thread->id;
+        $messaggio->user_id = $authUser->id;
+        $messaggio->messaggio = "Segnalazione contratto #{$contratto->id} ({$contratto->codice_contratto}) - " . $authUser->nominativo() . "\n\n" . $testo;
+        $messaggio->save();
+        $messaggio->load('mittente');
+
+        $thread->touch();
+
+        broadcast(new ChatMessageSent($messaggio))->toOthers();
+
+        // Notifica via email se primo messaggio non letto e push
+        $admin->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
+
+        SendChatWebPushNotification::dispatch($admin->id, [
+            'title' => $authUser->nominativo() . ' · Chat interna',
+            'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: 'Segnalazione in chat')), 120),
+            'url' => url('/backend/chat-interna?thread=' . $thread->id),
+            'thread_id' => (int) $thread->id,
+            'message_id' => (int) $messaggio->id,
+            'tag' => 'chat-thread-' . $thread->id,
+            'icon' => url('/images/logo_small_icon_only.png'),
+            'badge' => url('/images/logo_small_icon_only.png'),
+        ]);
+
+        return response()->json(['ok' => true, 'message' => 'Segnalazione inviata in chat', 'thread_id' => $thread->id]);
     }
 
 
