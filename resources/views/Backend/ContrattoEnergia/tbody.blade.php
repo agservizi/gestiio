@@ -103,8 +103,7 @@
                 <a href="javascript:void(0)" class="btn btn-icon btn-sm btn-light btn-active-light-primary segnala-chat-btn"
                    data-id="{{$record->id}}"
                    data-url="{{url('/backend/contratto-energia/'.$record->id.'/apri-chat')}}"
-                   data-bs-toggle="tooltip" data-bs-placement="top" title="Segnala via chat"
-                   onclick="(function(e){e.preventDefault();var btn=this;var url=btn.dataset.url;var meta=document.querySelector('meta[name=\'_token\']')||document.querySelector('meta[name=\'csrf-token\']');var token=meta?meta.content:'';fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':token},credentials:'same-origin',body:JSON.stringify({})}).then(function(r){return r.json();}).then(function(d){if(d.thread_id){window.location.href='/backend/chat-interna?thread='+d.thread_id;}else if(d.success&&d.redirect){window.location.href=d.redirect;}else if(d.message){alert(d.message);}}).catch(function(){alert('Errore durante l\'apertura della chat');});})(event);">
+                   data-bs-toggle="tooltip" data-bs-placement="top" title="Segnala via chat">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chat-dots" viewBox="0 0 16 16">
                         <path d="M2 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1v2l3-2h5a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2z"/>
                         <path d="M5 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm3 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm3 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>
