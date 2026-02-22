@@ -89,11 +89,16 @@ class ModalController extends Controller
                 ]);
 
             case 'upload-documento':
+                $authUser = Auth::user();
+                $canUploadDocumenti = $this->userHasAnyPermission($authUser, ['admin', 'agente', 'operatore', 'supervisore']);
+                abort_unless($canUploadDocumenti, 403);
                 $record = CartellaFiles::find($id);
                 abort_if(!$record, 404);
+                $canDeleteFiles = $this->userHasAnyPermission($authUser, ['admin', 'supervisore']);
                 return view('Backend.CartellaFiles.modalDropzone', [
                     'id' => $id,
-                    'titoloPagina' => 'Carica file in ' . $record->nome
+                    'titoloPagina' => 'Carica file in ' . $record->nome,
+                    'canDeleteFiles' => $canDeleteFiles,
                 ]);
 
             case 'dettaglio_produzione':
@@ -300,5 +305,26 @@ class ModalController extends Controller
             default:
                 return 'Voce non gestita:' . $modal;
         }
+    }
+
+    protected function userHasAnyPermission($user, array $permissions): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if (method_exists($user, 'hasAnyPermission')) {
+            return (bool) call_user_func([$user, 'hasAnyPermission'], $permissions);
+        }
+
+        if (method_exists($user, 'can')) {
+            foreach ($permissions as $permission) {
+                if ($user->can($permission)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class File extends Model
@@ -11,6 +12,10 @@ class File extends Model
     use HasFactory;
 
     protected $table = 'files';
+
+    protected $casts = [
+        'tags_documentali' => 'array',
+    ];
 
     /*
     |--------------------------------------------------------------------------
@@ -50,7 +55,7 @@ class File extends Model
 
         static::deleting(function ($model) {
             if (!Str::of($model->path_filename)->is('test*')) {
-                \Storage::delete($model->path_filename);
+                Storage::delete($model->path_filename);
             }
         });
     }

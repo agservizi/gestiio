@@ -1,5 +1,16 @@
 @extends('Backend._components.modal')
 @section('content')
+    <div class="row g-3 mb-6">
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">Categoria documentale</label>
+            <input type="text" id="categoria_documentale" class="form-control form-control-sm" placeholder="Es. Contratti, Fatture, Privacy"/>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">Tag (separati da virgola)</label>
+            <input type="text" id="tags_documentali" class="form-control form-control-sm" placeholder="es. urgente, cliente, firmato"/>
+        </div>
+    </div>
+
     <div class="fv-row">
         <div class="dropzone" id="kt_dropzonejs_example_1">
             <div class="dz-message needsclick">
@@ -17,12 +28,13 @@
     </div>
 
     <script>
+        var canDeleteFiles = @json($canDeleteFiles ?? false);
         var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
             url: "{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'upload'],$id)}}", // Set the url for your upload script location
             paramName: "file", // The name that will be used to transfer the file
             maxFiles: 10,
             maxFilesize: 50, // MB
-            addRemoveLinks: true,
+            addRemoveLinks: canDeleteFiles,
             //acceptedFiles: "image/*",
             headers: {
                 'X-CSRF-TOKEN': "{{ csrf_token() }}"
@@ -31,6 +43,8 @@
                 thisDropzone = this;
                 this.on("sending", function (file, xhr, formData) {
                     formData.append("uid", $('#uid').val());
+                    formData.append("categoria_documentale", $('#categoria_documentale').val());
+                    formData.append("tags_documentali", $('#tags_documentali').val());
                     console.log(formData)
                 });
 
@@ -53,6 +67,9 @@
 
             },
             removedfile: function (file) {
+                if (!canDeleteFiles) {
+                    return;
+                }
                 console.dir(file);
                 var name = file.filename;
                 console.log(name);

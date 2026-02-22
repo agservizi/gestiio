@@ -83,6 +83,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('documento-upload/{cartellaId}', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'upload']);
     Route::delete('documento-cancella', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'cancellaFile']);
     Route::get('documento-download/{id}', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'download']);
+    Route::post('documento-download-multiplo', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'downloadMultiplo']);
 
     Route::get('/modal/{modal}/{id?}', [\App\Http\Controllers\Backend\ModalController::class, 'show']);
 
