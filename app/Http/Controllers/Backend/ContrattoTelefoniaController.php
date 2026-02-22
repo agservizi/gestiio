@@ -279,6 +279,8 @@ class ContrattoTelefoniaController extends Controller
         $record->data = today();
 
 
+        $record->categoria_pratica = $this->determinaCategoriaPratica($record, $request);
+
         return view('Backend.ContrattoTelefonia.edit', [
             'record' => $record,
             'titoloPagina' => 'Nuovo ' . ContrattoTelefonia::NOME_SINGOLARE,
@@ -286,7 +288,8 @@ class ContrattoTelefoniaController extends Controller
             'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco ' . ContrattoTelefonia::NOME_PLURALE],
             'recordProdotto' => $prodotto,
             'tipoProdotto' => $tipoContratto->prodotto,
-            'creaContratto' => !$tipoContratto->crea_in_bozza
+            'creaContratto' => !$tipoContratto->crea_in_bozza,
+            'categoriaPratica' => $record->categoria_pratica,
         ]);
     }
 
@@ -390,6 +393,8 @@ class ContrattoTelefoniaController extends Controller
 
         }
 
+        $record->categoria_pratica = $this->determinaCategoriaPratica($record, request());
+
         return view('Backend.ContrattoTelefonia.edit', [
             'record' => $record,
             'controller' => ContrattoTelefoniaController::class,
@@ -398,7 +403,8 @@ class ContrattoTelefoniaController extends Controller
             'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco ' . ContrattoTelefonia::NOME_PLURALE],
             'recordProdotto' => $recordProdotto,
             'tipoProdotto' => $record->tipoContratto->prodotto,
-            'creaContratto' => true
+            'creaContratto' => true,
+            'categoriaPratica' => $record->categoria_pratica,
 
         ]);
     }
@@ -1376,6 +1382,8 @@ class ContrattoTelefoniaController extends Controller
 
     protected function rules($request, $id = null)
     {
+        $categoriaPratica = $request->input('categoria_pratica');
+        $isBusiness = $categoriaPratica === 'business';
 
         $rules = [
             'data' => ['required', new DataItalianaRule()],
@@ -1383,10 +1391,13 @@ class ContrattoTelefoniaController extends Controller
             'codice_contratto' => ['nullable', 'max:255'],
             'agente_id' => ['required'],
             'tipo_contratto_id' => ['required'],
-            'codice_fiscale' => ['required', new CodiceFiscaleRule()],
-            'ragione_sociale' => ['nullable', 'max:255'],
-            'nome' => ['required', 'max:255'],
-            'cognome' => ['required', 'max:255'],
+            'categoria_pratica' => ['required', 'in:consumer,business'],
+            'codice_fiscale' => $isBusiness ? ['nullable', new CodiceFiscaleRule()] : ['required', new CodiceFiscaleRule()],
+            'ragione_sociale' => $isBusiness ? ['required', 'max:255'] : ['nullable', 'max:255'],
+            'partita_iva' => $isBusiness ? ['required', 'max:30'] : ['nullable', 'max:30'],
+            'natura_giuridica' => $isBusiness ? ['required', 'in:impresa-individuale,societa-capitale,societa-persone'] : ['nullable'],
+            'nome' => $isBusiness ? ['nullable', 'max:255'] : ['required', 'max:255'],
+            'cognome' => $isBusiness ? ['nullable', 'max:255'] : ['required', 'max:255'],
             'email' => ['required', 'email', 'max:255', new EmailContrattoRule($request->input('tipo_contratto_id'), $id)],
             'telefono' => ['required', new \App\Rules\TelefonoRule(), new TelefonoContrattoRule($request->input('tipo_contratto_id'), $id)],
             'indirizzo' => ['required', 'max:255'],
@@ -1397,6 +1408,25 @@ class ContrattoTelefoniaController extends Controller
         ];
 
         return $rules;
+    }
+
+    protected function determinaCategoriaPratica(ContrattoTelefonia $record, Request $request): string
+    {
+        $oldCategoria = old('categoria_pratica');
+        if (in_array($oldCategoria, ['consumer', 'business'], true)) {
+            return $oldCategoria;
+        }
+
+        $categoriaDaRequest = $request->input('categoria_pratica');
+        if (in_array($categoriaDaRequest, ['consumer', 'business'], true)) {
+            return $categoriaDaRequest;
+        }
+
+        if ($record->ragione_sociale || $record->partita_iva || $record->natura_giuridica) {
+            return 'business';
+        }
+
+        return 'consumer';
     }
 
     protected function tipoFile($estensione)

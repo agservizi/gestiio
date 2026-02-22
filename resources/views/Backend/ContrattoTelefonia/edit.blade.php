@@ -94,29 +94,77 @@
                     <h4 class="fw-bold mb-1">Dati generali</h4>
                     <div class="text-muted fs-7">Anagrafica cliente e riferimenti pagamento</div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase'])
+                <input type="hidden" name="categoria_pratica" id="categoria_pratica"
+                       value="{{ old('categoria_pratica', $categoriaPratica ?? 'consumer') }}">
+
+                <div class="mb-6">
+                    <label class="fw-bold fs-6 mb-3 d-block required">Categoria pratica</label>
+                    <ul class="nav nav-pills gap-3" id="categoria-pratica-tabs">
+                        <li class="nav-item">
+                            <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
+                                    data-categoria="consumer">
+                                <i class="bi bi-person-circle me-1"></i>Consumer
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
+                                    data-categoria="business">
+                                <i class="bi bi-building me-1"></i>Business
+                            </button>
+                        </li>
+                    </ul>
+                    @error('categoria_pratica')
+                    <div class="text-danger fs-7 mt-2">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="js-panel-categoria js-panel-consumer">
+                    <div class="notice d-flex bg-light-info rounded border-info border border-dashed p-4 mb-5">
+                        <span class="me-3 text-info"><i class="bi bi-info-circle fs-3"></i></span>
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold text-gray-800">Dati Persona Fisica (Consumer)</span>
+                            <span class="text-muted fs-7">Compila anagrafica privata: codice fiscale, nome e cognome.</span>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputSelect2KeyValue',['campo'=>'natura_giuridica','testo'=>'Natura giuridica','array'=>['impresa-individuale'=>'Ditta individuale','societa-capitale'=>'Società capitale','societa-persone'=>'Società di persone']])
+                    <div class="row">
+                        <div class="col-md-6 js-consumer-field">
+                            @include('Backend._inputs.inputText',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase'])
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 js-consumer-field">
+                            @include('Backend._inputs.inputText',['campo'=>'nome','testo'=>'Nome','required'=>true,'autocomplete'=>'off'])
+                        </div>
+                        <div class="col-md-6 js-consumer-field">
+                            @include('Backend._inputs.inputText',['campo'=>'cognome','testo'=>'Cognome','required'=>true,'autocomplete'=>'off'])
+                        </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'nome','testo'=>'Nome','required'=>true,'autocomplete'=>'off'])
+
+                <div class="js-panel-categoria js-panel-business">
+                    <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-4 mb-5">
+                        <span class="me-3 text-warning"><i class="bi bi-briefcase fs-3"></i></span>
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold text-gray-800">Dati Azienda (Business)</span>
+                            <span class="text-muted fs-7">Compila anagrafica aziendale: natura giuridica, ragione sociale e partita IVA.</span>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'cognome','testo'=>'Cognome','required'=>true,'autocomplete'=>'off'])
+                    <div class="row">
+                        <div class="col-md-6 js-business-field">
+                            @include('Backend._inputs.inputSelect2KeyValue',['campo'=>'natura_giuridica','testo'=>'Natura giuridica','array'=>['impresa-individuale'=>'Ditta individuale','societa-capitale'=>'Società capitale','societa-persone'=>'Società di persone']])
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 js-business-field">
+                            @include('Backend._inputs.inputText',['campo'=>'ragione_sociale','testo'=>'Ragione sociale','required'=>false,'autocomplete'=>'off'])
+                        </div>
+                        <div class="col-md-6 js-business-field">
+                            @include('Backend._inputs.inputText',['campo'=>'partita_iva','testo'=>'Partita iva','required'=>false,'autocomplete'=>'off'])
+                        </div>
                     </div>
                 </div>
+
                 <div class="row">
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'ragione_sociale','testo'=>'Ragione sociale','required'=>false,'autocomplete'=>'off'])
-                    </div>
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'partita_iva','testo'=>'Partita iva','required'=>false,'autocomplete'=>'off'])
-                    </div>
                     <div class="col-md-6">
                         @include('Backend._inputs.inputTextButton',['campo'=>'iban','testo'=>'Iban','testoButton'=>'Genera','classeButton'=>'btn-light-primary'])
                     </div>
@@ -274,6 +322,27 @@
             eliminaHandler('Questa voce verrà eliminata definitivamente');
 
             mostraNascondiPermesso($('#cittadinanza').val());
+
+            function toggleCategoriaPratica(categoria) {
+                var isBusiness = categoria === 'business';
+
+                $('.js-panel-business').toggle(isBusiness);
+                $('.js-panel-consumer').toggle(!isBusiness);
+
+                $('.js-categoria-tab').removeClass('btn-primary').addClass('btn-light-primary');
+                $('.js-categoria-tab[data-categoria="' + categoria + '"]').removeClass('btn-light-primary').addClass('btn-primary');
+
+                $('#categoria_pratica').val(categoria);
+
+                $('#ragione_sociale, #partita_iva, #natura_giuridica').prop('required', isBusiness);
+                $('#codice_fiscale, #nome, #cognome').prop('required', !isBusiness);
+            }
+
+            toggleCategoriaPratica($('#categoria_pratica').val() || '{{ old('categoria_pratica', $categoriaPratica ?? 'consumer') }}');
+
+            $('.js-categoria-tab').on('click', function () {
+                toggleCategoriaPratica($(this).data('categoria'));
+            });
 
             var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
                 url: "{{action([$controller,'uploadAllegato'])}}", // Set the url for your upload script location
