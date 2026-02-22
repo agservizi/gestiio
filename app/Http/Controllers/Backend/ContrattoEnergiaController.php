@@ -95,13 +95,13 @@ class ContrattoEnergiaController extends Controller
 
         // Cerca thread esistente tra i due utenti
         $thread = ChatThread::query()
-                ->whereHas('partecipanti', function ($q) use ($authUser) {
+            ->whereHas('partecipanti', function ($q) use ($authUser) {
                 $q->where('users.id', $authUser->id);
             })
-                ->whereHas('partecipanti', function ($q) use ($recipient) {
+            ->whereHas('partecipanti', function ($q) use ($recipient) {
                 $q->where('users.id', $recipient->id);
             })
-                ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $recipient) {
+            ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $recipient) {
                 $q->whereNotIn('users.id', [$authUser->id, $recipient->id]);
             })
             ->latest('id')

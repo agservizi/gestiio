@@ -12,7 +12,8 @@ use App\Rules\PartitaIvaRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Cliente;
-use DB;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 
 class ClienteController extends Controller
@@ -23,7 +24,7 @@ class ClienteController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return mixed
      */
     public function index(Request $request)
     {
@@ -41,7 +42,9 @@ class ClienteController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $currentUser = Auth::user();
+        /** @var User|null $currentUser */
+        $orderByUser = $currentUser ? $currentUser->getExtra($nomeClasse) : null;
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -52,8 +55,8 @@ class ClienteController extends Controller
             $orderBy = 'recente';
         }
 
-        if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+        if ($currentUser && $orderByUser != $orderByString) {
+            $currentUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -67,7 +70,7 @@ class ClienteController extends Controller
                 'html' => base64_encode(view('Backend.Cliente.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -259,7 +262,7 @@ class ClienteController extends Controller
                     $user->cognome = $cliente->cognome;
                     $user->email = $cliente->email;
                     $password = rand(11111111, 99999999);
-                    $user->password = \Hash::make($password);
+                    $user->password = Hash::make($password);
                     $user->telefono = $cliente->telefono;
                     $user->save();
                     $cliente->user_id = $user->id;
@@ -286,7 +289,7 @@ class ClienteController extends Controller
 
                 $user = User::find($cliente->user_id);
                 $password = rand(11111111, 99999999);
-                $user->password = \Hash::make($password);
+                $user->password = Hash::make($password);
                 $user->save();
 
                 try {
@@ -412,7 +415,7 @@ class ClienteController extends Controller
 
     protected function tabContrattiTelefoniaRecords($id, $tab)
     {
-        return \App\Models\ContrattoTelefonia::query()
+        $qb = \App\Models\ContrattoTelefonia::query()
             ->whereRelation('cliente', 'id', $id)
             ->with(['comune' => function ($q) {
                 $q->select('id', 'comune', 'targa');
@@ -430,25 +433,35 @@ class ClienteController extends Controller
                 $q->select('id', 'alias');
             }])
             ->withCount('allegati')
-            ->latest('id')
-            ->paginate()->withPath(action([ClienteController::class, 'tab'], ['id' => $id, 'tab' => $tab]));
+            ->latest('id');
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $paginator */
+        $paginator = $qb->paginate();
+        $paginator->withPath(action([ClienteController::class, 'tab'], ['id' => $id, 'tab' => $tab]));
+        return $paginator;
     }
 
     protected function determinaPuoModificare()
     {
-        return Auth::user()->hasAnyPermission(['admin', 'supervisore']);
+        /** @var User $user */
+        $user = Auth::user();
+        return $user->hasAnyPermission(['admin', 'supervisore']);
 
     }
 
     protected function determinaPuoCambiareStato()
     {
-        return $this->determinaPuoModificare() || Auth::user()->hasPermissionTo('supervisore');
+        /** @var User $user */
+        $user = Auth::user();
+        return $this->determinaPuoModificare() || $user->hasPermissionTo('supervisore');
 
     }
 
     protected function determinaPuoCreare()
     {
-        return Auth::user()->hasAnyPermission(['admin', 'agente']);
+        /** @var User $user */
+        $user = Auth::user();
+        return $user->hasAnyPermission(['admin', 'agente']);
 
     }
 
