@@ -351,12 +351,14 @@ class VisuraController extends Controller
 
     protected function denominazioniRicercaAzienda(string $input): array
     {
-        $clean = strtoupper(trim($input));
-        $clean = preg_replace('/\s+/', ' ', $clean) ?: $clean;
+        $original = trim($input);
+        $original = preg_replace('/\s+/', ' ', $original) ?: $original;
+
+        $clean = strtoupper($original);
         $alnum = preg_replace('/[^A-Z0-9\s]/', ' ', $clean) ?: $clean;
         $alnum = preg_replace('/\s+/', ' ', trim($alnum)) ?: $alnum;
 
-        $variants = [$clean, $alnum];
+        $variants = [$original, $clean, $alnum];
         $words = array_values(array_filter(explode(' ', $alnum)));
         if (count($words) > 3) {
             $variants[] = implode(' ', array_slice($words, 0, 3));
