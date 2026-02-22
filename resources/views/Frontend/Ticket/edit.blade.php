@@ -8,7 +8,7 @@
     <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
         @csrf
         @method($record->id?'PATCH':'POST')
-        @php($uid=old('uid',\Illuminate\Support\Str::ulid()))
+        @php($uid=old('uid',$uploadUid ?? \Illuminate\Support\Str::ulid()))
         <input type="hidden" name="uid" id="uid" value="{{$uid}}">
 
         <div class="row">

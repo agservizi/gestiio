@@ -22,7 +22,11 @@
             <!--begin::Content-->
             <div id="kt_help_scroll" class="hover-scroll-overlay-y" data-kt-scroll="true" data-kt-scroll-height="auto" data-kt-scroll-wrappers="#kt_help_body"
                  data-kt-scroll-dependencies="#kt_help_header" data-kt-scroll-offset="5px">
-                @foreach(\App\Models\Ticket::where('user_id',Auth::id())->get() as $record)
+                @php($records = $ticketsRecenti ?? collect())
+                @if($records->count() === 0)
+                    <div class="alert alert-info">Nessun ticket presente.</div>
+                @endif
+                @foreach($records as $record)
 
                     <!--begin::Link-->
                     <div class="d-flex align-items-center mb-7">
@@ -35,9 +39,9 @@
                             <div class="d-flex flex-column me-2 me-lg-5">
                                 <!--begin::Title-->
                                 <span>{{$record->uidTicket()}}</span>
-                                <a href="https://preview.keenthemes.com/html/metronic/docs" class="text-dark text-hover-primary fw-bold fs-6 fs-lg-4 mb-1">{{$record->oggetto}}</a>
+                                <span class="text-dark fw-bold fs-6 fs-lg-4 mb-1">{{$record->oggetto}}</span>
                                 <!--end::Title-->
-                                <div class="fs-6 fs-lg-6">{!! $record->labelTipoTicket() !!}</div>
+                                <div class="fs-6 fs-lg-6">{{ \App\Models\Ticket::TIPI_TICKETS[$record->tipo] ?? $record->tipo }}</div>
                                 <!--begin::Description-->
                                 <div class="text-muted fw-semibold fs-7 fs-lg-6">Ultimo aggiornamento: {{$record->updated_at->format('d/m/Y')}}</div>
                                 <!--end::Description-->

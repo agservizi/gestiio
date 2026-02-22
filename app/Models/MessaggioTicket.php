@@ -36,5 +36,10 @@ class MessaggioTicket extends Model
         return $this->hasMany(AllegatoMessaggioTicket::class, 'messaggio_id', 'id');
     }
 
+    public function ticket()
+    {
+        return $this->belongsTo(Ticket::class, 'ticket_id', 'id');
+    }
+
 
 }

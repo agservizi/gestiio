@@ -22,6 +22,15 @@
             @endif
             <a href="{{ url('/logout') }}" class="btn btn-sm btn-danger">Logout</a>
         </div>
+        <div class="col-12 mb-2">
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge badge-light-primary">Ticket totali: {{ $ticketsTotali ?? 0 }}</span>
+                <span class="badge badge-light-warning">Ticket aperti: {{ $ticketsAperti ?? 0 }}</span>
+                <span class="badge badge-light-danger">Da leggere: {{ $ticketsDaLeggere ?? 0 }}</span>
+                <span class="badge badge-light-success">Contratti: {{ $contrattiTotali ?? 0 }}</span>
+                <span class="badge badge-light-info">Contratti in lavorazione: {{ $contrattiInLavorazione ?? 0 }}</span>
+            </div>
+        </div>
         <!--begin::Col-->
         <div class="col-xxl-5">
             <!--begin::Card-->
@@ -120,7 +129,7 @@
                 <div class="col-sm-6">
                     <!--begin::Card-->
 
-                    <a href="javascript:void(0)" data-kt-drawer-show="true" data-kt-drawer-target="#kt_engage_demos" class="card border-0 shadow-none min-h-200px mb-7"
+                    <a href="{{ url('/area-personale/contratti') }}" class="card border-0 shadow-none min-h-200px mb-7"
                        style="background-color: #35D29A">
                         <!--begin::Card body-->
                         <div class="card-body d-flex flex-column flex-center text-center">
@@ -148,16 +157,30 @@
                     <!--begin::Wrapper-->
                     <div class="d-flex flex-column align-items-center align-items-md-start flex-grow-1" data-theme="light">
                         <!--begin::Heading-->
-                        <h3 class="text-gray-900 fw-bolder text-uppercase mb-5">COMING SOON</h3>
+                        <h3 class="text-gray-900 fw-bolder text-uppercase mb-5">Attività recenti</h3>
                         <!--end::Heading-->
                         <!--begin::List-->
-                        <div class="text-gray-800 mb-5 text-center text-md-start">Explore our powerful
-                            <br/>documentation
+                        <div class="text-gray-800 mb-5 text-center text-md-start">
+                            @if(($ticketsRecenti ?? collect())->count() === 0)
+                                Nessuna attività ticket registrata.
+                            @else
+                                @foreach($ticketsRecenti->take(3) as $ticketRecente)
+                                    <div class="mb-2">
+                                        <span class="fw-bold">{{ $ticketRecente->uidTicket() }}</span> -
+                                        {{ $ticketRecente->oggetto }}
+                                        <span class="text-muted">({{ $ticketRecente->updated_at->format('d/m/Y H:i') }})</span>
+                                    </div>
+                                @endforeach
+                            @endif
                         </div>
                         <!--end::List-->
                         <!--begin::Link-->
-                        <a href="https://preview.keenthemes.com/html/metronic/docs" class="btn btn-hover-rise text-gray-900 text-uppercase fs-7 fw-bold"
-                           style="background-color: #EBEE51">Learn More</a>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ action([\App\Http\Controllers\Frontend\TicketController::class,'index']) }}" class="btn btn-hover-rise text-gray-900 text-uppercase fs-7 fw-bold"
+                               style="background-color: #EBEE51">Vedi tutti i ticket</a>
+                            <a href="{{ url('/dati-utente') }}" class="btn btn-hover-rise text-gray-900 text-uppercase fs-7 fw-bold"
+                               style="background-color: #EBEE51">Gestisci profilo</a>
+                        </div>
                         <!--end::Link-->
                     </div>
                     <!--end::Wrapper-->

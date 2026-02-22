@@ -23,23 +23,27 @@
             <div id="kt_explore_scroll" class="scroll-y me-n5 pe-5" data-kt-scroll="true" data-kt-scroll-height="auto" data-kt-scroll-wrappers="#kt_engage_demos_body"
                  data-kt-scroll-dependencies="#kt_engage_demos_header" data-kt-scroll-offset="5px">
                 <div class="mb-0">
-                    @foreach(\App\Models\ContrattoTelefonia::DelCliente()->get() as $record)
+                    @php($records = $contrattiRecenti ?? collect())
+                    @if($records->count() === 0)
+                        <div class="alert alert-info">Nessun contratto disponibile.</div>
+                    @endif
+                    @foreach($records as $record)
                         <div class="rounded border border-dashed border-gray-300 py-4 px-4 mb-5">
                             <div class="d-flex flex-stack">
                                 <div class="d-flex flex-column">
                                     <div class="d-flex align-items-center mb-1">
                                         <div class="fs-6 fw-semibold fw-semibold mb-0 me-1"
-                                             style="color: {{$record->tipoContratto->gestore->colore_hex}};">{{$record->tipoContratto->nome}}</div>
+                                             style="color: {{ $record->tipoContratto?->gestore?->colore_hex ?? '#3F4254' }};">{{ $record->tipoContratto?->nome ?? '-' }}</div>
                                         @if($record->citta)
                                             <i class="text-gray-400 fas fa-location-dot ms-1 fs-7"
                                                data-bs-toggle="popover" data-bs-custom-class="popover-inverse"
                                                data-bs-trigger="hover" data-bs-placement="top" data-bs-content="{{$record->indirizzo.' - '.$record->comune->comuneConTarga()}}"></i>
                                         @endif
                                     </div>
-                                    <div class="fs-7 text-muted">Data inserimento: {{$record->data->format('d/m/Y')}}</div>
+                                    <div class="fs-7 text-muted">Data inserimento: {{ optional($record->data)->format('d/m/Y') ?: '-' }}</div>
                                 </div>
                                 <div class="text-nowrap">
-                                    {!! $record->esito->labelStato() !!}
+                                    {!! $record->esito?->labelStato() !!}
                                 </div>
                             </div>
                         </div>

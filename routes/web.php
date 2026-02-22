@@ -44,11 +44,12 @@ Route::get('/pagina/{pagina}', [\App\Http\Controllers\PagineController::class, '
 Route::group(['middleware' => ['auth']], function () {
 
     Route::get('area-personale', [\App\Http\Controllers\Frontend\AreaUtenteController::class, 'show']);
+    Route::get('area-personale/contratti', [\App\Http\Controllers\Frontend\ContrattoController::class, 'index']);
     Route::get('ticket/{messaggioId}/allegato/{allegatoId}', [\App\Http\Controllers\Frontend\TicketController::class, 'downloadAllegato']);
 
     Route::resource('ticket', \App\Http\Controllers\Frontend\TicketController::class)->only(['index', 'create', 'show', 'store', 'update', 'edit']);
-    Route::post('/allegato-ticket', [\App\Http\Controllers\Frontend\TicketController::class, 'uploadAllegato']);
-    Route::delete('/allegato-ticket', [\App\Http\Controllers\Frontend\TicketController::class, 'deleteAllegato']);
+    Route::post('/allegato-ticket', [\App\Http\Controllers\Frontend\TicketController::class, 'uploadAllegato'])->middleware('throttle:30,1');
+    Route::delete('/allegato-ticket', [\App\Http\Controllers\Frontend\TicketController::class, 'deleteAllegato'])->middleware('throttle:60,1');
 
     Route::get('select2', [\App\Http\Controllers\Frontend\Select2::class, 'response']);
 
@@ -77,7 +78,6 @@ Route::get('/stop-impersona', function () {
 if (env('APP_ENV') == 'local') {
     Route::get('login-id/{id}', [\App\Http\Controllers\LogOut::class, 'loginId']);
 }
-
 
 
 

@@ -161,15 +161,15 @@
         </button>
 
         <!--begin::Demos drawer toggle-->
-        <button id="kt_engage_demos_toggle" class="engage-demos-toggle engage-btn btn shadow-sm fs-6 px-4 rounded-top-0" title="I tuoi contratti" data-bs-toggle="tooltip"
-                data-bs-placement="left" data-bs-dismiss="click" data-bs-trigger="hover">
+        <a href="{{ url('/area-personale/contratti') }}" class="engage-demos-toggle engage-btn btn shadow-sm fs-6 px-4 rounded-top-0"
+           title="I tuoi contratti" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-dismiss="click" data-bs-trigger="hover">
             <span id="kt_engage_demos_label">Contratti</span>
-        </button>
+        </a>
         <!--end::Demos drawer toggle-->
         <!--begin::Help drawer toggle-->
-        <button id="kt_help_toggle" class="engage-help-toggle btn engage-btn shadow-sm px-5 rounded-top-0" title="I tuoi tickets" data-bs-toggle="tooltip" data-bs-placement="left"
-                data-bs-dismiss="click" data-bs-trigger="hover">Tickets
-        </button>
+        <a href="{{ action([\App\Http\Controllers\Frontend\TicketController::class,'index']) }}" class="engage-help-toggle btn engage-btn shadow-sm px-5 rounded-top-0"
+           title="I tuoi tickets" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-dismiss="click" data-bs-trigger="hover">Tickets
+        </a>
         <!--end::Help drawer toggle-->
     </div>
 @endif
