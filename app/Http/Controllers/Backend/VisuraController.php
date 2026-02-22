@@ -267,21 +267,19 @@ class VisuraController extends Controller
             'provincia_id' => ['nullable', 'integer'],
         ]);
 
-        $legacyRequest = new Request([
-            'ragione_sociale' => $request->input('denominazione'),
-            'provincia' => $request->input('provincia_id'),
-        ]);
+        [$rawItems, $lastMessage] = $this->eseguiRicercaAziendaConFallback(
+            (string) $request->input('denominazione'),
+            $request->input('provincia_id')
+        );
 
-        $service = new VisuraCameraleService();
-        $response = $service->impresa($legacyRequest);
-        if (!$response || !isset($response->data)) {
+        if (empty($rawItems)) {
             return [
                 'success' => false,
-                'message' => $service->message ?: 'Nessun risultato trovato',
+                'message' => $lastMessage ?: 'Nessun risultato trovato. Prova con una denominazione più breve.',
             ];
         }
 
-        $items = collect($response->data)
+        $items = collect($rawItems)
             ->map(function ($item) {
                 $arr = json_decode(json_encode($item), true) ?: [];
                 $partitaIva = $this->extractPartitaIvaFromAziendaResult($arr);
@@ -305,6 +303,69 @@ class VisuraController extends Controller
             'count' => $items->count(),
             'items' => $items,
         ];
+    }
+
+    protected function eseguiRicercaAziendaConFallback(string $denominazioneInput, $provinciaId): array
+    {
+        $service = new VisuraCameraleService();
+        $results = [];
+        $lastMessage = null;
+        $denominazioni = $this->denominazioniRicercaAzienda($denominazioneInput);
+        $province = [];
+        if ($provinciaId) {
+            $province[] = $provinciaId;
+        }
+        $province[] = null;
+
+        foreach ($denominazioni as $denominazione) {
+            foreach ($province as $provincia) {
+                $legacyRequest = new Request([
+                    'ragione_sociale' => $denominazione,
+                    'provincia' => $provincia,
+                ]);
+
+                $response = $service->impresa($legacyRequest);
+                if (!$response || !isset($response->data) || !is_iterable($response->data)) {
+                    $lastMessage = $service->message ?: $lastMessage;
+                    continue;
+                }
+
+                foreach ($response->data as $item) {
+                    $row = json_decode(json_encode($item), true) ?: [];
+                    $key = md5(strtolower(
+                        trim((string) ($row['partita_iva'] ?? $row['piva'] ?? $row['cf_piva_id'] ?? ''))
+                        . '|'
+                        . trim((string) ($row['denominazione'] ?? $row['ragione_sociale'] ?? ''))
+                    ));
+                    $results[$key] = $item;
+                }
+
+                if (!empty($results)) {
+                    return [array_values($results), $lastMessage];
+                }
+            }
+        }
+
+        return [[], $lastMessage];
+    }
+
+    protected function denominazioniRicercaAzienda(string $input): array
+    {
+        $clean = strtoupper(trim($input));
+        $clean = preg_replace('/\s+/', ' ', $clean) ?: $clean;
+        $alnum = preg_replace('/[^A-Z0-9\s]/', ' ', $clean) ?: $clean;
+        $alnum = preg_replace('/\s+/', ' ', trim($alnum)) ?: $alnum;
+
+        $variants = [$clean, $alnum];
+        $words = array_values(array_filter(explode(' ', $alnum)));
+        if (count($words) > 3) {
+            $variants[] = implode(' ', array_slice($words, 0, 3));
+        }
+        if (count($words) > 2) {
+            $variants[] = implode(' ', array_slice($words, 0, 2));
+        }
+
+        return array_values(array_unique(array_filter($variants)));
     }
 
     protected function extractPartitaIvaFromAziendaResult(array $data): string
