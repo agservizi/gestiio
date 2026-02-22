@@ -1,23 +1,66 @@
 @extends('Frontend._layout.main')
 @push('customCss')
     <style>
-        #kt_body.area-personale-no-scroll {
-            overflow: hidden;
-            overscroll-behavior-y: none;
-        }
+        @media (min-width: 1200px) {
+            #kt_body.area-personale-no-scroll {
+                overflow: hidden;
+                overscroll-behavior-y: none;
+            }
 
-        #kt_body.area-personale-no-scroll .page.launcher.sidebar-enabled {
-            min-height: 100vh;
-            overflow: hidden;
-        }
+            #kt_body.area-personale-no-scroll .page.launcher.sidebar-enabled {
+                min-height: 100vh;
+                overflow: hidden;
+            }
 
-        #kt_body.area-personale-no-scroll .d-flex.flex-column.flex-column-fluid.mb-5.mb-lg-10 {
-            margin-bottom: 0 !important;
+            #kt_body.area-personale-no-scroll .d-flex.flex-column.flex-column-fluid.mb-5.mb-lg-10 {
+                margin-bottom: 0 !important;
+            }
+
+            #kt_body.area-personale-no-scroll .area-personale-shell {
+                height: calc(100vh - 235px);
+            }
+
+            #kt_body.area-personale-no-scroll .area-personale-shell > [class*="col-"] {
+                display: flex;
+                flex-direction: column;
+            }
+
+            #kt_body.area-personale-no-scroll .area-card-stretch {
+                height: 100%;
+            }
+
+            #kt_body.area-personale-no-scroll .area-card-compact {
+                min-height: 150px !important;
+                margin-bottom: 1rem !important;
+            }
+
+            #kt_body.area-personale-no-scroll .area-hero-body {
+                padding-top: 1.25rem !important;
+                padding-bottom: 0 !important;
+            }
+
+            #kt_body.area-personale-no-scroll .area-hero-media {
+                height: clamp(90px, 15vh, 145px) !important;
+                margin-bottom: -0.5rem !important;
+            }
+
+            #kt_body.area-personale-no-scroll .area-feature-media {
+                height: 72px !important;
+                margin-bottom: 0.75rem !important;
+            }
+
+            #kt_body.area-personale-no-scroll .area-activity-media {
+                height: 110px !important;
+            }
+
+            #kt_body.area-personale-no-scroll .area-activity-card {
+                min-height: 170px !important;
+            }
         }
     </style>
 @endpush
 @section('content')
-    <div class="row g-7 w-xxl-850px">
+    <div class="row g-3 w-100 area-personale-shell">
         @php
             $currentUser = \Illuminate\Support\Facades\Auth::user();
             $isCurrentAdmin = $currentUser && ($currentUser->hasPermissionTo('admin') || $currentUser->hasRole('admin'));
@@ -52,11 +95,11 @@
             </div>
         </div>
         <!--begin::Col-->
-        <div class="col-xxl-5">
+        <div class="col-xxl-5 area-card-stretch">
             <!--begin::Card-->
-            <div class="card border-0 shadow-none h-lg-100" style="background-color: #A838FF">
+            <div class="card border-0 shadow-none h-100" style="background-color: #A838FF">
                 <!--begin::Card body-->
-                <div class="card-body d-flex flex-column flex-center pb-0 pt-15">
+                <div class="card-body d-flex flex-column flex-center area-hero-body">
                     <!--begin::Wrapper-->
                     <div class="px-10 mb-10">
                         <!--begin::Heading-->
@@ -113,7 +156,7 @@
                     </div>
                     <!--end::Wrapper-->
                     <!--begin::Illustrations-->
-                    <img class="mw-100 h-225px mx-auto mb-lg-n18" src="/assets_backend/media/illustrations/light-version/PNG/online-shop.png"/>
+                    <img class="mw-100 h-225px mx-auto mb-lg-n18 area-hero-media" src="/assets_backend/media/illustrations/light-version/PNG/online-shop.png"/>
                     <!--end::Illustrations-->
                 </div>
                 <!--end::Card body-->
@@ -122,19 +165,19 @@
         </div>
         <!--end::Col-->
         <!--begin::Col-->
-        <div class="col-xxl-7">
+        <div class="col-xxl-7 area-card-stretch">
             <!--begin::Row-->
-            <div class="row g-lg-7">
+            <div class="row g-3">
                 <!--begin::Col-->
                 <div class="col-sm-6">
                     <!--begin::Card-->
                     <a href="{{action([\App\Http\Controllers\Frontend\TicketController::class,'create'])}}" data-target="kt_modal" data-toggle="modal-ajax"
-                       class="card border-0 shadow-none min-h-200px mb-7"
+                       class="card border-0 shadow-none min-h-200px area-card-compact"
                        style="background-color: #F9666E">
                         <!--begin::Card body-->
                         <div class="card-body d-flex flex-column flex-center text-center">
                             <!--begin::Illustrations-->
-                            <img class="mw-100 h-100px mb-7 mx-auto" src="/assets_backend/media/illustrations/light-version/PNG/support.png"/>
+                            <img class="mw-100 h-100px mb-7 mx-auto area-feature-media" src="/assets_backend/media/illustrations/light-version/PNG/support.png"/>
                             <!--end::Illustrations-->
                             <!--begin::Heading-->
                             <h4 class="text-white fw-bold text-uppercase">Nuovo ticket</h4>
@@ -149,12 +192,13 @@
                 <div class="col-sm-6">
                     <!--begin::Card-->
 
-                    <a href="{{ url('/area-personale/contratti') }}" class="card border-0 shadow-none min-h-200px mb-7"
+                    <a href="{{ url('/area-personale/contratti') }}"
+                       class="card border-0 shadow-none min-h-200px area-card-compact"
                        style="background-color: #35D29A">
                         <!--begin::Card body-->
                         <div class="card-body d-flex flex-column flex-center text-center">
                             <!--begin::Illustrations-->
-                            <img class="mw-100 h-100px mb-7 mx-auto" src="/assets_backend/media/illustrations/light-version/PNG/to-add.png"/>
+                            <img class="mw-100 h-100px mb-7 mx-auto area-feature-media" src="/assets_backend/media/illustrations/light-version/PNG/to-add.png"/>
                             <!--end::Illustrations-->
                             <!--begin::Heading-->
                             <h4 class="text-white fw-bold text-uppercase">I tuoi contratti</h4>
@@ -168,11 +212,11 @@
             </div>
             <!--end::Row-->
             <!--begin::Card-->
-            <div class="card border-0 shadow-none min-h-200px" style="background-color: #D5D83D">
+            <div class="card border-0 shadow-none min-h-200px area-activity-card" style="background-color: #D5D83D">
                 <!--begin::Card body-->
                 <div class="card-body d-flex flex-center flex-wrap">
                     <!--begin::Illustrations-->
-                    <img class="mw-100 h-200px me-4 mb-5 mb-lg-0" src="/assets_backend/media/illustrations/sigma-1/11.png"/>
+                    <img class="mw-100 h-200px me-4 mb-5 mb-lg-0 area-activity-media" src="/assets_backend/media/illustrations/sigma-1/11.png"/>
                     <!--end::Illustrations-->
                     <!--begin::Wrapper-->
                     <div class="d-flex flex-column align-items-center align-items-md-start flex-grow-1" data-theme="light">
