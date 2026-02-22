@@ -32,6 +32,7 @@
 
                 @includeWhen($tipoServizio->tipo_visura=='azienda','Backend.Visura.azienda')
                 @includeWhen($tipoServizio->tipo_visura=='privato','Backend.Visura.privato')
+                @includeWhen($isCatastale ?? false,'Backend.Visura.catasto')
                 <div class="row">
                     <div class="col-md-12">
                         @include('Backend._inputs.inputTextAreaCol',['campo'=>'note','testo'=>'Note','col'=>2])
@@ -272,6 +273,27 @@
                     });
 
             });
+
+            const isCatastale = @json((bool)($isCatastale ?? false));
+            const toggleCatastoFields = function () {
+                if (!isCatastale || !$('#catasto_entita').length) {
+                    return;
+                }
+
+                const entita = $('#catasto_entita').val();
+                const showImmobile = entita === 'immobile';
+                $('#catasto_immobile_fields').toggle(showImmobile);
+                $('#foglio_catasto, #particella_catasto').prop('required', showImmobile);
+            };
+
+            if (isCatastale) {
+                $('#provincia_catasto').on('input', function () {
+                    this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+                });
+
+                $('#catasto_entita').on('change', toggleCatastoFields);
+                toggleCatastoFields();
+            }
 
         });
     </script>

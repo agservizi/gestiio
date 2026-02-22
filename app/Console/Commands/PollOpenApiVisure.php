@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Services\OpenApiCatastoService;
 use App\Http\Services\OpenApiVisureService;
 use App\Models\AllegatoServizio;
+use App\Models\TipoVisura;
 use App\Models\Visura;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -41,7 +43,6 @@ class PollOpenApiVisure extends Command
             return self::SUCCESS;
         }
 
-        $service = new OpenApiVisureService();
         $processed = 0;
         $downloaded = 0;
         $errors = 0;
@@ -53,7 +54,11 @@ class PollOpenApiVisure extends Command
                 continue;
             }
 
-            $statusData = $service->statoRichiesta($requestId);
+            $provider = $this->resolveProvider($record);
+            $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+            $statusData = $provider === 'catasto'
+                ? $service->statoVisuraCatastale($requestId)
+                : $service->statoRichiesta($requestId);
             if (!$statusData) {
                 $errors++;
                 $this->warn("Visura #{$record->id}: errore stato ({$service->message})");
@@ -74,7 +79,9 @@ class PollOpenApiVisure extends Command
                 continue;
             }
 
-            $document = $service->scaricaDocumento($requestId);
+            $document = $provider === 'catasto'
+                ? $service->scaricaDocumentoVisuraCatastale($requestId)
+                : $service->scaricaDocumento($requestId);
             if (!$document) {
                 $errors++;
                 $this->warn("Visura #{$record->id}: documento non disponibile ({$service->message})");
@@ -134,18 +141,13 @@ class PollOpenApiVisure extends Command
 
     protected function salvaDocumento(Visura $record, array $document): ?array
     {
-        $base64 = (string) ($document['file'] ?? '');
-        if ($base64 === '') {
+        $content = $this->estraiContenutoDocumento($document);
+        if ($content === null) {
             return null;
         }
 
-        $content = base64_decode($base64, true);
-        if ($content === false) {
-            $content = $base64;
-        }
-
         $fileName = (string) ($document['nome'] ?? ('visura_' . $record->id . '.pdf'));
-        $mimeType = (string) ($document['mime_type'] ?? 'application/octet-stream');
+        $mimeType = (string) ($document['mime_type'] ?? $document['content_type'] ?? 'application/octet-stream');
 
         // Evita duplicati se il polling ripete lo stesso documento.
         $already = AllegatoServizio::query()
@@ -199,5 +201,41 @@ class PollOpenApiVisure extends Command
             'fileName' => $fileName,
         ];
     }
-}
 
+    protected function estraiContenutoDocumento(array $document): ?string
+    {
+        if (isset($document['raw_content']) && is_string($document['raw_content']) && $document['raw_content'] !== '') {
+            return $document['raw_content'];
+        }
+
+        $base64 = (string) ($document['file'] ?? '');
+        if ($base64 === '') {
+            return null;
+        }
+
+        $decoded = base64_decode($base64, true);
+        return $decoded === false ? $base64 : $decoded;
+    }
+
+    protected function resolveProvider(Visura $record): string
+    {
+        $hash = strtolower((string) $record->openapi_hash_visura);
+        if (str_starts_with($hash, 'catasto:')) {
+            return 'catasto';
+        }
+        if ($this->isCatastaleType($record->tipo)) {
+            return 'catasto';
+        }
+
+        return 'visengine';
+    }
+
+    protected function isCatastaleType(?TipoVisura $tipo): bool
+    {
+        if (!$tipo) {
+            return false;
+        }
+
+        return str_contains(strtolower((string) $tipo->nome), 'catast');
+    }
+}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Enums\TipiPortafoglioEnum;
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\AlertMessage;
+use App\Http\Services\OpenApiCatastoService;
 use App\Http\Services\OpenApiVisureService;
 use App\Models\AllegatoCafPatronato;
 use App\Models\AllegatoServizio;
@@ -240,13 +241,21 @@ class VisuraController extends Controller
         }
 
         $tipoServizio = TipoVisura::find($servizio);
+        $isCatastale = $this->isCatastaleType($tipoServizio);
+        $catastoData = [];
+        if ($isCatastale) {
+            [$catastoData, $noteLibera] = $this->extractCatastoDataFromNote((string) $record->note);
+            $record->note = $noteLibera;
+        }
 
         return view('Backend.Visura.edit', [
             'record' => $record,
             'titoloPagina' => 'Nuova ' . $tipoServizio->nome,
             'controller' => get_class($this),
             'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco ' . Visura::NOME_PLURALE],
-            'tipoServizio' => $tipoServizio
+            'tipoServizio' => $tipoServizio,
+            'isCatastale' => $isCatastale,
+            'catastoData' => $catastoData,
         ]);
     }
 
@@ -260,7 +269,7 @@ class VisuraController extends Controller
     {
         $servizio = $request->input('tipo_visura_id');
 
-        $request->validate($this->rules(null));
+        $request->validate($this->rules(null, $request));
 
         DB::beginTransaction();
 
@@ -344,6 +353,13 @@ class VisuraController extends Controller
             $eliminabile = true;
         }
 
+        $isCatastale = $this->isCatastaleType($record->tipo);
+        $catastoData = [];
+        if ($isCatastale) {
+            [$catastoData, $noteLibera] = $this->extractCatastoDataFromNote((string) $record->note);
+            $record->note = $noteLibera;
+        }
+
         return view('Backend.Visura.edit', [
             'record' => $record,
             'controller' => VisuraController::class,
@@ -351,6 +367,8 @@ class VisuraController extends Controller
             'eliminabile' => $eliminabile,
             'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco ' . Visura::NOME_PLURALE],
             'tipoServizio' => $record->tipo,
+            'isCatastale' => $isCatastale,
+            'catastoData' => $catastoData,
 
 
         ]);
@@ -367,7 +385,7 @@ class VisuraController extends Controller
     {
         $record = Visura::find($id);
         abort_if(!$record, 404, 'Questa ' . Visura::NOME_SINGOLARE . ' non esiste');
-        $request->validate($this->rules($id));
+        $request->validate($this->rules($id, $request));
         if ($record->tipo->tipo_visura == 'azienda') {
             $this->salvaDatiAzienda($record, $request);
         } else {
@@ -538,6 +556,11 @@ class VisuraController extends Controller
             $model->$campo = $valore;
         }
 
+        if ($this->isCatastaleRequest($request)) {
+            $tipo = TipoVisura::find($request->input('tipo_visura_id'));
+            $model->note = $this->buildCatastoNotePayload($request, $tipo);
+        }
+
         $model->save();
         return $model;
     }
@@ -580,6 +603,11 @@ class VisuraController extends Controller
             $model->$campo = $valore;
         }
 
+        if ($this->isCatastaleRequest($request)) {
+            $tipo = TipoVisura::find($request->input('tipo_visura_id'));
+            $model->note = $this->buildCatastoNotePayload($request, $tipo);
+        }
+
         $model->save();
         return $model;
     }
@@ -608,8 +636,11 @@ class VisuraController extends Controller
         abort_if(!$record, 404, 'Questa visura non esiste');
         abort_if(!$record->openapi_request_id, 422, 'Richiesta OpenAPI non presente');
 
-        $service = new OpenApiVisureService();
-        $statusData = $service->statoRichiesta($record->openapi_request_id);
+        $provider = $this->resolveOpenApiProvider($record);
+        $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+        $statusData = $provider === 'catasto'
+            ? $service->statoVisuraCatastale($record->openapi_request_id)
+            : $service->statoRichiesta($record->openapi_request_id);
         if (!$statusData) {
             return ['success' => false, 'message' => $service->message ?: 'Errore sincronizzazione OpenAPI'];
         }
@@ -625,8 +656,11 @@ class VisuraController extends Controller
         abort_if(!$record, 404, 'Questa visura non esiste');
         abort_if(!$record->openapi_request_id, 422, 'Richiesta OpenAPI non presente');
 
-        $service = new OpenApiVisureService();
-        $document = $service->scaricaDocumento($record->openapi_request_id);
+        $provider = $this->resolveOpenApiProvider($record);
+        $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+        $document = $provider === 'catasto'
+            ? $service->scaricaDocumentoVisuraCatastale($record->openapi_request_id)
+            : $service->scaricaDocumento($record->openapi_request_id);
         if (!$document) {
             return redirect()->back()->withErrors([
                 'openapi' => $service->message ?: 'Documento non disponibile',
@@ -656,25 +690,42 @@ class VisuraController extends Controller
         }
 
         $hash = trim((string) $tipoServizio->openapi_hash_visura);
-        if ($hash === '') {
+        if ($hash !== '') {
+            $service = new OpenApiVisureService();
+            $responseData = $service->creaRichiesta($hash, $this->payloadOpenApi($record));
+            if (!$responseData) {
+                throw new \RuntimeException($service->message ?: 'Impossibile creare la richiesta OpenAPI');
+            }
+
+            $record->openapi_hash_visura = $hash;
+            $record->openapi_request_id = (string) ($responseData['request_id'] ?? $responseData['id'] ?? '');
+            if ($record->openapi_request_id === '') {
+                throw new \RuntimeException('OpenAPI non ha restituito un request_id valido');
+            }
+            $record->openapi_stato_richiesta = (string) ($responseData['stato_richiesta'] ?? $responseData['status'] ?? 'in_lavorazione');
+            $record->openapi_response = $responseData;
+            $record->openapi_last_sync_at = now();
+            $record->save();
             return;
         }
 
-        $service = new OpenApiVisureService();
-        $responseData = $service->creaRichiesta($hash, $this->payloadOpenApi($record));
-        if (!$responseData) {
-            throw new \RuntimeException($service->message ?: 'Impossibile creare la richiesta OpenAPI');
-        }
+        if ($this->isCatastaleType($tipoServizio)) {
+            $service = new OpenApiCatastoService();
+            $responseData = $service->creaVisuraCatastale($this->payloadCatasto($record, $tipoServizio));
+            if (!$responseData) {
+                throw new \RuntimeException($service->message ?: 'Impossibile creare la richiesta Catasto');
+            }
 
-        $record->openapi_hash_visura = $hash;
-        $record->openapi_request_id = (string) ($responseData['request_id'] ?? $responseData['id'] ?? '');
-        if ($record->openapi_request_id === '') {
-            throw new \RuntimeException('OpenAPI non ha restituito un request_id valido');
+            $record->openapi_hash_visura = 'catasto:visura_catastale';
+            $record->openapi_request_id = (string) ($responseData['id'] ?? $responseData['request_id'] ?? '');
+            if ($record->openapi_request_id === '') {
+                throw new \RuntimeException('Catasto API non ha restituito un id richiesta valido');
+            }
+            $record->openapi_stato_richiesta = (string) ($responseData['stato_richiesta'] ?? $responseData['status'] ?? 'in_lavorazione');
+            $record->openapi_response = $responseData;
+            $record->openapi_last_sync_at = now();
+            $record->save();
         }
-        $record->openapi_stato_richiesta = (string) ($responseData['stato_richiesta'] ?? $responseData['status'] ?? 'in_lavorazione');
-        $record->openapi_response = $responseData;
-        $record->openapi_last_sync_at = now();
-        $record->save();
     }
 
     protected function salvaStatoOpenApi(Visura $record, array $statusData): void
@@ -718,8 +769,11 @@ class VisuraController extends Controller
         }
 
         try {
-            $service = new OpenApiVisureService();
-            $statusData = $service->statoRichiesta($record->openapi_request_id);
+            $provider = $this->resolveOpenApiProvider($record);
+            $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+            $statusData = $provider === 'catasto'
+                ? $service->statoVisuraCatastale($record->openapi_request_id)
+                : $service->statoRichiesta($record->openapi_request_id);
             if ($statusData) {
                 $this->salvaStatoOpenApi($record, $statusData);
             }
@@ -736,7 +790,9 @@ class VisuraController extends Controller
                 return;
             }
 
-            $document = $service->scaricaDocumento($record->openapi_request_id);
+            $document = $provider === 'catasto'
+                ? $service->scaricaDocumentoVisuraCatastale($record->openapi_request_id)
+                : $service->scaricaDocumento($record->openapi_request_id);
             if (!$document) {
                 return;
             }
@@ -752,18 +808,13 @@ class VisuraController extends Controller
 
     protected function salvaDocumentoOpenApiSuAllegati(Visura $record, array $document): ?array
     {
-        $base64 = (string) ($document['file'] ?? '');
-        if ($base64 === '') {
+        $content = $this->estraiContenutoDocumento($document);
+        if ($content === null) {
             return null;
         }
 
-        $content = base64_decode($base64, true);
-        if ($content === false) {
-            $content = $base64;
-        }
-
         $fileName = (string) ($document['nome'] ?? ('visura_' . $record->id . '.pdf'));
-        $mimeType = (string) ($document['mime_type'] ?? 'application/octet-stream');
+        $mimeType = (string) ($document['mime_type'] ?? $document['content_type'] ?? 'application/octet-stream');
 
         $path = ltrim(config('configurazione.allegati_visure.cartella'), '/')
             . '/' . Str::ulid() . '-' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
@@ -797,6 +848,148 @@ class VisuraController extends Controller
         ];
     }
 
+    protected function estraiContenutoDocumento(array $document): ?string
+    {
+        if (isset($document['raw_content']) && is_string($document['raw_content']) && $document['raw_content'] !== '') {
+            return $document['raw_content'];
+        }
+
+        $base64 = (string) ($document['file'] ?? '');
+        if ($base64 === '') {
+            return null;
+        }
+
+        $decoded = base64_decode($base64, true);
+        return $decoded === false ? $base64 : $decoded;
+    }
+
+    protected function resolveOpenApiProvider(Visura $record): string
+    {
+        $hash = strtolower((string) $record->openapi_hash_visura);
+        if (str_starts_with($hash, 'catasto:')) {
+            return 'catasto';
+        }
+        if ($this->isCatastaleType($record->tipo)) {
+            return 'catasto';
+        }
+
+        return 'visengine';
+    }
+
+    protected function isCatastaleType(?TipoVisura $tipo): bool
+    {
+        if (!$tipo) {
+            return false;
+        }
+        return str_contains(strtolower((string) $tipo->nome), 'catast');
+    }
+
+    protected function payloadCatasto(Visura $record, TipoVisura $tipoServizio): array
+    {
+        $noteData = $this->parseStructuredNote((string) $record->note);
+        $tipoNome = strtolower((string) $tipoServizio->nome);
+        $isTerreni = str_contains($tipoNome, 'terren');
+        $isSoggetto = (($noteData['entita'] ?? null) === 'soggetto') || str_contains($tipoNome, 'soggetto');
+        $tipoVisura = str_contains($tipoNome, 'storic') ? 'storica' : 'ordinaria';
+
+        $payload = [
+            'tipo_visura' => $tipoVisura,
+            'entita' => $isSoggetto ? 'soggetto' : 'immobile',
+            'cf_piva' => $record->partita_iva ?: $record->codice_fiscale,
+            'codice_fiscale' => $record->codice_fiscale,
+            'partita_iva' => $record->partita_iva,
+            'tipo_catasto' => $isTerreni ? 'terreni' : 'fabbricati',
+            'provincia' => $noteData['provincia'] ?? null,
+            'comune' => $noteData['comune'] ?? $record->citta,
+            'sezione' => $noteData['sezione'] ?? null,
+            'foglio' => $noteData['foglio'] ?? null,
+            'particella' => $noteData['particella'] ?? null,
+            'subalterno' => $noteData['subalterno'] ?? null,
+            'id_immobile' => $noteData['id_immobile'] ?? null,
+            'id_soggetto' => $noteData['id_soggetto'] ?? null,
+            'raw_note' => $record->note,
+        ];
+
+        return array_filter($payload, function ($value) {
+            return !is_null($value) && $value !== '';
+        });
+    }
+
+    protected function parseStructuredNote(string $note): array
+    {
+        $note = trim($note);
+        if ($note === '') {
+            return [];
+        }
+
+        $decoded = json_decode($note, true);
+        if (is_array($decoded)) {
+            return array_change_key_case($decoded, CASE_LOWER);
+        }
+
+        $data = [];
+        foreach (preg_split('/\\r\\n|\\r|\\n/', $note) as $line) {
+            if (!str_contains($line, ':')) {
+                continue;
+            }
+            [$key, $value] = array_map('trim', explode(':', $line, 2));
+            if ($key !== '' && $value !== '') {
+                $data[strtolower($key)] = $value;
+            }
+        }
+
+        return $data;
+    }
+
+    protected function extractCatastoDataFromNote(string $note): array
+    {
+        $data = $this->parseStructuredNote($note);
+        $noteLibera = (string) ($data['note_libera'] ?? (!str_starts_with(trim($note), '{') ? $note : ''));
+
+        return [$data, $noteLibera];
+    }
+
+    protected function isCatastaleRequest(Request $request): bool
+    {
+        $tipo = TipoVisura::find($request->input('tipo_visura_id'));
+        return $this->isCatastaleType($tipo);
+    }
+
+    protected function defaultCatastoEntita(?TipoVisura $tipo): string
+    {
+        $nome = strtolower((string) optional($tipo)->nome);
+        return str_contains($nome, 'soggetto') ? 'soggetto' : 'immobile';
+    }
+
+    protected function buildCatastoNotePayload(Request $request, ?TipoVisura $tipo): string
+    {
+        $entita = (string) ($request->input('catasto_entita') ?: $this->defaultCatastoEntita($tipo));
+        $tipoNome = strtolower((string) optional($tipo)->nome);
+        $tipoVisura = str_contains($tipoNome, 'storic') ? 'storica' : 'ordinaria';
+        $tipoCatasto = str_contains($tipoNome, 'terren') ? 'terreni' : 'fabbricati';
+
+        $payload = [
+            'provider' => 'catasto',
+            'note_libera' => (string) $request->input('note', ''),
+            'entita' => $entita,
+            'tipo_visura' => $tipoVisura,
+            'tipo_catasto' => $tipoCatasto,
+            'provincia' => strtoupper((string) $request->input('provincia_catasto')),
+            'comune' => (string) $request->input('comune_catasto'),
+            'sezione' => (string) $request->input('sezione_catasto'),
+            'foglio' => (string) $request->input('foglio_catasto'),
+            'particella' => (string) $request->input('particella_catasto'),
+            'subalterno' => (string) $request->input('subalterno_catasto'),
+            'id_immobile' => (string) $request->input('id_immobile_catasto'),
+            'id_soggetto' => (string) $request->input('id_soggetto_catasto'),
+        ];
+        $payload = array_filter($payload, function ($v) {
+            return $v !== '';
+        });
+
+        return json_encode($payload, JSON_UNESCAPED_UNICODE);
+    }
+
     protected function backToIndex()
     {
         return redirect()->action([get_class($this), 'index']);
@@ -811,7 +1004,7 @@ class VisuraController extends Controller
     }
 
 
-    protected function rules($id = null)
+    protected function rules($id = null, ?Request $request = null)
     {
 
 
@@ -828,6 +1021,26 @@ class VisuraController extends Controller
             'motivo_ko' => ['nullable', 'max:255'],
             'pagato' => ['nullable'],
         ];
+
+        if ($request && $this->isCatastaleRequest($request)) {
+            $entita = $request->input('catasto_entita');
+            if (!$entita) {
+                $tipo = TipoVisura::find($request->input('tipo_visura_id'));
+                $entita = $this->defaultCatastoEntita($tipo);
+            }
+
+            $rules = array_merge($rules, [
+                'provincia_catasto' => ['required', 'string', 'size:2'],
+                'comune_catasto' => ['required', 'string', 'max:120'],
+                'catasto_entita' => ['nullable', 'in:immobile,soggetto'],
+                'foglio_catasto' => [$entita === 'immobile' ? 'required' : 'nullable', 'string', 'max:20'],
+                'particella_catasto' => [$entita === 'immobile' ? 'required' : 'nullable', 'string', 'max:20'],
+                'subalterno_catasto' => ['nullable', 'string', 'max:20'],
+                'sezione_catasto' => ['nullable', 'string', 'max:20'],
+                'id_immobile_catasto' => ['nullable', 'string', 'max:60'],
+                'id_soggetto_catasto' => ['nullable', 'string', 'max:60'],
+            ]);
+        }
 
         return $rules;
     }
