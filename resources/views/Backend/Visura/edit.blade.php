@@ -315,11 +315,16 @@
                     url: url,
                     type: 'POST',
                     dataType: 'json',
-                    data: {
-                        denominazione: denominazione,
-                        provincia_id: provinciaId,
-                        _token: '{{csrf_token()}}'
-                    },
+                    data: (function () {
+                        const payload = {
+                            denominazione: denominazione,
+                            _token: '{{csrf_token()}}'
+                        };
+                        if (provinciaId) {
+                            payload.provincia_id = provinciaId;
+                        }
+                        return payload;
+                    })(),
                     success: function (resp) {
                         const $box = $('#box-risultati-ricerca-azienda');
                         const $tbody = $('#tbody-risultati-ricerca-azienda');

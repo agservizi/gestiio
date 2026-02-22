@@ -262,6 +262,10 @@ class VisuraController extends Controller
 
     public function ricercaAzienda(Request $request)
     {
+        if ($request->input('provincia_id') === '') {
+            $request->merge(['provincia_id' => null]);
+        }
+
         $request->validate([
             'denominazione' => ['required', 'string', 'max:255'],
             'provincia_id' => ['nullable', 'integer'],
