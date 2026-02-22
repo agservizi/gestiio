@@ -58,6 +58,17 @@ Route::group(['middleware' => ['auth']], function () {
 
 });
 
+// Stop impersonation: restore original user stored in session('impersona')
+Route::get('/stop-impersona', function () {
+    if (!session()->has('impersona')) {
+        return redirect('/');
+    }
+    $orig = session('impersona');
+    session()->forget('impersona');
+    \Illuminate\Support\Facades\Auth::loginUsingId($orig, false);
+    return redirect('/backend');
+})->middleware('auth');
+
 if (env('APP_ENV') == 'local') {
     Route::get('login-id/{id}', [\App\Http\Controllers\LogOut::class, 'loginId']);
 }

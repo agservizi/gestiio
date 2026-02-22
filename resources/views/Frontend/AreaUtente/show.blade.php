@@ -1,6 +1,14 @@
 @extends('Frontend._layout.main')
 @section('content')
     <div class="row g-7 w-xxl-850px">
+        @if(session()->has('impersona'))
+            @php $orig = \App\Models\User::find(session('impersona')); @endphp
+            @if($orig && $orig->hasPermissionTo('admin'))
+                <div class="col-12 mb-3 text-end">
+                    <a href="{{ url('/stop-impersona') }}" class="btn btn-sm btn-warning">Torna a admin</a>
+                </div>
+            @endif
+        @endif
         <!--begin::Col-->
         <div class="col-xxl-5">
             <!--begin::Card-->
