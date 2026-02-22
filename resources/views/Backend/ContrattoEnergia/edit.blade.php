@@ -451,6 +451,68 @@
                 $("#cap").val(e.params.data.cap);
             });
 
+            function setValidationState($field, isValid) {
+                $field.removeClass('is-valid is-invalid');
+                if (isValid === null) {
+                    return;
+                }
+                $field.addClass(isValid ? 'is-valid' : 'is-invalid');
+            }
+
+            function normalizePod(raw) {
+                return (raw || '').toString().trim().replace(/\s+/g, '').toUpperCase();
+            }
+
+            function normalizePdr(raw) {
+                return (raw || '').toString().trim().replace(/\s+/g, '');
+            }
+
+            function isValidPod(value) {
+                return /^IT\d{3}E[A-Z0-9]{8}$/.test(value);
+            }
+
+            function isValidPdr(value) {
+                return /^\d{14}$/.test(value);
+            }
+
+            var $pod = $('#pod');
+            if ($pod.length) {
+                var validatePod = function () {
+                    var normalized = normalizePod($pod.val());
+                    if (normalized === '') {
+                        setValidationState($pod, null);
+                        return;
+                    }
+                    setValidationState($pod, isValidPod(normalized));
+                };
+
+                $pod.on('input', validatePod);
+                $pod.on('blur', function () {
+                    $pod.val(normalizePod($pod.val()));
+                    validatePod();
+                });
+                validatePod();
+            }
+
+            var $pdr = $('#pdr');
+            if ($pdr.length) {
+                var validatePdr = function () {
+                    var normalized = normalizePdr($pdr.val());
+                    if (normalized === '') {
+                        setValidationState($pdr, null);
+                        return;
+                    }
+                    setValidationState($pdr, isValidPdr(normalized));
+                };
+
+                $pdr.on('input', validatePdr);
+                $pdr.on('blur', function () {
+                    $pdr.val(normalizePdr($pdr.val()));
+                    validatePdr();
+                });
+                validatePdr();
+            }
+
         });
         select2Universale('comune_rilascio', 'un comune', 3, 'citta');
 

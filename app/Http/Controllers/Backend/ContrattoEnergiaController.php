@@ -522,6 +522,7 @@ class ContrattoEnergiaController extends Controller
      */
     public function store(Request $request)
     {
+        $this->normalizzaCodiciEnergia($request);
 
         $tipoProdotto = $request->input('tipo_prodotto');
         $rules = $this->rules($request, null);
@@ -632,6 +633,8 @@ class ContrattoEnergiaController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $this->normalizzaCodiciEnergia($request);
+
         $record = ContrattoEnergia::find($id);
         abort_if(!$record, 404, 'Questo ' . ContrattoEnergia::NOME_SINGOLARE . ' non esiste');
 
@@ -696,6 +699,23 @@ class ContrattoEnergiaController extends Controller
         }
 
         return response()->download(Storage::path($record->path_filename), $record->filename_originale);
+    }
+
+    protected function normalizzaCodiciEnergia(Request $request): void
+    {
+        $pod = $request->input('pod');
+        if (is_string($pod)) {
+            $request->merge([
+                'pod' => strtoupper(preg_replace('/\s+/', '', trim($pod))),
+            ]);
+        }
+
+        $pdr = $request->input('pdr');
+        if (is_string($pdr)) {
+            $request->merge([
+                'pdr' => preg_replace('/\s+/', '', trim($pdr)),
+            ]);
+        }
     }
 
     public function uploadAllegato(Request $request)

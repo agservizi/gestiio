@@ -142,7 +142,7 @@ class Egea extends ProdottoEnergiaAbstract
             'iban' => ['required', new \App\Rules\IbanRule()],
             'bic_swift' => ['required', 'max:255'],
             'tipo_attivazione_gas' => ['required_without:tipo_attivazione_luce', 'max:255'],
-            'pdr' => ['required_with:tipo_attivazione_gas', 'max:255'],
+            'pdr' => ['required_with:tipo_attivazione_gas', new \App\Rules\PdrRule()],
             'matricola_contatore' => ['nullable', 'max:255'],
             'cat_uso_arera' => ['required_with:tipo_attivazione_gas', 'max:255'],
             'cabina_remi' => ['nullable', 'max:255'],
@@ -154,7 +154,7 @@ class Egea extends ProdottoEnergiaAbstract
             'consumo_anno_termico' => ['nullable', 'max:255'],
 
             'tipo_attivazione_luce' => ['required_without:tipo_attivazione_gas', 'max:255'],
-            'pod' => ['required_with:tipo_attivazione_luce', 'max:255'],
+            'pod' => ['required_with:tipo_attivazione_luce', new \App\Rules\PodRule()],
             'tipologia_uso' => ['required_with:tipo_attivazione_luce', 'max:255'],
             'tensione' => ['nullable', 'max:255'],
             'potenza_contrattuale' => ['nullable', 'max:255'],
