@@ -25,7 +25,10 @@ class VisuraCameraleService
         ];
 
         if ($request->input('provincia')) {
-            $query['provincia'] = Provincia::find($request->input('provincia'))->sigla_automobilistica;
+            $query['provincia'] = $this->normalizeProvincia($request->input('provincia'));
+            if (!$query['provincia']) {
+                unset($query['provincia']);
+            }
         }
 
 
@@ -167,6 +170,39 @@ class VisuraCameraleService
             ?: env('OPENAPI_BEARER_VISURE')
             ?: env('OPENAPI_BEARER')
         );
+    }
+
+    protected function normalizeProvincia($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        if (ctype_digit($raw)) {
+            $provincia = Provincia::find((int) $raw);
+            if ($provincia && $provincia->sigla_automobilistica) {
+                return strtoupper((string) $provincia->sigla_automobilistica);
+            }
+
+            return null;
+        }
+
+        $candidate = strtoupper(preg_replace('/[^A-Za-z]/', '', $raw) ?: '');
+        if (strlen($candidate) === 2) {
+            return $candidate;
+        }
+
+        $provincia = Provincia::where('nome', 'like', $raw)->orWhere('nome', 'like', '%' . $raw . '%')->first();
+        if ($provincia && $provincia->sigla_automobilistica) {
+            return strtoupper((string) $provincia->sigla_automobilistica);
+        }
+
+        return null;
     }
 
     protected function response($response)

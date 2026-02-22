@@ -269,7 +269,7 @@ class VisuraController extends Controller
 
         $request->validate([
             'denominazione' => ['required', 'string', 'max:255'],
-            'provincia_id' => ['nullable', 'integer'],
+            'provincia_id' => ['nullable', 'string', 'max:10'],
         ]);
 
         [$rawItems, $lastMessage] = $this->eseguiRicercaAziendaConFallback(
@@ -284,9 +284,10 @@ class VisuraController extends Controller
             ];
         }
 
+        $checkVies = $request->boolean('check_vies');
         $viesCache = [];
         $items = collect($rawItems)
-            ->map(function ($item) use (&$viesCache) {
+            ->map(function ($item) use (&$viesCache, $checkVies) {
                 $arr = json_decode(json_encode($item), true) ?: [];
                 $denominazione = $this->extractDenominazioneFromAziendaResult($arr);
                 $comune = (string) ($arr['comune'] ?? $arr['sede_legale_comune'] ?? $arr['sede_comune'] ?? '');
@@ -294,7 +295,7 @@ class VisuraController extends Controller
                 $natura = (string) ($arr['codice_natura_giuridica'] ?? $arr['natura_giuridica'] ?? $arr['forma_giuridica'] ?? '');
                 $partitaIva = $this->extractPartitaIvaFromAziendaResult($arr);
                 $viesValid = null;
-                if ($partitaIva !== '') {
+                if ($checkVies && $partitaIva !== '') {
                     if (!array_key_exists($partitaIva, $viesCache)) {
                         $viesCache[$partitaIva] = $this->verifyPartitaIvaViaVies($partitaIva);
                     }
