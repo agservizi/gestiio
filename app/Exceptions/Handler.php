@@ -4,7 +4,6 @@ namespace App\Exceptions;
 
 use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -67,7 +66,7 @@ class Handler extends ExceptionHandler
      *
      * @throws \Throwable
      */
-    public function render(Request $request, Throwable $e)
+    public function render($request, Throwable $e)
     {
         if ($e instanceof UnauthorizedException && Auth::check() && ($request->is('backend') || $request->is('backend/*'))) {
             if ($request->expectsJson()) {
