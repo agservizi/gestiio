@@ -282,6 +282,7 @@ class VisuraController extends Controller
             }
 
             $this->avviaRichiestaOpenApi($record, $tipoServizio);
+            $this->processaOpenApiAutomatico($record);
 
             $movimento = new MovimentoPortafoglio();
             $movimento->agente_id = Auth::id();
@@ -632,45 +633,16 @@ class VisuraController extends Controller
             ]);
         }
 
-        $base64 = (string) ($document['file'] ?? '');
-        if ($base64 === '') {
+        $saved = $this->salvaDocumentoOpenApiSuAllegati($record, $document);
+        if (!$saved) {
             return redirect()->back()->withErrors([
                 'openapi' => 'Documento OpenAPI senza contenuto',
             ]);
         }
 
-        $content = base64_decode($base64, true);
-        if ($content === false) {
-            $content = $base64;
-        }
-
-        $fileName = (string) ($document['nome'] ?? ('visura_' . $record->id . '.pdf'));
-        $mimeType = (string) ($document['mime_type'] ?? 'application/octet-stream');
-
-        $path = ltrim(config('configurazione.allegati_visure.cartella'), '/')
-            . '/' . Str::ulid() . '-' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
-        Storage::put($path, $content);
-
-        $allegato = new AllegatoServizio();
-        $allegato->uid = $record->uid;
-        $allegato->filename_originale = $fileName;
-        $allegato->path_filename = $path;
-        $allegato->dimensione_file = strlen($content);
-        $allegato->mime_type = $mimeType;
-        $allegato->file_contenuto_base64 = base64_encode($content);
-        $allegato->per_cliente = 0;
-        $allegato->allegato_id = $record->id;
-        $allegato->allegato_type = Visura::class;
-        $allegato->save();
-
-        if (Schema::hasColumn('visure', 'openapi_documento_nome')) {
-            $record->openapi_documento_nome = $fileName;
-            $record->openapi_documento_mime = $mimeType;
-            $record->openapi_documento_dimensione = strlen($content);
-            $record->openapi_documento_scaricato_at = now();
-            $record->openapi_last_sync_at = now();
-            $record->save();
-        }
+        $content = $saved['content'];
+        $fileName = $saved['fileName'];
+        $mimeType = $saved['mimeType'];
 
         return response()->streamDownload(function () use ($content) {
             echo $content;
@@ -737,6 +709,92 @@ class VisuraController extends Controller
         ], function ($value) {
             return !is_null($value) && $value !== '';
         });
+    }
+
+    protected function processaOpenApiAutomatico(Visura $record): void
+    {
+        if (!$record->openapi_request_id) {
+            return;
+        }
+
+        try {
+            $service = new OpenApiVisureService();
+            $statusData = $service->statoRichiesta($record->openapi_request_id);
+            if ($statusData) {
+                $this->salvaStatoOpenApi($record, $statusData);
+            }
+
+            $stato = strtolower((string) ($record->openapi_stato_richiesta ?? ''));
+            $isReady = $stato === ''
+                || str_contains($stato, 'evas')
+                || str_contains($stato, 'complet')
+                || str_contains($stato, 'chius')
+                || str_contains($stato, 'ready')
+                || str_contains($stato, 'dispon');
+
+            if (!$isReady) {
+                return;
+            }
+
+            $document = $service->scaricaDocumento($record->openapi_request_id);
+            if (!$document) {
+                return;
+            }
+
+            $this->salvaDocumentoOpenApiSuAllegati($record, $document);
+        } catch (\Throwable $exception) {
+            Log::warning('Processo OpenAPI automatico non completato', [
+                'visura_id' => $record->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    protected function salvaDocumentoOpenApiSuAllegati(Visura $record, array $document): ?array
+    {
+        $base64 = (string) ($document['file'] ?? '');
+        if ($base64 === '') {
+            return null;
+        }
+
+        $content = base64_decode($base64, true);
+        if ($content === false) {
+            $content = $base64;
+        }
+
+        $fileName = (string) ($document['nome'] ?? ('visura_' . $record->id . '.pdf'));
+        $mimeType = (string) ($document['mime_type'] ?? 'application/octet-stream');
+
+        $path = ltrim(config('configurazione.allegati_visure.cartella'), '/')
+            . '/' . Str::ulid() . '-' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
+        Storage::put($path, $content);
+
+        $allegato = new AllegatoServizio();
+        $allegato->uid = $record->uid;
+        $allegato->filename_originale = $fileName;
+        $allegato->path_filename = $path;
+        $allegato->dimensione_file = strlen($content);
+        $allegato->mime_type = $mimeType;
+        $allegato->file_contenuto_base64 = base64_encode($content);
+        $allegato->per_cliente = 0;
+        $allegato->allegato_id = $record->id;
+        $allegato->allegato_type = Visura::class;
+        $allegato->save();
+
+        if (Schema::hasColumn('visure', 'openapi_documento_nome')) {
+            $record->openapi_documento_nome = $fileName;
+            $record->openapi_documento_mime = $mimeType;
+            $record->openapi_documento_dimensione = strlen($content);
+            $record->openapi_documento_scaricato_at = now();
+            $record->openapi_last_sync_at = now();
+            $record->save();
+        }
+
+        return [
+            'content' => $content,
+            'fileName' => $fileName,
+            'mimeType' => $mimeType,
+        ];
     }
 
     protected function backToIndex()

@@ -209,31 +209,6 @@
                 caricaElenco(page || null);
             });
 
-            $(document).on('click', '.js-openapi-richiedi, .js-openapi-sync', function () {
-                const $btn = $(this);
-                const url = $btn.data('url');
-                if (!url) {
-                    return;
-                }
-                $btn.prop('disabled', true);
-                $.post(url, {_token: '{{csrf_token()}}'})
-                    .done(function (resp) {
-                        if (resp && resp.success) {
-                            caricaElenco();
-                        } else if (resp && resp.message) {
-                            Swal.fire('Attenzione', resp.message, 'warning');
-                        } else {
-                            caricaElenco();
-                        }
-                    })
-                    .fail(function (xhr) {
-                        const msg = xhr.responseJSON?.message || 'Errore durante chiamata OpenAPI';
-                        Swal.fire('Errore', msg, 'error');
-                    })
-                    .always(function () {
-                        $btn.prop('disabled', false);
-                    });
-            });
         });
     </script>
 @endpush

@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\BackfillAllegatiDbContent::class,
         \App\Console\Commands\BackfillGestoriEnergiaCategorie::class,
         \App\Console\Commands\BackfillGestoriEnergiaLoghiDb::class,
+        \App\Console\Commands\PollOpenApiVisure::class,
         \App\Console\Commands\SyncTipoVisuraOpenApiHash::class,
     ];
 
@@ -27,7 +28,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('visure:poll-openapi --limit=100')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->onOneServer();
     }
 
     /**
