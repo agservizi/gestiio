@@ -297,6 +297,7 @@
                                 $('#indirizzo').val(resp.res.address);
                             }
                         }
+                    });
             });
 
             $('#btn-ricerca-azienda').on('click', function () {
@@ -377,8 +378,6 @@
                     }
                 });
             });
-
-        });
 
             const isCatastale = @json((bool)($isCatastale ?? false));
             const toggleCatastoFields = function () {
