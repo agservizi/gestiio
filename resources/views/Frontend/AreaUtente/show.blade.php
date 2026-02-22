@@ -170,8 +170,8 @@
         <div class="customer-hero mb-4">
             <div class="row align-items-center g-4">
                 <div class="col-lg-8">
-                    <h1>Ciao {{ Auth::user()->nome }}, benvenuto nella tua area personale</h1>
-                    <div class="opacity-75">Gestisci account, ticket e contratti in un unico spazio operativo.</div>
+                    <h1 class="text-white">Ciao {{ Auth::user()->nome }}, benvenuto nella tua area personale</h1>
+                    <div class="text-white opacity-75">Gestisci account, ticket e contratti in un unico spazio operativo.</div>
                 </div>
                 <div class="col-lg-4">
                     <div class="customer-actions">
