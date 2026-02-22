@@ -450,8 +450,11 @@ class ContrattoEnergiaController extends Controller
         abort_if(!$gestore, 404, 'Questo gestore non esiste');
 
         $categoriaRichiesta = $request->input('categoria_pratica');
-        if (!$categoriaRichiesta) {
-            $categoriaRichiesta = 'business';
+        if (!in_array($categoriaRichiesta, ['consumer', 'business'], true)) {
+            $categoriaGestore = strtolower((string) $gestore->categoria_pratica);
+            $categoriaRichiesta = in_array($categoriaGestore, ['consumer', 'business'], true)
+                ? $categoriaGestore
+                : ($this->categoriaDaTipoProdotto($gestore->model_prodotto) ?? 'consumer');
         }
 
         if (in_array($categoriaRichiesta, ['consumer', 'business'], true)) {
