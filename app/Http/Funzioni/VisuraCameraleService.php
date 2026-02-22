@@ -7,6 +7,7 @@ use App\Models\Provincia;
 use App\Models\VisuraCamerale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class VisuraCameraleService
 {
@@ -44,7 +45,7 @@ class VisuraCameraleService
     public function richiediVisura($naturaGiuridica, $partitaIva)
     {
 
-        \Log::info('Richiesta visura ' . $naturaGiuridica . ' per ' . $partitaIva);
+        Log::info('Richiesta visura ' . $naturaGiuridica . ' per ' . $partitaIva);
         switch ($naturaGiuridica) {
             case 'impresa-individuale':
                 $res = $this->ordinariaIndividuale($partitaIva);
@@ -158,7 +159,9 @@ class VisuraCameraleService
     protected function bearer()
     {
         return (string) (
-            config('services.openapi.bearer_visure')
+            config('services.openapi.bearer_visure_camerali')
+            ?: env('OPENAPI_BEARER_VISURE_CAMERALI')
+            ?: config('services.openapi.bearer_visure')
             ?: env('OPENAPI_BEARER_VISURE')
             ?: env('OPENAPI_BEARER')
         );
@@ -176,7 +179,9 @@ class VisuraCameraleService
             return null;
         } else {
             $json = json_decode($response->body());
-            $this->messaggioErrore($json->error, $json->message);
+            $errorCode = $json->error ?? (string) $response->status();
+            $errorMessage = $json->message ?? 'Errore servizio visure camerali';
+            $this->messaggioErrore($errorCode, $errorMessage);
             return null;
         }
 
