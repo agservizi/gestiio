@@ -9,7 +9,8 @@ use Throwable;
 
 class OpenApiVisureService
 {
-    private const ENDPOINT = 'https://test.visengine.openapi.it/';
+    private const ENDPOINT_SANDBOX = 'https://test.visengine2.altravia.com/';
+    private const ENDPOINT_PRODUCTION = 'https://visengine2.altravia.com/';
 
     protected PendingRequest $client;
     public ?string $message = null;
@@ -131,11 +132,14 @@ class OpenApiVisureService
 
     protected function endpoint(): string
     {
+        $customSandbox = config('services.openapi.visure_base_url_sandbox');
+        $customProduction = config('services.openapi.visure_base_url_production');
+
         if (!config('services.openapi.sandbox')) {
-            return str_replace('test.', '', self::ENDPOINT);
+            return rtrim((string) ($customProduction ?: self::ENDPOINT_PRODUCTION), '/') . '/';
         }
 
-        return self::ENDPOINT;
+        return rtrim((string) ($customSandbox ?: self::ENDPOINT_SANDBOX), '/') . '/';
     }
 
     protected function bearerToken(): string
