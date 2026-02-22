@@ -1,13 +1,25 @@
 @extends('Frontend._layout.main')
 @section('content')
     <div class="row g-7 w-xxl-850px">
-        @if(session()->has('impersona'))
-            @php $orig = \App\Models\User::find(session('impersona')); @endphp
-            @if($orig && $orig->hasPermissionTo('admin'))
-                <div class="col-12 mb-3 text-end">
-                    <a href="{{ url('/stop-impersona') }}" class="btn btn-sm btn-warning">Torna a admin</a>
-                </div>
-            @endif
+        @php
+            $currentUser = \Illuminate\Support\Facades\Auth::user();
+            $isCurrentAdmin = $currentUser && $currentUser->hasPermissionTo('admin');
+            $origAdmin = null;
+            if (session()->has('impersona')) {
+                $orig = \App\Models\User::find(session('impersona'));
+                if ($orig && $orig->hasPermissionTo('admin')) {
+                    $origAdmin = $orig;
+                }
+            }
+        @endphp
+        @if($isCurrentAdmin || $origAdmin)
+            <div class="col-12 mb-3 text-end">
+                @if($origAdmin)
+                    <a href="{{ url('/stop-impersona') }}" class="btn btn-sm btn-warning">Torna all'area admin</a>
+                @else
+                    <a href="{{ url('/backend') }}" class="btn btn-sm btn-warning">Torna all'area admin</a>
+                @endif
+            </div>
         @endif
         <!--begin::Col-->
         <div class="col-xxl-5">
