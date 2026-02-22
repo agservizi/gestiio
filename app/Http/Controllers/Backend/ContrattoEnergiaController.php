@@ -606,6 +606,7 @@ class ContrattoEnergiaController extends Controller
 
 
         $categoriaPratica = $this->determinaCategoriaPratica($record, request(), $tipoProdotto);
+        $categoriaSwitchUrls = $this->buildCategoriaSwitchUrls($record->gestore, $record->agente_id);
 
         return view('Backend.ContrattoEnergia.edit', [
             'record' => $record,
@@ -619,7 +620,7 @@ class ContrattoEnergiaController extends Controller
             'tipoProdotto' => $tipoProdotto,
             'creaContratto' => true,
             'categoriaPratica' => $categoriaPratica,
-            'categoriaSwitchUrls' => [],
+            'categoriaSwitchUrls' => $categoriaSwitchUrls,
 
         ]);
     }
@@ -656,6 +657,40 @@ class ContrattoEnergiaController extends Controller
 
 
         return $this->backToIndex();
+    }
+
+    public function switchCategoria(Request $request, $id)
+    {
+        $request->validate([
+            'categoria_pratica' => ['required', 'in:consumer,business'],
+        ]);
+
+        $record = ContrattoEnergia::with('gestore')->find($id);
+        abort_if(!$record, 404, 'Questo contratto non esiste');
+        abort_if(!$record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 403, 'Non puoi modificare questo contratto');
+
+        $categoriaRichiesta = $request->input('categoria_pratica');
+        $gestoreTarget = $this->resolveGestoreByCategoria($record->gestore, $categoriaRichiesta);
+
+        if (!$gestoreTarget) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Switch non disponibile per questa categoria.',
+            ], 422);
+        }
+
+        if ($gestoreTarget->id !== $record->gestore_id) {
+            $record->gestore_id = $gestoreTarget->id;
+            // Reset prodotto specifico: verrà ricreato al prossimo salvataggio nel nuovo form categoria.
+            $record->prodotto_id = null;
+            $record->prodotto_type = null;
+            $record->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'redirect' => action([self::class, 'edit'], [$record->id]),
+        ]);
     }
 
     /**

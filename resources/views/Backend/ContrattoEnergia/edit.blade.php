@@ -101,7 +101,7 @@
                         }
                         $switchConsumerUrl = $categoriaSwitchUrls['consumer'] ?? null;
                         $switchBusinessUrl = $categoriaSwitchUrls['business'] ?? null;
-                        $switchAbilitato = !empty($switchConsumerUrl) && !empty($switchBusinessUrl) && !$record->id;
+                        $switchAbilitato = !empty($switchConsumerUrl) && !empty($switchBusinessUrl);
                     @endphp
 
                     <div class="mb-6">
@@ -208,6 +208,8 @@
 
 
         $(function () {
+            var recordId = {!! $record->id ? (int) $record->id : 'null' !!};
+            var switchCategoriaUrl = @json($record->id ? action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'switchCategoria'], [$record->id]) : null);
 
             eliminaHandler('Questa voce verrà eliminata definitivamente');
             if ($('#agente_id').is("select")) {
@@ -230,8 +232,55 @@
             $('.js-categoria-tab:not([disabled])').on('click', function () {
                 var categoria = $(this).data('categoria');
                 var switchUrl = $(this).data('switch-url');
+                var categoriaCorrente = $('#categoria_pratica').val();
+
+                if (categoria === categoriaCorrente) {
+                    return;
+                }
 
                 toggleCategoriaPratica(categoria);
+
+                if (recordId && switchCategoriaUrl) {
+                    Swal.fire({
+                        title: 'Confermi lo switch categoria?',
+                        text: 'I campi specifici del prodotto corrente verranno reimpostati.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sì, continua',
+                        cancelButtonText: 'Annulla'
+                    }).then(function (result) {
+                        if (!result.isConfirmed) {
+                            toggleCategoriaPratica(categoriaCorrente);
+                            return;
+                        }
+
+                        $.ajax({
+                            url: switchCategoriaUrl,
+                            type: 'POST',
+                            dataType: 'json',
+                            data: {
+                                _token: '{{ csrf_token() }}',
+                                categoria_pratica: categoria
+                            },
+                            success: function (resp) {
+                                if (resp && resp.redirect) {
+                                    window.location.href = resp.redirect;
+                                    return;
+                                }
+                                window.location.reload();
+                            },
+                            error: function (xhr) {
+                                var msg = 'Impossibile eseguire lo switch categoria.';
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    msg = xhr.responseJSON.message;
+                                }
+                                toggleCategoriaPratica(categoriaCorrente);
+                                Swal.fire('Errore', msg, 'warning');
+                            }
+                        });
+                    });
+                    return;
+                }
 
                 if (switchUrl && window.location.href !== switchUrl) {
                     var redirectUrl = new URL(switchUrl, window.location.origin);
