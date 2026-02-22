@@ -25,13 +25,13 @@ class LoginResponse implements LoginResponseContract
         /** @var User|null $user */
         $user = Auth::user();
 
-        if ($user && $user->hasAnyPermission(['admin', 'agente'])) {
+        if ($user && $user->hasAnyPermission(['admin', 'agente', 'operatore'])) {
             $redirectTo = action([DashboardController::class, 'show']);
         } elseif ($user && $user->hasPermissionTo('supervisore')) {
             $redirectTo = action([ContrattoTelefoniaController::class, 'index']);
 
         } else {
-            $redirectTo = config('fortify.home');
+            $redirectTo = '/area-personale';
         }
 
 

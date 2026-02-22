@@ -14,7 +14,12 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/', function () {
     if (\Illuminate\Support\Facades\Auth::check()) {
-        return redirect('/backend');
+        /** @var \App\Models\User $user */
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if ($user->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore'])) {
+            return redirect('/backend');
+        }
+        return redirect('/area-personale');
     }
 
     return redirect('/login');
@@ -72,7 +77,6 @@ Route::get('/stop-impersona', function () {
 if (env('APP_ENV') == 'local') {
     Route::get('login-id/{id}', [\App\Http\Controllers\LogOut::class, 'loginId']);
 }
-
 
 
 
