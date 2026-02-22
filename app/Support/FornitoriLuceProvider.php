@@ -13,9 +13,16 @@ class FornitoriLuceProvider
 
     public static function list(): array
     {
+        $cached = Cache::get(self::CACHE_KEY);
+        if (self::isValidList($cached)) {
+            return $cached;
+        }
+
+        Cache::forget(self::CACHE_KEY);
+
         return Cache::remember(self::CACHE_KEY, self::CACHE_TTL_SECONDS, function (): array {
             $fornitori = self::fetchFromGme();
-            if (!empty($fornitori)) {
+            if (self::isValidList($fornitori)) {
                 return $fornitori;
             }
 
@@ -61,7 +68,7 @@ class FornitoriLuceProvider
                 continue;
             }
 
-            $name = $parts[0] ?? '';
+            $name = self::sanitizeName($parts[0] ?? '');
             if ($name === '' || mb_stripos($name, 'Numero di Operatori') !== false) {
                 continue;
             }
@@ -73,5 +80,43 @@ class FornitoriLuceProvider
 
         return $names;
     }
-}
 
+    private static function sanitizeName(string $name): string
+    {
+        $name = trim(preg_replace('/\s+/u', ' ', $name));
+
+        // Esclude righe html/js o testo non fornitore.
+        if ($name === '' || mb_strlen($name) < 2 || mb_strlen($name) > 120) {
+            return '';
+        }
+        if (preg_match('/[{}<>]/u', $name)) {
+            return '';
+        }
+        if (preg_match('/\b(var|window|function|script|_paq)\b/i', $name)) {
+            return '';
+        }
+        if (preg_match('/(Socio unico|GSE|D\.Lgs|cookie|privacy)/iu', $name)) {
+            return '';
+        }
+
+        return $name;
+    }
+
+    private static function isValidList($items): bool
+    {
+        if (!is_array($items) || count($items) < 10) {
+            return false;
+        }
+
+        foreach ($items as $key => $value) {
+            if (!is_string($key) || !is_string($value)) {
+                return false;
+            }
+            if (self::sanitizeName($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
