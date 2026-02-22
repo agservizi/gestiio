@@ -673,7 +673,7 @@ class AgenteController extends Controller
             return ['success' => false, 'message' => 'Non puoi impersonare questo utente'];
         }
 
-        Session::flash('impersona', Auth::id());
+        Session::put('impersona', Auth::id());
         Auth::loginUsingId($id, false);
         return ['success' => true, 'redirect' => '/'];
     }

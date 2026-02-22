@@ -408,7 +408,7 @@ class ClienteController extends Controller
             return ['success' => false, 'message' => 'Non puoi impersonare questo utente'];
         }
 
-        Session::flash('impersona', Auth::id());
+        Session::put('impersona', Auth::id());
         Auth::loginUsingId($user->id, false);
         return ['success' => true, 'redirect' => '/'];
     }
