@@ -166,7 +166,7 @@
 
                 <div class="row">
                     <div class="col-md-6">
-                        @include('Backend._inputs.inputTextButton',['campo'=>'iban','testo'=>'Iban','testoButton'=>'Genera','classeButton'=>'btn-light-primary'])
+                        @include('Backend._inputs.inputText',['campo'=>'iban','testo'=>'Iban','required'=>false,'autocomplete'=>'off'])
                     </div>
                     <div class="col-md-6">
                         <div class="row">
@@ -424,24 +424,6 @@
                 },
             });
 
-
-            $('#button-iban').click(function () {
-                var url = '{{action([\App\Http\Controllers\Backend\AjaxController::class,'post'],'genera-iban')}}';
-                $.ajax({
-                    url: url,
-                    type: 'post',
-                    dataType: 'json',
-                    method: 'POST',
-                    success: function (resp) {
-                        if (resp.success) {
-                            $('#iban').val(resp.iban);
-
-                        }
-
-                    }
-                });
-
-            });
             $('#codice_fiscale').blur(function (e) {
 
                 var codice_fiscale = $(this).val();
