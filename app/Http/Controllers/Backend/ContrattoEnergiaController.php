@@ -61,25 +61,48 @@ class ContrattoEnergiaController extends Controller
         /** @var \App\Models\User $authUser */
         $authUser = Auth::user();
 
-        // Trova admin di riferimento: preferisci l'utente con id 2, altrimenti cerca un utente con permesso 'admin'
-        $admin = User::find(2);
-        if (!$admin) {
-            $admin = User::whereHas('permissions', function ($q) {
-                $q->where('name', 'admin');
-            })->first();
+        // Determine the recipient based on who is sending:
+        // - If sender is admin: deliver to the contract's agent (uploader) if available, otherwise to an available agent/supervisor.
+        // - If sender is not admin: deliver to an admin (prefer id 2 if different), otherwise fallback to an available operator.
+        $recipient = null;
+        if ($authUser->hasPermissionTo('admin')) {
+            if (!empty($contratto->agente_id) && $contratto->agente_id !== $authUser->id) {
+                $recipient = User::find($contratto->agente_id);
+            }
+            if (!$recipient) {
+                $recipient = User::whereHas('permissions', function ($q) {
+                    $q->whereIn('name', ['agente', 'supervisore']);
+                })->where('id', '<>', $authUser->id)->first();
+            }
+        } else {
+            // non-admin sender -> send to admin
+            $recipient = User::find(2);
+            if ($recipient && $recipient->id === $authUser->id) {
+                $recipient = null;
+            }
+            if (!$recipient) {
+                $recipient = User::whereHas('permissions', function ($q) {
+                    $q->where('name', 'admin');
+                })->where('id', '<>', $authUser->id)->first();
+            }
+            if (!$recipient) {
+                $recipient = User::whereHas('permissions', function ($q) {
+                    $q->whereIn('name', ['agente', 'supervisore']);
+                })->where('id', '<>', $authUser->id)->first();
+            }
         }
-        abort_if(!$admin, 404, 'Utente amministratore non trovato');
+        abort_if(!$recipient, 404, 'Destinatario non trovato');
 
         // Cerca thread esistente tra i due utenti
         $thread = ChatThread::query()
             ->whereHas('partecipanti', function ($q) use ($authUser) {
                 $q->where('users.id', $authUser->id);
             })
-            ->whereHas('partecipanti', function ($q) use ($admin) {
-                $q->where('users.id', $admin->id);
+            ->whereHas('partecipanti', function ($q) use ($recipient) {
+                $q->where('users.id', $recipient->id);
             })
-            ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $admin) {
-                $q->whereNotIn('users.id', [$authUser->id, $admin->id]);
+            ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $recipient) {
+                $q->whereNotIn('users.id', [$authUser->id, $recipient->id]);
             })
             ->latest('id')
             ->first();
@@ -90,7 +113,7 @@ class ContrattoEnergiaController extends Controller
             $thread->save();
             $thread->partecipanti()->attach([
                 $authUser->id => ['last_read_at' => now()],
-                $admin->id => ['last_read_at' => null],
+                $recipient->id => ['last_read_at' => null],
             ]);
         }
 
@@ -107,9 +130,9 @@ class ContrattoEnergiaController extends Controller
         broadcast(new ChatMessageSent($messaggio))->toOthers();
 
         // Notifica via email se primo messaggio non letto e push
-        $admin->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
+        $recipient->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
 
-        SendChatWebPushNotification::dispatch($admin->id, [
+        SendChatWebPushNotification::dispatch($recipient->id, [
             'title' => $authUser->nominativo() . ' · Chat interna',
             'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: 'Segnalazione in chat')), 120),
             'url' => url('/backend/chat-interna?thread=' . $thread->id),
@@ -131,25 +154,45 @@ class ContrattoEnergiaController extends Controller
         /** @var \App\Models\User $authUser */
         $authUser = Auth::user();
 
-        // trova admin (preferisci id 2, altrimenti primo con permesso admin)
-        $admin = User::find(2);
-        if (!$admin) {
-            $admin = User::whereHas('permissions', function ($q) {
-                $q->where('name', 'admin');
-            })->first();
+        // Determine recipient: symmetric to segnalaChat logic
+        $recipient = null;
+        if ($authUser->hasPermissionTo('admin')) {
+            if (!empty($contratto->agente_id) && $contratto->agente_id !== $authUser->id) {
+                $recipient = User::find($contratto->agente_id);
+            }
+            if (!$recipient) {
+                $recipient = User::whereHas('permissions', function ($q) {
+                    $q->whereIn('name', ['agente', 'supervisore']);
+                })->where('id', '<>', $authUser->id)->first();
+            }
+        } else {
+            $recipient = User::find(2);
+            if ($recipient && $recipient->id === $authUser->id) {
+                $recipient = null;
+            }
+            if (!$recipient) {
+                $recipient = User::whereHas('permissions', function ($q) {
+                    $q->where('name', 'admin');
+                })->where('id', '<>', $authUser->id)->first();
+            }
+            if (!$recipient) {
+                $recipient = User::whereHas('permissions', function ($q) {
+                    $q->whereIn('name', ['agente', 'supervisore']);
+                })->where('id', '<>', $authUser->id)->first();
+            }
         }
-        abort_if(!$admin, 404, 'Utente amministratore non trovato');
+        abort_if(!$recipient, 404, 'Destinatario non trovato');
 
-        // trova o crea thread tra authUser e admin
+        // trova o crea thread tra authUser e recipient
         $thread = ChatThread::query()
             ->whereHas('partecipanti', function ($q) use ($authUser) {
                 $q->where('users.id', $authUser->id);
             })
-            ->whereHas('partecipanti', function ($q) use ($admin) {
-                $q->where('users.id', $admin->id);
+            ->whereHas('partecipanti', function ($q) use ($recipient) {
+                $q->where('users.id', $recipient->id);
             })
-            ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $admin) {
-                $q->whereNotIn('users.id', [$authUser->id, $admin->id]);
+            ->whereDoesntHave('partecipanti', function ($q) use ($authUser, $recipient) {
+                $q->whereNotIn('users.id', [$authUser->id, $recipient->id]);
             })
             ->latest('id')
             ->first();
@@ -160,7 +203,7 @@ class ContrattoEnergiaController extends Controller
             $thread->save();
             $thread->partecipanti()->attach([
                 $authUser->id => ['last_read_at' => now()],
-                $admin->id => ['last_read_at' => null],
+                $recipient->id => ['last_read_at' => null],
             ]);
         }
 
@@ -191,10 +234,10 @@ class ContrattoEnergiaController extends Controller
 
         broadcast(new ChatMessageSent($messaggio))->toOthers();
 
-        // notifica admin
-        $admin->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
+        // notify recipient
+        $recipient->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
 
-        SendChatWebPushNotification::dispatch($admin->id, [
+        SendChatWebPushNotification::dispatch($recipient->id, [
             'title' => $authUser->nominativo() . ' · Chat interna',
             'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: 'Segnalazione in chat')), 120),
             'url' => url('/backend/chat-interna?thread=' . $thread->id),
