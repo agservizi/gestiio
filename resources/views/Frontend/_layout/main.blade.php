@@ -37,6 +37,7 @@
 <!--end::Head-->
 <!--begin::Body-->
 <body id="kt_body" class="page-bg">
+@php($isAreaCliente = request()->is('area-personale*') || request()->is('ticket*'))
 <!--begin::Theme mode setup on page load-->
 <script>var defaultThemeMode = "light";
     var themeMode;
@@ -68,7 +69,7 @@
                 <!--begin::Menu-->
                 <div class="d-flex flex-column flex-column-fluid mb-5 mb-lg-10">
                     <!--begin::Brand-->
-                    <div class="d-flex flex-center pt-10 pt-lg-0 mb-10 mb-lg-0 h-lg-225px">
+                    <div class="d-flex flex-center {{ $isAreaCliente ? 'pt-4 pt-lg-2 mb-4 mb-lg-2 h-lg-120px' : 'pt-10 pt-lg-0 mb-10 mb-lg-0 h-lg-225px' }}">
                         @if(false)
                             <!--begin::Sidebar toggle-->
                             <div class="btn btn-icon btn-active-color-primary w-30px h-30px d-lg-none me-4 ms-n15" id="kt_sidebar_toggle">
@@ -87,7 +88,7 @@
                         @endif
                         <!--begin::Logo-->
                         <a href="/">
-                            <img alt="Logo" src="/loghi/logo.png" class="h-45px h-sm-55px h-md-70px"/>
+                            <img alt="Logo" src="/loghi/logo.png" class="{{ $isAreaCliente ? 'h-38px h-sm-45px h-md-55px' : 'h-45px h-sm-55px h-md-70px' }}"/>
                         </a>
                         <!--end::Logo-->
                     </div>
