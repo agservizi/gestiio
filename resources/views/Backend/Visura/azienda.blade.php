@@ -31,7 +31,6 @@
                 <thead>
                 <tr class="fw-bolder fs-7 text-uppercase">
                     <th>Denominazione</th>
-                    <th>P.IVA</th>
                     <th>Comune</th>
                     <th>Natura giuridica</th>
                     <th class="text-end">Azione</th>

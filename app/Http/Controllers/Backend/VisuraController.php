@@ -282,11 +282,9 @@ class VisuraController extends Controller
         $items = collect($rawItems)
             ->map(function ($item) {
                 $arr = json_decode(json_encode($item), true) ?: [];
-                $partitaIva = $this->extractPartitaIvaFromAziendaResult($arr);
 
                 return [
                     'denominazione' => (string) ($arr['denominazione'] ?? $arr['ragione_sociale'] ?? ''),
-                    'partita_iva' => $partitaIva,
                     'indirizzo' => (string) ($arr['indirizzo'] ?? $arr['sede_legale_indirizzo'] ?? ''),
                     'comune' => (string) ($arr['comune'] ?? $arr['sede_legale_comune'] ?? ''),
                     'natura_giuridica' => (string) ($arr['codice_natura_giuridica'] ?? $arr['natura_giuridica'] ?? ''),
@@ -294,7 +292,7 @@ class VisuraController extends Controller
                 ];
             })
             ->filter(function ($row) {
-                return ($row['denominazione'] !== '') || ($row['partita_iva'] !== '');
+                return ($row['denominazione'] !== '');
             })
             ->values();
 
@@ -339,9 +337,9 @@ class VisuraController extends Controller
                 foreach ($dataItems as $item) {
                     $row = json_decode(json_encode($item), true) ?: [];
                     $key = md5(strtolower(
-                        trim((string) ($row['partita_iva'] ?? $row['piva'] ?? $row['cf_piva_id'] ?? ''))
+                        trim((string) ($row['denominazione'] ?? $row['ragione_sociale'] ?? ''))
                         . '|'
-                        . trim((string) ($row['denominazione'] ?? $row['ragione_sociale'] ?? ''))
+                        . trim((string) ($row['comune'] ?? $row['sede_legale_comune'] ?? ''))
                     ));
                     $results[$key] = $item;
                 }
@@ -407,67 +405,6 @@ class VisuraController extends Controller
         }
 
         return array_values(array_unique(array_filter($variants)));
-    }
-
-    protected function extractPartitaIvaFromAziendaResult(array $data): string
-    {
-        $flat = $this->flattenArrayForLookup($data);
-
-        $candidateKeys = [
-            'partita_iva',
-            'partitaiva',
-            'piva',
-            'cf_piva_id',
-            'cfpivaid',
-            'cf_piva',
-            'cfpiva',
-            'vat',
-            'vat_number',
-            'vatnumber',
-        ];
-
-        foreach ($candidateKeys as $key) {
-            if (!array_key_exists($key, $flat)) {
-                continue;
-            }
-            $normalized = preg_replace('/\D+/', '', (string) $flat[$key]);
-            if (is_string($normalized) && strlen($normalized) === 11) {
-                return $normalized;
-            }
-        }
-
-        foreach ($flat as $key => $value) {
-            if (!str_contains($key, 'partita') && !str_contains($key, 'piva') && !str_contains($key, 'vat') && !str_contains($key, 'cfpiva')) {
-                continue;
-            }
-            $normalized = preg_replace('/\D+/', '', (string) $value);
-            if (is_string($normalized) && strlen($normalized) === 11) {
-                return $normalized;
-            }
-        }
-
-        return '';
-    }
-
-    protected function flattenArrayForLookup(array $data, string $prefix = ''): array
-    {
-        $flat = [];
-        foreach ($data as $key => $value) {
-            $normalizedKey = preg_replace('/[^a-z0-9_]+/', '', strtolower((string) $key));
-            $composed = trim($prefix . '_' . $normalizedKey, '_');
-
-            if (is_array($value)) {
-                $flat = array_merge($flat, $this->flattenArrayForLookup($value, $composed));
-                continue;
-            }
-
-            if (is_scalar($value) || $value === null) {
-                $flat[$composed] = (string) $value;
-                $flat[$normalizedKey] = (string) $value;
-            }
-        }
-
-        return $flat;
     }
 
     /**

@@ -334,14 +334,10 @@
                         resp.items.forEach(function (item) {
                             const tr = $('<tr></tr>');
                             tr.append('<td>' + (item.denominazione || '-') + '</td>');
-                            tr.append('<td>' + (item.partita_iva || '-') + '</td>');
                             tr.append('<td>' + (item.comune || '-') + '</td>');
                             tr.append('<td>' + (item.natura_giuridica || '-') + '</td>');
                             const $btnUsa = $('<button type="button" class="btn btn-sm btn-primary">Usa dati</button>');
                             $btnUsa.on('click', function () {
-                                if (item.partita_iva) {
-                                    $('#partita_iva').val(item.partita_iva);
-                                }
                                 if (item.denominazione) {
                                     $('#ragione_sociale').val(item.denominazione);
                                 }
