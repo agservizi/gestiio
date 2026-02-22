@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Enums\TipiPortafoglioEnum;
 use App\Http\Controllers\Controller;
+use App\Http\Funzioni\VisuraCameraleService;
 use App\Http\MieClassi\AlertMessage;
 use App\Http\Services\OpenApiCatastoService;
 use App\Http\Services\OpenApiVisureService;
@@ -257,6 +258,52 @@ class VisuraController extends Controller
             'isCatastale' => $isCatastale,
             'catastoData' => $catastoData,
         ]);
+    }
+
+    public function ricercaAzienda(Request $request)
+    {
+        $request->validate([
+            'denominazione' => ['required', 'string', 'max:255'],
+            'provincia_id' => ['nullable', 'integer'],
+        ]);
+
+        $legacyRequest = new Request([
+            'ragione_sociale' => $request->input('denominazione'),
+            'provincia' => $request->input('provincia_id'),
+        ]);
+
+        $service = new VisuraCameraleService();
+        $response = $service->impresa($legacyRequest);
+        if (!$response || !isset($response->data)) {
+            return [
+                'success' => false,
+                'message' => $service->message ?: 'Nessun risultato trovato',
+            ];
+        }
+
+        $items = collect($response->data)
+            ->map(function ($item) {
+                $arr = json_decode(json_encode($item), true) ?: [];
+
+                return [
+                    'denominazione' => (string) ($arr['denominazione'] ?? $arr['ragione_sociale'] ?? ''),
+                    'partita_iva' => (string) ($arr['partita_iva'] ?? $arr['piva'] ?? $arr['cf_piva_id'] ?? ''),
+                    'indirizzo' => (string) ($arr['indirizzo'] ?? $arr['sede_legale_indirizzo'] ?? ''),
+                    'comune' => (string) ($arr['comune'] ?? $arr['sede_legale_comune'] ?? ''),
+                    'natura_giuridica' => (string) ($arr['codice_natura_giuridica'] ?? $arr['natura_giuridica'] ?? ''),
+                    'raw' => $arr,
+                ];
+            })
+            ->filter(function ($row) {
+                return ($row['denominazione'] !== '') || ($row['partita_iva'] !== '');
+            })
+            ->values();
+
+        return [
+            'success' => true,
+            'count' => $items->count(),
+            'items' => $items,
+        ];
     }
 
     /**

@@ -77,6 +77,9 @@
             if ($('#agente_id').is("select")) {
                 select2UniversaleBackend('agente_id', 'un agente', 1);
             }
+            if ($('#provincia_ricerca').length) {
+                select2UniversaleBackend('provincia_ricerca', 'una provincia');
+            }
 
             @if(session('openapi_credito_bloccato') && !$vecchio)
             Swal.fire({
@@ -294,9 +297,77 @@
                                 $('#indirizzo').val(resp.res.address);
                             }
                         }
-                    });
-
             });
+
+            $('#btn-ricerca-azienda').on('click', function () {
+                const denominazione = ($('#ricerca_azienda_denominazione').val() || '').trim();
+                const provinciaId = ($('#provincia_ricerca').val() || '').trim();
+                const url = $(this).data('url');
+                if (!denominazione) {
+                    Swal.fire('Attenzione', 'Inserisci la denominazione da cercare', 'warning');
+                    return;
+                }
+
+                const $btn = $(this);
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        denominazione: denominazione,
+                        provincia_id: provinciaId,
+                        _token: '{{csrf_token()}}'
+                    },
+                    success: function (resp) {
+                        const $box = $('#box-risultati-ricerca-azienda');
+                        const $tbody = $('#tbody-risultati-ricerca-azienda');
+                        $tbody.html('');
+
+                        if (!resp.success || !resp.items || !resp.items.length) {
+                            $box.addClass('d-none');
+                            Swal.fire('Nessun risultato', resp.message || 'Nessuna azienda trovata', 'info');
+                            return;
+                        }
+
+                        resp.items.forEach(function (item) {
+                            const tr = $('<tr></tr>');
+                            tr.append('<td>' + (item.denominazione || '-') + '</td>');
+                            tr.append('<td>' + (item.partita_iva || '-') + '</td>');
+                            tr.append('<td>' + (item.comune || '-') + '</td>');
+                            tr.append('<td>' + (item.natura_giuridica || '-') + '</td>');
+                            const $btnUsa = $('<button type="button" class="btn btn-sm btn-primary">Usa dati</button>');
+                            $btnUsa.on('click', function () {
+                                if (item.partita_iva) {
+                                    $('#partita_iva').val(item.partita_iva);
+                                }
+                                if (item.denominazione) {
+                                    $('#ragione_sociale').val(item.denominazione);
+                                }
+                                if (item.indirizzo) {
+                                    $('#indirizzo').val(item.indirizzo);
+                                }
+                                Swal.fire('Completato', 'Dati azienda inseriti nel form', 'success');
+                            });
+                            const td = $('<td class="text-end"></td>');
+                            td.append($btnUsa);
+                            tr.append(td);
+                            $tbody.append(tr);
+                        });
+
+                        $box.removeClass('d-none');
+                    },
+                    error: function () {
+                        Swal.fire('Errore', 'Ricerca azienda non disponibile al momento', 'error');
+                    },
+                    complete: function () {
+                        $btn.prop('disabled', false);
+                    }
+                });
+            });
+
+        });
 
             const isCatastale = @json((bool)($isCatastale ?? false));
             const toggleCatastoFields = function () {
