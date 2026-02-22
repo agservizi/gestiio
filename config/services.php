@@ -40,6 +40,7 @@ return [
 
     'openapi' => [
         'bearer_sms' => env('OPENAPI_BEARER_SMS'),
+        'bearer_visure' => env('OPENAPI_BEARER_VISURE', env('OPENAPI_BEARER')),
         'sandbox' => env('OPENAPI_SANDBOX', false)
     ],
 

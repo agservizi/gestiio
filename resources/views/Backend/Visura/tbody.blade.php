@@ -77,6 +77,29 @@
                     </span>
                     </a>
                 @endif
+                @if($record->hasOpenApiMapping())
+                    @if(!$record->openapi_request_id)
+                        <button type="button"
+                                class="btn btn-icon btn-sm btn-light btn-active-light-primary js-openapi-richiedi"
+                                data-url="{{action([\App\Http\Controllers\Backend\VisuraController::class,'richiediOpenApi'],$record->id)}}"
+                                data-bs-toggle="tooltip" data-bs-placement="top" title="Invia richiesta OpenAPI">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    @else
+                        <button type="button"
+                                class="btn btn-icon btn-sm btn-light btn-active-light-primary js-openapi-sync"
+                                data-url="{{action([\App\Http\Controllers\Backend\VisuraController::class,'sincronizzaOpenApi'],$record->id)}}"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Sincronizza stato OpenAPI ({{ $record->openapi_stato_richiesta ?: 'n/d' }})">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <a class="btn btn-icon btn-sm btn-light btn-active-light-primary"
+                           href="{{action([\App\Http\Controllers\Backend\VisuraController::class,'scaricaDocumentoOpenApi'],$record->id)}}"
+                           data-bs-toggle="tooltip" data-bs-placement="top" title="Scarica documento OpenAPI">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    @endif
+                @endif
 
                 @if($puoModificareEsito)
                     <a href="{{action([\App\Http\Controllers\Backend\ModalController::class,'show'],['modifica-stato-visura',$record->id])}}"

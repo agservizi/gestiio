@@ -39,6 +39,10 @@
                     <div class="col-md-6">
                         @include('Backend._inputs.inputRadioH',['campo'=>'tipo_visura','testo'=>'Tipo','required'=>true,"array"=>['privato'=>'Privato','azienda'=>'Azienda']])
                     </div>
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputText',['campo'=>'openapi_hash_visura','testo'=>'Hash visura OpenAPI','required'=>false,'autocomplete'=>'off'])
+                        <small class="text-muted">Hash servizio Visengine usato per richiesta automatica/stato/download.</small>
+                    </div>
                 </div>
 
                 <div class="row">

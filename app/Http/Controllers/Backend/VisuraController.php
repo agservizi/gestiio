@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Enums\TipiPortafoglioEnum;
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\AlertMessage;
+use App\Http\Services\OpenApiVisureService;
 use App\Models\AllegatoCafPatronato;
 use App\Models\AllegatoServizio;
 use App\Models\AllegatoVisura;
@@ -20,6 +21,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Visura;
 use Illuminate\Support\Str;
 use function App\getInputCheckbox;
@@ -151,7 +154,7 @@ class VisuraController extends Controller
         $queryBuilder = \App\Models\Visura::query()
             ->with('esito')
             ->with('agente')
-            ->with('tipo:id,nome')
+            ->with('tipo:id,nome,openapi_hash_visura')
             ->withCount('allegati')
             ->withCount('allegatiPerCliente');
         $term = $request->input('cerca');
@@ -260,28 +263,43 @@ class VisuraController extends Controller
         $request->validate($this->rules(null));
 
         DB::beginTransaction();
-        $tipoServizio = TipoVisura::find($servizio);
 
-        $record = new Visura();
-        $record->esito_id = 'in-gestione';
-        $record->prezzo_pratica = $tipoServizio->prezzo_agente;
-        $record->tipo_visura_id = $tipoServizio->id;
-        $record->caricato_da_user_id = Auth::id();
-        if ($tipoServizio->tipo_visura == 'azienda') {
-            $this->salvaDatiAzienda($record, $request);
-        } else {
-            $this->salvaDatiPrivato($record, $request);
+        try {
+            $tipoServizio = TipoVisura::find($servizio);
+            if (!$tipoServizio) {
+                throw new \RuntimeException('Tipo visura non trovato');
+            }
+
+            $record = new Visura();
+            $record->esito_id = 'in-gestione';
+            $record->prezzo_pratica = $tipoServizio->prezzo_agente;
+            $record->tipo_visura_id = $tipoServizio->id;
+            $record->caricato_da_user_id = Auth::id();
+            if ($tipoServizio->tipo_visura == 'azienda') {
+                $this->salvaDatiAzienda($record, $request);
+            } else {
+                $this->salvaDatiPrivato($record, $request);
+            }
+
+            $this->avviaRichiestaOpenApi($record, $tipoServizio);
+
+            $movimento = new MovimentoPortafoglio();
+            $movimento->agente_id = Auth::id();
+            $movimento->importo = -$tipoServizio->prezzo_agente;
+            $movimento->descrizione = 'Visura ' . $tipoServizio->nome . ' per ' . ($record->partita_iva ?? $record->codice_fiscale);
+            $movimento->prodotto_id = $record->id;
+            $movimento->prodotto_type = get_class($record);
+            $movimento->portafoglio = TipiPortafoglioEnum::SERVIZI->value;
+            $movimento->save();
+
+            DB::commit();
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+            Log::error('Errore creazione visura', ['error' => $exception->getMessage()]);
+            return redirect()->back()->withInput()->withErrors([
+                'openapi' => $exception->getMessage(),
+            ]);
         }
-        $movimento = new MovimentoPortafoglio();
-        $movimento->agente_id = Auth::id();
-        $movimento->importo = -$tipoServizio->prezzo_agente;
-        $movimento->descrizione = 'Visura ' . $tipoServizio->nome . ' per ' . $record->partita_iva;
-        $movimento->prodotto_id = $record->id;
-        $movimento->prodotto_type = get_class($record);
-        $movimento->portafoglio = TipiPortafoglioEnum::SERVIZI->value;
-        $movimento->save();
-
-        DB::commit();
 
         $alertMessage = new AlertMessage();
         $alertMessage->messaggio('Ti è stato scalato l\'importo di ' . importo($tipoServizio->prezzo_agente) . ' per la visura ' . $tipoServizio->nome, 'primary')->titolo('Portafoglio aggiornato', 'primary')->flash();
@@ -563,6 +581,162 @@ class VisuraController extends Controller
 
         $model->save();
         return $model;
+    }
+
+    public function richiediOpenApi(int $id)
+    {
+        $record = Visura::with('tipo')->find($id);
+        abort_if(!$record, 404, 'Questa visura non esiste');
+
+        if ($record->openapi_request_id) {
+            return ['success' => false, 'message' => 'Richiesta OpenAPI già presente'];
+        }
+
+        try {
+            $this->avviaRichiestaOpenApi($record, $record->tipo);
+        } catch (\Throwable $exception) {
+            return ['success' => false, 'message' => $exception->getMessage()];
+        }
+
+        return ['success' => true, 'message' => 'Richiesta OpenAPI inviata'];
+    }
+
+    public function sincronizzaOpenApi(int $id)
+    {
+        $record = Visura::with('tipo')->find($id);
+        abort_if(!$record, 404, 'Questa visura non esiste');
+        abort_if(!$record->openapi_request_id, 422, 'Richiesta OpenAPI non presente');
+
+        $service = new OpenApiVisureService();
+        $statusData = $service->statoRichiesta($record->openapi_request_id);
+        if (!$statusData) {
+            return ['success' => false, 'message' => $service->message ?: 'Errore sincronizzazione OpenAPI'];
+        }
+
+        $this->salvaStatoOpenApi($record, $statusData);
+
+        return ['success' => true, 'message' => 'Stato aggiornato', 'stato' => $record->openapi_stato_richiesta];
+    }
+
+    public function scaricaDocumentoOpenApi(int $id)
+    {
+        $record = Visura::with('tipo')->find($id);
+        abort_if(!$record, 404, 'Questa visura non esiste');
+        abort_if(!$record->openapi_request_id, 422, 'Richiesta OpenAPI non presente');
+
+        $service = new OpenApiVisureService();
+        $document = $service->scaricaDocumento($record->openapi_request_id);
+        if (!$document) {
+            return redirect()->back()->withErrors([
+                'openapi' => $service->message ?: 'Documento non disponibile',
+            ]);
+        }
+
+        $base64 = (string) ($document['file'] ?? '');
+        if ($base64 === '') {
+            return redirect()->back()->withErrors([
+                'openapi' => 'Documento OpenAPI senza contenuto',
+            ]);
+        }
+
+        $content = base64_decode($base64, true);
+        if ($content === false) {
+            $content = $base64;
+        }
+
+        $fileName = (string) ($document['nome'] ?? ('visura_' . $record->id . '.pdf'));
+        $mimeType = (string) ($document['mime_type'] ?? 'application/octet-stream');
+
+        $path = ltrim(config('configurazione.allegati_visure.cartella'), '/')
+            . '/' . Str::ulid() . '-' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
+        Storage::put($path, $content);
+
+        $allegato = new AllegatoServizio();
+        $allegato->uid = $record->uid;
+        $allegato->filename_originale = $fileName;
+        $allegato->path_filename = $path;
+        $allegato->dimensione_file = strlen($content);
+        $allegato->mime_type = $mimeType;
+        $allegato->file_contenuto_base64 = base64_encode($content);
+        $allegato->per_cliente = 0;
+        $allegato->allegato_id = $record->id;
+        $allegato->allegato_type = Visura::class;
+        $allegato->save();
+
+        if (Schema::hasColumn('visure', 'openapi_documento_nome')) {
+            $record->openapi_documento_nome = $fileName;
+            $record->openapi_documento_mime = $mimeType;
+            $record->openapi_documento_dimensione = strlen($content);
+            $record->openapi_documento_scaricato_at = now();
+            $record->openapi_last_sync_at = now();
+            $record->save();
+        }
+
+        return response()->streamDownload(function () use ($content) {
+            echo $content;
+        }, $fileName, ['Content-Type' => $mimeType]);
+    }
+
+    protected function avviaRichiestaOpenApi(Visura $record, TipoVisura $tipoServizio): void
+    {
+        if (!Schema::hasColumn('visure', 'openapi_hash_visura')) {
+            return;
+        }
+
+        $hash = trim((string) $tipoServizio->openapi_hash_visura);
+        if ($hash === '') {
+            return;
+        }
+
+        $service = new OpenApiVisureService();
+        $responseData = $service->creaRichiesta($hash, $this->payloadOpenApi($record));
+        if (!$responseData) {
+            throw new \RuntimeException($service->message ?: 'Impossibile creare la richiesta OpenAPI');
+        }
+
+        $record->openapi_hash_visura = $hash;
+        $record->openapi_request_id = (string) ($responseData['request_id'] ?? $responseData['id'] ?? '');
+        if ($record->openapi_request_id === '') {
+            throw new \RuntimeException('OpenAPI non ha restituito un request_id valido');
+        }
+        $record->openapi_stato_richiesta = (string) ($responseData['stato_richiesta'] ?? $responseData['status'] ?? 'in_lavorazione');
+        $record->openapi_response = $responseData;
+        $record->openapi_last_sync_at = now();
+        $record->save();
+    }
+
+    protected function salvaStatoOpenApi(Visura $record, array $statusData): void
+    {
+        if (!Schema::hasColumn('visure', 'openapi_hash_visura')) {
+            return;
+        }
+
+        $record->openapi_stato_richiesta = (string) ($statusData['stato_richiesta'] ?? $statusData['status'] ?? $record->openapi_stato_richiesta);
+        $record->openapi_response = $statusData;
+        $record->openapi_last_sync_at = now();
+        $record->save();
+    }
+
+    protected function payloadOpenApi(Visura $record): array
+    {
+        return array_filter([
+            'cf_piva_id' => $record->partita_iva ?: $record->codice_fiscale,
+            'partita_iva' => $record->partita_iva,
+            'codice_fiscale' => $record->codice_fiscale,
+            'ragione_sociale' => $record->ragione_sociale,
+            'nome' => $record->nome,
+            'cognome' => $record->cognome,
+            'email' => $record->email,
+            'cellulare' => $record->cellulare,
+            'indirizzo' => $record->indirizzo,
+            'cap' => $record->cap,
+            'citta' => $record->citta,
+            'note' => $record->note,
+            'internal_id' => $record->id,
+            'internal_uid' => $record->uid,
+        ], function ($value) {
+            return !is_null($value) && $value !== '';
+        });
     }
 
     protected function backToIndex()

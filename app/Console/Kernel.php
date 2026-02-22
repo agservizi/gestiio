@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\BackfillAllegatiDbContent::class,
         \App\Console\Commands\BackfillGestoriEnergiaCategorie::class,
         \App\Console\Commands\BackfillGestoriEnergiaLoghiDb::class,
+        \App\Console\Commands\SyncTipoVisuraOpenApiHash::class,
     ];
 
     /**

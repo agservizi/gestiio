@@ -3,14 +3,23 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\TipoVisura;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\TipoVisura;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class TipoVisuraController extends Controller
 {
     protected $conFiltro = false;
+
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
 
 
     /**
@@ -34,7 +43,7 @@ class TipoVisuraController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $this->currentUser()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -46,7 +55,7 @@ class TipoVisuraController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -60,7 +69,7 @@ class TipoVisuraController extends Controller
                 'html' => base64_encode(view('Backend.TipoVisura.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -246,6 +255,7 @@ class TipoVisuraController extends Controller
             'abilitato' => 'app\getInputCheckbox',
             'richiedi_allegati' => 'app\getInputCheckbox',
             'tipo_visura' => '',
+            'openapi_hash_visura' => 'trim',
         ];
         foreach ($campi as $campo => $funzione) {
             $valore = $request->$campo;
@@ -283,6 +293,7 @@ class TipoVisuraController extends Controller
             'prezzo_cliente' => ['required'],
             'prezzo_agente' => ['required'],
             'abilitato' => ['nullable'],
+            'openapi_hash_visura' => ['nullable', 'max:255'],
         ];
 
         return $rules;

@@ -23,7 +23,10 @@ class Visura extends Model
     ];
 
     protected $casts = [
-        'data' => 'datetime'
+        'data' => 'datetime',
+        'openapi_last_sync_at' => 'datetime',
+        'openapi_documento_scaricato_at' => 'datetime',
+        'openapi_response' => 'array',
     ];
 
     /**
@@ -106,6 +109,11 @@ class Visura extends Model
     public function nominativo()
     {
         return $this->ragione_sociale ?? ($this->cognome . ' ' . $this->nome);
+    }
+
+    public function hasOpenApiMapping(): bool
+    {
+        return (bool) ($this->openapi_hash_visura ?: optional($this->tipo)->openapi_hash_visura);
     }
 
 

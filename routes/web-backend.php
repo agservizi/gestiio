@@ -49,6 +49,9 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::resource('/visura', \App\Http\Controllers\Backend\VisuraController::class)->except(['create']);
     Route::post('/allegato-visura', [\App\Http\Controllers\Backend\VisuraController::class, 'uploadAllegato']);
     Route::delete('/allegato-visura', [\App\Http\Controllers\Backend\VisuraController::class, 'deleteAllegato']);
+    Route::post('/visura/{id}/openapi-richiedi', [\App\Http\Controllers\Backend\VisuraController::class, 'richiediOpenApi']);
+    Route::post('/visura/{id}/openapi-sync', [\App\Http\Controllers\Backend\VisuraController::class, 'sincronizzaOpenApi']);
+    Route::get('/visura/{id}/openapi-documento', [\App\Http\Controllers\Backend\VisuraController::class, 'scaricaDocumentoOpenApi']);
 
 
     //Spedizioni
