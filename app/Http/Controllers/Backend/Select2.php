@@ -178,6 +178,7 @@ class Select2 extends Controller
 
 
             case 'provincia':
+            case 'provincia_ricerca':
                 if (empty($term)) {
                     return [''];
                 }
