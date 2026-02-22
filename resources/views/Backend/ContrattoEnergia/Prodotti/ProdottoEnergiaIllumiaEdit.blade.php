@@ -102,6 +102,26 @@
     </div>
     <div class="row">
         <div class="col-md-6">
+            @include('Backend._inputs.inputSwitch',['campo'=>'provenienza_mercato_libero','testo'=>'Provenienza mercato libero'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputSwitch',['campo'=>'uso_non_professionale_luce','testo'=>'Uso non professionale luce'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'consumo_annuo_luce','testo'=>'Consumo annuo luce','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'potenza_contrattuale','testo'=>'Potenza contrattuale','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'livello_tensione','testo'=>'Livello tensione','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'attuale_societa_luce','testo'=>'Attuale societa luce','autocomplete'=>'off'])
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
             @include('Backend._inputs.inputText',['campo'=>'indirizzo_fornitura_luce','testo'=>'Indirizzo fornitura luce','autocomplete'=>'off','help'=>'(solo se diverso dall’indirizzo di residenza)'])
         </div>
         <div class="col-md-6">
@@ -126,6 +146,35 @@
         </div>
         <div class="col-md-6">
             @include('Backend._inputs.inputText',['campo'=>'pdr','testo'=>'Pdr','autocomplete'=>'off'])
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            @include('Backend._inputs.inputSwitch',['campo'=>'uso_non_professionale_gas','testo'=>'Uso non professionale gas'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'consumo_annuo_gas','testo'=>'Consumo annuo gas','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'attuale_societa_gas','testo'=>'Attuale societa gas','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'profilo_consumo','testo'=>'Profilo consumo','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'posizione_contatore','testo'=>'Posizione contatore','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'consumo_annuo','testo'=>'Consumo annuo','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'matricola_contatore','testo'=>'Matricola contatore','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputSwitch',['campo'=>'riscaldamento','testo'=>'Riscaldamento'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputSwitch',['campo'=>'cottura_acqua_calda','testo'=>'Cottura acqua calda'])
         </div>
     </div>
     <div class="row">

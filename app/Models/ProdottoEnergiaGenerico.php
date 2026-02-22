@@ -20,6 +20,11 @@ class ProdottoEnergiaGenerico extends Model
         'fornitura_richiesta' => 'array',
         'fasce_reperibilita' => 'array',
         'tipologia_uso_gas' => 'array',
+        'provenienza_mercato_libero' => 'boolean',
+        'uso_non_professionale_luce' => 'boolean',
+        'uso_non_professionale_gas' => 'boolean',
+        'riscaldamento' => 'boolean',
+        'cottura_acqua_calda' => 'boolean',
         'data_rilascio' => 'datetime',
         'data_scadenza' => 'datetime',
     ];
