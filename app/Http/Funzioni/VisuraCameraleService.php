@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Log;
 
 class VisuraCameraleService
 {
+    private const ENDPOINT_SANDBOX = 'https://test.visurecamerali.openapi.it/';
+    private const ENDPOINT_PRODUCTION = 'https://visurecamerali.openapi.it/';
 
     public $error = false;
     public $message;
@@ -30,7 +32,7 @@ class VisuraCameraleService
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->bearer()
-            ])->get($this->url('https://test.visurecamerali.openapi.it/impresa'), $query);
+            ])->get($this->endpoint() . 'impresa', $query);
 
         } catch (\Exception $exception) {
 
@@ -75,7 +77,7 @@ class VisuraCameraleService
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->bearer()
-        ])->get($this->url("https://test.visurecamerali.openapi.it/$tipo/$id"));
+        ])->get($this->endpoint() . $tipo . '/' . $id);
 
 
         return $this->response($response);
@@ -87,7 +89,7 @@ class VisuraCameraleService
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->bearer()
-        ])->get($this->url("https://test.visurecamerali.openapi.it/$tipo/$id/allegati"));
+        ])->get($this->endpoint() . $tipo . '/' . $id . '/allegati');
 
 
         return $this->response($response);
@@ -102,7 +104,7 @@ class VisuraCameraleService
         ];
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->bearer()
-        ])->post($this->url('https://test.visurecamerali.openapi.it/ordinaria-impresa-individuale'), $query);
+        ])->post($this->endpoint() . 'ordinaria-impresa-individuale', $query);
 
 
         return $this->response($response);
@@ -116,7 +118,7 @@ class VisuraCameraleService
         ];
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->bearer()
-        ])->post($this->url('https://test.visurecamerali.openapi.it/ordinaria-societa-persone'), $query);
+        ])->post($this->endpoint() . 'ordinaria-societa-persone', $query);
 
 
         return $this->response($response);
@@ -130,7 +132,7 @@ class VisuraCameraleService
         ];
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->bearer()
-        ])->post($this->url('https://test.visurecamerali.openapi.it/ordinaria-societa-capitale'), $query);
+        ])->post($this->endpoint() . 'ordinaria-societa-capitale', $query);
 
 
         return $this->response($response);
@@ -147,12 +149,12 @@ class VisuraCameraleService
     }
 
 
-    protected function url($url)
+    protected function endpoint(): string
     {
         if (config('services.openapi.sandbox')) {
-            return $url;
+            return rtrim((string) (config('services.openapi.visure_camerali_base_url_sandbox') ?: self::ENDPOINT_SANDBOX), '/') . '/';
         } else {
-            return str_replace('test.', '', $url);
+            return rtrim((string) (config('services.openapi.visure_camerali_base_url_production') ?: self::ENDPOINT_PRODUCTION), '/') . '/';
         }
     }
 

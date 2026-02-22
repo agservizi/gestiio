@@ -44,6 +44,8 @@ return [
         'bearer_visure' => env('OPENAPI_BEARER_VISURE', env('OPENAPI_BEARER')),
         'bearer_catasto' => env('OPENAPI_BEARER_CATASTO'),
         'sandbox' => env('OPENAPI_SANDBOX', false),
+        'visure_camerali_base_url_sandbox' => env('OPENAPI_VISURE_CAMERALI_BASE_URL_SANDBOX'),
+        'visure_camerali_base_url_production' => env('OPENAPI_VISURE_CAMERALI_BASE_URL_PRODUCTION'),
         'visure_base_url_sandbox' => env('OPENAPI_VISURE_BASE_URL_SANDBOX'),
         'visure_base_url_production' => env('OPENAPI_VISURE_BASE_URL_PRODUCTION'),
         'catasto_base_url_sandbox' => env('OPENAPI_CATASTO_BASE_URL_SANDBOX'),
