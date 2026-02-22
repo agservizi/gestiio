@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 
 class SyncTipoVisuraOpenApiHash extends Command
 {
-    protected $signature = 'visure:sync-openapi-hash {--dry-run : Mostra solo mapping senza salvare} {--force : Sovrascrive anche hash gia valorizzati}';
+    protected $signature = 'visure:sync-openapi-hash {--dry-run : Mostra solo mapping senza salvare} {--force : Sovrascrive anche hash gia valorizzati} {--debug : Mostra struttura dati OpenAPI per diagnosi}';
 
     protected $description = 'Allinea tipi_visure.openapi_hash_visura usando l elenco servizi Visengine OpenAPI';
 
@@ -27,6 +27,11 @@ class SyncTipoVisuraOpenApiHash extends Command
 
         $indicizzato = $this->indicizzaVisureOpenApi($elenco);
         if (empty($indicizzato)) {
+            if ((bool) $this->option('debug')) {
+                $this->warn('DEBUG struttura risposta OpenAPI (prime 5 voci):');
+                $preview = array_slice($this->flattenNodes($elenco), 0, 5);
+                $this->line(json_encode($preview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            }
             $this->error('Elenco OpenAPI ricevuto ma non interpretabile (nome/hash mancanti).');
             return self::FAILURE;
         }
@@ -84,8 +89,9 @@ class SyncTipoVisuraOpenApiHash extends Command
     protected function indicizzaVisureOpenApi(array $elenco): array
     {
         $out = [];
-        foreach ($elenco as $item) {
-            if (!is_array($item)) {
+        $nodes = $this->flattenNodes($elenco);
+        foreach ($nodes as $item) {
+            if (!is_array($item) || empty($item)) {
                 continue;
             }
 
@@ -102,15 +108,31 @@ class SyncTipoVisuraOpenApiHash extends Command
             ];
         }
 
-        return $out;
+        // Unicizza per hash.
+        $unique = [];
+        foreach ($out as $row) {
+            $unique[$row['hash']] = $row;
+        }
+
+        return array_values($unique);
     }
 
     protected function extractName(array $item): string
     {
-        $keys = ['nome', 'name', 'titolo', 'title', 'visura', 'label'];
+        $keys = ['nome', 'name', 'titolo', 'title', 'visura', 'servizio', 'label', 'descrizione', 'description'];
         foreach ($keys as $key) {
             $value = $item[$key] ?? null;
             if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        foreach ($item as $key => $value) {
+            if (!is_string($value) || trim($value) === '') {
+                continue;
+            }
+            $k = mb_strtolower((string) $key, 'UTF-8');
+            if (str_contains($k, 'nome') || str_contains($k, 'name') || str_contains($k, 'title') || str_contains($k, 'visura') || str_contains($k, 'servizio')) {
                 return trim($value);
             }
         }
@@ -128,7 +150,53 @@ class SyncTipoVisuraOpenApiHash extends Command
             }
         }
 
+        foreach ($item as $key => $value) {
+            if (!is_string($value) || trim($value) === '') {
+                continue;
+            }
+            $k = mb_strtolower((string) $key, 'UTF-8');
+            if (str_contains($k, 'hash')) {
+                return trim($value);
+            }
+        }
+
         return '';
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function flattenNodes(array $payload): array
+    {
+        $stack = [$payload];
+        $nodes = [];
+
+        while (!empty($stack)) {
+            $current = array_pop($stack);
+            if (!is_array($current)) {
+                continue;
+            }
+
+            // Nodo candidato se contiene almeno 1 valore scalare stringa.
+            $hasScalarString = false;
+            foreach ($current as $value) {
+                if (is_string($value) && trim($value) !== '') {
+                    $hasScalarString = true;
+                    break;
+                }
+            }
+            if ($hasScalarString) {
+                $nodes[] = $current;
+            }
+
+            foreach ($current as $value) {
+                if (is_array($value)) {
+                    $stack[] = $value;
+                }
+            }
+        }
+
+        return $nodes;
     }
 
     protected function normalize(string $value): string
@@ -188,4 +256,3 @@ class SyncTipoVisuraOpenApiHash extends Command
         return $bestScore >= 2 ? $best : null;
     }
 }
-
