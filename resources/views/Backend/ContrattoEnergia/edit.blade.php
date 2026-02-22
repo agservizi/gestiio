@@ -57,6 +57,8 @@
                        value="{{old('gestore_id',$record->gestore_id)}}">
                 <input type="hidden" id="tipo_prodotto" name="tipo_prodotto"
                        value="{{old('tipo_prodotto',$tipoProdotto)}}">
+                <input type="hidden" name="categoria_pratica" id="categoria_pratica"
+                       value="{{ old('categoria_pratica', $categoriaPratica ?? 'consumer') }}">
 
                 <div class="mb-5">
                     <h4 class="fw-bold mb-1">Dati pratica</h4>
@@ -89,6 +91,51 @@
                     <div class="mb-5">
                         <h4 class="fw-bold mb-1">Dettagli contratto</h4>
                         <div class="text-muted fs-7">Campi specifici del gestore e della fornitura</div>
+                    </div>
+                    @php
+                        $categoriaDaProdotto = null;
+                        if (str_contains(strtolower((string)$tipoProdotto), 'business')) {
+                            $categoriaDaProdotto = 'business';
+                        } elseif (str_contains(strtolower((string)$tipoProdotto), 'consumer')) {
+                            $categoriaDaProdotto = 'consumer';
+                        }
+                        $switchConsumerUrl = $categoriaSwitchUrls['consumer'] ?? null;
+                        $switchBusinessUrl = $categoriaSwitchUrls['business'] ?? null;
+                        $switchAbilitato = !empty($switchConsumerUrl) && !empty($switchBusinessUrl) && !$record->id;
+                    @endphp
+
+                    <div class="mb-6">
+                        <label class="fw-bold fs-6 mb-3 d-block required">Categoria pratica</label>
+                        <ul class="nav nav-pills gap-3" id="categoria-pratica-tabs">
+                            <li class="nav-item">
+                                <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
+                                        data-categoria="consumer"
+                                        data-switch-url="{{ $switchConsumerUrl }}"
+                                        @if(!$switchAbilitato) disabled @endif>
+                                    <i class="bi bi-person-circle me-1"></i>Consumer
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
+                                        data-categoria="business"
+                                        data-switch-url="{{ $switchBusinessUrl }}"
+                                        @if(!$switchAbilitato) disabled @endif>
+                                    <i class="bi bi-building me-1"></i>Business
+                                </button>
+                            </li>
+                        </ul>
+                        @if(!$switchAbilitato && !empty($categoriaDaProdotto))
+                            <div class="text-muted fs-7 mt-2">
+                                Categoria fissata dal prodotto selezionato: <span class="fw-bold text-gray-700">{{ ucfirst($categoriaDaProdotto) }}</span>.
+                            </div>
+                        @elseif($switchAbilitato)
+                            <div class="text-muted fs-7 mt-2">
+                                Cambiando categoria apri direttamente il form prodotto corrispondente.
+                            </div>
+                        @endif
+                        @error('categoria_pratica')
+                        <div class="text-danger fs-7 mt-2">{{ $message }}</div>
+                        @enderror
                     </div>
                     @include("Backend.ContrattoEnergia.Prodotti.{$tipoProdotto}Edit",['record'=>$recordProdotto,'codiceFiscale'=>$record->codice_fiscale,'email'=>$record->email,'telefono'=>$record->telefono,'denominazione'=>$record->denominazione])
                 @endif
@@ -166,6 +213,30 @@
             if ($('#agente_id').is("select")) {
                 select2UniversaleBackend('agente_id', 'un agente', 1);
             }
+
+            function toggleCategoriaPratica(categoria) {
+                var isBusiness = categoria === 'business';
+
+                $('.js-categoria-tab').removeClass('btn-primary').addClass('btn-light-primary');
+                $('.js-categoria-tab[data-categoria="' + categoria + '"]').removeClass('btn-light-primary').addClass('btn-primary');
+                $('#categoria_pratica').val(categoria);
+
+                $('#denominazione, #partita_iva').prop('required', isBusiness);
+                $('#nome, #cognome').prop('required', !isBusiness);
+            }
+
+            toggleCategoriaPratica($('#categoria_pratica').val() || '{{ old('categoria_pratica', $categoriaPratica ?? 'consumer') }}');
+
+            $('.js-categoria-tab:not([disabled])').on('click', function () {
+                var categoria = $(this).data('categoria');
+                var switchUrl = $(this).data('switch-url');
+
+                toggleCategoriaPratica(categoria);
+
+                if (switchUrl && window.location.href !== switchUrl) {
+                    window.location.href = switchUrl;
+                }
+            });
 
             var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
                 url: "{{action([$controller,'uploadAllegato'])}}", // Set the url for your upload script location

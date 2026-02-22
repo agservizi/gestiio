@@ -455,6 +455,9 @@ class ContrattoEnergiaController extends Controller
         $record->data = today();
 
 
+        $categoriaPratica = $this->determinaCategoriaPratica($record, $request, $gestore->model_prodotto);
+        $categoriaSwitchUrls = $this->buildCategoriaSwitchUrls($gestore, $record->agente_id);
+
         return view('Backend.ContrattoEnergia.edit', [
             'record' => $record,
             'contratto' => $record,
@@ -463,7 +466,9 @@ class ContrattoEnergiaController extends Controller
             'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . ContrattoEnergia::NOME_PLURALE],
             'recordProdotto' => $prodotto,
             'tipoProdotto' => $gestore->model_prodotto,
-            'creaContratto' => false
+            'creaContratto' => false,
+            'categoriaPratica' => $categoriaPratica,
+            'categoriaSwitchUrls' => $categoriaSwitchUrls,
         ]);
     }
 
@@ -494,7 +499,7 @@ class ContrattoEnergiaController extends Controller
     {
 
         $tipoProdotto = $request->input('tipo_prodotto');
-        $rules = $this->rules(null);
+        $rules = $this->rules($request, null);
         $classeProdotto = null;
         if ($tipoProdotto) {
             $classeProdotto = ProdottoEnergiaAbstract::constructor($tipoProdotto);
@@ -574,6 +579,8 @@ class ContrattoEnergiaController extends Controller
         }
 
 
+        $categoriaPratica = $this->determinaCategoriaPratica($record, request(), $tipoProdotto);
+
         return view('Backend.ContrattoEnergia.edit', [
             'record' => $record,
             'contratto' => $record,
@@ -584,7 +591,9 @@ class ContrattoEnergiaController extends Controller
             'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . ContrattoEnergia::NOME_PLURALE],
             'recordProdotto' => $recordProdotto,
             'tipoProdotto' => $tipoProdotto,
-            'creaContratto' => true
+            'creaContratto' => true,
+            'categoriaPratica' => $categoriaPratica,
+            'categoriaSwitchUrls' => [],
 
         ]);
     }
@@ -602,7 +611,7 @@ class ContrattoEnergiaController extends Controller
         abort_if(!$record, 404, 'Questo ' . ContrattoEnergia::NOME_SINGOLARE . ' non esiste');
 
         $tipoProdotto = $request->input('tipo_prodotto');
-        $rules = $this->rules(null);
+        $rules = $this->rules($request, $id);
         $classeProdotto = null;
         if ($tipoProdotto) {
             $classeProdotto = ProdottoEnergiaAbstract::constructor($tipoProdotto);
@@ -610,8 +619,6 @@ class ContrattoEnergiaController extends Controller
         }
 
         $request->validate($rules);
-
-        $request->validate($this->rules($id));
         $esitoPrima = $record->esito_id;
         $this->salvaDati($record, $request, $classeProdotto);
 
@@ -1019,20 +1026,138 @@ class ContrattoEnergiaController extends Controller
     }
 
 
-    protected function rules($id = null)
+    protected function rules(Request $request, $id = null)
     {
-
+        $categoriaPratica = $this->determinaCategoriaPraticaDaRequest($request);
+        $isBusiness = $categoriaPratica === 'business';
 
         $rules = [
             'data' => ['required', new DataItalianaRule()],
             'agente_id' => ['required'],
             'gestore_id' => ['required'],
+            'categoria_pratica' => ['required', 'in:consumer,business'],
             'codice_fiscale' => ['required', new CodiceFiscaleRule()],
+            'denominazione' => $isBusiness ? ['nullable', 'max:255'] : ['nullable', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'telefono' => ['required', new \App\Rules\TelefonoRule()],
         ];
 
         return $rules;
+    }
+
+    protected function determinaCategoriaPratica(ContrattoEnergia $record, Request $request, ?string $tipoProdotto = null): string
+    {
+        $categoriaDaProdotto = $this->categoriaDaTipoProdotto($tipoProdotto);
+        if ($categoriaDaProdotto !== null) {
+            return $categoriaDaProdotto;
+        }
+
+        $oldCategoria = old('categoria_pratica');
+        if (in_array($oldCategoria, ['consumer', 'business'], true)) {
+            return $oldCategoria;
+        }
+
+        return $this->determinaCategoriaPraticaDaRequest($request);
+    }
+
+    protected function determinaCategoriaPraticaDaRequest(Request $request): string
+    {
+        $categoriaDaRequest = $request->input('categoria_pratica');
+        if (in_array($categoriaDaRequest, ['consumer', 'business'], true)) {
+            return $categoriaDaRequest;
+        }
+
+        $categoriaDaTipoProdotto = $this->categoriaDaTipoProdotto($request->input('tipo_prodotto'));
+        if ($categoriaDaTipoProdotto !== null) {
+            return $categoriaDaTipoProdotto;
+        }
+
+        return 'consumer';
+    }
+
+    protected function categoriaDaTipoProdotto(?string $tipoProdotto): ?string
+    {
+        if (!$tipoProdotto) {
+            return null;
+        }
+
+        $nome = strtolower($tipoProdotto);
+        if (str_contains($nome, 'business')) {
+            return 'business';
+        }
+        if (str_contains($nome, 'consumer')) {
+            return 'consumer';
+        }
+
+        return null;
+    }
+
+    protected function buildCategoriaSwitchUrls(GestoreContrattoEnergia $gestoreCorrente, ?int $agenteId = null): array
+    {
+        $targets = [
+            'consumer' => $this->resolveGestoreByCategoria($gestoreCorrente, 'consumer'),
+            'business' => $this->resolveGestoreByCategoria($gestoreCorrente, 'business'),
+        ];
+
+        $urls = [
+            'consumer' => null,
+            'business' => null,
+        ];
+
+        foreach ($targets as $categoria => $gestore) {
+            if (!$gestore) {
+                continue;
+            }
+
+            $url = action([self::class, 'create'], [$gestore->id]);
+            if ($agenteId) {
+                $url .= '?' . http_build_query(['agente_id' => $agenteId]);
+            }
+            $urls[$categoria] = $url;
+        }
+
+        return $urls;
+    }
+
+    protected function resolveGestoreByCategoria(GestoreContrattoEnergia $gestoreCorrente, string $categoria): ?GestoreContrattoEnergia
+    {
+        $categoria = strtolower($categoria);
+        if (!in_array($categoria, ['consumer', 'business'], true)) {
+            return null;
+        }
+
+        $modelProdotto = (string) $gestoreCorrente->model_prodotto;
+        $modelProdottoLower = strtolower($modelProdotto);
+
+        if (!str_contains($modelProdottoLower, 'consumer') && !str_contains($modelProdottoLower, 'business')) {
+            return null;
+        }
+
+        if ($categoria === 'consumer') {
+            $targetProdotto = str_ireplace('business', 'Consumer', $modelProdotto);
+        } else {
+            $targetProdotto = str_ireplace('consumer', 'Business', $modelProdotto);
+        }
+
+        if ($targetProdotto === $modelProdotto) {
+            $targetProdotto = $modelProdotto;
+        }
+
+        $gestore = GestoreContrattoEnergia::query()
+            ->where('attivo', 1)
+            ->where('model_prodotto', $targetProdotto)
+            ->first();
+
+        if ($gestore) {
+            return $gestore;
+        }
+
+        $categoriaAttuale = $this->categoriaDaTipoProdotto($modelProdotto);
+        if ($categoriaAttuale === $categoria) {
+            return $gestoreCorrente;
+        }
+
+        return null;
     }
 
     protected function tipoFile($estensione)
