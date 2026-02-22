@@ -138,8 +138,7 @@ class Illumia extends ProdottoEnergiaAbstract
 
     public function determinaProvvigione(Request $request)
     {
-        $gestoreContrattoEnergia = GestoreContrattoEnergia::find(1);
-        return $gestoreContrattoEnergia->importo_contratto;
+        return $this->calcolaProvvigioneDaGestore($request, 1, false);
     }
 
 

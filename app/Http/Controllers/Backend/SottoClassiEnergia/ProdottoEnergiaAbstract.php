@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend\SottoClassiEnergia;
 
 use App\Models\Comune;
 use App\Models\ContrattoEnergia;
+use App\Models\GestoreContrattoEnergia;
 use App\Models\ProdottoEnergiaEnelBusiness;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -56,6 +57,37 @@ class ProdottoEnergiaAbstract
     public function determinaProvvigione(Request $request)
     {
         return 0;
+    }
+
+    protected function calcolaProvvigioneDaGestore(Request $request, ?int $fallbackGestoreId = null, bool $consideraBollettino = false): float
+    {
+        $gestoreId = (int) $request->input('gestore_id');
+        if ($gestoreId <= 0) {
+            $gestoreId = (int) $fallbackGestoreId;
+        }
+
+        $gestore = $gestoreId > 0 ? GestoreContrattoEnergia::find($gestoreId) : null;
+        if (!$gestore) {
+            return 0;
+        }
+
+        $isBusiness = $gestore->categoria_pratica === 'business'
+            || str_contains(strtolower((string) $gestore->model_prodotto), 'business');
+
+        if ($consideraBollettino && $request->input('modalita_pagamento') === 'bollettino') {
+            if ($isBusiness && $gestore->importo_pagamento_bollettino_business !== null) {
+                return (float) $gestore->importo_pagamento_bollettino_business;
+            }
+            if ($gestore->importo_pagamento_bollettino !== null) {
+                return (float) $gestore->importo_pagamento_bollettino;
+            }
+        }
+
+        if ($isBusiness && $gestore->importo_contratto_business !== null) {
+            return (float) $gestore->importo_contratto_business;
+        }
+
+        return (float) ($gestore->importo_contratto ?? 0);
     }
 
 

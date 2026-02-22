@@ -1092,6 +1092,16 @@ class ContrattoEnergiaController extends Controller
             return $categoriaDaRequest;
         }
 
+        $gestoreId = $request->input('gestore_id');
+        if ($gestoreId) {
+            $categoriaDaGestore = GestoreContrattoEnergia::query()
+                ->whereKey($gestoreId)
+                ->value('categoria_pratica');
+            if (in_array($categoriaDaGestore, ['consumer', 'business'], true)) {
+                return $categoriaDaGestore;
+            }
+        }
+
         $categoriaDaTipoProdotto = $this->categoriaDaTipoProdotto($request->input('tipo_prodotto'));
         if ($categoriaDaTipoProdotto !== null) {
             return $categoriaDaTipoProdotto;
@@ -1352,6 +1362,17 @@ class ContrattoEnergiaController extends Controller
         $categoria = strtolower($categoria);
         if (!in_array($categoria, ['consumer', 'business'], true)) {
             return null;
+        }
+
+        if ($gestoreCorrente->switch_key) {
+            $gestore = GestoreContrattoEnergia::query()
+                ->where('switch_key', $gestoreCorrente->switch_key)
+                ->where('categoria_pratica', $categoria)
+                ->where('attivo', 1)
+                ->first();
+            if ($gestore) {
+                return $gestore;
+            }
         }
 
         $modelProdotto = (string) $gestoreCorrente->model_prodotto;

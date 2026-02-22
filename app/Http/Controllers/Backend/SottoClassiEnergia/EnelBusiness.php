@@ -194,12 +194,7 @@ class EnelBusiness extends ProdottoEnergiaAbstract
 
     public function determinaProvvigione(Request $request)
     {
-        $gestoreContrattoEnergia = GestoreContrattoEnergia::find(4);
-        if ($request->input('modalita_pagamento') == 'bollettino') {
-            return $gestoreContrattoEnergia->importo_pagamento_bollettino;
-        } else {
-            return $gestoreContrattoEnergia->importo_contratto;
-        }
+        return $this->calcolaProvvigioneDaGestore($request, 4, true);
     }
 
 

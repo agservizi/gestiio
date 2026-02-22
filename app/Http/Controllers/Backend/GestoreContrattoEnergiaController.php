@@ -3,18 +3,28 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\GestoreContrattoEnergiaContrattoEnergia;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\GestoreContrattoEnergia;
-use DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Intervention\Image\Facades\Image;
 
 class GestoreContrattoEnergiaController extends Controller
 {
     protected $conFiltro = false;
+
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
 
 
     /**
@@ -38,7 +48,7 @@ class GestoreContrattoEnergiaController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $this->currentUser()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -50,7 +60,7 @@ class GestoreContrattoEnergiaController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -64,7 +74,7 @@ class GestoreContrattoEnergiaController extends Controller
                 'html' => base64_encode(view('Backend.GestoreContrattoEnergia.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -226,6 +236,7 @@ class GestoreContrattoEnergiaController extends Controller
 
         if ($nuovo) {
             $model->model_prodotto = 'ProdottoEnergiaGenerico';
+            $model->categoria_pratica = 'consumer';
         }
 
         //Ciclo su campi
@@ -239,12 +250,19 @@ class GestoreContrattoEnergiaController extends Controller
             'titolo_notifica_a_gestore' => '',
             'testo_notifica_a_gestore' => '',
             'importo_contratto' => 'app\getInputNumero',
+            'importo_contratto_business' => 'app\getInputNumero',
             'importo_pagamento_bollettino' => 'app\getInputNumero',
+            'importo_pagamento_bollettino_business' => 'app\getInputNumero',
+            'categoria_pratica' => '',
+            'switch_key' => '',
         ];
         foreach ($campi as $campo => $funzione) {
             $valore = $request->$campo;
             if ($funzione != '') {
                 $valore = $funzione($valore);
+            }
+            if ($campo === 'switch_key') {
+                $valore = Str::slug((string) $valore, '-');
             }
             $model->$campo = $valore;
         }
@@ -253,14 +271,19 @@ class GestoreContrattoEnergiaController extends Controller
             $model->model_prodotto = $request->input('model_prodotto');
         }
 
+        if (!$model->switch_key) {
+            $nomeBase = preg_replace('/\b(consumer|business)\b/i', '', (string) $model->nome);
+            $model->switch_key = Str::slug(trim((string) $nomeBase), '-');
+        }
+
         $model->save();
 
         if ($request->file('logo')) {
             $tmpFile = $request->file('logo');
             $extensione = $tmpFile->extension();
             $filename = hexdec(uniqid()) . '.' . $extensione;
-            if ($model->logo && \Storage::exists($model->logo)) {
-                \Storage::delete($model->logo);
+            if ($model->logo && Storage::exists($model->logo)) {
+                Storage::delete($model->logo);
             }
             $fileImmagine = $this->salvaImmagine($tmpFile, $filename, true);
             $model->logo = $fileImmagine;
@@ -292,7 +315,15 @@ class GestoreContrattoEnergiaController extends Controller
             'nome' => ['required', 'max:255'],
             'colore_hex' => ['nullable', 'max:255'],
             'attivo' => ['nullable'],
-            'email_notifica_a_gestore' => ['nullable']
+            'email_notifica_a_gestore' => ['nullable'],
+            'categoria_pratica' => ['required', 'in:consumer,business'],
+            'switch_key' => [
+                'required',
+                'max:100',
+                Rule::unique('tab_gestori_contratti_energia')
+                    ->ignore($id)
+                    ->where(fn($q) => $q->where('categoria_pratica', request()->input('categoria_pratica'))),
+            ],
         ];
 
         return $rules;
@@ -331,7 +362,7 @@ class GestoreContrattoEnergiaController extends Controller
         if ($canvas) {
 
             if ($img->height() < $height || $img->width() < $width) {
-                \Log::debug('Aggiusto rapporto');
+                Log::debug('Aggiusto rapporto');
                 $img->resizeCanvas($width, $height, 'center', false, 'ffffff');
             }
         }

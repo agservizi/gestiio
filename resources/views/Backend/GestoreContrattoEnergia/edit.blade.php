@@ -24,6 +24,12 @@
                     <div class="col-md-6">
                         @include('Backend._inputs.inputText',['campo'=>'url','testo'=>'Url','autocomplete'=>'off'])
                     </div>
+                    <div class="col-md-3">
+                        @include('Backend._inputs.inputSelect2KeyValue',['campo'=>'categoria_pratica','testo'=>'Categoria pratica','required'=>true,'array'=>\App\Models\GestoreContrattoEnergia::CATEGORIE_PRATICA])
+                    </div>
+                    <div class="col-md-3">
+                        @include('Backend._inputs.inputText',['campo'=>'switch_key','testo'=>'Switch key','required'=>true,'autocomplete'=>'off','help'=>'Es: enel, a2a, illumia'])
+                    </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6">
@@ -56,7 +62,13 @@
                         @include('Backend._inputs.inputText',['campo'=>'importo_contratto','testo'=>'Importo a contratto','required' => true,'classe' => 'importo'])
                     </div>
                     <div class="col-md-6">
+                        @include('Backend._inputs.inputText',['campo'=>'importo_contratto_business','testo'=>'Importo a contratto business','classe' => 'importo','help'=>'Usato per i gestori configurati come Business'])
+                    </div>
+                    <div class="col-md-6">
                         @include('Backend._inputs.inputText',['campo'=>'importo_pagamento_bollettino','testo'=>'Importo a contratto bollettino','classe' => 'importo'])
+                    </div>
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputText',['campo'=>'importo_pagamento_bollettino_business','testo'=>'Importo bollettino business','classe' => 'importo','help'=>'Usato per i gestori Business con pagamento bollettino'])
                     </div>
                 </div>
                 <div class="row">

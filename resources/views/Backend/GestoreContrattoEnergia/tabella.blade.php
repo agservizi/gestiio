@@ -3,6 +3,7 @@
         <thead>
         <tr class="fw-bolder fs-6 text-gray-800">
             <th class="">Nome</th>
+            <th class="">Categoria</th>
             <th class="">Colore</th>
             <th class="">Email notifica</th>
             <th class="text-center">Attivo</th>
@@ -27,6 +28,15 @@
                             <span class="text-gray-400 fw-semibold d-block fs-7">{{$record->url}}</span>
                         </div>
                     </div>
+                </td>
+                <td class="">
+                    <span class="badge badge-light-primary">{{ $record->categoriaLabel() }}</span>
+                    <div class="text-muted fs-8">{{ $record->switch_key }}</div>
+                    @if($record->warningConfigurazioneProvvigioniBusiness())
+                        <div class="mt-1">
+                            <span class="badge badge-light-warning">{{ $record->warningConfigurazioneProvvigioniBusiness() }}</span>
+                        </div>
+                    @endif
                 </td>
                 <td class=""><span class="badge min-w-20" style="background-color: {{$record->colore_hex}}"> </span>
                 <td >

@@ -154,8 +154,7 @@ class Egea extends ProdottoEnergiaAbstract
 
     public function determinaProvvigione(Request $request)
     {
-        $gestoreContrattoEnergia = GestoreContrattoEnergia::find(2);
-        return $gestoreContrattoEnergia->importo_contratto;
+        return $this->calcolaProvvigioneDaGestore($request, 2, false);
     }
 
 

@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Log;
 
 class GestoreContrattoEnergia extends Model
 {
+    public const CATEGORIE_PRATICA = [
+        'consumer' => 'Consumer',
+        'business' => 'Business',
+    ];
 
     protected $table = "tab_gestori_contratti_energia";
 
@@ -71,6 +75,28 @@ class GestoreContrattoEnergia extends Model
     public function immagineLogo()
     {
         return $this->logo ? ('/storage' . $this->logo) : '/images/logo-placeholder.png';
+    }
+
+    public function categoriaLabel(): string
+    {
+        return self::CATEGORIE_PRATICA[$this->categoria_pratica] ?? ucfirst((string) $this->categoria_pratica);
+    }
+
+    public function warningConfigurazioneProvvigioniBusiness(): ?string
+    {
+        if ($this->categoria_pratica !== 'business') {
+            return null;
+        }
+
+        if ($this->importo_contratto_business === null) {
+            return 'Manca importo contratto business';
+        }
+
+        if ($this->importo_pagamento_bollettino_business === null && $this->importo_pagamento_bollettino !== null) {
+            return 'Manca importo bollettino business';
+        }
+
+        return null;
     }
 
 }
