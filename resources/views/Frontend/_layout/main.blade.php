@@ -136,8 +136,8 @@
 <!--end::Main-->
 @if(true)
     <div id="kt_account" class="bg-body" data-kt-drawer="true" data-kt-drawer-name="explore" data-kt-drawer-activate="true" data-kt-drawer-overlay="true"
-         data-kt-drawer-width="{default:'350px', 'lg': '350px'}" data-kt-drawer-direction="end" data-kt-drawer-toggle="#kt_account_toggle"
-         data-kt-drawer-close="#kt_engage_demos_close">
+         data-kt-drawer-width="{default:'360px', 'lg': '520px'}" data-kt-drawer-direction="end" data-kt-drawer-toggle="#kt_account_toggle"
+         data-kt-drawer-close="#kt_account_close">
         @include('Frontend.AreaUtente.drawerAccount')
     </div>
 

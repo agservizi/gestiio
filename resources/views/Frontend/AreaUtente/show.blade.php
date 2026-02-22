@@ -13,6 +13,9 @@
             }
         @endphp
         <div class="col-12 mb-3 text-end">
+            <button class="btn btn-sm btn-light-primary me-2" type="button" data-kt-drawer-show="true" data-kt-drawer-target="#kt_account">
+                Gestione account
+            </button>
             @if($isCurrentAdmin || $origAdmin)
                 @if($origAdmin)
                     <a href="{{ url('/stop-impersona') }}" class="btn btn-sm btn-warning me-2">Torna all'area admin</a>
@@ -178,7 +181,8 @@
                         <div class="d-flex flex-wrap gap-2">
                             <a href="{{ action([\App\Http\Controllers\Frontend\TicketController::class,'index']) }}" class="btn btn-hover-rise text-gray-900 text-uppercase fs-7 fw-bold"
                                style="background-color: #EBEE51">Vedi tutti i ticket</a>
-                            <a href="#gestione-account" class="btn btn-hover-rise text-gray-900 text-uppercase fs-7 fw-bold"
+                            <a href="javascript:void(0)" data-kt-drawer-show="true" data-kt-drawer-target="#kt_account"
+                               class="btn btn-hover-rise text-gray-900 text-uppercase fs-7 fw-bold"
                                style="background-color: #EBEE51">Gestisci profilo</a>
                         </div>
                         <!--end::Link-->
@@ -190,141 +194,6 @@
             <!--end::Card-->
         </div>
         <!--end::Col-->
-        <div class="col-12" id="gestione-account">
-            <div class="card border-0 shadow-none">
-                <div class="card-body">
-                    @php($user = $profileUser ?? Auth::user())
-                    @include('Backend._components.alertMessage')
-                    @include('Backend._components.alertErrori')
-
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-6">
-                        <div>
-                            <h3 class="mb-1">Gestione account</h3>
-                            <div class="text-muted">Aggiorna i tuoi dati senza uscire dall'area personale.</div>
-                        </div>
-                        <a class="btn btn-sm btn-light-primary"
-                           href="{{ action([\App\Http\Controllers\Backend\AreaPersonaleController::class,'exportDatiPersonali']) }}">
-                            Esporta dati personali (JSON)
-                        </a>
-                    </div>
-
-                    <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6">
-                        <li class="nav-item">
-                            <a class="nav-link active" data-bs-toggle="tab" href="#cliente_tab_dati">Dati</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#cliente_tab_email">Email</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#cliente_tab_password">Password</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#cliente_tab_sessioni">Sessioni</a>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <div class="tab-pane fade show active" id="cliente_tab_dati">
-                            <form method="POST" action="{{ action([\App\Http\Controllers\Backend\AreaPersonaleController::class,'update'],'dati-utente') }}">
-                                @csrf
-                                @method('PATCH')
-                                <div class="row g-4">
-                                    <div class="col-md-6">
-                                        <label class="form-label required">Nome</label>
-                                        <input type="text" name="nome" class="form-control form-control-solid" required value="{{ old('nome', $user->nome) }}">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label required">Cognome</label>
-                                        <input type="text" name="cognome" class="form-control form-control-solid" required value="{{ old('cognome', $user->cognome) }}">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label required">Telefono</label>
-                                        <input type="text" name="telefono" class="form-control form-control-solid" required value="{{ old('telefono', $user->telefono) }}">
-                                    </div>
-                                </div>
-                                <div class="mt-4 text-end">
-                                    <button class="btn btn-primary" type="submit">Salva dati</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div class="tab-pane fade" id="cliente_tab_email">
-                            <form method="POST" action="{{ action([\App\Http\Controllers\Backend\AreaPersonaleController::class,'update'],'dati-email') }}">
-                                @csrf
-                                @method('PATCH')
-                                <div class="row g-4">
-                                    <div class="col-md-6">
-                                        <label class="form-label required">Email</label>
-                                        <input type="email" name="email" class="form-control form-control-solid" required value="{{ old('email', $user->email) }}">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label required">Conferma email</label>
-                                        <input type="email" name="email_confirmation" class="form-control form-control-solid" required value="{{ old('email_confirmation', $user->email) }}">
-                                    </div>
-                                </div>
-                                <div class="mt-4 text-end">
-                                    <button class="btn btn-primary" type="submit">Aggiorna email</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div class="tab-pane fade" id="cliente_tab_password">
-                            <form method="POST" action="{{ action([\App\Http\Controllers\Backend\AreaPersonaleController::class,'update'],'dati-password') }}">
-                                @csrf
-                                @method('PATCH')
-                                <div class="row g-4">
-                                    <div class="col-md-4">
-                                        <label class="form-label required">Password attuale</label>
-                                        <input type="password" name="password_attuale" class="form-control form-control-solid" required autocomplete="current-password">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label required">Nuova password</label>
-                                        <input type="password" name="password" class="form-control form-control-solid" required autocomplete="new-password">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label required">Conferma password</label>
-                                        <input type="password" name="password_confirmation" class="form-control form-control-solid" required autocomplete="new-password">
-                                    </div>
-                                </div>
-                                <div class="mt-4 text-end">
-                                    <button class="btn btn-primary" type="submit">Aggiorna password</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div class="tab-pane fade" id="cliente_tab_sessioni">
-                            @php($logins = $recentLogin ?? collect())
-                            <div class="table-responsive">
-                                <table class="table table-row-bordered">
-                                    <thead>
-                                    <tr class="fw-bolder fs-7 text-uppercase">
-                                        <th>Data/Ora</th>
-                                        <th>Esito</th>
-                                        <th>IP</th>
-                                        <th>User agent</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    @forelse($logins as $login)
-                                        <tr>
-                                            <td>{{ optional($login->created_at)->format('d/m/Y H:i') }}</td>
-                                            <td>{!! $login->riuscito ? '<span class="badge badge-light-success">OK</span>' : '<span class="badge badge-light-danger">KO</span>' !!}</td>
-                                            <td>{{ $login->ip ?: '-' }}</td>
-                                            <td class="text-muted">{{ \Illuminate\Support\Str::limit($login->user_agent, 100) }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="4" class="text-muted">Nessuna attività recente.</td>
-                                        </tr>
-                                    @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
 @endsection
