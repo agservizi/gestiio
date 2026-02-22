@@ -12,15 +12,16 @@
                 }
             }
         @endphp
-        @if($isCurrentAdmin || $origAdmin)
-            <div class="col-12 mb-3 text-end">
+        <div class="col-12 mb-3 text-end">
+            @if($isCurrentAdmin || $origAdmin)
                 @if($origAdmin)
-                    <a href="{{ url('/stop-impersona') }}" class="btn btn-sm btn-warning">Torna all'area admin</a>
+                    <a href="{{ url('/stop-impersona') }}" class="btn btn-sm btn-warning me-2">Torna all'area admin</a>
                 @else
-                    <a href="{{ url('/backend') }}" class="btn btn-sm btn-warning">Torna all'area admin</a>
+                    <a href="{{ url('/backend') }}" class="btn btn-sm btn-warning me-2">Torna all'area admin</a>
                 @endif
-            </div>
-        @endif
+            @endif
+            <a href="{{ url('/logout') }}" class="btn btn-sm btn-danger">Logout</a>
+        </div>
         <!--begin::Col-->
         <div class="col-xxl-5">
             <!--begin::Card-->
