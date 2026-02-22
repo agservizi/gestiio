@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Gestore extends Model
 {
@@ -95,7 +96,25 @@ class Gestore extends Model
             }
         }
 
-        return '/storage/' . $relativePath;
+        $publicStoragePath = public_path('storage');
+        if (is_link($publicStoragePath) || is_dir($publicStoragePath)) {
+            return '/storage/' . $relativePath;
+        }
+
+        if (Storage::disk('public')->exists($relativePath)) {
+            $extension = Str::lower(pathinfo($relativePath, PATHINFO_EXTENSION));
+            $mime = match ($extension) {
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+                default => 'image/jpeg',
+            };
+            $contenuto = Storage::disk('public')->get($relativePath);
+            return 'data:' . $mime . ';base64,' . base64_encode($contenuto);
+        }
+
+        return '/images/logo-placeholder.png';
     }
 
 }
