@@ -64,6 +64,12 @@ Route::group(['middleware' => ['auth']], function () {
 
 });
 
+// Alias compatibilità: alcune chiamate legacy puntano senza prefisso /backend.
+Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa']], function () {
+    Route::get('/visura-cerca-azienda', [\App\Http\Controllers\Backend\VisuraCameraleController::class, 'showCercaAzienda']);
+    Route::post('/visura-cerca-azienda', [\App\Http\Controllers\Backend\VisuraCameraleController::class, 'postCercaAzienda']);
+});
+
 // Stop impersonation: restore original user stored in session('impersona')
 Route::get('/stop-impersona', function () {
     if (!session()->has('impersona')) {
@@ -78,6 +84,5 @@ Route::get('/stop-impersona', function () {
 if (env('APP_ENV') == 'local') {
     Route::get('login-id/{id}', [\App\Http\Controllers\LogOut::class, 'loginId']);
 }
-
 
 
