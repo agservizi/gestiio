@@ -27,6 +27,7 @@ use App\Models\ContrattoEnergia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use function App\getInputCheckbox;
@@ -446,6 +447,28 @@ class ContrattoEnergiaController extends Controller
         $record->gestore_id = $gestoreId;
 
         $gestore = GestoreContrattoEnergia::find($record->gestore_id);
+        abort_if(!$gestore, 404, 'Questo gestore non esiste');
+
+        $categoriaRichiesta = $request->input('categoria_pratica');
+        if (!$categoriaRichiesta) {
+            $categoriaRichiesta = 'business';
+        }
+
+        if (in_array($categoriaRichiesta, ['consumer', 'business'], true)) {
+            $gestoreTarget = $this->resolveGestoreByCategoria($gestore, $categoriaRichiesta);
+            if ($gestoreTarget && $gestoreTarget->id !== $gestore->id) {
+                $query = array_merge(
+                    ['categoria_pratica' => $categoriaRichiesta],
+                    $this->extractCreatePrefillData($request)
+                );
+
+                $url = action([self::class, 'create'], [$gestoreTarget->id]);
+                $url .= '?' . http_build_query($query);
+
+                return redirect()->to($url);
+            }
+        }
+
         if ($gestore->model_prodotto) {
             $classe = 'App\Models\\' . $gestore->model_prodotto;
             $prodotto = $this->presetCampi(new $classe(), $gestore->model_prodotto);
@@ -453,6 +476,8 @@ class ContrattoEnergiaController extends Controller
 
         $record->uid = Str::ulid();
         $record->data = today();
+        $this->applyCreatePrefillToContratto($record, $request);
+        $this->applyCreatePrefillToProdotto($prodotto, $request);
 
 
         $categoriaPratica = $this->determinaCategoriaPratica($record, $request, $gestore->model_prodotto);
@@ -1109,14 +1134,217 @@ class ContrattoEnergiaController extends Controller
                 continue;
             }
 
-            $url = action([self::class, 'create'], [$gestore->id]);
+            $query = ['categoria_pratica' => $categoria];
             if ($agenteId) {
-                $url .= '?' . http_build_query(['agente_id' => $agenteId]);
+                $query['agente_id'] = $agenteId;
             }
+
+            $url = action([self::class, 'create'], [$gestore->id]) . '?' . http_build_query($query);
             $urls[$categoria] = $url;
         }
 
         return $urls;
+    }
+
+    protected function extractCreatePrefillData(Request $request): array
+    {
+        $allowed = [
+            'agente_id',
+            'codice_fiscale',
+            'email',
+            'telefono',
+            'cellulare',
+            'denominazione',
+            'nome',
+            'cognome',
+            'partita_iva',
+            'forma_giuridica',
+            'indirizzo',
+            'citta',
+            'cap',
+            'scala',
+            'interno',
+            'indirizzo_sede',
+            'comune_sede',
+            'cap_sede',
+            'nr_sede',
+            'nome_cognome_referente',
+            'codice_fiscale_referente',
+            'telefono_referente',
+            'codice_destinatario',
+            'indirizzo_pec',
+            'pod',
+            'pdr',
+            'iban',
+        ];
+
+        $data = [];
+        foreach ($allowed as $campo) {
+            $valore = $request->input($campo);
+            if (is_string($valore)) {
+                $valore = trim($valore);
+            }
+            if ($valore === null || $valore === '') {
+                continue;
+            }
+            $data[$campo] = $valore;
+        }
+
+        $data = $this->normalizzaPrefillData($data);
+
+        return $data;
+    }
+
+    protected function applyCreatePrefillToContratto(ContrattoEnergia $record, Request $request): void
+    {
+        $prefill = $this->extractCreatePrefillData($request);
+        $record->agente_id = $this->prefillValue($prefill, ['agente_id'], $record->agente_id);
+        $record->codice_fiscale = $this->prefillValue($prefill, ['codice_fiscale'], $record->codice_fiscale);
+        $record->email = $this->prefillValue($prefill, ['email'], $record->email);
+        $record->telefono = $this->prefillValue($prefill, ['telefono'], $record->telefono);
+        $record->denominazione = $this->prefillValue($prefill, ['denominazione'], $record->denominazione);
+    }
+
+    protected function applyCreatePrefillToProdotto($prodotto, Request $request): void
+    {
+        if (!$prodotto) {
+            return;
+        }
+
+        $prefill = $this->extractCreatePrefillData($request);
+        foreach ([
+            'codice_fiscale',
+            'email',
+            'telefono',
+            'cellulare',
+            'denominazione',
+            'nome',
+            'cognome',
+            'partita_iva',
+            'forma_giuridica',
+            'indirizzo',
+            'citta',
+            'cap',
+            'scala',
+            'interno',
+            'indirizzo_sede',
+            'comune_sede',
+            'cap_sede',
+            'nr_sede',
+            'nome_cognome_referente',
+            'codice_fiscale_referente',
+            'telefono_referente',
+            'codice_destinatario',
+            'indirizzo_pec',
+            'pod',
+            'pdr',
+            'iban',
+        ] as $campo) {
+            if (!array_key_exists($campo, $prefill)) {
+                continue;
+            }
+            $this->setModelColumnValue($prodotto, $campo, $prefill[$campo]);
+        }
+
+        // Mapping incrociato Consumer <-> Business
+        $indirizzo = $this->prefillValue($prefill, ['indirizzo', 'indirizzo_sede']);
+        $citta = $this->prefillValue($prefill, ['citta', 'comune_sede']);
+        $cap = $this->prefillValue($prefill, ['cap', 'cap_sede']);
+
+        $this->setModelColumnValue($prodotto, 'indirizzo', $indirizzo);
+        $this->setModelColumnValue($prodotto, 'citta', $citta);
+        $this->setModelColumnValue($prodotto, 'cap', $cap);
+
+        $this->setModelColumnValue($prodotto, 'indirizzo_sede', $indirizzo);
+        $this->setModelColumnValue($prodotto, 'comune_sede', $citta);
+        $this->setModelColumnValue($prodotto, 'cap_sede', $cap);
+    }
+
+    protected function prefillValue(array $prefill, array $keys, $default = null)
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $prefill)) {
+                continue;
+            }
+            return $prefill[$key];
+        }
+
+        return $default;
+    }
+
+    protected function normalizzaPrefillData(array $data): array
+    {
+        if (empty($data['indirizzo']) && !empty($data['indirizzo_sede'])) {
+            $data['indirizzo'] = $data['indirizzo_sede'];
+        }
+        if (empty($data['indirizzo_sede']) && !empty($data['indirizzo'])) {
+            $data['indirizzo_sede'] = $data['indirizzo'];
+        }
+
+        if (empty($data['citta']) && !empty($data['comune_sede'])) {
+            $data['citta'] = $data['comune_sede'];
+        }
+        if (empty($data['comune_sede']) && !empty($data['citta'])) {
+            $data['comune_sede'] = $data['citta'];
+        }
+
+        if (empty($data['cap']) && !empty($data['cap_sede'])) {
+            $data['cap'] = $data['cap_sede'];
+        }
+        if (empty($data['cap_sede']) && !empty($data['cap'])) {
+            $data['cap_sede'] = $data['cap'];
+        }
+
+        if (empty($data['interno']) && !empty($data['nr_sede'])) {
+            $data['interno'] = $data['nr_sede'];
+        }
+        if (empty($data['nr_sede']) && !empty($data['interno'])) {
+            $data['nr_sede'] = $data['interno'];
+        }
+
+        if (empty($data['telefono']) && !empty($data['cellulare'])) {
+            $data['telefono'] = $data['cellulare'];
+        }
+        if (empty($data['cellulare']) && !empty($data['telefono'])) {
+            $data['cellulare'] = $data['telefono'];
+        }
+
+        if (empty($data['denominazione']) && (!empty($data['nome']) || !empty($data['cognome']))) {
+            $data['denominazione'] = trim(($data['cognome'] ?? '') . ' ' . ($data['nome'] ?? ''));
+        }
+
+        if ((empty($data['nome']) && empty($data['cognome'])) && !empty($data['denominazione'])) {
+            $parts = preg_split('/\s+/', trim((string) $data['denominazione']));
+            if (is_array($parts) && count($parts) > 1) {
+                $data['nome'] = array_pop($parts);
+                $data['cognome'] = implode(' ', $parts);
+            }
+        }
+
+        return $data;
+    }
+
+    protected function setModelColumnValue($model, string $campo, $valore): void
+    {
+        if ($valore === null || $valore === '') {
+            return;
+        }
+        if (!$this->modelHasColumn($model, $campo)) {
+            return;
+        }
+        $model->{$campo} = $valore;
+    }
+
+    protected function modelHasColumn($model, string $campo): bool
+    {
+        static $cache = [];
+
+        $table = $model->getTable();
+        if (!isset($cache[$table])) {
+            $cache[$table] = Schema::getColumnListing($table);
+        }
+
+        return in_array($campo, $cache[$table], true);
     }
 
     protected function resolveGestoreByCategoria(GestoreContrattoEnergia $gestoreCorrente, string $categoria): ?GestoreContrattoEnergia

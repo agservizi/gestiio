@@ -234,7 +234,53 @@
                 toggleCategoriaPratica(categoria);
 
                 if (switchUrl && window.location.href !== switchUrl) {
-                    window.location.href = switchUrl;
+                    var redirectUrl = new URL(switchUrl, window.location.origin);
+                    var campiPrefill = [
+                        'agente_id',
+                        'codice_fiscale',
+                        'email',
+                        'telefono',
+                        'cellulare',
+                        'denominazione',
+                        'nome',
+                        'cognome',
+                        'partita_iva',
+                        'forma_giuridica',
+                        'indirizzo',
+                        'citta',
+                        'cap',
+                        'scala',
+                        'interno',
+                        'indirizzo_sede',
+                        'comune_sede',
+                        'cap_sede',
+                        'nr_sede',
+                        'nome_cognome_referente',
+                        'codice_fiscale_referente',
+                        'telefono_referente',
+                        'codice_destinatario',
+                        'indirizzo_pec',
+                        'pod',
+                        'pdr',
+                        'iban'
+                    ];
+
+                    campiPrefill.forEach(function (campo) {
+                        var $field = $('[name="' + campo + '"]');
+                        if (!$field.length) {
+                            return;
+                        }
+                        var valore = $field.val();
+                        if (Array.isArray(valore)) {
+                            valore = valore.length ? valore[0] : '';
+                        }
+                        if (valore === null || valore === '') {
+                            return;
+                        }
+                        redirectUrl.searchParams.set(campo, valore);
+                    });
+
+                    window.location.href = redirectUrl.toString();
                 }
             });
 
