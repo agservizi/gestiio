@@ -324,6 +324,81 @@ class VisuraController extends Controller
         ];
     }
 
+    public function ricercaAziendaDettaglio(Request $request)
+    {
+        if ($request->input('provincia_id') === '') {
+            $request->merge(['provincia_id' => null]);
+        }
+
+        $request->validate([
+            'denominazione' => ['required', 'string', 'max:255'],
+            'provincia_id' => ['nullable', 'string', 'max:10'],
+            'raw' => ['nullable', 'string'],
+        ]);
+
+        $raw = [];
+        if ($request->filled('raw')) {
+            $decoded = json_decode((string) $request->input('raw'), true);
+            if (is_array($decoded)) {
+                $raw = $decoded;
+            }
+        }
+
+        $pivaFromRaw = $this->extractPartitaIvaFromAziendaResult($raw);
+        if ($pivaFromRaw !== '') {
+            return [
+                'success' => true,
+                'partita_iva' => $pivaFromRaw,
+            ];
+        }
+
+        [$rawItems, $lastMessage] = $this->eseguiRicercaAziendaConFallback(
+            (string) $request->input('denominazione'),
+            $request->input('provincia_id')
+        );
+
+        if (empty($rawItems)) {
+            return [
+                'success' => false,
+                'message' => $lastMessage ?: 'Nessun dettaglio disponibile per la denominazione indicata.',
+            ];
+        }
+
+        $needle = $this->normalizeAziendaStringForMatch((string) $request->input('denominazione'));
+        $bestPiva = '';
+        foreach ($rawItems as $item) {
+            $arr = json_decode(json_encode($item), true) ?: [];
+            $piva = $this->extractPartitaIvaFromAziendaResult($arr);
+            if ($piva === '') {
+                continue;
+            }
+
+            $den = $this->normalizeAziendaStringForMatch($this->extractDenominazioneFromAziendaResult($arr));
+            if ($needle !== '' && $den === $needle) {
+                return [
+                    'success' => true,
+                    'partita_iva' => $piva,
+                ];
+            }
+
+            if ($bestPiva === '') {
+                $bestPiva = $piva;
+            }
+        }
+
+        if ($bestPiva !== '') {
+            return [
+                'success' => true,
+                'partita_iva' => $bestPiva,
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => 'Partita IVA non disponibile per il risultato selezionato.',
+        ];
+    }
+
     protected function eseguiRicercaAziendaConFallback(string $denominazioneInput, $provinciaId): array
     {
         $service = new VisuraCameraleService();
@@ -474,6 +549,13 @@ class VisuraController extends Controller
         }
 
         return '';
+    }
+
+    protected function normalizeAziendaStringForMatch(string $value): string
+    {
+        $upper = strtoupper(trim($value));
+        $upper = preg_replace('/[^A-Z0-9]+/', ' ', $upper) ?: '';
+        return trim(preg_replace('/\s+/', ' ', $upper) ?: '');
     }
 
     protected function extractPartitaIvaFromAziendaResult(array $data): string

@@ -351,16 +351,51 @@
                             tr.append('<td>' + (item.natura_giuridica || '-') + '</td>');
                             const $btnUsa = $('<button type="button" class="btn btn-sm btn-primary">Usa dati</button>');
                             $btnUsa.on('click', function () {
+                                const applyBaseData = function () {
+                                    if (item.denominazione) {
+                                        $('#ragione_sociale').val(item.denominazione);
+                                    }
+                                    if (item.indirizzo) {
+                                        $('#indirizzo').val(item.indirizzo);
+                                    }
+                                };
+
+                                applyBaseData();
+
                                 if (item.partita_iva) {
                                     $('#partita_iva').val(item.partita_iva);
+                                    Swal.fire('Completato', 'Dati azienda inseriti nel form', 'success');
+                                    return;
                                 }
-                                if (item.denominazione) {
-                                    $('#ragione_sociale').val(item.denominazione);
-                                }
-                                if (item.indirizzo) {
-                                    $('#indirizzo').val(item.indirizzo);
-                                }
-                                Swal.fire('Completato', 'Dati azienda inseriti nel form', 'success');
+
+                                const previousText = $btnUsa.text();
+                                $btnUsa.prop('disabled', true).text('Recupero P.IVA...');
+
+                                $.ajax({
+                                    url: "{{action([\App\Http\Controllers\Backend\VisuraController::class,'ricercaAziendaDettaglio'])}}",
+                                    type: 'POST',
+                                    dataType: 'json',
+                                    data: {
+                                        denominazione: item.denominazione || '',
+                                        provincia_id: ($('#provincia_ricerca').val() || '').trim(),
+                                        raw: JSON.stringify(item.raw || {}),
+                                        _token: '{{csrf_token()}}'
+                                    },
+                                    success: function (detailResp) {
+                                        if (detailResp && detailResp.success && detailResp.partita_iva) {
+                                            $('#partita_iva').val(detailResp.partita_iva);
+                                            Swal.fire('Completato', 'Dati azienda inseriti nel form', 'success');
+                                            return;
+                                        }
+                                        Swal.fire('Attenzione', (detailResp && detailResp.message) ? detailResp.message : 'Partita IVA non trovata automaticamente.', 'warning');
+                                    },
+                                    error: function () {
+                                        Swal.fire('Errore', 'Recupero partita IVA non disponibile al momento.', 'error');
+                                    },
+                                    complete: function () {
+                                        $btnUsa.prop('disabled', false).text(previousText);
+                                    }
+                                });
                             });
                             const td = $('<td class="text-end"></td>');
                             td.append($btnUsa);
