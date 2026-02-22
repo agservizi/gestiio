@@ -1,4 +1,21 @@
 @extends('Frontend._layout.main')
+@push('customCss')
+    <style>
+        #kt_body.area-personale-no-scroll {
+            overflow: hidden;
+            overscroll-behavior-y: none;
+        }
+
+        #kt_body.area-personale-no-scroll .page.launcher.sidebar-enabled {
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #kt_body.area-personale-no-scroll .d-flex.flex-column.flex-column-fluid.mb-5.mb-lg-10 {
+            margin-bottom: 0 !important;
+        }
+    </style>
+@endpush
 @section('content')
     <div class="row g-7 w-xxl-850px">
         @php
@@ -747,6 +764,16 @@
         </div>
     @endif
 @endsection
+@push('customScript')
+    <script>
+        $(function () {
+            const body = document.getElementById('kt_body');
+            if (body) {
+                body.classList.add('area-personale-no-scroll');
+            }
+        });
+    </script>
+@endpush
 @push('customScript')
     <script>
         $(function () {
