@@ -151,19 +151,7 @@ class AreaPersonaleController extends Controller
                 break;
 
             case 'openapi-credenziali':
-                abort_unless($this->currentUser()->hasPermissionTo('agente') && $this->currentUser()->agente, 403);
-                Validator::make($request->input(), [
-                    'openapi_visure_token' => ['nullable', 'string', 'max:2048'],
-                    'openapi_catasto_token' => ['nullable', 'string', 'max:2048'],
-                ])->validate();
-
-                $this->currentUser()->agente->openapi_visure_token = trim((string) $request->input('openapi_visure_token')) ?: null;
-                $this->currentUser()->agente->openapi_catasto_token = trim((string) $request->input('openapi_catasto_token')) ?: null;
-                $this->currentUser()->agente->save();
-
-                $alert = new AlertMessage();
-                $alert->messaggio('Credenziali OpenAPI visure aggiornate')->flash();
-                break;
+                abort(403, 'Operazione consentita solo da gestione agenti admin');
 
 
 

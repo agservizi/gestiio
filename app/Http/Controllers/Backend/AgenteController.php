@@ -576,6 +576,8 @@ class AgenteController extends Controller
             'iban' => 'strtoupper',
             'listino_telefonia_id' => '',
             'paga_con_paypal' => 'app\getInputCheckbox',
+            'openapi_visure_token' => '',
+            'openapi_catasto_token' => '',
 
         ];
         foreach ($campi as $campo => $funzione) {
@@ -584,6 +586,15 @@ class AgenteController extends Controller
                 $valore = $funzione($valore);
             }
             $model->$campo = $valore;
+        }
+
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
+        if ($authUser && $authUser->hasPermissionTo('admin')) {
+            $model->openapi_visure_token = trim((string) $model->openapi_visure_token) ?: null;
+            $model->openapi_catasto_token = trim((string) $model->openapi_catasto_token) ?: null;
+        } else {
+            unset($model->openapi_visure_token, $model->openapi_catasto_token);
         }
         $model->save();
 
@@ -651,6 +662,8 @@ class AgenteController extends Controller
                 Rule::unique(User::class)->ignore($id),
             ],
             'password' => [$id == null ? 'required' : 'nullable', 'string', new PasswordRules()],
+            'openapi_visure_token' => ['nullable', 'string', 'max:2048'],
+            'openapi_catasto_token' => ['nullable', 'string', 'max:2048'],
 
         ];
 

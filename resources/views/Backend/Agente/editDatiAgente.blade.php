@@ -41,3 +41,31 @@
     <div class="col-md-6">
     </div>
 </div>
+
+@if(Auth::user()->hasPermissionTo('admin'))
+    <div class="separator my-6"></div>
+    <div class="row">
+        <div class="col-md-12">
+            <h5 class="mb-1">Credenziali servizio visure (solo admin)</h5>
+            <div class="text-muted mb-4">Queste credenziali sono gestite esclusivamente dal backoffice admin e usate per separare i costi per agente.</div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',[
+                'campo'=>'openapi_visure_token',
+                'testo'=>'Credenziale visure agente',
+                'autocomplete'=>'off',
+                'required'=>false
+            ])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',[
+                'campo'=>'openapi_catasto_token',
+                'testo'=>'Credenziale catasto agente',
+                'autocomplete'=>'off',
+                'required'=>false
+            ])
+        </div>
+    </div>
+@endif
