@@ -5,7 +5,12 @@
             {{$record->gestore->nome}}
         </td>
         <td class="fw-semibold" >
-            {{$record->codice_contratto}}
+            <span class="text-primary fw-bold">
+                {{$record->codice_contratto_interno ?: ('OP' . str_pad((string)$record->id, 11, '0', STR_PAD_LEFT))}}
+            </span>
+            @if($record->codice_contratto)
+                <br><span class="text-warning fs-8 fw-semibold">Esterno: {{$record->codice_contratto}}</span>
+            @endif
         </td>
         <td class="">
             <div class="d-flex align-items-center">

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ContrattoEnergia extends Model
 {
@@ -65,6 +66,9 @@ class ContrattoEnergia extends Model
 
 
         static::saving(function (ContrattoEnergia $model) {
+            if (self::hasInternalCodeColumn() && !$model->codice_contratto_interno && $model->id) {
+                $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
+            }
 
             if ($model->esito_id !== 'bozza') {
                 $esito = EsitoContrattoEnergia::find($model->esito_id);
@@ -81,7 +85,7 @@ class ContrattoEnergia extends Model
                 $model->mese_pagamento = null;
             }
 
-            $model->testo_ricerca = $model->denominazione . '|' . $model->codice_contratto . '|' . $model->codice_fiscale;
+            $model->testo_ricerca = $model->denominazione . '|' . $model->codice_contratto . '|' . $model->codice_contratto_interno . '|' . $model->codice_fiscale;
 
         });
 
@@ -109,6 +113,13 @@ class ContrattoEnergia extends Model
             self::calcolaProduzioneContrattiEnergia($model->agente_id, $model->created_at->year, $model->created_at->month);
         });
 
+        self::created(function (ContrattoEnergia $model) {
+            if (!$model->codice_contratto_interno && self::hasInternalCodeColumn()) {
+                $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
+                $model->saveQuietly();
+            }
+        });
+
 
     }
 
@@ -134,6 +145,20 @@ class ContrattoEnergia extends Model
 
         //self::calcolaGuadagnoAgenzia($anno, $mese);
 
+    }
+
+    protected static function buildInternalContractCode(int $id): string
+    {
+        return 'OP' . str_pad((string) $id, 11, '0', STR_PAD_LEFT);
+    }
+
+    protected static function hasInternalCodeColumn(): bool
+    {
+        static $hasColumn = null;
+        if ($hasColumn === null) {
+            $hasColumn = Schema::hasColumn((new static())->getTable(), 'codice_contratto_interno');
+        }
+        return $hasColumn;
     }
 
 

@@ -2,7 +2,14 @@
     <tr class="" id="tr_{{$record->id}}">
         <td class="d-none d-lg-table-cell">{{$record->data->format('d/m/y')}}</td>
         <td class="">{{$record->codice_cliente}}</td>
-        <td class="">{{$record->codice_contratto}}</td>
+        <td class="">
+            <span class="text-primary fw-bold">
+                {{$record->codice_contratto_interno ?: ('TEL' . str_pad((string)$record->id, 11, '0', STR_PAD_LEFT))}}
+            </span>
+            @if($record->codice_contratto)
+                <br><span class="text-warning fs-8 fw-semibold">Esterno: {{$record->codice_contratto}}</span>
+            @endif
+        </td>
         <td class="fw-semibold" style="color: {{$record->tipoContratto->gestore->colore_hex}};">
             {{$record->tipoContratto->nome}}
         </td>

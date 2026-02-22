@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ContrattoTelefonia extends Model
 {
@@ -62,6 +63,9 @@ class ContrattoTelefonia extends Model
 
 
         static::saving(function (ContrattoTelefonia $model) {
+            if (self::hasInternalCodeColumn() && !$model->codice_contratto_interno && $model->id) {
+                $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
+            }
 
             $esito = EsitoTelefonia::find($model->esito_id);
             $model->esito_finale = $esito->esito_finale;
@@ -95,6 +99,13 @@ class ContrattoTelefonia extends Model
 
         self::deleted(function ($model) {
             ProduzioneOperatore::calcolaTotaliOrdiniMese($model->agente_id, $model->created_at->year, $model->created_at->month);
+        });
+
+        self::created(function (ContrattoTelefonia $model) {
+            if (!$model->codice_contratto_interno && self::hasInternalCodeColumn()) {
+                $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
+                $model->saveQuietly();
+            }
         });
 
 
@@ -250,6 +261,20 @@ class ContrattoTelefonia extends Model
         }
 
 
+    }
+
+    protected static function buildInternalContractCode(int $id): string
+    {
+        return 'TEL' . str_pad((string) $id, 11, '0', STR_PAD_LEFT);
+    }
+
+    protected static function hasInternalCodeColumn(): bool
+    {
+        static $hasColumn = null;
+        if ($hasColumn === null) {
+            $hasColumn = Schema::hasColumn((new static())->getTable(), 'codice_contratto_interno');
+        }
+        return $hasColumn;
     }
 
     public function creatoQuestoMese()
