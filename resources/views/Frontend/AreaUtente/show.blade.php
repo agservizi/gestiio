@@ -56,6 +56,24 @@
             #kt_body.area-personale-no-scroll .area-activity-card {
                 min-height: 170px !important;
             }
+
+            #kt_body.area-personale-no-scroll .area-top-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.5rem;
+                flex-wrap: nowrap;
+            }
+
+            #kt_body.area-personale-no-scroll .area-top-actions .btn {
+                padding: 0.35rem 0.65rem;
+                font-size: 0.78rem;
+                line-height: 1.1;
+            }
+
+            #kt_body.area-personale-no-scroll .area-card-compact h4 {
+                font-size: 1rem;
+                margin-bottom: 0;
+            }
         }
     </style>
 @endpush
@@ -72,7 +90,7 @@
                 }
             }
         @endphp
-        <div class="col-12 mb-3 text-end">
+        <div class="col-12 mb-3 text-end area-top-actions">
             <button class="btn btn-sm btn-light-primary me-2" type="button" data-kt-drawer-show="true" data-kt-drawer-target="#kt_account">
                 Gestione account
             </button>
