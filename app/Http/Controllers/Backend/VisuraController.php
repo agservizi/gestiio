@@ -488,6 +488,9 @@ class VisuraController extends Controller
             'cfpivaid',
             'cf_piva',
             'cfpiva',
+            'codice_fiscale',
+            'codicefiscale',
+            'cf',
             'vat',
             'vat_number',
             'vatnumber',
@@ -504,7 +507,14 @@ class VisuraController extends Controller
         }
 
         foreach ($flat as $key => $value) {
-            if (!str_contains($key, 'partita') && !str_contains($key, 'piva') && !str_contains($key, 'vat') && !str_contains($key, 'cfpiva')) {
+            if (
+                !str_contains($key, 'partita')
+                && !str_contains($key, 'piva')
+                && !str_contains($key, 'vat')
+                && !str_contains($key, 'cfpiva')
+                && !str_contains($key, 'codicefiscale')
+                && $key !== 'cf'
+            ) {
                 continue;
             }
             $normalized = preg_replace('/\D+/', '', (string) $value);
