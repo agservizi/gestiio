@@ -3,11 +3,11 @@
     <div class="row g-7 w-xxl-850px">
         @php
             $currentUser = \Illuminate\Support\Facades\Auth::user();
-            $isCurrentAdmin = $currentUser && $currentUser->hasPermissionTo('admin');
+            $isCurrentAdmin = $currentUser && ($currentUser->hasPermissionTo('admin') || $currentUser->hasRole('admin'));
             $origAdmin = null;
             if (session()->has('impersona')) {
                 $orig = \App\Models\User::find(session('impersona'));
-                if ($orig && $orig->hasPermissionTo('admin')) {
+                if ($orig && ($orig->hasPermissionTo('admin') || $orig->hasRole('admin'))) {
                     $origAdmin = $orig;
                 }
             }
