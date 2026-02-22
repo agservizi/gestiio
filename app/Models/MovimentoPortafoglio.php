@@ -42,6 +42,12 @@ class MovimentoPortafoglio extends Model
                     $agente->portafoglio_spedizioni = $agente->portafoglio_spedizioni + $model->importo;
                     $model->importo_dopo = $agente->portafoglio_spedizioni;
                     break;
+
+                case TipiPortafoglioEnum::VISURE->value:
+                    $model->importo_prima = (float)($agente->portafoglio_visure ?? 0);
+                    $agente->portafoglio_visure = (float)($agente->portafoglio_visure ?? 0) + $model->importo;
+                    $model->importo_dopo = $agente->portafoglio_visure;
+                    break;
             }
 
             $agente->save();

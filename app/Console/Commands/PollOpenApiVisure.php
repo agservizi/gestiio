@@ -6,6 +6,7 @@ use App\Http\Services\OpenApiCatastoService;
 use App\Http\Services\OpenApiVisureService;
 use App\Models\AllegatoServizio;
 use App\Models\TipoVisura;
+use App\Models\User;
 use App\Models\Visura;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -31,6 +32,8 @@ class PollOpenApiVisure extends Command
 
         $query = Visura::query()
             ->with('tipo:id,nome')
+            ->with('agente:id')
+            ->with('agente.agente')
             ->whereNotNull('openapi_request_id');
 
         if (Schema::hasColumn('visure', 'openapi_documento_scaricato_at')) {
@@ -55,7 +58,13 @@ class PollOpenApiVisure extends Command
             }
 
             $provider = $this->resolveProvider($record);
-            $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+            $service = $provider === 'catasto'
+                ? $this->buildCatastoServiceForRecord($record)
+                : $this->buildVisureServiceForRecord($record);
+            if (!$service) {
+                $this->warn("Visura #{$record->id}: credenziali agente mancanti, polling saltato");
+                continue;
+            }
             $statusData = $provider === 'catasto'
                 ? $service->statoVisuraCatastale($requestId)
                 : $service->statoRichiesta($requestId);
@@ -237,5 +246,42 @@ class PollOpenApiVisure extends Command
         }
 
         return str_contains(strtolower((string) $tipo->nome), 'catast');
+    }
+
+    protected function buildVisureServiceForRecord(Visura $record): ?OpenApiVisureService
+    {
+        $token = $this->getAgenteOpenApiToken($record, 'visure');
+        if (!$token) {
+            return null;
+        }
+        return new OpenApiVisureService($token);
+    }
+
+    protected function buildCatastoServiceForRecord(Visura $record): ?OpenApiCatastoService
+    {
+        $token = $this->getAgenteOpenApiToken($record, 'catasto');
+        if (!$token) {
+            return null;
+        }
+        return new OpenApiCatastoService($token);
+    }
+
+    protected function getAgenteOpenApiToken(Visura $record, string $tipo): ?string
+    {
+        $agente = $record->agente;
+        if (!$agente instanceof User) {
+            return null;
+        }
+
+        $profiloAgente = $agente->agente;
+        if (!$profiloAgente) {
+            return null;
+        }
+
+        if ($tipo === 'catasto') {
+            return $profiloAgente->openapi_catasto_token ?: null;
+        }
+
+        return $profiloAgente->openapi_visure_token ?: null;
     }
 }

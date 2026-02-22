@@ -8,13 +8,14 @@
     <div class="card">
         <div class="card-body">
             @include('Backend._components.alertErrori')
-            <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
+            <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}" id="form-visura">
                 @csrf
                 @method($record->id?'PATCH':'POST')
                 @php($uid=old('uid',$record->uid))
 
                 <input type="hidden" name="uid" id="uid" value="{{$uid}}">
                 <input type="hidden" name="tipo_visura_id" value="{{old('tipo_visura_id',$tipoServizio->id)}}">
+                <input type="hidden" name="fallback_backoffice" id="fallback_backoffice" value="{{old('fallback_backoffice', '0')}}">
                 @if(Auth::user()->hasAnyPermission(['admin','operatore']))
                     <div class="row">
                         <div class="col-md-6">
@@ -76,6 +77,29 @@
             if ($('#agente_id').is("select")) {
                 select2UniversaleBackend('agente_id', 'un agente', 1);
             }
+
+            @if(session('openapi_credito_bloccato') && !$vecchio)
+            Swal.fire({
+                icon: 'warning',
+                title: 'Servizio automatico non disponibile',
+                text: 'Puoi ricaricare il portafoglio visure oppure inviare la pratica al backoffice (con scalo da portafoglio servizi).',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Ricarica portafoglio visure',
+                denyButtonText: 'Invia al backoffice',
+                cancelButtonText: 'Annulla',
+                reverseButtons: true
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    window.location.href = "{{action([\App\Http\Controllers\Backend\RicaricaPlafonController::class,'show'], ['tab_portafoglio' => \App\Enums\TipiPortafoglioEnum::VISURE->value])}}";
+                    return;
+                }
+                if (result.isDenied) {
+                    $('#fallback_backoffice').val('1');
+                    $('#form-visura').trigger('submit');
+                }
+            });
+            @endif
 
             if ($('#kt_dropzonejs_example_1').length) {
                 var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {

@@ -14,9 +14,11 @@ class OpenApiVisureService
 
     protected PendingRequest $client;
     public ?string $message = null;
+    protected ?string $bearerTokenOverride = null;
 
-    public function __construct()
+    public function __construct(?string $bearerToken = null)
     {
+        $this->bearerTokenOverride = $bearerToken;
         $this->client = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->bearerToken(),
             'content-type' => 'application/json',
@@ -144,6 +146,10 @@ class OpenApiVisureService
 
     protected function bearerToken(): string
     {
+        if ($this->bearerTokenOverride) {
+            return $this->bearerTokenOverride;
+        }
+
         return (string) (config('services.openapi.bearer_visure')
             ?: env('OPENAPI_BEARER_VISURE')
             ?: env('OPENAPI_BEARER'));

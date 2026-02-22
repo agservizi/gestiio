@@ -1,7 +1,8 @@
 @if(Auth::user()->agente && !Auth::user()->hasPermissionTo('supervisore'))
     @php($saldoServizi = (float)(Auth::user()->agente->portafoglio_servizi ?? 0))
     @php($saldoSpedizioni = (float)(Auth::user()->agente->portafoglio_spedizioni ?? 0))
-    @php($saldoTotale = $saldoServizi + $saldoSpedizioni)
+    @php($saldoVisure = (float)(Auth::user()->agente->portafoglio_visure ?? 0))
+    @php($saldoTotale = $saldoServizi + $saldoSpedizioni + $saldoVisure)
     <div class="d-flex align-items-center d-none d-md-inline-flex position-relative me-6">
         <div class="cursor-pointer" data-kt-menu-trigger="hover" data-kt-menu-attach="parent"
              data-kt-menu-placement="bottom-end" data-kt-menu-flip="bottom">
@@ -17,6 +18,11 @@
             <div class="menu-item px-4 d-flex justify-content-between align-items-center">
                 <span class="text-gray-600">Portafoglio Spedizioni</span>
                 <span class="fw-bold fs-6 text-gray-800">{{\App\importo($saldoSpedizioni,true)}}</span>
+            </div>
+            <div class="separator my-2"></div>
+            <div class="menu-item px-4 d-flex justify-content-between align-items-center">
+                <span class="text-gray-600">Portafoglio Visure</span>
+                <span class="fw-bold fs-6 text-gray-800">{{\App\importo($saldoVisure,true)}}</span>
             </div>
         </div>
     </div>

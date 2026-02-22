@@ -14,6 +14,11 @@ class Agente extends Model
 
     protected $fillable=['user_id'];
 
+    protected $casts = [
+        'openapi_visure_token' => 'encrypted',
+        'openapi_catasto_token' => 'encrypted',
+    ];
+
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI

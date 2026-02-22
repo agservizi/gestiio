@@ -268,6 +268,7 @@ class VisuraController extends Controller
     public function store(Request $request)
     {
         $servizio = $request->input('tipo_visura_id');
+        $fallbackBackoffice = $request->boolean('fallback_backoffice');
 
         $request->validate($this->rules(null, $request));
 
@@ -279,9 +280,26 @@ class VisuraController extends Controller
                 throw new \RuntimeException('Tipo visura non trovato');
             }
 
+            $agente = User::query()->with('agente')->find((int) $request->input('agente_id'));
+            if (!$agente || !$agente->agente) {
+                throw new \RuntimeException('Agente non trovato per questa visura');
+            }
+            $prezzo = (float) $tipoServizio->prezzo_agente;
+            if ($fallbackBackoffice) {
+                $saldoServizi = (float) ($agente->agente->portafoglio_servizi ?? 0);
+                if ($saldoServizi < $prezzo) {
+                    throw new \RuntimeException('Credito portafoglio servizi insufficiente per invio al backoffice');
+                }
+            } else {
+                $saldoVisure = (float) ($agente->agente->portafoglio_visure ?? 0);
+                if ($saldoVisure < $prezzo) {
+                    throw new \RuntimeException('Credito portafoglio visure insufficiente');
+                }
+            }
+
             $record = new Visura();
             $record->esito_id = 'in-gestione';
-            $record->prezzo_pratica = $tipoServizio->prezzo_agente;
+            $record->prezzo_pratica = $prezzo;
             $record->tipo_visura_id = $tipoServizio->id;
             $record->caricato_da_user_id = Auth::id();
             if ($tipoServizio->tipo_visura == 'azienda') {
@@ -290,29 +308,69 @@ class VisuraController extends Controller
                 $this->salvaDatiPrivato($record, $request);
             }
 
-            $this->avviaRichiestaOpenApi($record, $tipoServizio);
-            $this->processaOpenApiAutomatico($record);
+            if ($fallbackBackoffice) {
+                $record->openapi_stato_richiesta = 'backoffice';
+                $record->openapi_response = [
+                    'status' => 'backoffice',
+                    'message' => 'Pratica inviata al backoffice su richiesta agente',
+                ];
+                $record->openapi_last_sync_at = now();
+                $record->save();
+            } else {
+                try {
+                    $this->avviaRichiestaOpenApi($record, $tipoServizio);
+                    $this->processaOpenApiAutomatico($record);
+                } catch (\Throwable $openApiException) {
+                    if ($this->isOpenApiCreditoTokenIssue($openApiException->getMessage())) {
+                        throw new \RuntimeException('__OPENAPI_CREDITO_BLOCCO__' . $openApiException->getMessage());
+                    }
+                    throw $openApiException;
+                }
+            }
 
             $movimento = new MovimentoPortafoglio();
-            $movimento->agente_id = Auth::id();
+            $movimento->agente_id = (int) $agente->id;
             $movimento->importo = -$tipoServizio->prezzo_agente;
-            $movimento->descrizione = 'Visura ' . $tipoServizio->nome . ' per ' . ($record->partita_iva ?? $record->codice_fiscale);
+            $movimento->descrizione = ($fallbackBackoffice ? 'Visura backoffice ' : 'Visura ')
+                . $tipoServizio->nome . ' per ' . ($record->partita_iva ?? $record->codice_fiscale);
             $movimento->prodotto_id = $record->id;
             $movimento->prodotto_type = get_class($record);
-            $movimento->portafoglio = TipiPortafoglioEnum::SERVIZI->value;
+            $movimento->portafoglio = $fallbackBackoffice
+                ? TipiPortafoglioEnum::SERVIZI->value
+                : TipiPortafoglioEnum::VISURE->value;
             $movimento->save();
 
             DB::commit();
         } catch (\Throwable $exception) {
             DB::rollBack();
-            Log::error('Errore creazione visura', ['error' => $exception->getMessage()]);
-            return redirect()->back()->withInput()->withErrors([
-                'openapi' => $exception->getMessage(),
+            $message = $exception->getMessage();
+            $openApiCreditoBloccato = str_starts_with($message, '__OPENAPI_CREDITO_BLOCCO__');
+            if ($openApiCreditoBloccato) {
+                $message = 'Il servizio automatico visure al momento non è disponibile. Puoi ricaricare il portafoglio visure oppure inviare la pratica al backoffice.';
+            } else {
+                $message = str_replace('__OPENAPI_CREDITO_BLOCCO__', '', $message);
+            }
+
+            Log::error('Errore creazione visura', ['error' => $message]);
+
+            $response = redirect()->back()->withInput()->withErrors([
+                'openapi' => $message,
             ]);
+
+            if ($openApiCreditoBloccato) {
+                $response->with('openapi_credito_bloccato', true);
+            }
+
+            return $response;
         }
 
         $alertMessage = new AlertMessage();
-        $alertMessage->messaggio('Ti è stato scalato l\'importo di ' . importo($tipoServizio->prezzo_agente) . ' per la visura ' . $tipoServizio->nome, 'primary')->titolo('Portafoglio aggiornato', 'primary')->flash();
+        $walletText = $fallbackBackoffice ? 'portafoglio servizi' : 'portafoglio visure';
+        $azioneText = $fallbackBackoffice ? 'inviata al backoffice' : 'creata';
+        $alertMessage
+            ->messaggio('Ti è stato scalato l\'importo di ' . importo($tipoServizio->prezzo_agente) . ' dal ' . $walletText . ' per la visura ' . $tipoServizio->nome . ' ' . $azioneText, 'primary')
+            ->titolo('Portafoglio aggiornato', 'primary')
+            ->flash();
 
 
         return $this->backToIndex();
@@ -618,31 +676,33 @@ class VisuraController extends Controller
         abort_if(!$record, 404, 'Questa visura non esiste');
 
         if ($record->openapi_request_id) {
-            return ['success' => false, 'message' => 'Richiesta OpenAPI già presente'];
+            return ['success' => false, 'message' => 'Richiesta automatica già presente'];
         }
 
         try {
             $this->avviaRichiestaOpenApi($record, $record->tipo);
         } catch (\Throwable $exception) {
-            return ['success' => false, 'message' => $exception->getMessage()];
+            return ['success' => false, 'message' => $this->userFacingOpenApiMessage($exception->getMessage(), 'Impossibile avviare la richiesta automatica')];
         }
 
-        return ['success' => true, 'message' => 'Richiesta OpenAPI inviata'];
+        return ['success' => true, 'message' => 'Richiesta automatica inviata'];
     }
 
     public function sincronizzaOpenApi(int $id)
     {
         $record = Visura::with('tipo')->find($id);
         abort_if(!$record, 404, 'Questa visura non esiste');
-        abort_if(!$record->openapi_request_id, 422, 'Richiesta OpenAPI non presente');
+        abort_if(!$record->openapi_request_id, 422, 'Richiesta automatica non presente');
 
         $provider = $this->resolveOpenApiProvider($record);
-        $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+        $service = $provider === 'catasto'
+            ? $this->buildCatastoServiceForRecord($record)
+            : $this->buildVisureServiceForRecord($record);
         $statusData = $provider === 'catasto'
             ? $service->statoVisuraCatastale($record->openapi_request_id)
             : $service->statoRichiesta($record->openapi_request_id);
         if (!$statusData) {
-            return ['success' => false, 'message' => $service->message ?: 'Errore sincronizzazione OpenAPI'];
+            return ['success' => false, 'message' => $this->userFacingOpenApiMessage($service->message, 'Errore sincronizzazione richiesta automatica')];
         }
 
         $this->salvaStatoOpenApi($record, $statusData);
@@ -654,23 +714,25 @@ class VisuraController extends Controller
     {
         $record = Visura::with('tipo')->find($id);
         abort_if(!$record, 404, 'Questa visura non esiste');
-        abort_if(!$record->openapi_request_id, 422, 'Richiesta OpenAPI non presente');
+        abort_if(!$record->openapi_request_id, 422, 'Richiesta automatica non presente');
 
         $provider = $this->resolveOpenApiProvider($record);
-        $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+        $service = $provider === 'catasto'
+            ? $this->buildCatastoServiceForRecord($record)
+            : $this->buildVisureServiceForRecord($record);
         $document = $provider === 'catasto'
             ? $service->scaricaDocumentoVisuraCatastale($record->openapi_request_id)
             : $service->scaricaDocumento($record->openapi_request_id);
         if (!$document) {
             return redirect()->back()->withErrors([
-                'openapi' => $service->message ?: 'Documento non disponibile',
+                'openapi' => $this->userFacingOpenApiMessage($service->message, 'Documento non disponibile'),
             ]);
         }
 
         $saved = $this->salvaDocumentoOpenApiSuAllegati($record, $document);
         if (!$saved) {
             return redirect()->back()->withErrors([
-                'openapi' => 'Documento OpenAPI senza contenuto',
+                'openapi' => 'Documento non disponibile',
             ]);
         }
 
@@ -691,16 +753,16 @@ class VisuraController extends Controller
 
         $hash = trim((string) $tipoServizio->openapi_hash_visura);
         if ($hash !== '') {
-            $service = new OpenApiVisureService();
+            $service = $this->buildVisureServiceForRecord($record);
             $responseData = $service->creaRichiesta($hash, $this->payloadOpenApi($record));
             if (!$responseData) {
-                throw new \RuntimeException($service->message ?: 'Impossibile creare la richiesta OpenAPI');
+                throw new \RuntimeException($this->userFacingOpenApiMessage($service->message, 'Impossibile creare la richiesta automatica'));
             }
 
             $record->openapi_hash_visura = $hash;
             $record->openapi_request_id = (string) ($responseData['request_id'] ?? $responseData['id'] ?? '');
             if ($record->openapi_request_id === '') {
-                throw new \RuntimeException('OpenAPI non ha restituito un request_id valido');
+                throw new \RuntimeException('Impossibile completare la richiesta automatica');
             }
             $record->openapi_stato_richiesta = (string) ($responseData['stato_richiesta'] ?? $responseData['status'] ?? 'in_lavorazione');
             $record->openapi_response = $responseData;
@@ -710,16 +772,16 @@ class VisuraController extends Controller
         }
 
         if ($this->isCatastaleType($tipoServizio)) {
-            $service = new OpenApiCatastoService();
+            $service = $this->buildCatastoServiceForRecord($record);
             $responseData = $service->creaVisuraCatastale($this->payloadCatasto($record, $tipoServizio));
             if (!$responseData) {
-                throw new \RuntimeException($service->message ?: 'Impossibile creare la richiesta Catasto');
+                throw new \RuntimeException($this->userFacingOpenApiMessage($service->message, 'Impossibile creare la richiesta automatica'));
             }
 
             $record->openapi_hash_visura = 'catasto:visura_catastale';
             $record->openapi_request_id = (string) ($responseData['id'] ?? $responseData['request_id'] ?? '');
             if ($record->openapi_request_id === '') {
-                throw new \RuntimeException('Catasto API non ha restituito un id richiesta valido');
+                throw new \RuntimeException('Impossibile completare la richiesta automatica');
             }
             $record->openapi_stato_richiesta = (string) ($responseData['stato_richiesta'] ?? $responseData['status'] ?? 'in_lavorazione');
             $record->openapi_response = $responseData;
@@ -770,7 +832,9 @@ class VisuraController extends Controller
 
         try {
             $provider = $this->resolveOpenApiProvider($record);
-            $service = $provider === 'catasto' ? new OpenApiCatastoService() : new OpenApiVisureService();
+            $service = $provider === 'catasto'
+                ? $this->buildCatastoServiceForRecord($record)
+                : $this->buildVisureServiceForRecord($record);
             $statusData = $provider === 'catasto'
                 ? $service->statoVisuraCatastale($record->openapi_request_id)
                 : $service->statoRichiesta($record->openapi_request_id);
@@ -972,6 +1036,95 @@ class VisuraController extends Controller
         }
 
         return $data;
+    }
+
+    protected function buildVisureServiceForRecord(Visura $record): OpenApiVisureService
+    {
+        $token = $this->getAgenteOpenApiToken($record, 'visure');
+        if (!$token) {
+            throw new \RuntimeException('Servizio automatico non disponibile per questo agente');
+        }
+        return new OpenApiVisureService($token);
+    }
+
+    protected function buildCatastoServiceForRecord(Visura $record): OpenApiCatastoService
+    {
+        $token = $this->getAgenteOpenApiToken($record, 'catasto');
+        if (!$token) {
+            throw new \RuntimeException('Servizio automatico non disponibile per questo agente');
+        }
+        return new OpenApiCatastoService($token);
+    }
+
+    protected function getAgenteOpenApiToken(Visura $record, string $tipo): ?string
+    {
+        $agente = User::query()->with('agente')->find($record->agente_id);
+        if (!$agente || !$agente->agente) {
+            return null;
+        }
+
+        if ($tipo === 'catasto') {
+            return $agente->agente->openapi_catasto_token ?: null;
+        }
+
+        return $agente->agente->openapi_visure_token ?: null;
+    }
+
+    protected function isOpenApiCreditoTokenIssue(string $message): bool
+    {
+        $message = strtolower(trim($message));
+        if ($message === '') {
+            return false;
+        }
+
+        $tokenMarkers = [
+            'wrong token',
+            'invalid token',
+            'token non valido',
+            'unauthorized',
+            '(401)',
+            ' 401',
+        ];
+
+        foreach ($tokenMarkers as $marker) {
+            if (str_contains($message, $marker)) {
+                return true;
+            }
+        }
+
+        $creditoMarkers = [
+            'credito insufficiente',
+            'credito non sufficiente',
+            'saldo insufficiente',
+            'fondi insufficienti',
+            'insufficient credit',
+            'insufficient funds',
+            '(402)',
+            ' 402',
+            'servizio automatico non disponibile per questo agente',
+        ];
+
+        foreach ($creditoMarkers as $marker) {
+            if (str_contains($message, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function userFacingOpenApiMessage(?string $message, string $fallback): string
+    {
+        $message = trim((string) $message);
+        if ($message === '') {
+            return $fallback;
+        }
+
+        if ($this->isOpenApiCreditoTokenIssue($message)) {
+            return 'Il servizio automatico visure al momento non è disponibile. Puoi ricaricare il portafoglio visure oppure inviare la pratica al backoffice.';
+        }
+
+        return 'Il servizio automatico visure al momento non è disponibile. Riprova più tardi o invia la pratica al backoffice.';
     }
 
     protected function extractCatastoDataFromNote(string $note): array

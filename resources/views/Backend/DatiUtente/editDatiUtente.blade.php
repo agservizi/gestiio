@@ -83,6 +83,11 @@
                 <li class="nav-item">
                     <a class="nav-link" data-bs-toggle="tab" href="#tab_attivita">Attività</a>
                 </li>
+                @if($user->hasPermissionTo('agente') && $user->agente)
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab_openapi">OpenAPI Visure</a>
+                    </li>
+                @endif
                 <li class="nav-item">
                     <a class="nav-link {{$two?'active':''}}" data-bs-toggle="tab" href="#tab_two_factor">Autenticazione a due fattori</a>
                 </li>
@@ -344,6 +349,37 @@
                         </div>
                     </div>
                 </div>
+
+                @if($user->hasPermissionTo('agente') && $user->agente)
+                    <div class="tab-pane" id="tab_openapi" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-8 px-lg-2 py-lg-2">
+                                <h3 class="mb-1">Credenziali OpenAPI Visure</h3>
+                                <div class="text-muted mb-4">Token personali dell'agente per chiamate visure/catasto e credito separato dal wallet principale.</div>
+                                <form method="POST" action="{{ action([$controller,'update'],'openapi-credenziali') }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    @php($record = $user->agente)
+                                    @include('Backend._inputs.inputText',[
+                                        'campo'=>'openapi_visure_token',
+                                        'testo'=>'Token OpenAPI Visure',
+                                        'placeholder'=>'Inserisci il bearer token per visure',
+                                        'required'=>false
+                                    ])
+                                    @include('Backend._inputs.inputText',[
+                                        'campo'=>'openapi_catasto_token',
+                                        'testo'=>'Token OpenAPI Catasto',
+                                        'placeholder'=>'Inserisci il bearer token per catasto (opzionale)',
+                                        'required'=>false
+                                    ])
+                                    <div class="w-100 text-center">
+                                        <button class="btn btn-primary" type="submit">Salva credenziali OpenAPI</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <div class="tab-pane  {{$two?'active show':''}}" id="tab_two_factor" role="tabpanel">
                     <div class="row">

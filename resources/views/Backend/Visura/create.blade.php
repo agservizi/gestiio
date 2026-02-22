@@ -23,11 +23,11 @@
                     <td class="text-end">{{\App\importo($servizio->prezzo_cliente)}}</td>
                     <td class="text-end">{{\App\importo($servizio->prezzo_agente)}}</td>
                     <td class="text-end">
-                        @if(Auth::user()->agente->portafoglio_servizi>=$servizio->prezzo_agente)
+                        @if((float)(Auth::user()->agente->portafoglio_visure ?? 0) >= (float)$servizio->prezzo_agente)
                         <a href="{{action([\App\Http\Controllers\Backend\VisuraController::class,'create'],$servizio->id)}}"
                            class="btn btn-primary btn-sm" style="white-space: nowrap;">Crea pratica</a>
                         @else
-                            <a href="{{action([\App\Http\Controllers\Backend\RicaricaPlafonController::class,'show'])}}"
+                            <a href="{{action([\App\Http\Controllers\Backend\RicaricaPlafonController::class,'show'], ['tab_portafoglio' => \App\Enums\TipiPortafoglioEnum::VISURE->value])}}"
                                class="btn btn-danger btn-sm">Ricarica portafoglio</a>
                         @endif
                     </td>

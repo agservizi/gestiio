@@ -145,7 +145,8 @@
                         @if(!$record->hasPermissionTo('supervisore'))
                             @php($saldoServizi = (float)($record->agente->portafoglio_servizi ?? 0))
                             @php($saldoSpedizioni = (float)($record->agente->portafoglio_spedizioni ?? 0))
-                            @php($saldoTotale = $saldoServizi + $saldoSpedizioni)
+                            @php($saldoVisure = (float)($record->agente->portafoglio_visure ?? 0))
+                            @php($saldoTotale = $saldoServizi + $saldoSpedizioni + $saldoVisure)
                             <div class="border border-gray-300 border-dashed rounded min-w-175px py-3 px-4 mb-3 position-relative">
                                 <div class="d-flex align-items-center justify-content-between cursor-pointer" data-kt-menu-trigger="hover" data-kt-menu-attach="parent"
                                      data-kt-menu-placement="bottom-end" data-kt-menu-flip="bottom">
@@ -166,6 +167,11 @@
                                     <div class="menu-item px-4 d-flex justify-content-between align-items-center">
                                         <span class="text-gray-600">Portafoglio Spedizioni</span>
                                         <span class="fw-bold fs-6 text-gray-800">€ {{number_format($saldoSpedizioni, 2, ',', '.')}}</span>
+                                    </div>
+                                    <div class="separator my-2"></div>
+                                    <div class="menu-item px-4 d-flex justify-content-between align-items-center">
+                                        <span class="text-gray-600">Portafoglio Visure</span>
+                                        <span class="fw-bold fs-6 text-gray-800">€ {{number_format($saldoVisure, 2, ',', '.')}}</span>
                                     </div>
                                 </div>
                             </div>

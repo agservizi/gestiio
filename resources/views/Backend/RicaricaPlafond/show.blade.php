@@ -26,6 +26,7 @@
                     @if(!empty($agenteSelezionato) && !empty($agenteSelezionato->agente))
                         @php($saldoServizi = (float)($agenteSelezionato->agente->portafoglio_servizi ?? 0))
                         @php($saldoSpedizioni = (float)($agenteSelezionato->agente->portafoglio_spedizioni ?? 0))
+                        @php($saldoVisure = (float)($agenteSelezionato->agente->portafoglio_visure ?? 0))
                         <div class="d-flex flex-wrap gap-3 mt-3 mb-3">
                             <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4">
                                 <div class="fs-6 text-gray-500">Saldo servizi</div>
@@ -34,6 +35,10 @@
                             <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4">
                                 <div class="fs-6 text-gray-500">Saldo spedizioni</div>
                                 <div class="fs-4 fw-bold">€ {{number_format($saldoSpedizioni, 2, ',', '.')}}</div>
+                            </div>
+                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4">
+                                <div class="fs-6 text-gray-500">Saldo visure</div>
+                                <div class="fs-4 fw-bold">€ {{number_format($saldoVisure, 2, ',', '.')}}</div>
                             </div>
                         </div>
                     @endif
