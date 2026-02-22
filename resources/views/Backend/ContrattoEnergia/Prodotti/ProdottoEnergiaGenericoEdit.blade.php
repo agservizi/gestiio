@@ -1,4 +1,14 @@
 @php($isBusinessPratica = old('categoria_pratica', $categoriaPratica ?? 'consumer') === 'business')
+@php($selectedFornitoreLuce = old('attuale_fornitore_luce', $record->attuale_fornitore_luce ?? null))
+@php($fornitoriLuce = \App\Support\FornitoriLuceProvider::list())
+@if($selectedFornitoreLuce && !array_key_exists($selectedFornitoreLuce, $fornitoriLuce))
+    @php($fornitoriLuce = [$selectedFornitoreLuce => $selectedFornitoreLuce] + $fornitoriLuce)
+@endif
+@php($selectedFornitoreGas = old('attuale_fornitore_gas', $record->attuale_fornitore_gas ?? null))
+@php($fornitoriGas = config('fornitori_gas_italia', []))
+@if($selectedFornitoreGas && !array_key_exists($selectedFornitoreGas, $fornitoriGas))
+    @php($fornitoriGas = [$selectedFornitoreGas => $selectedFornitoreGas] + $fornitoriGas)
+@endif
 <h3 class="card-title">Dati generali</h3>
 <div class="row">
     @if($isBusinessPratica)
@@ -94,7 +104,7 @@
     <h4>DATI TECNICI ENERGIA ELETTRICA</h4>
     <div class="row">
         <div class="col-md-6">
-            @include('Backend._inputs.inputText',['campo'=>'attuale_fornitore_luce','testo'=>'Attuale fornitore luce','autocomplete'=>'off'])
+            @include('Backend._inputs.inputSelect2KeyValue',['campo'=>'attuale_fornitore_luce','testo'=>'Attuale fornitore luce','required'=>false,'array'=>$fornitoriLuce,'placeholder'=>'Seleziona fornitore luce'])
         </div>
         <div class="col-md-6">
             @include('Backend._inputs.inputText',['campo'=>'pod','testo'=>'Pod','autocomplete'=>'off'])
@@ -142,7 +152,7 @@
     <h4>DATI TECNICI GAS NATURALE</h4>
     <div class="row">
         <div class="col-md-6">
-            @include('Backend._inputs.inputText',['campo'=>'attuale_fornitore_gas','testo'=>'Attuale fornitore gas','autocomplete'=>'off'])
+            @include('Backend._inputs.inputSelect2KeyValue',['campo'=>'attuale_fornitore_gas','testo'=>'Attuale fornitore gas','required'=>false,'array'=>$fornitoriGas,'placeholder'=>'Seleziona fornitore gas'])
         </div>
         <div class="col-md-6">
             @include('Backend._inputs.inputText',['campo'=>'pdr','testo'=>'Pdr','autocomplete'=>'off'])
