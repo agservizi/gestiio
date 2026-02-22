@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class Gestore extends Model
 {
@@ -80,7 +81,21 @@ class Gestore extends Model
 
     public function immagineLogo()
     {
-        return $this->logo ? ('/storage' . $this->logo) : '/images/logo-placeholder.png';
+        if (!$this->logo) {
+            return '/images/logo-placeholder.png';
+        }
+
+        $relativePath = ltrim((string) $this->logo, '/');
+
+        // Migra al volo eventuali file salvati sul disk legacy.
+        if (!Storage::disk('public')->exists($relativePath) && Storage::exists('/' . $relativePath)) {
+            $contenuto = Storage::get('/' . $relativePath);
+            if ($contenuto !== null) {
+                Storage::disk('public')->put($relativePath, $contenuto);
+            }
+        }
+
+        return '/storage/' . $relativePath;
     }
 
 }

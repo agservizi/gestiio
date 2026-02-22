@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Gestore;
-use DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
@@ -15,6 +16,13 @@ class GestoreController extends Controller
 {
     protected $conFiltro = false;
 
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
 
     /**
      * Display a listing of the resource.
@@ -37,7 +45,7 @@ class GestoreController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $this->currentUser()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -49,7 +57,7 @@ class GestoreController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -63,7 +71,7 @@ class GestoreController extends Controller
                 'html' => base64_encode(view('Backend.Gestore.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -250,11 +258,17 @@ class GestoreController extends Controller
             $tmpFile = $request->file('logo');
             $extensione = $tmpFile->extension();
             $filename = hexdec(uniqid()) . '.' . $extensione;
-            if ($model->logo && \Storage::exists($model->logo)) {
-                \Storage::delete($model->logo);
+            if ($model->logo) {
+                $oldPath = ltrim((string) $model->logo, '/');
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+                if (Storage::exists('/' . $oldPath)) {
+                    Storage::delete('/' . $oldPath);
+                }
             }
 
-            $fileImmagine = $this->salvaImmagine($tmpFile, $filename,true);
+            $fileImmagine = $this->salvaImmagine($tmpFile, $filename, true);
             $model->logo = $fileImmagine;
             $model->save();
 
@@ -295,9 +309,10 @@ class GestoreController extends Controller
     protected function salvaImmagine($tmpFile, $nomefile, $canvas = false)
     {
 
-        $cartella = config('configurazione.loghi.cartella');
-        if (!Storage::exists($cartella)) {
-            Storage::makeDirectory($cartella);
+        $cartella = ltrim((string) config('configurazione.loghi.cartella'), '/');
+        $storagePublic = Storage::disk('public');
+        if (!$storagePublic->exists($cartella)) {
+            $storagePublic->makeDirectory($cartella);
         }
 
 
@@ -305,10 +320,11 @@ class GestoreController extends Controller
         $dimensioni = config('configurazione.loghi.dimensioni');
         //$img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
         $img = $this->ridimensionaImmagine($img, $dimensioni['width'], $dimensioni['height'], $canvas, 'normale');
-        $img->save(Storage::path($cartella . '/' . $nomefile), 80);
+        $absolutePath = storage_path('app/public/' . $cartella . '/' . $nomefile);
+        $img->save($absolutePath, 80);
 
 
-        return $cartella . '/' . $nomefile;
+        return '/' . $cartella . '/' . $nomefile;
 
     }
 
@@ -325,7 +341,7 @@ class GestoreController extends Controller
         if ($canvas) {
 
             if ($img->height() < $height || $img->width() < $width) {
-                \Log::debug('Aggiusto rapporto');
+                Log::debug('Aggiusto rapporto');
                 $img->resizeCanvas($width, $height, 'center', false, 'ffffff');
             }
         }
