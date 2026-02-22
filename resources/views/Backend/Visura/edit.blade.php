@@ -284,11 +284,19 @@
                 const showImmobile = entita === 'immobile';
                 $('#catasto_immobile_fields').toggle(showImmobile);
                 $('#foglio_catasto, #particella_catasto').prop('required', showImmobile);
+
+                if ($('#catasto_entita_hint').length) {
+                    $('#catasto_entita_hint').text(
+                        showImmobile
+                            ? 'Per ricerca per immobile servono Foglio e Particella.'
+                            : 'Per ricerca per soggetto usa ID soggetto oppure CF/P.IVA + Provincia.'
+                    );
+                }
             };
 
             if (isCatastale) {
                 $('#provincia_catasto').on('input', function () {
-                    this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+                    this.value = this.value.toUpperCase();
                 });
 
                 $('#catasto_entita').on('change', toggleCatastoFields);

@@ -891,22 +891,55 @@ class VisuraController extends Controller
         $isTerreni = str_contains($tipoNome, 'terren');
         $isSoggetto = (($noteData['entita'] ?? null) === 'soggetto') || str_contains($tipoNome, 'soggetto');
         $tipoVisura = str_contains($tipoNome, 'storic') ? 'storica' : 'ordinaria';
+        $tipoCatasto = $isTerreni ? 'T' : 'F';
+        $richiedente = trim((string) $this->currentUser()->nominativo());
+        if ($richiedente === '') {
+            $richiedente = trim((string) $this->currentUser()->email);
+        }
+
+        // Variante soggetto: id_soggetto (preferita) o cf_piva + provincia.
+        if ($isSoggetto) {
+            $payload = [
+                'entita' => 'soggetto',
+                'tipo_visura' => $tipoVisura,
+                'tipo_catasto' => $tipoCatasto,
+                'richiedente' => $richiedente,
+                'id_soggetto' => $noteData['id_soggetto'] ?? null,
+                'cf_piva' => $record->partita_iva ?: $record->codice_fiscale,
+                'provincia' => $noteData['provincia'] ?? null,
+            ];
+
+            return array_filter($payload, function ($value) {
+                return !is_null($value) && $value !== '';
+            });
+        }
+
+        // Variante immobile: id_immobile (preferita) o dati catastali.
+        if (!empty($noteData['id_immobile'])) {
+            $payload = [
+                'entita' => 'immobile',
+                'id_immobile' => $noteData['id_immobile'],
+                'tipo_visura' => $tipoVisura,
+                'richiedente' => $richiedente,
+            ];
+
+            return array_filter($payload, function ($value) {
+                return !is_null($value) && $value !== '';
+            });
+        }
 
         $payload = [
             'tipo_visura' => $tipoVisura,
-            'entita' => $isSoggetto ? 'soggetto' : 'immobile',
-            'cf_piva' => $record->partita_iva ?: $record->codice_fiscale,
-            'codice_fiscale' => $record->codice_fiscale,
-            'partita_iva' => $record->partita_iva,
-            'tipo_catasto' => $isTerreni ? 'terreni' : 'fabbricati',
+            'entita' => 'immobile',
+            'tipo_catasto' => $tipoCatasto,
+            'richiedente' => $richiedente,
             'provincia' => $noteData['provincia'] ?? null,
             'comune' => $noteData['comune'] ?? $record->citta,
             'sezione' => $noteData['sezione'] ?? null,
+            'sezione_urbana' => $noteData['sezione_urbana'] ?? null,
             'foglio' => $noteData['foglio'] ?? null,
             'particella' => $noteData['particella'] ?? null,
             'subalterno' => $noteData['subalterno'] ?? null,
-            'id_immobile' => $noteData['id_immobile'] ?? null,
-            'id_soggetto' => $noteData['id_soggetto'] ?? null,
             'raw_note' => $record->note,
         ];
 
@@ -966,7 +999,7 @@ class VisuraController extends Controller
         $entita = (string) ($request->input('catasto_entita') ?: $this->defaultCatastoEntita($tipo));
         $tipoNome = strtolower((string) optional($tipo)->nome);
         $tipoVisura = str_contains($tipoNome, 'storic') ? 'storica' : 'ordinaria';
-        $tipoCatasto = str_contains($tipoNome, 'terren') ? 'terreni' : 'fabbricati';
+        $tipoCatasto = str_contains($tipoNome, 'terren') ? 'T' : 'F';
 
         $payload = [
             'provider' => 'catasto',
@@ -977,6 +1010,7 @@ class VisuraController extends Controller
             'provincia' => strtoupper((string) $request->input('provincia_catasto')),
             'comune' => (string) $request->input('comune_catasto'),
             'sezione' => (string) $request->input('sezione_catasto'),
+            'sezione_urbana' => (string) $request->input('sezione_urbana_catasto'),
             'foglio' => (string) $request->input('foglio_catasto'),
             'particella' => (string) $request->input('particella_catasto'),
             'subalterno' => (string) $request->input('subalterno_catasto'),
@@ -1030,13 +1064,14 @@ class VisuraController extends Controller
             }
 
             $rules = array_merge($rules, [
-                'provincia_catasto' => ['required', 'string', 'size:2'],
+                'provincia_catasto' => ['required', 'string', 'max:80'],
                 'comune_catasto' => ['required', 'string', 'max:120'],
                 'catasto_entita' => ['nullable', 'in:immobile,soggetto'],
                 'foglio_catasto' => [$entita === 'immobile' ? 'required' : 'nullable', 'string', 'max:20'],
                 'particella_catasto' => [$entita === 'immobile' ? 'required' : 'nullable', 'string', 'max:20'],
                 'subalterno_catasto' => ['nullable', 'string', 'max:20'],
                 'sezione_catasto' => ['nullable', 'string', 'max:20'],
+                'sezione_urbana_catasto' => ['nullable', 'string', 'max:20'],
                 'id_immobile_catasto' => ['nullable', 'string', 'max:60'],
                 'id_soggetto_catasto' => ['nullable', 'string', 'max:60'],
             ]);
