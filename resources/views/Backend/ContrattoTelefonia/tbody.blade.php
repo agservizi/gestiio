@@ -20,7 +20,9 @@
         </td>
         <td class="">
             {{$record->nominativo()}}<br>
-            {{$record->ragione_sociale}}
+            <span class="text-muted">
+                {{$record->partita_iva ?: $record->codice_fiscale}}
+            </span>
         </td>
         <td class="d-none d-md-table-cell">
             {!! \App\telefonoWhatsapp($record->telefono) !!}<br>

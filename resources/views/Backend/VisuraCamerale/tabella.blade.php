@@ -9,7 +9,7 @@
             </td>
         @endif
         <td>
-            {{$record->contratto->ragione_sociale}}
+            {{$record->contratto?->nominativo()}}
         </td>
         <td>
             @if($record->contratto_id)
@@ -51,4 +51,3 @@
         </td>
     </tr>
 @endforeach
-

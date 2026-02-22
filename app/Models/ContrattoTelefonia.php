@@ -51,9 +51,9 @@ class ContrattoTelefonia extends Model
     {
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
-            if (Auth::user()->hasPermissionTo('agente')) {
+            if (self::authUserHasPermissionTo('agente')) {
                 $builder->where('agente_id', Auth::id());
-            } elseif (Auth::user()->hasPermissionTo('supervisore')) {
+            } elseif (self::authUserHasPermissionTo('supervisore')) {
                 $builder->whereHas('mandato', function ($q) {
                     $q->where('agente_id', Auth::id());
                 });
@@ -179,7 +179,7 @@ class ContrattoTelefonia extends Model
 
     public function nominativo()
     {
-        return $this->cognome . ' ' . $this->nome;
+        return trim($this->ragione_sociale ?: ($this->cognome . ' ' . $this->nome));
     }
 
     public function denominazione()
@@ -261,20 +261,58 @@ class ContrattoTelefonia extends Model
 
     public static function determinaPuoModificare()
     {
-        return Auth::user()->hasAnyPermission(['admin', 'supervisore']);
+        return self::authUserHasAnyPermission(['admin', 'supervisore']);
 
     }
 
     public static function determinaPuoCambiareStato()
     {
-        return self::determinaPuoModificare() || Auth::user()->hasPermissionTo('supervisore');
+        return self::determinaPuoModificare() || self::authUserHasPermissionTo('supervisore');
 
     }
 
     public static function determinaPuoCreare()
     {
-        return Auth::user()->hasAnyPermission(['admin', 'agente']);
+        return self::authUserHasAnyPermission(['admin', 'agente']);
 
+    }
+
+    protected static function authUserHasPermissionTo(string $permission): bool
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        if (method_exists($user, 'hasPermissionTo')) {
+            return (bool) call_user_func([$user, 'hasPermissionTo'], $permission);
+        }
+
+        return method_exists($user, 'can')
+            ? (bool) call_user_func([$user, 'can'], $permission)
+            : false;
+    }
+
+    protected static function authUserHasAnyPermission(array $permissions): bool
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        if (method_exists($user, 'hasAnyPermission')) {
+            return (bool) call_user_func([$user, 'hasAnyPermission'], $permissions);
+        }
+
+        if (method_exists($user, 'can')) {
+            foreach ($permissions as $permission) {
+                if ((bool) call_user_func([$user, 'can'], $permission)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
 

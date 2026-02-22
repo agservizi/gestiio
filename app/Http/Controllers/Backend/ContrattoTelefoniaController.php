@@ -807,6 +807,8 @@ class ContrattoTelefoniaController extends Controller
             $model->$campo = $valore;
         }
 
+        $this->normalizzaCampiPerCategoriaPratica($request, $model);
+
         if (!$model->cliente_id) {
             $cliente = Cliente::where('codice_fiscale', $model->codice_fiscale)->first();
             if (!$cliente) {
@@ -833,6 +835,22 @@ class ContrattoTelefoniaController extends Controller
         $this->salvaDatiProdotti($model, $request);
 
         return $model;
+    }
+
+    protected function normalizzaCampiPerCategoriaPratica(Request $request, ContrattoTelefonia $model): void
+    {
+        $categoria = $request->input('categoria_pratica', 'consumer');
+
+        if ($categoria === 'business') {
+            $model->nome = null;
+            $model->cognome = null;
+            $model->codice_fiscale = null;
+            return;
+        }
+
+        $model->ragione_sociale = null;
+        $model->partita_iva = null;
+        $model->natura_giuridica = null;
     }
 
 

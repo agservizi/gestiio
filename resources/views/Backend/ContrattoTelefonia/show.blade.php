@@ -60,6 +60,7 @@
 
 @section('content')
     @php($vecchio=$record->id)
+    @php($categoriaPratica = ($record->ragione_sociale || $record->partita_iva || $record->natura_giuridica) ? 'business' : 'consumer')
     <div class="card card-flush">
         <div class="card-body">
             @include('Backend._components.alertErrori')
@@ -103,27 +104,35 @@
 
             <div class="row">
                 <div class="col-md-6">
-                    @include('Backend._inputs.inputTextReadonly',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase'])
-                </div>
-                <div class="col-md-6">
-                    @include('Backend._inputs.inputTextReadonly',['campo'=>'natura_giuridica','testo'=>'Natura giuridica'])
+                    @include('Backend._inputs.inputTextReadonly',['campo'=>'categoria_pratica','testo'=>'Categoria pratica','valore'=>$categoriaPratica==='business'?'Business':'Consumer'])
                 </div>
             </div>
+            @if($categoriaPratica === 'consumer')
+                <div class="row">
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputTextReadonly',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase'])
+                    </div>
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputTextReadonly',['campo'=>'nome','testo'=>'Nome','required'=>true,'autocomplete'=>'off'])
+                    </div>
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputTextReadonly',['campo'=>'cognome','testo'=>'Cognome','required'=>true,'autocomplete'=>'off'])
+                    </div>
+                </div>
+            @else
+                <div class="row">
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputTextReadonly',['campo'=>'natura_giuridica','testo'=>'Natura giuridica'])
+                    </div>
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputTextReadonly',['campo'=>'ragione_sociale','testo'=>'Ragione sociale','required'=>false,'autocomplete'=>'off'])
+                    </div>
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputTextReadonly',['campo'=>'partita_iva','testo'=>'Partita iva','required'=>false,'autocomplete'=>'off'])
+                    </div>
+                </div>
+            @endif
             <div class="row">
-                <div class="col-md-6">
-                    @include('Backend._inputs.inputTextReadonly',['campo'=>'nome','testo'=>'Nome','required'=>true,'autocomplete'=>'off'])
-                </div>
-                <div class="col-md-6">
-                    @include('Backend._inputs.inputTextReadonly',['campo'=>'cognome','testo'=>'Cognome','required'=>true,'autocomplete'=>'off'])
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    @include('Backend._inputs.inputTextReadonly',['campo'=>'ragione_sociale','testo'=>'Ragione sociale','required'=>false,'autocomplete'=>'off'])
-                </div>
-                <div class="col-md-6">
-                    @include('Backend._inputs.inputTextReadonly',['campo'=>'partita_iva','testo'=>'Partita iva','required'=>false,'autocomplete'=>'off'])
-                </div>
                 <div class="col-md-6">
                     @include('Backend._inputs.inputTextReadonly',['campo'=>'iban','testo'=>'Iban'])
                 </div>
