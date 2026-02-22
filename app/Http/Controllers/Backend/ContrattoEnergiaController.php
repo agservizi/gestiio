@@ -1062,7 +1062,7 @@ class ContrattoEnergiaController extends Controller
             'gestore_id' => ['required'],
             'categoria_pratica' => ['required', 'in:consumer,business'],
             'codice_fiscale' => ['required', new CodiceFiscaleRule()],
-            'denominazione' => $isBusiness ? ['nullable', 'max:255'] : ['nullable', 'max:255'],
+            'denominazione' => $isBusiness ? ['required', 'max:255'] : ['nullable', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'telefono' => ['required', new \App\Rules\TelefonoRule()],
         ];

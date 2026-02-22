@@ -1,18 +1,54 @@
-
+@php($isBusinessPratica = old('categoria_pratica', $categoriaPratica ?? 'consumer') === 'business')
 <h3 class="card-title">Dati generali</h3>
 <div class="row">
-    <div class="col-md-6">
-        @include('Backend._inputs_.inputTextValore',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase','valore' => $codiceFiscale])
-    </div>
+    @if($isBusinessPratica)
+        <div class="col-md-6">
+            @include('Backend._inputs_.inputTextValore',['campo'=>'denominazione','testo'=>'Ragione sociale / Denominazione','required'=>true,'autocomplete'=>'off','valore' => $denominazione ?? $contratto->denominazione])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs_.inputTextValore',['campo'=>'codice_fiscale','testo'=>'Codice fiscale azienda','required'=>true,'autocomplete'=>'off','classe'=>'uppercase','valore' => $codiceFiscale])
+        </div>
+    @else
+        <div class="col-md-6">
+            @include('Backend._inputs_.inputTextValore',['campo'=>'codice_fiscale','testo'=>'Codice fiscale','required'=>true,'autocomplete'=>'off','classe'=>'uppercase','valore' => $codiceFiscale])
+        </div>
+    @endif
 </div>
-<div class="row">
-    <div class="col-md-6">
-        @include('Backend._inputs.inputText',['campo'=>'nome','testo'=>'Nome','required'=>true,'autocomplete'=>'off'])
+@if($isBusinessPratica)
+    <div class="row">
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'partita_iva','testo'=>'Partita IVA','required'=>true,'autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'forma_giuridica','testo'=>'Forma giuridica','required'=>true,'autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'cellulare','testo'=>'Cellulare azienda','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'fax','testo'=>'Fax azienda','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'nome_cognome_referente','testo'=>'Nome e cognome referente','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'codice_fiscale_referente','testo'=>'Codice fiscale referente','classe'=>'uppercase','autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'telefono_referente','testo'=>'Telefono referente','autocomplete'=>'off'])
+        </div>
     </div>
-    <div class="col-md-6">
-        @include('Backend._inputs.inputText',['campo'=>'cognome','testo'=>'Cognome','required'=>true,'autocomplete'=>'off'])
+@endif
+@if(!$isBusinessPratica)
+    <div class="row">
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'nome','testo'=>'Nome','required'=>true,'autocomplete'=>'off'])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',['campo'=>'cognome','testo'=>'Cognome','required'=>true,'autocomplete'=>'off'])
+        </div>
     </div>
-</div>
+@endif
 <div class="row">
     <div class="col-md-6">
         @include('Backend._inputs_.inputTextValore',['campo'=>'email','testo'=>'Email','autocomplete'=>'off','required'=>true,'valore' => $email])
@@ -185,8 +221,11 @@
     <script src="/assets_backend/js-miei/select2_it.js"></script>
     <script>
         function copiaIntestatario() {
-
-            $('#intestatario_conto_corrente').val($('#cognome').val() + ' ' + $('#nome').val());
+            const denominazione = $('#denominazione').val();
+            const intestatario = denominazione && denominazione.trim() !== ''
+                ? denominazione
+                : ($('#cognome').val() + ' ' + $('#nome').val()).trim();
+            $('#intestatario_conto_corrente').val(intestatario);
             $('#codice_fiscale_intestatario').val($('#codice_fiscale').val());
         }
 

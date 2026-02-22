@@ -35,6 +35,13 @@ class Generico extends ProdottoEnergiaAbstract
 
             'nome' => 'app\getInputUcwords',
             'cognome' => 'app\getInputUcwords',
+            'partita_iva' => '',
+            'forma_giuridica' => '',
+            'cellulare' => '',
+            'fax' => '',
+            'nome_cognome_referente' => '',
+            'codice_fiscale_referente' => '',
+            'telefono_referente' => '',
 
             'indirizzo' => 'app\getInputUcwords',
             'interno' => '',
@@ -89,7 +96,12 @@ class Generico extends ProdottoEnergiaAbstract
             $contrattoEnergia->prodotto_id = $model->contratto_energia_id;
             $contrattoEnergia->prodotto_type = get_class($model);
         }
-        $contrattoEnergia->denominazione = $model->cognome . ' ' . $model->nome;
+        $isBusiness = $request->input('categoria_pratica') === 'business';
+        $denominazione = trim((string) $request->input('denominazione'));
+        if (!$isBusiness || $denominazione === '') {
+            $denominazione = trim((string) ($model->cognome . ' ' . $model->nome));
+        }
+        $contrattoEnergia->denominazione = $denominazione;
         $contrattoEnergia->indirizzo_completo = $model->indirizzo . ' ' . Comune::find($model->citta)?->comuneConTarga();
         $contrattoEnergia->testo_ricerca = $contrattoEnergia->denominazione . '|' . $contrattoEnergia->codice_contratto;
 
@@ -102,8 +114,16 @@ class Generico extends ProdottoEnergiaAbstract
     public function rulesProdotto($id = null)
     {
 
+        $isBusiness = request()->input('categoria_pratica') === 'business';
 
         $rules = [
+            'partita_iva' => $isBusiness ? ['required', new \App\Rules\PartitaIvaRule()] : ['nullable', new \App\Rules\PartitaIvaRule()],
+            'forma_giuridica' => $isBusiness ? ['required', 'max:255'] : ['nullable', 'max:255'],
+            'cellulare' => ['nullable', 'max:255'],
+            'fax' => ['nullable', 'max:255'],
+            'nome_cognome_referente' => ['nullable', 'max:255'],
+            'codice_fiscale_referente' => ['nullable', 'max:255'],
+            'telefono_referente' => ['nullable', 'max:255'],
             'fornitura_richiesta' => ['nullable'],
             'fasce_reperibilita' => ['nullable'],
             'attuale_fornitore_luce' => ['nullable', 'max:255'],
