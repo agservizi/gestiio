@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use SoapClient;
 use App\Models\Visura;
 use Illuminate\Support\Str;
 use function App\getInputCheckbox;
@@ -283,16 +284,27 @@ class VisuraController extends Controller
             ];
         }
 
+        $viesCache = [];
         $items = collect($rawItems)
-            ->map(function ($item) {
+            ->map(function ($item) use (&$viesCache) {
                 $arr = json_decode(json_encode($item), true) ?: [];
                 $denominazione = $this->extractDenominazioneFromAziendaResult($arr);
                 $comune = (string) ($arr['comune'] ?? $arr['sede_legale_comune'] ?? $arr['sede_comune'] ?? '');
                 $indirizzo = (string) ($arr['indirizzo'] ?? $arr['sede_legale_indirizzo'] ?? $arr['sede_indirizzo'] ?? '');
                 $natura = (string) ($arr['codice_natura_giuridica'] ?? $arr['natura_giuridica'] ?? $arr['forma_giuridica'] ?? '');
+                $partitaIva = $this->extractPartitaIvaFromAziendaResult($arr);
+                $viesValid = null;
+                if ($partitaIva !== '') {
+                    if (!array_key_exists($partitaIva, $viesCache)) {
+                        $viesCache[$partitaIva] = $this->verifyPartitaIvaViaVies($partitaIva);
+                    }
+                    $viesValid = $viesCache[$partitaIva];
+                }
 
                 return [
                     'denominazione' => $denominazione,
+                    'partita_iva' => $partitaIva,
+                    'vies_valid' => $viesValid,
                     'indirizzo' => $indirizzo,
                     'comune' => $comune,
                     'natura_giuridica' => $natura,
@@ -461,6 +473,89 @@ class VisuraController extends Controller
         }
 
         return '';
+    }
+
+    protected function extractPartitaIvaFromAziendaResult(array $data): string
+    {
+        $flat = $this->flattenArrayForLookup($data);
+
+        $candidateKeys = [
+            'partita_iva',
+            'partitaiva',
+            'piva',
+            'cf_piva_id',
+            'cfpivaid',
+            'cf_piva',
+            'cfpiva',
+            'vat',
+            'vat_number',
+            'vatnumber',
+        ];
+
+        foreach ($candidateKeys as $key) {
+            if (!array_key_exists($key, $flat)) {
+                continue;
+            }
+            $normalized = preg_replace('/\D+/', '', (string) $flat[$key]);
+            if (is_string($normalized) && strlen($normalized) === 11) {
+                return $normalized;
+            }
+        }
+
+        foreach ($flat as $key => $value) {
+            if (!str_contains($key, 'partita') && !str_contains($key, 'piva') && !str_contains($key, 'vat') && !str_contains($key, 'cfpiva')) {
+                continue;
+            }
+            $normalized = preg_replace('/\D+/', '', (string) $value);
+            if (is_string($normalized) && strlen($normalized) === 11) {
+                return $normalized;
+            }
+        }
+
+        return '';
+    }
+
+    protected function flattenArrayForLookup(array $data, string $prefix = ''): array
+    {
+        $flat = [];
+        foreach ($data as $key => $value) {
+            $normalizedKey = preg_replace('/[^a-z0-9_]+/', '', strtolower((string) $key));
+            $composed = trim($prefix . '_' . $normalizedKey, '_');
+
+            if (is_array($value)) {
+                $flat = array_merge($flat, $this->flattenArrayForLookup($value, $composed));
+                continue;
+            }
+
+            if (is_scalar($value) || $value === null) {
+                $flat[$composed] = (string) $value;
+                $flat[$normalizedKey] = (string) $value;
+            }
+        }
+
+        return $flat;
+    }
+
+    protected function verifyPartitaIvaViaVies(string $partitaIva): ?bool
+    {
+        if (!preg_match('/^\d{11}$/', $partitaIva)) {
+            return null;
+        }
+
+        try {
+            $client = new SoapClient('http://ec.europa.eu/taxation_customs/vies/checkVatService.wsdl', [
+                'connection_timeout' => 8,
+                'cache_wsdl' => WSDL_CACHE_BOTH,
+            ]);
+            $res = $client->checkVat([
+                'countryCode' => 'IT',
+                'vatNumber' => $partitaIva,
+            ]);
+
+            return (bool) ($res->valid ?? false);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**

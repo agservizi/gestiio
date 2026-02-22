@@ -339,10 +339,20 @@
                         resp.items.forEach(function (item) {
                             const tr = $('<tr></tr>');
                             tr.append('<td>' + (item.denominazione || '-') + '</td>');
+                            let pivaText = item.partita_iva || '-';
+                            if (item.partita_iva && item.vies_valid === true) {
+                                pivaText += ' <span class="badge badge-light-success ms-1">VIES OK</span>';
+                            } else if (item.partita_iva && item.vies_valid === false) {
+                                pivaText += ' <span class="badge badge-light-danger ms-1">VIES KO</span>';
+                            }
+                            tr.append('<td>' + pivaText + '</td>');
                             tr.append('<td>' + (item.comune || '-') + '</td>');
                             tr.append('<td>' + (item.natura_giuridica || '-') + '</td>');
                             const $btnUsa = $('<button type="button" class="btn btn-sm btn-primary">Usa dati</button>');
                             $btnUsa.on('click', function () {
+                                if (item.partita_iva) {
+                                    $('#partita_iva').val(item.partita_iva);
+                                }
                                 if (item.denominazione) {
                                     $('#ragione_sociale').val(item.denominazione);
                                 }
