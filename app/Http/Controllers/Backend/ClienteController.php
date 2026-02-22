@@ -12,8 +12,7 @@ use App\Rules\PartitaIvaRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Cliente;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use DB;
 use Illuminate\Support\Facades\Session;
 
 class ClienteController extends Controller
@@ -42,9 +41,7 @@ class ClienteController extends Controller
 
         ];
 
-        /** @var \App\Models\User|null $me */
-        $me = Auth::user();
-        $orderByUser = $me ? $me->getExtra($nomeClasse) : null;
+        $orderByUser = Auth::user()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -56,9 +53,7 @@ class ClienteController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            if ($me) {
-                $me->setExtra([$nomeClasse => $orderBy]);
-            }
+            Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -72,7 +67,7 @@ class ClienteController extends Controller
                 'html' => base64_encode(view('Backend.Cliente.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ]))
             ];
 
         }
@@ -96,7 +91,7 @@ class ClienteController extends Controller
 
     /**
      * @param Request $request
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     protected function applicaFiltri($request)
     {
@@ -264,7 +259,7 @@ class ClienteController extends Controller
                     $user->cognome = $cliente->cognome;
                     $user->email = $cliente->email;
                     $password = rand(11111111, 99999999);
-                    $user->password = Hash::make($password);
+                    $user->password = \Hash::make($password);
                     $user->telefono = $cliente->telefono;
                     $user->save();
                     $cliente->user_id = $user->id;
@@ -291,7 +286,7 @@ class ClienteController extends Controller
 
                 $user = User::find($cliente->user_id);
                 $password = rand(11111111, 99999999);
-                $user->password = Hash::make($password);
+                $user->password = \Hash::make($password);
                 $user->save();
 
                 try {
@@ -412,8 +407,7 @@ class ClienteController extends Controller
 
         Session::flash('impersona', Auth::id());
         Auth::loginUsingId($user->id, false);
-        // after impersonation redirect to frontend personal area (authenticated client)
-        return ['success' => true, 'redirect' => '/area-personale'];
+        return ['success' => true, 'redirect' => '/'];
     }
 
     protected function tabContrattiTelefoniaRecords($id, $tab)
@@ -436,55 +430,25 @@ class ClienteController extends Controller
                 $q->select('id', 'alias');
             }])
             ->withCount('allegati')
-            ->latest('id');
-
-        $qb = \App\Models\ContrattoTelefonia::query()
-            ->whereRelation('cliente', 'id', $id)
-            ->with(['comune' => function ($q) {
-                $q->select('id', 'comune', 'targa');
-            }])
-            ->with(['esito' => function ($q) {
-                $q->select('id', 'nome', 'colore_hex');
-            }])
-            ->with(['tipoContratto.gestore' => function ($q) {
-                $q->select('id', 'nome', 'colore_hex');
-            }])
-            ->with(['tipoContratto' => function ($q) {
-                $q->select('id', 'gestore_id', 'nome', 'pda');
-            }])
-            ->with(['agente' => function ($q) {
-                $q->select('id', 'alias');
-            }])
-            ->withCount('allegati')
-            ->latest('id');
-
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $p */
-        $p = $qb->paginate();
-        $p->withPath(action([ClienteController::class, 'tab'], ['id' => $id, 'tab' => $tab]));
-        return $p;
+            ->latest('id')
+            ->paginate()->withPath(action([ClienteController::class, 'tab'], ['id' => $id, 'tab' => $tab]));
     }
 
     protected function determinaPuoModificare()
     {
-        /** @var \App\Models\User|null $me */
-        $me = Auth::user();
-        return $me ? $me->hasAnyPermission(['admin', 'supervisore']) : false;
+        return Auth::user()->hasAnyPermission(['admin', 'supervisore']);
 
     }
 
     protected function determinaPuoCambiareStato()
     {
-        /** @var \App\Models\User|null $me */
-        $me = Auth::user();
-        return $this->determinaPuoModificare() || ($me ? $me->hasPermissionTo('supervisore') : false);
+        return $this->determinaPuoModificare() || Auth::user()->hasPermissionTo('supervisore');
 
     }
 
     protected function determinaPuoCreare()
     {
-        /** @var \App\Models\User|null $me */
-        $me = Auth::user();
-        return $me ? $me->hasAnyPermission(['admin', 'agente']) : false;
+        return Auth::user()->hasAnyPermission(['admin', 'agente']);
 
     }
 
