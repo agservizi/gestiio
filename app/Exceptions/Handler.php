@@ -4,9 +4,11 @@ namespace App\Exceptions;
 
 use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 use Throwable;
 use Twilio\Exceptions\RestException;
 
@@ -54,6 +56,28 @@ class Handler extends ExceptionHandler
     public function report(Throwable $exception)
     {
         parent::report($exception);
+    }
+
+    /**
+     * Render an exception into an HTTP response.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \Throwable $e
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Throwable
+     */
+    public function render(Request $request, Throwable $e)
+    {
+        if ($e instanceof UnauthorizedException && Auth::check() && ($request->is('backend') || $request->is('backend/*'))) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Non autorizzato'], 403);
+            }
+
+            return redirect('/area-personale');
+        }
+
+        return parent::render($request, $e);
     }
 
 
