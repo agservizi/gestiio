@@ -148,7 +148,7 @@ class VisuraCameraleService
 
     protected function url($url)
     {
-        if (env('OPENAPI_SANDBOX')) {
+        if (config('services.openapi.sandbox')) {
             return $url;
         } else {
             return str_replace('test.', '', $url);
@@ -157,7 +157,11 @@ class VisuraCameraleService
 
     protected function bearer()
     {
-        return env('OPENAPI_BEARER');
+        return (string) (
+            config('services.openapi.bearer_visure')
+            ?: env('OPENAPI_BEARER_VISURE')
+            ?: env('OPENAPI_BEARER')
+        );
     }
 
     protected function response($response)
