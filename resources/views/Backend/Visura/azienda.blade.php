@@ -14,7 +14,7 @@
                     <button type="button"
                             class="btn btn-light-primary w-100"
                             id="btn-ricerca-azienda"
-                            data-url="{{action([\App\Http\Controllers\Backend\VisuraController::class,'ricercaAzienda')}}">
+                            data-url="{{action([\App\Http\Controllers\Backend\VisuraController::class,'ricercaAzienda'])}}">
                         Cerca
                     </button>
                 </div>
