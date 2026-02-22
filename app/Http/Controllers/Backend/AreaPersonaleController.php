@@ -62,6 +62,9 @@ class AreaPersonaleController extends Controller
 
     public function show($cosa = null)
     {
+        if (!$this->currentUser()->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore'])) {
+            return redirect('/area-personale#gestione-account');
+        }
 
         $recentLogin = RegistroLogin::where('user_id', $this->currentUser()->id)
             ->latest('id')
@@ -151,7 +154,7 @@ class AreaPersonaleController extends Controller
 
         }
 
-        return redirect()->action([AreaPersonaleController::class, 'show']);
+        return redirect()->back();
     }
 
 
