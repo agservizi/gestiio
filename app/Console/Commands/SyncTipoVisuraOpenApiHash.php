@@ -222,16 +222,31 @@ class SyncTipoVisuraOpenApiHash extends Command
             return null;
         }
 
+        $needleFamily = $this->detectFamily($needle);
+        $filtered = $openApiList;
+        if ($needleFamily) {
+            $filtered = array_values(array_filter($openApiList, function ($candidate) use ($needleFamily) {
+                return $this->detectFamily($candidate['normalized']) === $needleFamily;
+            }));
+            if (empty($filtered)) {
+                $filtered = $openApiList;
+            }
+        }
+
+        $needle = $this->normalizeWithSynonyms($needle);
+
         // 1) Exact normalized match
-        foreach ($openApiList as $candidate) {
-            if ($candidate['normalized'] === $needle) {
+        foreach ($filtered as $candidate) {
+            $candidateNorm = $this->normalizeWithSynonyms($candidate['normalized']);
+            if ($candidateNorm === $needle) {
                 return $candidate;
             }
         }
 
         // 2) Contains either direction
-        foreach ($openApiList as $candidate) {
-            if (str_contains($candidate['normalized'], $needle) || str_contains($needle, $candidate['normalized'])) {
+        foreach ($filtered as $candidate) {
+            $candidateNorm = $this->normalizeWithSynonyms($candidate['normalized']);
+            if (str_contains($candidateNorm, $needle) || str_contains($needle, $candidateNorm)) {
                 return $candidate;
             }
         }
@@ -240,19 +255,61 @@ class SyncTipoVisuraOpenApiHash extends Command
         $needleTokens = array_values(array_filter(explode(' ', $needle)));
         $best = null;
         $bestScore = 0;
-        foreach ($openApiList as $candidate) {
-            $candidateTokens = array_values(array_filter(explode(' ', $candidate['normalized'])));
+        foreach ($filtered as $candidate) {
+            $candidateNorm = $this->normalizeWithSynonyms($candidate['normalized']);
+            $candidateTokens = array_values(array_filter(explode(' ', $candidateNorm)));
             if (empty($candidateTokens)) {
                 continue;
             }
             $common = array_intersect($needleTokens, $candidateTokens);
-            $score = count($common);
+            $score = count($common) * 10;
+            // Premia nomi che contengono token distintivi lato visura.
+            foreach (['immobile', 'soggetto', 'terreni', 'giuridica', 'fisica', 'ordinaria', 'storica'] as $token) {
+                if (in_array($token, $needleTokens, true) && in_array($token, $candidateTokens, true)) {
+                    $score += 5;
+                }
+            }
             if ($score > $bestScore) {
                 $best = $candidate;
                 $bestScore = $score;
             }
         }
 
-        return $bestScore >= 2 ? $best : null;
+        return $bestScore >= 20 ? $best : null;
+    }
+
+    protected function detectFamily(string $normalized): ?string
+    {
+        if (str_contains($normalized, 'catast') || str_contains($normalized, 'catasto')) {
+            return 'catastale';
+        }
+        if (str_contains($normalized, 'camerale') || str_contains($normalized, 'impresa')) {
+            return 'camerale';
+        }
+        if (str_contains($normalized, 'crif') || str_contains($normalized, 'centrale rischi')) {
+            return 'crif';
+        }
+        if (str_contains($normalized, 'protest')) {
+            return 'protesti';
+        }
+
+        return null;
+    }
+
+    protected function normalizeWithSynonyms(string $value): string
+    {
+        $value = ' ' . $value . ' ';
+        $replacements = [
+            ' catastale ' => ' catasto ',
+            ' centrale rischi ' => ' crif ',
+            ' pregiudizievoli ' => ' protesti ',
+            ' societa ' => ' giuridica ',
+            ' persona giuridica ' => ' giuridica ',
+            ' persona fisica ' => ' fisica ',
+            ' per soggetto ' => ' soggetto ',
+        ];
+        $value = strtr($value, $replacements);
+
+        return trim(preg_replace('/\s+/', ' ', $value) ?? '');
     }
 }
