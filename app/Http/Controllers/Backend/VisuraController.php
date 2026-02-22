@@ -369,6 +369,12 @@ class VisuraController extends Controller
                 return [];
             }
 
+            // Alcune risposte arrivano come oggetto stdClass con chiavi numeriche.
+            // In questo caso è una lista risultati a tutti gli effetti.
+            if (array_is_list($arr) || $this->isNumericKeyedArray($arr)) {
+                return array_values($arr);
+            }
+
             // Se è già un singolo record azienda, restituiscilo come lista a 1 elemento.
             $hasAziendaFields = isset($arr['denominazione']) || isset($arr['ragione_sociale']) || isset($arr['partita_iva']) || isset($arr['piva']);
             if ($hasAziendaFields) {
@@ -384,6 +390,21 @@ class VisuraController extends Controller
         }
 
         return [];
+    }
+
+    protected function isNumericKeyedArray(array $arr): bool
+    {
+        if ($arr === []) {
+            return false;
+        }
+
+        foreach (array_keys($arr) as $key) {
+            if (!(is_int($key) || (is_string($key) && ctype_digit($key)))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected function denominazioniRicercaAzienda(string $input): array
