@@ -325,12 +325,18 @@ class VisuraController extends Controller
                 ]);
 
                 $response = $service->impresa($legacyRequest);
-                if (!$response || !isset($response->data) || !is_iterable($response->data)) {
+                if (!$response || !isset($response->data)) {
                     $lastMessage = $service->message ?: $lastMessage;
                     continue;
                 }
 
-                foreach ($response->data as $item) {
+                $dataItems = $this->normalizeAziendaSearchDataItems($response->data);
+                if (empty($dataItems)) {
+                    $lastMessage = $service->message ?: $lastMessage;
+                    continue;
+                }
+
+                foreach ($dataItems as $item) {
                     $row = json_decode(json_encode($item), true) ?: [];
                     $key = md5(strtolower(
                         trim((string) ($row['partita_iva'] ?? $row['piva'] ?? $row['cf_piva_id'] ?? ''))
@@ -347,6 +353,39 @@ class VisuraController extends Controller
         }
 
         return [[], $lastMessage];
+    }
+
+    protected function normalizeAziendaSearchDataItems($data): array
+    {
+        if (is_array($data)) {
+            return $data;
+        }
+
+        if ($data instanceof \Traversable) {
+            return iterator_to_array($data, false);
+        }
+
+        if (is_object($data)) {
+            $arr = json_decode(json_encode($data), true);
+            if (!is_array($arr)) {
+                return [];
+            }
+
+            // Se è già un singolo record azienda, restituiscilo come lista a 1 elemento.
+            $hasAziendaFields = isset($arr['denominazione']) || isset($arr['ragione_sociale']) || isset($arr['partita_iva']) || isset($arr['piva']);
+            if ($hasAziendaFields) {
+                return [$arr];
+            }
+
+            // Se è una struttura contenitore, prova i nodi più comuni.
+            foreach (['items', 'records', 'risultati', 'result'] as $node) {
+                if (isset($arr[$node]) && is_array($arr[$node])) {
+                    return $arr[$node];
+                }
+            }
+        }
+
+        return [];
     }
 
     protected function denominazioniRicercaAzienda(string $input): array
