@@ -286,17 +286,21 @@ class VisuraController extends Controller
         $items = collect($rawItems)
             ->map(function ($item) {
                 $arr = json_decode(json_encode($item), true) ?: [];
+                $denominazione = $this->extractDenominazioneFromAziendaResult($arr);
+                $comune = (string) ($arr['comune'] ?? $arr['sede_legale_comune'] ?? $arr['sede_comune'] ?? '');
+                $indirizzo = (string) ($arr['indirizzo'] ?? $arr['sede_legale_indirizzo'] ?? $arr['sede_indirizzo'] ?? '');
+                $natura = (string) ($arr['codice_natura_giuridica'] ?? $arr['natura_giuridica'] ?? $arr['forma_giuridica'] ?? '');
 
                 return [
-                    'denominazione' => (string) ($arr['denominazione'] ?? $arr['ragione_sociale'] ?? ''),
-                    'indirizzo' => (string) ($arr['indirizzo'] ?? $arr['sede_legale_indirizzo'] ?? ''),
-                    'comune' => (string) ($arr['comune'] ?? $arr['sede_legale_comune'] ?? ''),
-                    'natura_giuridica' => (string) ($arr['codice_natura_giuridica'] ?? $arr['natura_giuridica'] ?? ''),
+                    'denominazione' => $denominazione,
+                    'indirizzo' => $indirizzo,
+                    'comune' => $comune,
+                    'natura_giuridica' => $natura,
                     'raw' => $arr,
                 ];
             })
             ->filter(function ($row) {
-                return ($row['denominazione'] !== '');
+                return $row['denominazione'] !== '' || $row['comune'] !== '' || $row['indirizzo'] !== '';
             })
             ->values();
 
@@ -340,11 +344,17 @@ class VisuraController extends Controller
 
                 foreach ($dataItems as $item) {
                     $row = json_decode(json_encode($item), true) ?: [];
+                    $denominazione = $this->extractDenominazioneFromAziendaResult($row);
+                    $comune = trim((string) ($row['comune'] ?? $row['sede_legale_comune'] ?? $row['sede_comune'] ?? ''));
+                    $fallbackKey = md5(json_encode($row));
                     $key = md5(strtolower(
-                        trim((string) ($row['denominazione'] ?? $row['ragione_sociale'] ?? ''))
+                        trim((string) $denominazione)
                         . '|'
-                        . trim((string) ($row['comune'] ?? $row['sede_legale_comune'] ?? ''))
+                        . $comune
                     ));
+                    if (trim((string) $denominazione) === '' && $comune === '') {
+                        $key = $fallbackKey;
+                    }
                     $results[$key] = $item;
                 }
 
@@ -430,6 +440,27 @@ class VisuraController extends Controller
         }
 
         return array_values(array_unique(array_filter($variants)));
+    }
+
+    protected function extractDenominazioneFromAziendaResult(array $arr): string
+    {
+        foreach ([
+            'denominazione',
+            'ragione_sociale',
+            'nome',
+            'descrizione',
+            'company_name',
+            'business_name',
+            'anagrafica_denominazione',
+            'impresa_denominazione',
+        ] as $key) {
+            $value = trim((string) ($arr[$key] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
     }
 
     /**
