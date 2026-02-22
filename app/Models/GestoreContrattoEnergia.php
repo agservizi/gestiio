@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class GestoreContrattoEnergia extends Model
 {
@@ -74,7 +75,28 @@ class GestoreContrattoEnergia extends Model
 
     public function immagineLogo()
     {
-        return $this->logo ? ('/storage' . $this->logo) : '/images/logo-placeholder.png';
+        if (!$this->logo) {
+            if ($this->logo_contenuto_base64) {
+                $mime = $this->logo_mime_type ?: 'image/jpeg';
+                return 'data:' . $mime . ';base64,' . $this->logo_contenuto_base64;
+            }
+            return '/images/logo-placeholder.png';
+        }
+
+        if ($this->logo_contenuto_base64) {
+            $mime = $this->logo_mime_type ?: 'image/jpeg';
+            return 'data:' . $mime . ';base64,' . $this->logo_contenuto_base64;
+        }
+
+        $relativePath = ltrim((string) $this->logo, '/');
+        if (!Storage::disk('public')->exists($relativePath) && Storage::exists('/' . $relativePath)) {
+            $contenuto = Storage::get('/' . $relativePath);
+            if ($contenuto !== null) {
+                Storage::disk('public')->put($relativePath, $contenuto);
+            }
+        }
+
+        return '/storage/' . $relativePath;
     }
 
     public function categoriaLabel(): string

@@ -282,11 +282,19 @@ class GestoreContrattoEnergiaController extends Controller
             $tmpFile = $request->file('logo');
             $extensione = $tmpFile->extension();
             $filename = hexdec(uniqid()) . '.' . $extensione;
-            if ($model->logo && Storage::exists($model->logo)) {
-                Storage::delete($model->logo);
+            if ($model->logo) {
+                $oldPath = ltrim((string) $model->logo, '/');
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+                if (Storage::exists('/' . $oldPath)) {
+                    Storage::delete('/' . $oldPath);
+                }
             }
-            $fileImmagine = $this->salvaImmagine($tmpFile, $filename, true);
-            $model->logo = $fileImmagine;
+            $logo = $this->salvaImmagine($tmpFile, $filename, true);
+            $model->logo = $logo['path'];
+            $model->logo_contenuto_base64 = $logo['base64'];
+            $model->logo_mime_type = $logo['mime_type'];
             $model->save();
         }
 
@@ -329,12 +337,13 @@ class GestoreContrattoEnergiaController extends Controller
         return $rules;
     }
 
-    protected function salvaImmagine($tmpFile, $nomefile, $canvas = false)
+    protected function salvaImmagine($tmpFile, $nomefile, $canvas = false): array
     {
 
-        $cartella = config('configurazione.loghi.cartella');
-        if (!Storage::exists($cartella)) {
-            Storage::makeDirectory($cartella);
+        $cartella = ltrim((string) config('configurazione.loghi.cartella'), '/');
+        $storagePublic = Storage::disk('public');
+        if (!$storagePublic->exists($cartella)) {
+            $storagePublic->makeDirectory($cartella);
         }
 
 
@@ -342,10 +351,16 @@ class GestoreContrattoEnergiaController extends Controller
         $dimensioni = config('configurazione.loghi.dimensioni');
         //$img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
         $img = $this->ridimensionaImmagine($img, $dimensioni['width'], $dimensioni['height'], $canvas, 'normale');
-        $img->save(Storage::path($cartella . '/' . $nomefile), 80);
+        $absolutePath = storage_path('app/public/' . $cartella . '/' . $nomefile);
+        $img->save($absolutePath, 80);
 
+        $binary = (string) $img->encode('jpg', 80);
 
-        return $cartella . '/' . $nomefile;
+        return [
+            'path' => '/' . $cartella . '/' . $nomefile,
+            'base64' => base64_encode($binary),
+            'mime_type' => 'image/jpeg',
+        ];
 
     }
 

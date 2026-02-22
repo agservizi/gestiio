@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         \App\Console\Commands\BackfillAllegatiDbContent::class,
         \App\Console\Commands\BackfillGestoriEnergiaCategorie::class,
+        \App\Console\Commands\BackfillGestoriEnergiaLoghiDb::class,
     ];
 
     /**
