@@ -483,7 +483,12 @@ class ContrattoEnergiaController extends Controller
         $this->applyCreatePrefillToProdotto($prodotto, $request);
 
 
-        $categoriaPratica = $this->determinaCategoriaPratica($record, $request, $gestore->model_prodotto);
+        $categoriaPratica = $this->determinaCategoriaPratica(
+            $record,
+            $request,
+            $gestore->model_prodotto,
+            $gestore->categoria_pratica
+        );
         $categoriaSwitchUrls = $this->buildCategoriaSwitchUrls($gestore, $record->agente_id);
 
         return view('Backend.ContrattoEnergia.edit', [
@@ -608,7 +613,12 @@ class ContrattoEnergiaController extends Controller
         }
 
 
-        $categoriaPratica = $this->determinaCategoriaPratica($record, request(), $tipoProdotto);
+        $categoriaPratica = $this->determinaCategoriaPratica(
+            $record,
+            request(),
+            $tipoProdotto,
+            $record->gestore->categoria_pratica ?? null
+        );
         $categoriaSwitchUrls = $this->buildCategoriaSwitchUrls($record->gestore, $record->agente_id);
 
         return view('Backend.ContrattoEnergia.edit', [
@@ -1128,16 +1138,31 @@ class ContrattoEnergiaController extends Controller
         return $rules;
     }
 
-    protected function determinaCategoriaPratica(ContrattoEnergia $record, Request $request, ?string $tipoProdotto = null): string
+    protected function determinaCategoriaPratica(
+        ContrattoEnergia $record,
+        Request $request,
+        ?string $tipoProdotto = null,
+        ?string $categoriaGestore = null
+    ): string
     {
-        $categoriaDaProdotto = $this->categoriaDaTipoProdotto($tipoProdotto);
-        if ($categoriaDaProdotto !== null) {
-            return $categoriaDaProdotto;
-        }
-
         $oldCategoria = old('categoria_pratica');
         if (in_array($oldCategoria, ['consumer', 'business'], true)) {
             return $oldCategoria;
+        }
+
+        $categoriaDaRequest = $request->input('categoria_pratica');
+        if (in_array($categoriaDaRequest, ['consumer', 'business'], true)) {
+            return $categoriaDaRequest;
+        }
+
+        $categoriaGestore = strtolower((string) $categoriaGestore);
+        if (in_array($categoriaGestore, ['consumer', 'business'], true)) {
+            return $categoriaGestore;
+        }
+
+        $categoriaDaProdotto = $this->categoriaDaTipoProdotto($tipoProdotto);
+        if ($categoriaDaProdotto !== null) {
+            return $categoriaDaProdotto;
         }
 
         return $this->determinaCategoriaPraticaDaRequest($request);
