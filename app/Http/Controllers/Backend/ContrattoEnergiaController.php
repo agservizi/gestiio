@@ -706,6 +706,35 @@ class ContrattoEnergiaController extends Controller
         ]);
     }
 
+    public function pda($id)
+    {
+        $contratto = ContrattoEnergia::find($id);
+        abort_if(!$contratto, 404, 'Questo contratto non esiste');
+
+        // Al momento per energia non è previsto un generatore PDA dedicato.
+        // Evita errore 500 in view e mostra feedback utente coerente.
+        return redirect()
+            ->action([self::class, 'show'], [$contratto->id])
+            ->withErrors(['PDA non disponibile per questo contratto energia.']);
+    }
+
+    public function duplicaAnagrafica($id)
+    {
+        abort_if(!$this->determinaPuoCreare(), 403, 'Non autorizzato a creare un nuovo contratto');
+
+        $record = ContrattoEnergia::with(['gestore', 'prodotto'])->find($id);
+        abort_if(!$record, 404, 'Questo contratto non esiste');
+
+        $query = $this->buildDuplicaAnagraficaQuery($record);
+
+        $url = action([self::class, 'create'], [$record->gestore_id]);
+        if (!empty($query)) {
+            $url .= '?' . http_build_query($query);
+        }
+
+        return redirect()->to($url);
+    }
+
     /**
      * Remove the specified resource from storage.
      *
@@ -1286,6 +1315,64 @@ class ContrattoEnergiaController extends Controller
         $data = $this->normalizzaPrefillData($data);
 
         return $data;
+    }
+
+    protected function buildDuplicaAnagraficaQuery(ContrattoEnergia $record): array
+    {
+        $categoria = strtolower((string) ($record->gestore->categoria_pratica ?? ''));
+        if (!in_array($categoria, ['consumer', 'business'], true)) {
+            $categoria = $this->categoriaDaTipoProdotto((string) ($record->gestore->model_prodotto ?? '')) ?? 'consumer';
+        }
+
+        $data = [
+            'categoria_pratica' => $categoria,
+            'codice_fiscale' => (string) ($record->codice_fiscale ?? ''),
+            'email' => (string) ($record->email ?? ''),
+            'telefono' => (string) ($record->telefono ?? ''),
+            'denominazione' => (string) ($record->denominazione ?? ''),
+        ];
+
+        if (!$this->currentUser()->hasPermissionTo('agente') && $record->agente_id) {
+            $data['agente_id'] = (int) $record->agente_id;
+        }
+
+        $prodotto = $record->prodotto;
+        if ($prodotto) {
+            foreach ([
+                'nome',
+                'cognome',
+                'partita_iva',
+                'forma_giuridica',
+                'cellulare',
+                'fax',
+                'nome_cognome_referente',
+                'codice_fiscale_referente',
+                'telefono_referente',
+                'indirizzo',
+                'interno',
+                'citta',
+                'cap',
+                'scala',
+                'indirizzo_sede',
+                'comune_sede',
+                'cap_sede',
+                'nr_sede',
+                'codice_destinatario',
+                'indirizzo_pec',
+            ] as $campo) {
+                $valore = $prodotto->{$campo} ?? null;
+                if (!is_scalar($valore)) {
+                    continue;
+                }
+                $valore = is_string($valore) ? trim($valore) : $valore;
+                if ($valore === null || $valore === '') {
+                    continue;
+                }
+                $data[$campo] = $valore;
+            }
+        }
+
+        return $this->normalizzaPrefillData($data);
     }
 
     protected function applyCreatePrefillToContratto(ContrattoEnergia $record, Request $request): void

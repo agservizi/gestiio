@@ -23,9 +23,11 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/allegato-contratto-energia', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'uploadAllegato']);
     Route::delete('/allegato-contratto-energia', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'deleteAllegato']);
     Route::get('contratto-energia/{contrattoId}/allegato/{allegatoId}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'downloadAllegato']);
+    Route::get('pda-contratto-energia/{id}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'pda']);
     Route::get('/contratto-energia/create/{servizio?}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'create']);
 
     Route::resource('contratto-energia', \App\Http\Controllers\Backend\ContrattoEnergiaController::class)->except(['create']);
+    Route::get('/contratto-energia/{id}/duplica-anagrafica', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'duplicaAnagrafica']);
     Route::post('/contratto-energia/{id}/switch-categoria', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'switchCategoria']);
     Route::post('/contratto-energia/{id}/segnala-chat', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'segnalaChat']);
     Route::post('/contratto-energia/{id}/apri-chat', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'apriChat']);
