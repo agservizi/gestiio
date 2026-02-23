@@ -106,6 +106,15 @@ class Generico extends ProdottoEnergiaAbstract
             $model->$campo = $valore;
         }
 
+        // Su pratiche business nome/cognome possono non essere compilati a form,
+        // ma nel DB del prodotto sono NOT NULL.
+        if ($model->nome === null) {
+            $model->nome = '';
+        }
+        if ($model->cognome === null) {
+            $model->cognome = '';
+        }
+
         $model->save();
         if ($nuovo) {
             $contrattoEnergia->prodotto_id = $model->contratto_energia_id;
