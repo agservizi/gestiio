@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\BackfillAllegatiDbContent::class,
         \App\Console\Commands\BackfillGestoriEnergiaCategorie::class,
         \App\Console\Commands\BackfillGestoriEnergiaLoghiDb::class,
+        \App\Console\Commands\DocumentiScadenzeReminder::class,
         \App\Console\Commands\PollOpenApiVisure::class,
         \App\Console\Commands\SyncTipoVisuraOpenApiHash::class,
     ];
@@ -30,6 +31,11 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('visure:poll-openapi --limit=100')
             ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        $schedule->command('documenti:promemoria-scadenze --giorni=7 --limit=200')
+            ->dailyAt('08:00')
             ->withoutOverlapping()
             ->onOneServer();
     }

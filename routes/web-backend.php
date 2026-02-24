@@ -91,7 +91,18 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('documento-upload/{cartellaId}', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'upload']);
     Route::delete('documento-cancella', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'cancellaFile']);
     Route::get('documento-download/{id}', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'download']);
+    Route::get('documento-preview/{id}', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'preview']);
     Route::post('documento-download-multiplo', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'downloadMultiplo']);
+    Route::post('documento-sposta', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'moveFile']);
+    Route::post('cartella-sposta', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'moveFolder']);
+    Route::post('documento-rinomina', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'renameFile']);
+    Route::post('documento/{id}/versione', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'uploadVersion']);
+    Route::post('documento/{id}/versione/{versionId}/rollback', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'rollbackVersion']);
+    Route::post('documento-scadenza', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'setExpiry']);
+    Route::post('documenti/{cartellaId}/template', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'applyTemplate']);
+    Route::post('documenti/{id}/visibilita', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'setFolderVisibility']);
+    Route::post('documento-share', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'createShareLink']);
+    Route::get('documenti-audit-export', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'exportAuditCsv']);
 
     Route::get('/modal/{modal}/{id?}', [\App\Http\Controllers\Backend\ModalController::class, 'show']);
 

@@ -38,6 +38,7 @@ Route::post('/verifica-partita-iva', [\App\Http\Controllers\RegistratiController
 Route::get('/test', \App\Http\Controllers\TestController::class);
 
 Route::view('/policies', 'auth.policies');
+Route::match(['get', 'post'], '/documenti/condivisi/{token}', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'sharedDownload']);
 
 Route::get('/pagina/{pagina}', [\App\Http\Controllers\PagineController::class, 'show']);
 
@@ -84,5 +85,4 @@ Route::get('/stop-impersona', function () {
 if (env('APP_ENV') == 'local') {
     Route::get('login-id/{id}', [\App\Http\Controllers\LogOut::class, 'loginId']);
 }
-
 

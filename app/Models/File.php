@@ -15,6 +15,8 @@ class File extends Model
 
     protected $casts = [
         'tags_documentali' => 'array',
+        'expires_at' => 'datetime',
+        'last_reminder_at' => 'datetime',
     ];
 
     /*
@@ -72,6 +74,26 @@ class File extends Model
     public function urlFile()
     {
         return '/storage' . $this->path_filename;
+    }
+
+    public function cartella()
+    {
+        return $this->belongsTo(CartellaFiles::class, 'cartella_id');
+    }
+
+    public function parentFile()
+    {
+        return $this->belongsTo(self::class, 'parent_file_id');
+    }
+
+    public function versions()
+    {
+        return $this->hasMany(FileVersion::class, 'file_id')->orderByDesc('versione');
+    }
+
+    public function shareLinks()
+    {
+        return $this->hasMany(FileShareLink::class, 'file_id');
     }
 
     protected static function tipoFile($estensione)

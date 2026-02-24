@@ -1,5 +1,6 @@
 @php($canManageFolders = $canManageFolders ?? false)
 @php($canDeleteFiles = $canDeleteFiles ?? false)
+@php($canUploadFiles = $canUploadFiles ?? false)
 @php($stats = $stats ?? ['conteggio_file' => $files->count()])
 
 <div class="d-flex flex-stack flex-wrap gap-3 mb-4">
@@ -63,26 +64,11 @@
                 <td>-</td>
                 <td class="text-end" data-kt-filemanager-table="action_dropdown">
                     @if($canManageFolders)
-                        <div class="d-flex justify-content-end">
-                            <div class="ms-2">
-                                <button type="button" class="btn btn-sm btn-icon btn-light btn-active-light-primary me-2" data-kt-menu-trigger="click"
-                                        data-kt-menu-placement="bottom-end">
-                                    <span class="svg-icon svg-icon-5 m-0">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <rect x="10" y="10" width="4" height="4" rx="2" fill="currentColor"></rect>
-                                            <rect x="17" y="10" width="4" height="4" rx="2" fill="currentColor"></rect>
-                                            <rect x="3" y="10" width="4" height="4" rx="2" fill="currentColor"></rect>
-                                        </svg>
-                                    </span>
-                                </button>
-                                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4"
-                                     data-kt-menu="true">
-                                    <div class="menu-item px-3">
-                                        <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'edit'],['cartellaId'=>$cartellaId,'cartella'=>$cartella->id]) }}"
-                                           class="menu-link px-3" data-target="kt_modal" data-toggle="modal-ajax">Modifica</a>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="d-flex justify-content-end gap-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-light-info folder-move" data-folder-id="{{ $cartella->id }}">Sposta</button>
+                            <button type="button" class="btn btn-sm btn-light-warning folder-visibility" data-folder-id="{{ $cartella->id }}" data-folder-roles="{{ implode(',', (array)($cartella->visibilita_ruoli ?? [])) }}">Visibilità</button>
+                            <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'edit'],['cartellaId'=>$cartellaId,'cartella'=>$cartella->id]) }}"
+                               class="btn btn-sm btn-light-primary" data-target="kt_modal" data-toggle="modal-ajax">Modifica</a>
                         </div>
                     @endif
                 </td>
@@ -109,6 +95,12 @@
                         <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'download'],$record->id) }}"
                            class="text-gray-800 text-hover-primary">{{ $record->filename_originale }}</a>
                     </div>
+                    <div class="text-muted fs-8">#{{ $record->id }} | v{{ (int)($record->versione ?? 1) }}</div>
+                    @if($record->expires_at)
+                        <div class="fs-8 {{ $record->expires_at->isPast() ? 'text-danger' : 'text-warning' }}">
+                            Scadenza: {{ $record->expires_at->format('d/m/Y') }}
+                        </div>
+                    @endif
                 </td>
                 <td><span class="badge badge-light">{{ strtoupper($record->tipo_file) }}</span></td>
                 <td>
@@ -130,9 +122,29 @@
                 <td>{{ \App\humanFileSize($record->dimensione_file) }}</td>
                 <td>{{ $record->created_at->format('d/m/Y H:i') }}</td>
                 <td class="text-end" data-kt-filemanager-table="action_dropdown">
-                    <div class="d-flex justify-content-end gap-2">
+                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                        <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'preview'],$record->id) }}" target="_blank"
+                           class="btn btn-sm btn-light-info">Anteprima</a>
                         <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'download'],$record->id) }}"
                            class="btn btn-sm btn-light-primary">Scarica</a>
+                        @if($canManageFolders)
+                            <button type="button" class="btn btn-sm btn-light-dark file-rename"
+                                    data-file-id="{{ $record->id }}"
+                                    data-file-name="{{ e($record->filename_originale) }}">Rinomina</button>
+                            <button type="button" class="btn btn-sm btn-light-secondary file-move"
+                                    data-file-id="{{ $record->id }}">Sposta</button>
+                            <button type="button" class="btn btn-sm btn-light-warning file-expiry"
+                                    data-file-id="{{ $record->id }}"
+                                    data-file-expiry="{{ $record->expires_at?->format('Y-m-d') }}">Scadenza</button>
+                            <button type="button" class="btn btn-sm btn-light-success file-share"
+                                    data-file-id="{{ $record->id }}">Share</button>
+                        @endif
+                        @if($canUploadFiles)
+                            <button type="button" class="btn btn-sm btn-light-primary file-version"
+                                    data-file-id="{{ $record->id }}">Nuova v.</button>
+                            <button type="button" class="btn btn-sm btn-light-warning file-rollback"
+                                    data-file-id="{{ $record->id }}">Rollback</button>
+                        @endif
                         @if($canDeleteFiles)
                             <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'cancellaFile'],['id'=>$record->id]) }}"
                                class="elimina-file btn btn-sm btn-light-danger">Elimina</a>

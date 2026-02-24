@@ -9,6 +9,10 @@
             <label class="form-label fw-semibold">Tag (separati da virgola)</label>
             <input type="text" id="tags_documentali" class="form-control form-control-sm" placeholder="es. urgente, cliente, firmato"/>
         </div>
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">Scadenza documento (opzionale)</label>
+            <input type="date" id="expires_at" class="form-control form-control-sm"/>
+        </div>
     </div>
 
     <div class="fv-row">
@@ -45,6 +49,7 @@
                     formData.append("uid", $('#uid').val());
                     formData.append("categoria_documentale", $('#categoria_documentale').val());
                     formData.append("tags_documentali", $('#tags_documentali').val());
+                    formData.append("expires_at", $('#expires_at').val());
                     console.log(formData)
                 });
 

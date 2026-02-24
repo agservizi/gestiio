@@ -46,6 +46,16 @@
             <a class="btn btn-sm btn-light-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
                id="btn-nuova-cartella"
                href="{{action([$controller,'create'],$cartellaId)}}">{{ $testoNuovo }}</a>
+            <button type="button" id="btn-apply-template" class="btn btn-sm btn-light-info fw-bold">
+                Template cartelle
+            </button>
+            <button type="button" id="btn-share-current-folder" class="btn btn-sm btn-light-success fw-bold">
+                Share cartella
+            </button>
+            <a id="btn-audit-export" class="btn btn-sm btn-light-dark fw-bold"
+               href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'exportAuditCsv']) }}">
+                Export audit CSV
+            </a>
         @endif
 
         <button type="button" id="download-multiplo-btn" class="btn btn-sm btn-light-success fw-bold" disabled>
@@ -59,6 +69,7 @@
         @csrf
         <div id="download-multiplo-inputs"></div>
     </form>
+    <input type="file" id="file-version-input" class="d-none"/>
 
     <div class="card card-flush">
         <div class="card-header py-5">
@@ -119,6 +130,18 @@
         const baseDocumentiUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'index'], $cartellaId) }}';
         const createCartellaUrlTemplate = '{{ action([$controller, 'create'], ['cartellaId' => '__CARTELLA_ID__']) }}';
         const uploadDocumentoUrlTemplate = '{{ action([\App\Http\Controllers\Backend\ModalController::class, 'show'], ['upload-documento', '__CARTELLA_ID__']) }}';
+        const moveFileUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'moveFile']) }}';
+        const moveFolderUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'moveFolder']) }}';
+        const renameFileUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'renameFile']) }}';
+        const setExpiryUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'setExpiry']) }}';
+        const createShareUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'createShareLink']) }}';
+        const uploadVersionUrlTemplate = '{{ url('/backend/documento/__ID__/versione') }}';
+        const rollbackVersionUrlTemplate = '{{ url('/backend/documento/__ID__/versione/__VERSION_ID__/rollback') }}';
+        const applyTemplateUrlTemplate = '{{ url('/backend/documenti/__ID__/template') }}';
+        const setFolderVisibilityUrlTemplate = '{{ url('/backend/documenti/__ID__/visibilita') }}';
+        const folderOptions = @json($folderOptions ?? []);
+        const shareBaseUrl = @json($shareBaseUrl ?? '');
+        const auditExportBaseUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'exportAuditCsv']) }}';
 
         $(function () {
             const $filterSearch = $('#filter_search');
@@ -132,8 +155,13 @@
             const $downloadBtn = $('#download-multiplo-btn');
             const $btnNuovaCartella = $('#btn-nuova-cartella');
             const $btnUploadDocumento = $('#btn-upload-documenti');
+            const $btnTemplate = $('#btn-apply-template');
+            const $btnShareCurrentFolder = $('#btn-share-current-folder');
+            const $btnAuditExport = $('#btn-audit-export');
+            const $versionFileInput = $('#file-version-input');
             const selectedFileIds = new Set();
             let currentDocumentiUrl = baseDocumentiUrl;
+            let pendingVersionFileId = null;
 
             function currentFilters() {
                 return {
@@ -173,6 +201,22 @@
                 if ($btnUploadDocumento.length) {
                     $btnUploadDocumento.attr('href', uploadDocumentoUrlTemplate.replace('__CARTELLA_ID__', String(id)));
                 }
+                if ($btnShareCurrentFolder.length) {
+                    $btnShareCurrentFolder.data('cartella-id', id);
+                }
+            }
+
+            function csrfHeaders() {
+                return {'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')};
+            }
+
+            function folderHint() {
+                const entries = Object.entries(folderOptions).slice(0, 30).map(([id, name]) => id + ': ' + name);
+                return entries.join('\n');
+            }
+
+            function currentCartellaId() {
+                return resolveCartellaIdFromUrl(currentDocumentiUrl);
             }
 
             function syncSelectionState() {
@@ -289,6 +333,280 @@
                     $inputs.append('<input type="hidden" name="file_ids[]" value="' + id + '">');
                 });
                 $('#download-multiplo-form').trigger('submit');
+            });
+
+            $btnAuditExport.on('click', function (e) {
+                e.preventDefault();
+                const params = new URLSearchParams(currentFilters());
+                window.open(auditExportBaseUrl + '?' + params.toString(), '_blank');
+            });
+
+            $btnTemplate.on('click', function () {
+                Swal.fire({
+                    title: 'Template cartelle',
+                    input: 'select',
+                    inputOptions: {
+                        subentri_volture: 'Subentri/Volture',
+                        contratto_standard: 'Contratto standard',
+                        kpi_audit: 'KPI/Audit'
+                    },
+                    inputValue: 'subentri_volture',
+                    showCancelButton: true,
+                    confirmButtonText: 'Applica'
+                }).then(function (result) {
+                    if (!result.value) {
+                        return;
+                    }
+                    $.ajax({
+                        url: applyTemplateUrlTemplate.replace('__ID__', String(currentCartellaId())),
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: {template: result.value},
+                        success: function () {
+                            refreshElenco();
+                        }
+                    });
+                });
+            });
+
+            $btnShareCurrentFolder.on('click', function () {
+                const cartellaId = Number($(this).data('cartella-id') || 0);
+                Swal.fire({
+                    title: 'Share cartella',
+                    html: '<input id=\"share-folder-exp\" type=\"date\" class=\"swal2-input\" placeholder=\"Scadenza\">' +
+                        '<input id=\"share-folder-pass\" type=\"text\" class=\"swal2-input\" placeholder=\"Password (opzionale)\">' +
+                        '<input id=\"share-folder-max\" type=\"number\" class=\"swal2-input\" placeholder=\"Max download (opzionale)\">',
+                    showCancelButton: true,
+                    confirmButtonText: 'Crea link',
+                    preConfirm: function () {
+                        return {
+                            expires_at: $('#share-folder-exp').val() || null,
+                            password: $('#share-folder-pass').val() || null,
+                            max_downloads: $('#share-folder-max').val() || null
+                        };
+                    }
+                }).then(function (result) {
+                    if (!result.value) {
+                        return;
+                    }
+                    const payload = Object.assign({cartella_id: cartellaId}, result.value);
+                    $.ajax({
+                        url: createShareUrl,
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: payload,
+                        success: function (response) {
+                            Swal.fire('Link creato', '<a href=\"' + response.url + '\" target=\"_blank\">' + response.url + '</a>', 'success');
+                        }
+                    });
+                });
+            });
+
+            $(document).on('click', '.file-rename', function () {
+                const id = Number($(this).data('file-id'));
+                const name = String($(this).data('file-name') || '');
+                Swal.fire({
+                    title: 'Rinomina file',
+                    input: 'text',
+                    inputValue: name,
+                    showCancelButton: true,
+                    confirmButtonText: 'Salva'
+                }).then(function (result) {
+                    if (!result.value) {
+                        return;
+                    }
+                    $.ajax({
+                        url: renameFileUrl,
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: {id: id, filename_originale: result.value},
+                        success: function () { refreshElenco(); }
+                    });
+                });
+            });
+
+            $(document).on('click', '.file-move', function () {
+                const id = Number($(this).data('file-id'));
+                Swal.fire({
+                    title: 'Sposta file',
+                    input: 'text',
+                    inputLabel: 'ID cartella destinazione (0 per Root)',
+                    inputPlaceholder: 'Es: 15',
+                    footer: '<pre style=\"text-align:left;max-height:160px;overflow:auto\">' + folderHint() + '</pre>',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sposta'
+                }).then(function (result) {
+                    if (result.value === undefined) {
+                        return;
+                    }
+                    const target = String(result.value).trim();
+                    $.ajax({
+                        url: moveFileUrl,
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: {id: id, target_cartella_id: target === '' || target === '0' ? null : Number(target)},
+                        success: function () { refreshElenco(); }
+                    });
+                });
+            });
+
+            $(document).on('click', '.folder-move', function () {
+                const id = Number($(this).data('folder-id'));
+                Swal.fire({
+                    title: 'Sposta cartella',
+                    input: 'text',
+                    inputLabel: 'ID cartella padre destinazione (0 per Root)',
+                    inputPlaceholder: 'Es: 20',
+                    footer: '<pre style=\"text-align:left;max-height:160px;overflow:auto\">' + folderHint() + '</pre>',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sposta'
+                }).then(function (result) {
+                    if (result.value === undefined) {
+                        return;
+                    }
+                    const target = String(result.value).trim();
+                    $.ajax({
+                        url: moveFolderUrl,
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: {id: id, target_parent_id: target === '' || target === '0' ? null : Number(target)},
+                        success: function () { refreshElenco(); }
+                    });
+                });
+            });
+
+            $(document).on('click', '.folder-visibility', function () {
+                const id = Number($(this).data('folder-id'));
+                const existing = String($(this).data('folder-roles') || '');
+                Swal.fire({
+                    title: 'Visibilità cartella',
+                    input: 'text',
+                    inputLabel: 'Ruoli CSV (admin,agente,operatore,supervisore) - vuoto=tutti',
+                    inputValue: existing,
+                    showCancelButton: true,
+                    confirmButtonText: 'Salva'
+                }).then(function (result) {
+                    if (result.value === undefined) {
+                        return;
+                    }
+                    const raw = String(result.value || '').trim();
+                    const roles = raw ? raw.split(',').map(function (r) { return r.trim(); }).filter(Boolean) : [];
+                    $.ajax({
+                        url: setFolderVisibilityUrlTemplate.replace('__ID__', String(id)),
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: {ruoli: roles},
+                        success: function () { refreshElenco(); }
+                    });
+                });
+            });
+
+            $(document).on('click', '.file-expiry', function () {
+                const id = Number($(this).data('file-id'));
+                const current = String($(this).data('file-expiry') || '');
+                Swal.fire({
+                    title: 'Scadenza documento',
+                    input: 'date',
+                    inputValue: current,
+                    showCancelButton: true,
+                    confirmButtonText: 'Salva'
+                }).then(function (result) {
+                    if (result.value === undefined) {
+                        return;
+                    }
+                    $.ajax({
+                        url: setExpiryUrl,
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: {id: id, expires_at: result.value || null},
+                        success: function () { refreshElenco(); }
+                    });
+                });
+            });
+
+            $(document).on('click', '.file-share', function () {
+                const fileId = Number($(this).data('file-id'));
+                Swal.fire({
+                    title: 'Share file',
+                    html: '<input id=\"share-file-exp\" type=\"date\" class=\"swal2-input\" placeholder=\"Scadenza\">' +
+                        '<input id=\"share-file-pass\" type=\"text\" class=\"swal2-input\" placeholder=\"Password (opzionale)\">' +
+                        '<input id=\"share-file-max\" type=\"number\" class=\"swal2-input\" placeholder=\"Max download (opzionale)\">',
+                    showCancelButton: true,
+                    confirmButtonText: 'Crea link',
+                    preConfirm: function () {
+                        return {
+                            expires_at: $('#share-file-exp').val() || null,
+                            password: $('#share-file-pass').val() || null,
+                            max_downloads: $('#share-file-max').val() || null
+                        };
+                    }
+                }).then(function (result) {
+                    if (!result.value) {
+                        return;
+                    }
+                    const payload = Object.assign({file_id: fileId}, result.value);
+                    $.ajax({
+                        url: createShareUrl,
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        data: payload,
+                        success: function (response) {
+                            Swal.fire('Link creato', '<a href=\"' + response.url + '\" target=\"_blank\">' + response.url + '</a>', 'success');
+                        }
+                    });
+                });
+            });
+
+            $(document).on('click', '.file-version', function () {
+                pendingVersionFileId = Number($(this).data('file-id'));
+                $versionFileInput.val('');
+                $versionFileInput.trigger('click');
+            });
+
+            $(document).on('click', '.file-rollback', function () {
+                const fileId = Number($(this).data('file-id'));
+                Swal.fire({
+                    title: 'Rollback versione',
+                    input: 'text',
+                    inputLabel: 'Inserisci ID versione o numero versione',
+                    inputPlaceholder: 'Es. 3',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ripristina'
+                }).then(function (result) {
+                    const v = String(result.value || '').trim();
+                    if (!v) {
+                        return;
+                    }
+                    const url = rollbackVersionUrlTemplate
+                        .replace('__ID__', String(fileId))
+                        .replace('__VERSION_ID__', encodeURIComponent(v));
+                    $.ajax({
+                        url: url,
+                        type: 'POST',
+                        headers: csrfHeaders(),
+                        success: function () { refreshElenco(); }
+                    });
+                });
+            });
+
+            $versionFileInput.on('change', function () {
+                if (!pendingVersionFileId || !this.files || !this.files[0]) {
+                    return;
+                }
+                const fd = new FormData();
+                fd.append('file', this.files[0]);
+                $.ajax({
+                    url: uploadVersionUrlTemplate.replace('__ID__', String(pendingVersionFileId)),
+                    type: 'POST',
+                    headers: csrfHeaders(),
+                    data: fd,
+                    processData: false,
+                    contentType: false,
+                    success: function () {
+                        pendingVersionFileId = null;
+                        refreshElenco();
+                    }
+                });
             });
 
             updateContextActions(resolveCartellaIdFromUrl(currentDocumentiUrl));
