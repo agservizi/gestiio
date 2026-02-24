@@ -511,6 +511,15 @@
 
                         <!--begin:Menu sub-->
                         <div class="menu-sub menu-sub-accordion">
+                            <div class="menu-item">
+                                <a class="menu-link"
+                                   href="{{ route('settings') }}#controlli-contratti">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Controlli contratti</span>
+                                </a>
+                            </div>
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">

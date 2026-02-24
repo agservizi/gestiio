@@ -18,7 +18,7 @@
                         @if(count(config('setting_fields', [])) )
 
                             @foreach(config('setting_fields') as $section => $fields)
-                                <div class="panel panel-info">
+                                <div class="panel panel-info" @if($section === 'controlli_contratti') id="controlli-contratti" @endif>
                                     <div class="panel-heading">
                                         <i class="{{ \Illuminate\Support\Arr::get($fields, 'icon', 'glyphicon glyphicon-flash') }}"></i>
                                         <h4> {{ $fields['title'] }}</h4>
@@ -43,7 +43,7 @@
                         @endif
 
                         @if(!array_key_exists('controlli_contratti', config('setting_fields', [])))
-                            <div class="panel panel-info">
+                            <div class="panel panel-info" id="controlli-contratti">
                                 <div class="panel-heading">
                                     <i class="glyphicon glyphicon-flash"></i>
                                     <h4>Controlli contratti</h4>
