@@ -426,8 +426,7 @@
 
             const series = chart.series.push(am5percent.PieSeries.new(root, {
                 valueField: 'value',
-                categoryField: 'label',
-                innerRadius: am5.percent(75)
+                categoryField: 'label'
             }));
 
             series.labels.template.setAll({forceHidden: true});
