@@ -32,6 +32,15 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
+
+    .ui-toolbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .ticket-ui-toolbar {
+        align-items: stretch;
+    }
 }
 
 @media (max-width: 575.98px) {
@@ -41,5 +50,17 @@
 
     .min-h-350px {
         min-height: 280px !important;
+    }
+
+    .ui-toolbar-actions .btn {
+        width: 100%;
+    }
+
+    .ticket-ui-quick {
+        width: 100%;
+    }
+
+    .ticket-ui-toolbar .w-300px {
+        width: 100% !important;
     }
 }

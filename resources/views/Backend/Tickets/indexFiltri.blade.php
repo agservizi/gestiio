@@ -1,4 +1,4 @@
-<form action="{{action([$controller,'index'])}}" method="GET">
+<form action="{{action([$controller,'index'])}}" method="GET" class="js-ticket-filter-form">
     <div class="px-7 py-5">
         <div class="mb-3">
             <label class="form-label fw-bold">Stato:</label>
@@ -33,9 +33,9 @@
                 </div>
             </div>
         @endif
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-end gap-2">
             @if($conFiltro)
-                <a href="{{action([$controller,'index'])}}" class="btn btn-sm btn-success me-2">Vedi tutti</a>
+                <a href="{{action([$controller,'index'])}}" class="btn btn-sm btn-light-success">Vedi tutti</a>
             @endif
             <button type="submit" class="btn btn-sm btn-primary" data-kt-menu-dismiss="true" name="filtra">Filtra</button>
         </div>

@@ -1,6 +1,6 @@
 @extends('Backend._layout._main')
 @section('toolbar')
-    <div class="d-flex align-items-center py-1">
+    <div class="ui-toolbar-actions py-1">
         @include('Backend._components.ricercaIndex')
         @isset($ordinamenti)
             <div class="me-4 d-none d-md-block">

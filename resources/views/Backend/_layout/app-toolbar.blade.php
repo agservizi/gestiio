@@ -13,7 +13,7 @@
         </div>
         <!--end::Page title-->
         <!--begin::Actions-->
-        <div class="d-flex align-items-center gap-2 gap-lg-3 min-h-40px">
+        <div class="ui-toolbar-actions min-h-40px">
             @yield('toolbar')
         </div>
         <!--end::Actions-->

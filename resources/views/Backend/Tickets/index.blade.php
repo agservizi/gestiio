@@ -1,7 +1,7 @@
 @extends('Backend._layout._main')
 
 @section('toolbar')
-    <div class="d-flex align-items-center py-1 gap-2 flex-wrap">
+    <div class="ui-toolbar-actions py-1">
         <div class="me-2">
             <a href="#" class="btn btn-sm {{$conFiltro?'btn-success':'bg-body'}} btn-flex btn-light btn-active-primary fw-bolder"
                data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end" data-kt-menu-flip="top-end">
@@ -17,6 +17,9 @@
             </div>
         </div>
         <a class="btn btn-sm btn-primary" href="{{action([$controller,'create'])}}">Nuovo {{\App\Models\Ticket::NOME_SINGOLARE}}</a>
+        @if($conFiltro)
+            <a class="btn btn-sm btn-light-success" href="{{action([$controller,'index'])}}">Reset Filtri</a>
+        @endif
     </div>
 @endsection
 
@@ -43,9 +46,34 @@
         ->map(fn($items) => $items->count())
         ->sortKeys())
 
+    <div class="card card-flush ui-card-surface mb-6">
+        <div class="card-body py-4">
+            <div class="ticket-ui-toolbar">
+                <div class="ticket-ui-quick">
+                    <span class="badge badge-light-primary">Pagina: {{$totale}} ticket</span>
+                    @if($conFiltro)
+                        <span class="badge badge-light-success">Filtri attivi</span>
+                    @endif
+                    @if(request()->filled('stato'))
+                        <span class="badge badge-light-info">Stato: {{\App\Models\Ticket::STATI_TICKETS[request()->input('stato')]['testo'] ?? request()->input('stato')}}</span>
+                    @endif
+                    @if(request()->filled('assegnatario_id'))
+                        <span class="badge badge-light-warning">Assegnazione filtrata</span>
+                    @endif
+                </div>
+                <div class="w-300px mw-100">
+                    <div class="position-relative">
+                        <i class="ki-duotone ki-magnifier fs-2 position-absolute top-50 translate-middle-y ms-4"><span class="path1"></span><span class="path2"></span></i>
+                        <input id="js-ticket-local-search" type="text" class="form-control form-control-solid ps-12" placeholder="Cerca in questa pagina ticket...">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-5 g-xl-8 mb-6">
         <div class="col-md-6 col-xl-3">
-            <div class="card card-flush h-100">
+            <div class="card card-flush ui-card-surface ticket-ui-kpi is-primary h-100">
                 <div class="card-body d-flex flex-column">
                     <span class="text-muted fw-semibold fs-7">Ticket in pagina</span>
                     <span class="fs-2hx fw-bold text-gray-900 mt-2">{{$totale}}</span>
@@ -53,7 +81,7 @@
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card card-flush h-100">
+            <div class="card card-flush ui-card-surface ticket-ui-kpi is-danger h-100">
                 <div class="card-body d-flex flex-column">
                     <span class="text-muted fw-semibold fs-7">Nuovi da leggere</span>
                     <span class="fs-2hx fw-bold text-danger mt-2">{{$nuoviDaLeggere}}</span>
@@ -61,7 +89,7 @@
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card card-flush h-100">
+            <div class="card card-flush ui-card-surface ticket-ui-kpi is-success h-100">
                 <div class="card-body d-flex flex-column">
                     <span class="text-muted fw-semibold fs-7">In carico a me</span>
                     <span class="fs-2hx fw-bold text-success mt-2">{{$inCaricoAMe}}</span>
@@ -69,7 +97,7 @@
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card card-flush h-100">
+            <div class="card card-flush ui-card-surface ticket-ui-kpi is-warning h-100">
                 <div class="card-body d-flex flex-column">
                     <span class="text-muted fw-semibold fs-7">Non assegnati</span>
                     <span class="fs-2hx fw-bold text-warning mt-2">{{$nonAssegnati}}</span>
@@ -80,32 +108,38 @@
 
     <div class="row g-5 g-xl-8 mb-6">
         <div class="col-xl-4">
-            <div class="card card-flush h-100">
-                <div class="card-header pt-6"><h3 class="card-title fw-bold">Distribuzione Stati</h3></div>
-                <div class="card-body"><div id="ticket_status_chart" style="height: 280px"></div></div>
+            <div class="card card-flush ui-card-surface h-100">
+                <div class="card-header pt-6"><h3 class="card-title fw-bold ui-card-title">Distribuzione Stati</h3></div>
+                <div class="card-body"><div id="ticket_status_chart" class="ticket-ui-chart"></div></div>
             </div>
         </div>
         <div class="col-xl-4">
-            <div class="card card-flush h-100">
-                <div class="card-header pt-6"><h3 class="card-title fw-bold">Ticket per Assegnatario</h3></div>
-                <div class="card-body"><div id="ticket_assignee_chart" style="height: 280px"></div></div>
+            <div class="card card-flush ui-card-surface h-100">
+                <div class="card-header pt-6"><h3 class="card-title fw-bold ui-card-title">Ticket per Assegnatario</h3></div>
+                <div class="card-body"><div id="ticket_assignee_chart" class="ticket-ui-chart"></div></div>
             </div>
         </div>
         <div class="col-xl-4">
-            <div class="card card-flush h-100">
-                <div class="card-header pt-6"><h3 class="card-title fw-bold">Trend Aperture</h3></div>
-                <div class="card-body"><div id="ticket_trend_chart" style="height: 280px"></div></div>
+            <div class="card card-flush ui-card-surface h-100">
+                <div class="card-header pt-6"><h3 class="card-title fw-bold ui-card-title">Trend Aperture</h3></div>
+                <div class="card-body"><div id="ticket_trend_chart" class="ticket-ui-chart"></div></div>
             </div>
         </div>
     </div>
 
-    <div class="card card-flush">
+    <div class="card card-flush ui-card-surface ticket-ui-shell">
+        <div id="ticket-loading-overlay" class="ticket-ui-loading">
+            <div class="d-flex align-items-center gap-3 px-6 py-4 bg-body rounded">
+                <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                <span class="fw-semibold text-gray-700">Operazione in corso...</span>
+            </div>
+        </div>
         <div class="card-header py-5">
-            <h3 class="card-title fw-bold">Lista Ticket</h3>
+            <h3 class="card-title fw-bold ui-card-title">Lista Ticket</h3>
         </div>
         <div class="card-body pt-0">
-            <div class="table-responsive">
-                <table class="table table-row-dashed align-middle gy-4">
+            <div class="table-responsive ui-table-wrap">
+                <table id="js-ticket-table" class="table table-row-dashed align-middle gy-4 ui-data-table">
                     <thead>
                     <tr class="fw-bolder fs-7 text-uppercase text-muted">
                         <th>#</th>
@@ -172,7 +206,16 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="text-center py-8 text-muted">Nessun ticket trovato.</td></tr>
+                        <tr>
+                            <td colspan="8" class="py-10">
+                                <div class="ticket-ui-empty p-8 text-center">
+                                    <i class="ki-duotone ki-information-4 fs-2tx text-gray-400 mb-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                                    <div class="fw-bold fs-5 text-gray-700 mb-1">Nessun ticket trovato</div>
+                                    <div class="text-muted mb-4">Prova a rimuovere i filtri o crea un nuovo ticket.</div>
+                                    <a class="btn btn-sm btn-primary" href="{{action([$controller,'create'])}}">Nuovo Ticket</a>
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -191,11 +234,26 @@
             const assigneeValues = @json($assigneeCounts->values());
             const trendLabels = @json($trend->keys()->values());
             const trendValues = @json($trend->values());
+            const overlay = $('#ticket-loading-overlay');
+
+            function uiPalette() {
+                const root = getComputedStyle(document.documentElement);
+                return {
+                    primary: root.getPropertyValue('--kt-primary').trim() || '#009ef7',
+                    success: root.getPropertyValue('--kt-success').trim() || '#50cd89',
+                    warning: root.getPropertyValue('--kt-warning').trim() || '#ffc700',
+                    danger: root.getPropertyValue('--kt-danger').trim() || '#f1416c',
+                    info: root.getPropertyValue('--kt-info').trim() || '#7239ea',
+                    gray500: root.getPropertyValue('--kt-gray-500').trim() || '#a1a5b7',
+                    gray300: root.getPropertyValue('--kt-gray-300').trim() || '#e4e6ef'
+                };
+            }
 
             function renderCharts() {
                 if (typeof ApexCharts === 'undefined') {
                     return;
                 }
+                const palette = uiPalette();
 
                 const statusEl = document.querySelector('#ticket_status_chart');
                 if (statusEl) {
@@ -204,7 +262,9 @@
                         series: statusValues,
                         labels: statusLabels,
                         legend: {position: 'bottom'},
-                        dataLabels: {enabled: false}
+                        dataLabels: {enabled: false},
+                        colors: [palette.primary, palette.success, palette.warning, palette.danger, palette.info, palette.gray500],
+                        noData: {text: 'Nessun dato'}
                     }).render();
                 }
 
@@ -215,7 +275,10 @@
                         series: [{name: 'Ticket', data: assigneeValues}],
                         xaxis: {categories: assigneeLabels},
                         plotOptions: {bar: {borderRadius: 4, horizontal: false}},
-                        dataLabels: {enabled: false}
+                        dataLabels: {enabled: false},
+                        colors: [palette.primary],
+                        grid: {borderColor: palette.gray300},
+                        noData: {text: 'Nessun dato'}
                     }).render();
                 }
 
@@ -227,12 +290,27 @@
                         xaxis: {categories: trendLabels},
                         stroke: {curve: 'smooth', width: 2},
                         dataLabels: {enabled: false},
-                        fill: {type: 'gradient', gradient: {opacityFrom: 0.45, opacityTo: 0.05}}
+                        colors: [palette.success],
+                        fill: {type: 'gradient', gradient: {opacityFrom: 0.45, opacityTo: 0.05}},
+                        grid: {borderColor: palette.gray300},
+                        noData: {text: 'Nessun dato'}
                     }).render();
                 }
             }
 
             renderCharts();
+
+            $('#js-ticket-local-search').on('keyup', function () {
+                const value = ($(this).val() || '').toLowerCase();
+                $('#js-ticket-table tbody tr').each(function () {
+                    const text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(value) !== -1);
+                });
+            });
+
+            $(document).on('submit', '.js-ticket-assign-form, .js-ticket-takeover-form, .js-ticket-filter-form', function () {
+                overlay.css('display', 'flex');
+            });
 
             $(document).on('submit', '.js-ticket-assign-form', function (event) {
                 event.preventDefault();
@@ -252,6 +330,8 @@
                 }).then(function (result) {
                     if (result.isConfirmed) {
                         form.submit();
+                    } else {
+                        overlay.hide();
                     }
                 });
             });
@@ -274,6 +354,8 @@
                 }).then(function (result) {
                     if (result.isConfirmed) {
                         form.submit();
+                    } else {
+                        overlay.hide();
                     }
                 });
             });

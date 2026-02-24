@@ -221,10 +221,27 @@ function tabAjax() {
 }
 
 function modalAjax() {
-    $(document).on('click', '[data-toggle="modal-ajax"]', function (e) {
+    var triggerSelector = '[data-toggle="modal-ajax"], [data-toggleZ="modal-ajax"]';
+
+    var refreshUi = function (container) {
+        if (typeof KTApp !== 'undefined' && typeof KTApp.createInstances === 'function') {
+            KTApp.createInstances();
+        }
+
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Tooltip === 'function') {
+            $(container || document).find('[data-bs-toggle="tooltip"]').each(function () {
+                if (!bootstrap.Tooltip.getInstance(this)) {
+                    bootstrap.Tooltip.getOrCreateInstance(this);
+                }
+            });
+        }
+    };
+
+    $(document).on('click', triggerSelector, function (e) {
         e.preventDefault();
         var url = $(this).attr('href');
-        var target = '#' + $(this).data('target');
+        var targetName = $(this).data('target') || $(this).attr('data-targetZ');
+        var target = '#' + targetName;
 
         console.log($(target).length);
         // AJAX request
@@ -237,6 +254,7 @@ function modalAjax() {
 
                 // Display Modal
                 $(target).modal('show');
+                refreshUi(target);
             },
             error: function (xhr, ajaxOptions, thrownError) {
                 var err = eval("(" + xhr.responseText + ")");
@@ -247,6 +265,7 @@ function modalAjax() {
         });
     });
 
+    refreshUi(document);
 }
 
 
