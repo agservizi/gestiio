@@ -44,6 +44,36 @@ return [
                 'value' => ''
             ],
             [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_telefonia_cf_morosita_per_gestore',
+                'label' => 'Telefonia - Morosita per gestore',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Formato: ID_GESTORE: CF1,CF2 (una riga per gestore). Se presente, questa regola ha priorita sul blocco generale telefonia.',
+                'value' => ''
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_telefonia_cf_blacklist_per_gestore',
+                'label' => 'Telefonia - Blacklist per gestore',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Formato: ID_GESTORE: CF1,CF2 (una riga per gestore). Se presente, questa regola ha priorita sul blocco generale telefonia.',
+                'value' => ''
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_telefonia_cf_credit_check_per_gestore',
+                'label' => 'Telefonia - Credit check per gestore',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Formato: ID_GESTORE: CF1,CF2 (una riga per gestore). Se presente, questa regola ha priorita sul blocco generale telefonia.',
+                'value' => ''
+            ],
+            [
                 'type' => 'text',
                 'data' => 'string',
                 'name' => 'blocco_contratti_energia_verifica_cf_attivo',
@@ -80,6 +110,36 @@ return [
                 'rules' => 'nullable|string',
                 'class' => '',
                 'help' => 'Inserisci uno o piu codici fiscali separati da invio, virgola o punto e virgola.',
+                'value' => ''
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_energia_cf_morosita_per_gestore',
+                'label' => 'Energia - Morosita per gestore',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Formato: ID_GESTORE: CF1,CF2 (una riga per gestore). Se presente, questa regola ha priorita sul blocco generale energia.',
+                'value' => ''
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_energia_cf_blacklist_per_gestore',
+                'label' => 'Energia - Blacklist per gestore',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Formato: ID_GESTORE: CF1,CF2 (una riga per gestore). Se presente, questa regola ha priorita sul blocco generale energia.',
+                'value' => ''
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_energia_cf_credit_check_per_gestore',
+                'label' => 'Energia - Credit check per gestore',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Formato: ID_GESTORE: CF1,CF2 (una riga per gestore). Se presente, questa regola ha priorita sul blocco generale energia.',
                 'value' => ''
             ],
         ]

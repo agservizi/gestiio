@@ -358,7 +358,8 @@
                     dataType: 'json',
                     data: {
                         _token: '{{ csrf_token() }}',
-                        codice_fiscale: cf
+                        codice_fiscale: cf,
+                        tipo_contratto_id: $('#tipo_contratto_id').val() || null
                     }
                 }).done(function (resp) {
                     applyCfRiskState(resp, showModal);

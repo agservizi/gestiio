@@ -543,7 +543,7 @@ class ContrattoEnergiaController extends Controller
         }
 
         $request->validate($rules);
-        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'), $request);
         if ($cfRisk['blocked']) {
             return $this->redirectCodiceFiscaleBloccato($cfRisk);
         }
@@ -667,7 +667,7 @@ class ContrattoEnergiaController extends Controller
         }
 
         $request->validate($rules);
-        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'), $request, $record);
         if ($cfRisk['blocked']) {
             return $this->redirectCodiceFiscaleBloccato($cfRisk);
         }
@@ -686,16 +686,37 @@ class ContrattoEnergiaController extends Controller
     {
         $request->validate([
             'codice_fiscale' => ['nullable', 'string', 'max:64'],
+            'gestore_id' => ['nullable', 'integer'],
         ]);
 
-        $risk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+        $risk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'), $request);
 
         return response()->json($risk);
     }
 
-    protected function checkCodiceFiscaleRisk(string $codiceFiscale): array
+    protected function checkCodiceFiscaleRisk(string $codiceFiscale, ?Request $request = null, ?ContrattoEnergia $record = null): array
     {
-        return app(ContrattiCfRiskService::class)->check($codiceFiscale, ContrattiCfRiskService::DOMAIN_ENERGIA);
+        $gestoreId = $this->resolveGestoreIdForCfRisk($request, $record);
+
+        return app(ContrattiCfRiskService::class)->check(
+            $codiceFiscale,
+            ContrattiCfRiskService::DOMAIN_ENERGIA,
+            $gestoreId
+        );
+    }
+
+    protected function resolveGestoreIdForCfRisk(?Request $request = null, ?ContrattoEnergia $record = null): ?int
+    {
+        $gestoreId = (int) ($request?->input('gestore_id') ?? 0);
+        if ($gestoreId > 0) {
+            return $gestoreId;
+        }
+
+        if ($record && $record->gestore_id) {
+            return (int) $record->gestore_id;
+        }
+
+        return null;
     }
 
     protected function redirectCodiceFiscaleBloccato(array $risk)

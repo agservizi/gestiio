@@ -38,6 +38,34 @@
                                                     return \Illuminate\Support\Str::startsWith($field['name'], 'blocco_contratti_energia_');
                                                 });
                                             @endphp
+                                            <div class="row g-8 mb-8">
+                                                <div class="col-12 col-lg-6">
+                                                    <div class="p-4 border rounded bg-light">
+                                                        <h6 class="mb-3">Gestori Telefonia (backend/gestore)</h6>
+                                                        <div class="small text-muted mb-2">Usa questi ID nel formato: <code>ID_GESTORE: CF1,CF2</code></div>
+                                                        <ul class="mb-0 ps-4">
+                                                            @forelse(($gestoriTelefonia ?? collect()) as $gestore)
+                                                                <li><strong>{{ $gestore->id }}</strong> - {{ $gestore->nome }}</li>
+                                                            @empty
+                                                                <li>Nessun gestore telefonia disponibile.</li>
+                                                            @endforelse
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-lg-6">
+                                                    <div class="p-4 border rounded bg-light">
+                                                        <h6 class="mb-3">Gestori Energia (backend/gestore-contratto-energia)</h6>
+                                                        <div class="small text-muted mb-2">Usa questi ID nel formato: <code>ID_GESTORE: CF1,CF2</code></div>
+                                                        <ul class="mb-0 ps-4">
+                                                            @forelse(($gestoriEnergia ?? collect()) as $gestore)
+                                                                <li><strong>{{ $gestore->id }}</strong> - {{ $gestore->nome }}</li>
+                                                            @empty
+                                                                <li>Nessun gestore energia disponibile.</li>
+                                                            @endforelse
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div class="row g-8">
                                                 <div class="col-12 col-lg-6">
                                                     <h5 class="mb-4">Telefonia</h5>

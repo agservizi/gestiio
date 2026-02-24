@@ -252,7 +252,8 @@
                     dataType: 'json',
                     data: {
                         _token: '{{ csrf_token() }}',
-                        codice_fiscale: cf
+                        codice_fiscale: cf,
+                        gestore_id: $('#gestore_id').val() || null
                     }
                 }).done(function (resp) {
                     applyCfRiskState(resp, showModal);
