@@ -553,6 +553,31 @@
                 $box.scrollTop(Math.max(0, state.top + deltaHeight));
             }
 
+            function syncThreadActiveStyles() {
+                $('.chat-thread-item').each(function () {
+                    const $item = $(this);
+                    const isActive = $item.hasClass('active');
+
+                    $item.find('.chat-thread-title')
+                        .toggleClass('text-white', isActive)
+                        .toggleClass('text-gray-900', !isActive);
+
+                    $item.find('.chat-thread-preview')
+                        .toggleClass('text-white', isActive)
+                        .toggleClass('opacity-75', isActive)
+                        .toggleClass('text-gray-700', !isActive);
+
+                    $item.find('.chat-thread-time')
+                        .toggleClass('text-white', isActive)
+                        .toggleClass('opacity-75', isActive)
+                        .toggleClass('text-muted', !isActive);
+
+                    $item.find('.chat-thread-action-btn')
+                        .toggleClass('btn-light', isActive)
+                        .toggleClass('btn-light-secondary', !isActive);
+                });
+            }
+
             function setComposerEnabled(enabled) {
                 $('#chat-messaggio').prop('disabled', !enabled);
                 $('#chat-send-button').prop('disabled', !enabled);
@@ -688,6 +713,8 @@
                 if (!threadId) {
                     $('#chat-messages').html('<div class="h-100 d-flex align-items-center justify-content-center text-muted fs-6 py-10">Seleziona o crea una conversazione.</div>');
                     setComposerEnabled(false);
+                    $('.chat-thread-item').removeClass('active');
+                    syncThreadActiveStyles();
                     oldestLoadedMessageId = null;
                     hasMoreHistory = false;
                     activeLastMessageId = null;
@@ -711,6 +738,7 @@
                     hasMoreHistory = !!response.hasMore;
                     $('.chat-thread-item').removeClass('active');
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
+                    syncThreadActiveStyles();
                     setComposerEnabled(true);
                     sendTypingStatus(false);
                     clearReply();
@@ -746,6 +774,7 @@
                             $('.chat-thread-item').removeClass('active');
                             $('.chat-thread-item[data-thread-id="' + activeThreadId + '"]').addClass('active');
                         }
+                        syncThreadActiveStyles();
                         renderForwardTargets();
                     }
                     if (activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
@@ -857,6 +886,7 @@
                     activeThreadId = threadId;
                     $('.chat-thread-item').removeClass('active');
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
+                    syncThreadActiveStyles();
                 }
                 loadMessages(threadId, true);
             });
@@ -1437,6 +1467,7 @@
             }
 
             renderForwardTargets();
+            syncThreadActiveStyles();
             initWebPushNotifications();
             unlockNotificationSound();
 
