@@ -531,11 +531,28 @@ class ContrattoTelefoniaController extends Controller
         $contratto = ContrattoTelefonia::withCount('allegati')->with('tipoContratto')->find($id);
         abort_if(!$contratto, 404, 'Questo contratto non esiste');
 
+        $request->validate([
+            'esito_id' => ['required'],
+            'codice_cliente' => ['nullable', 'string', 'max:255'],
+            'codice_contratto' => ['nullable', 'string', 'max:255'],
+            'motivo_ko' => ['nullable', 'string', 'max:254'],
+        ]);
+
         $esitoPrima = $contratto->esito_id;
 
         $esito = EsitoTelefonia::find($request->input('esito_id'));
+        if (!$esito) {
+            return response()->json(['success' => false, 'message' => 'Stato selezionato non valido.'], 422);
+        }
+
+        if ((int)$esito->chiedi_motivo === 1 && trim((string)$request->input('motivo_ko')) === '') {
+            return response()->json(['success' => false, 'message' => 'La motivazione KO è obbligatoria per lo stato selezionato.'], 422);
+        }
+
         $motivoKoprima = $contratto->motivo_ko;
-        $contratto->pagato = getInputCheckbox($request->input('pagato'));
+        if ($this->currentUser()->hasPermissionTo('admin')) {
+            $contratto->pagato = getInputCheckbox($request->input('pagato'));
+        }
         $contratto->codice_contratto = getInputToUpper($request->input('codice_contratto'));
         $contratto->codice_cliente = getInputToUpper($request->input('codice_cliente'));
         $contratto->esito_id = $esito->id;
