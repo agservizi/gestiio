@@ -14,7 +14,11 @@ class CausaleTicket extends Model
     public const NOME_SINGOLARE = "causale ticket";
     public const NOME_PLURALE = "causali ticket";
 
-    public const SERVIZI = ['App\Models\ContrattoTelefonia' => 'Contratto telefonia', 'App\Models\SpedizioneBrt' => 'Spedizione BRT'];
+    public const SERVIZI = [
+        'App\Models\ContrattoTelefonia' => 'Contratto telefonia',
+        'App\Models\ContrattoEnergia' => 'Contratto energia',
+        'App\Models\SpedizioneBrt' => 'Spedizione BRT',
+    ];
 
     protected $fillable = [
         'servizio_type', 'descrizione_causale'

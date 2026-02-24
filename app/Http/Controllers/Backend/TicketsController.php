@@ -10,6 +10,7 @@ use App\Models\LetturaTicket;
 use App\Models\Notifica;
 use App\Models\SpedizioneBrt;
 use App\Models\Ticket;
+use App\Models\ContrattoEnergia;
 use App\Models\ContrattoTelefonia;
 use App\Models\MessaggioTicket;
 use App\Models\User;
@@ -127,6 +128,10 @@ class TicketsController extends Controller
                 case 'contratto-telefonia':
                     $servizio = ContrattoTelefonia::find($request->input('servizio_id'));
                     $record->servizio_type = ContrattoTelefonia::class;
+                    break;
+                case 'contratto-energia':
+                    $servizio = ContrattoEnergia::find($request->input('servizio_id'));
+                    $record->servizio_type = ContrattoEnergia::class;
                     break;
 
             }

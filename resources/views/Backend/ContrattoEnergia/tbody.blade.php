@@ -64,6 +64,11 @@
                     </span>
                     </a>
                 @endif
+                <a class="btn btn-icon btn-sm btn-light btn-active-light-primary"
+                   href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_type'=>'contratto-energia','servizio_id'=>$record->id])}}"
+                   data-bs-toggle="tooltip" data-bs-placement="top" title="Apri ticket">
+                    <i class="bi bi-chat-left-text fs-3"></i>
+                </a>
                 <a class="btn btn-icon btn-sm btn-light btn-active-light-primary" href="{{action([$controller,'show'],$record->id)}}"
                    data-bs-toggle="tooltip" data-bs-placement="top" title="Vedi"
                 >
