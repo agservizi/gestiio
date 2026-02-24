@@ -17,6 +17,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('contratto/{contrattoId}/allegato/{allegatoId}', [\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'downloadAllegato']);
     Route::resource('contratto', \App\Http\Controllers\Backend\ContrattoTelefoniaController::class);
     Route::post('/contratto/{id}/azione/{azione}', [\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'azioni']);
+    Route::post('/contratto/verifica-cf-rischio', [\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'verificaCodiceFiscaleRischio']);
     Route::get('pda-contratto/{id}', [\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'pda']);
 
     //ContrattoEnergia
@@ -27,6 +28,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('/contratto-energia/create/{servizio?}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'create']);
 
     Route::resource('contratto-energia', \App\Http\Controllers\Backend\ContrattoEnergiaController::class)->except(['create']);
+    Route::post('/contratto-energia/verifica-cf-rischio', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'verificaCodiceFiscaleRischio']);
     Route::get('/contratto-energia/{id}/duplica-anagrafica', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'duplicaAnagrafica']);
     Route::post('/contratto-energia/{id}/switch-categoria', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'switchCategoria']);
     Route::post('/contratto-energia/{id}/segnala-chat', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'segnalaChat']);

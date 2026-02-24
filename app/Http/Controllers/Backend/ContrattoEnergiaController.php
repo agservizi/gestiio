@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Backend\SottoClassiEnergia\ProdottoEnergiaAbstract;
 use App\Http\Controllers\Controller;
+use App\Http\Services\ContrattiCfRiskService;
 
 use App\Models\AllegatoContrattoEnergia;
 use App\Models\Cliente;
@@ -21,6 +22,7 @@ use App\Notifications\NotificaGenericaGestoreContrattoEnergia;
 use App\Rules\CodiceFiscaleRule;
 use App\Rules\DataItalianaRule;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ContrattoEnergia;
@@ -541,6 +543,10 @@ class ContrattoEnergiaController extends Controller
         }
 
         $request->validate($rules);
+        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+        if ($cfRisk['blocked']) {
+            return $this->redirectCodiceFiscaleBloccato($cfRisk);
+        }
         $record = new ContrattoEnergia();
         $this->salvaDati($record, $request, $classeProdotto);
 
@@ -661,6 +667,10 @@ class ContrattoEnergiaController extends Controller
         }
 
         $request->validate($rules);
+        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+        if ($cfRisk['blocked']) {
+            return $this->redirectCodiceFiscaleBloccato($cfRisk);
+        }
         $esitoPrima = $record->esito_id;
         $this->salvaDati($record, $request, $classeProdotto);
 
@@ -670,6 +680,33 @@ class ContrattoEnergiaController extends Controller
 
 
         return $this->backToIndex();
+    }
+
+    public function verificaCodiceFiscaleRischio(Request $request): JsonResponse
+    {
+        $request->validate([
+            'codice_fiscale' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $risk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+
+        return response()->json($risk);
+    }
+
+    protected function checkCodiceFiscaleRisk(string $codiceFiscale): array
+    {
+        return app(ContrattiCfRiskService::class)->check($codiceFiscale);
+    }
+
+    protected function redirectCodiceFiscaleBloccato(array $risk)
+    {
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+                'codice_fiscale' => $risk['message'] ?? 'Codice fiscale bloccato per morosita/blacklist/credit check.',
+            ])
+            ->with('cf_risk_block', $risk);
     }
 
     public function switchCategoria(Request $request, $id)

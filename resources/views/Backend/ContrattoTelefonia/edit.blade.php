@@ -314,6 +314,60 @@
         }
 
         $(function () {
+            var cfRiskCheckUrl = '{{ action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'verificaCodiceFiscaleRischio']) }}';
+            var initialCfRiskBlock = @json(session('cf_risk_block'));
+            var cfRiskLocked = false;
+
+            function setContractButtonsLocked(locked) {
+                $('#submit, #submit-bozza').prop('disabled', locked);
+            }
+
+            function showCfRiskModal(payload) {
+                var labels = (payload && payload.labels && payload.labels.length) ? payload.labels : ['Morosita / Blacklist / Credit check'];
+                var cf = (payload && payload.codice_fiscale) ? payload.codice_fiscale : ($('#codice_fiscale').val() || '');
+                var items = labels.map(function (label) {
+                    return '<li class="mb-1"><span class="badge badge-danger me-2">●</span>' + label + '</li>';
+                }).join('');
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Semaforo rosso',
+                    html: '<div class="text-start">Codice fiscale <b>' + cf + '</b> bloccato.<br><ul class="mt-3 ps-4">' + items + '</ul><div class="mt-2">Impossibile caricare il contratto.</div></div>',
+                    confirmButtonText: 'OK'
+                });
+            }
+
+            function applyCfRiskState(payload, showModal) {
+                cfRiskLocked = !!(payload && payload.blocked);
+                setContractButtonsLocked(cfRiskLocked);
+                if (cfRiskLocked && showModal) {
+                    showCfRiskModal(payload);
+                }
+                return payload;
+            }
+
+            function requestCfRisk(showModal) {
+                var cf = ($('#codice_fiscale').val() || '').trim();
+                if (cf === '') {
+                    return $.Deferred().resolve(applyCfRiskState({blocked: false}, false)).promise();
+                }
+
+                return $.ajax({
+                    url: cfRiskCheckUrl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        codice_fiscale: cf
+                    }
+                }).done(function (resp) {
+                    applyCfRiskState(resp, showModal);
+                });
+            }
+
+            if (initialCfRiskBlock && initialCfRiskBlock.blocked) {
+                applyCfRiskState(initialCfRiskBlock, true);
+            }
 
             if ($('#agente_id').is('select')) {
                 select2UniversaleBackend('agente_id', 'un agente', 1);
@@ -424,7 +478,33 @@
                 },
             });
 
+            $('#codice_fiscale').on('blur change', function () {
+                requestCfRisk(true);
+            });
+
+            $('form').on('submit.cfRisk', function (event) {
+                var form = this;
+
+                if (cfRiskLocked) {
+                    event.preventDefault();
+                    showCfRiskModal(initialCfRiskBlock || {codice_fiscale: $('#codice_fiscale').val(), labels: []});
+                    return;
+                }
+
+                event.preventDefault();
+                requestCfRisk(false).done(function (resp) {
+                    if (resp && resp.blocked) {
+                        showCfRiskModal(resp);
+                        return;
+                    }
+                    form.submit();
+                });
+            });
+
             $('#codice_fiscale').blur(function (e) {
+                if (cfRiskLocked) {
+                    return;
+                }
 
                 var codice_fiscale = $(this).val();
                 if (codice_fiscale === "") {

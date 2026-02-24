@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Http\Services\ContrattiCfRiskService;
 use App\Http\Funzioni\VisuraCameraleService;
 use App\Http\MieClassi\PdfProdottoSkyGlass;
 use App\Http\MieClassi\PdfProdottoSkyTv;
@@ -33,6 +34,7 @@ use App\Rules\DataItalianaRule;
 use App\Rules\EmailContrattoRule;
 use App\Rules\TelefonoContrattoRule;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ContrattoTelefonia;
@@ -322,6 +324,10 @@ class ContrattoTelefoniaController extends Controller
         }
 
         $request->validate($rules);
+        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+        if ($cfRisk['blocked']) {
+            return $this->redirectCodiceFiscaleBloccato($cfRisk);
+        }
         $record = new ContrattoTelefonia();
         $this->salvaDati($record, $request);
 
@@ -428,6 +434,10 @@ class ContrattoTelefoniaController extends Controller
         }
 
         $request->validate($rules);
+        $cfRisk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+        if ($cfRisk['blocked']) {
+            return $this->redirectCodiceFiscaleBloccato($cfRisk);
+        }
 
         $request->validate($this->rules($request, $id));
         $esitoPrima = $record->esito_id;
@@ -439,6 +449,33 @@ class ContrattoTelefoniaController extends Controller
 
 
         return $this->backToIndex();
+    }
+
+    public function verificaCodiceFiscaleRischio(Request $request): JsonResponse
+    {
+        $request->validate([
+            'codice_fiscale' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $risk = $this->checkCodiceFiscaleRisk((string) $request->input('codice_fiscale'));
+
+        return response()->json($risk);
+    }
+
+    protected function checkCodiceFiscaleRisk(string $codiceFiscale): array
+    {
+        return app(ContrattiCfRiskService::class)->check($codiceFiscale);
+    }
+
+    protected function redirectCodiceFiscaleBloccato(array $risk)
+    {
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+                'codice_fiscale' => $risk['message'] ?? 'Codice fiscale bloccato per morosita/blacklist/credit check.',
+            ])
+            ->with('cf_risk_block', $risk);
     }
 
     /**
