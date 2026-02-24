@@ -531,6 +531,29 @@
                 box.scrollTop(box[0].scrollHeight);
             }
 
+            function captureMessagesScrollState() {
+                const box = $('#chat-messages')[0];
+                if (!box) return null;
+
+                const distanceFromBottom = box.scrollHeight - (box.scrollTop + box.clientHeight);
+                return {
+                    top: box.scrollTop,
+                    height: box.scrollHeight,
+                    nearBottom: distanceFromBottom <= 90,
+                };
+            }
+
+            function restoreMessagesScrollState(state) {
+                if (!state) return;
+
+                const $box = $('#chat-messages');
+                const box = $box[0];
+                if (!box) return;
+
+                const deltaHeight = box.scrollHeight - state.height;
+                $box.scrollTop(Math.max(0, state.top + deltaHeight));
+            }
+
             function setComposerEnabled(enabled) {
                 $('#chat-messaggio').prop('disabled', !enabled);
                 $('#chat-send-button').prop('disabled', !enabled);
@@ -725,9 +748,14 @@
                     if (activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
                         const incomingLastId = parseInt(response.activeLastMessageId || 0, 10) || null;
                         const incomingSenderId = parseInt(response.activeLastMessageSenderId || 0, 10) || null;
+                        const scrollState = captureMessagesScrollState();
 
                         $('#chat-messages').html(response.messaggiHtml);
-                        scrollToBottom();
+                        if (scrollState && !scrollState.nearBottom) {
+                            restoreMessagesScrollState(scrollState);
+                        } else {
+                            scrollToBottom();
+                        }
 
                         if (incomingLastId) {
                             activeLastMessageId = incomingLastId;
