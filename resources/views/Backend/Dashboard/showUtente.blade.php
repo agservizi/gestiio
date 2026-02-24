@@ -30,151 +30,35 @@
 @push('customCss')
 @endpush
 @push('customScript')
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
     <script>
         $(function () {
+            const datiCurve = @json($datiBarreOrdini);
+            const element = document.getElementById('kt_project_overview_graph');
+            if (!element || typeof am5 === 'undefined') return;
 
-            var datiCurve =@json($datiBarreOrdini);
+            const root = am5.Root.new(element);
+            root.setThemes([am5themes_Animated.new(root)]);
 
+            const chart = root.container.children.push(am5percent.PieChart.new(root, {
+                layout: root.verticalLayout
+            }));
 
-            graficoCurve();
+            const series = chart.series.push(am5percent.PieSeries.new(root, {
+                valueField: 'totale',
+                categoryField: 'mese',
+                tooltip: am5.Tooltip.new(root, {labelText: '{category}: €{value}'})
+            }));
+            series.labels.template.setAll({forceHidden: true});
+            series.ticks.template.setAll({forceHidden: true});
+            series.slices.template.setAll({strokeOpacity: 0});
 
-            function graficoCurve() {
-                var element = document.getElementById('kt_project_overview_graph');
-
-                var height = parseInt(KTUtil.css(element, 'height'));
-                var labelColor = KTUtil.getCssVariableValue('--bs-gray-500');
-                var borderColor = KTUtil.getCssVariableValue('--bs-gray-200');
-                var totaleColor = KTUtil.getCssVariableValue('--bs-success');
-                var totaleLightColor = KTUtil.getCssVariableValue('--bs-success');
-
-                if (!element) {
-                    return;
-                }
-
-                var options = {
-                    series: [
-                        {
-                            name: 'Totale',
-                            data: datiCurve.arrOk
-                        }
-                    ],
-                    chart: {
-                        fontFamily: 'inherit',
-                        type: 'area',
-                        height: height,
-                        toolbar: {
-                            show: false
-                        }
-                    },
-                    plotOptions: {},
-                    legend: {
-                        show: false
-                    },
-                    dataLabels: {
-                        enabled: false
-                    },
-                    fill: {
-                        type: 'solid',
-                        opacity: 0.5
-                    },
-                    stroke: {
-                        curve: 'smooth',
-                        show: true,
-                        width: 3,
-                        colors: [totaleColor]
-                    },
-                    xaxis: {
-                        categories: datiCurve.arrMese,
-                        axisBorder: {
-                            show: false,
-                        },
-                        axisTicks: {
-                            show: false
-                        },
-                        labels: {
-                            style: {
-                                colors: labelColor,
-                                fontSize: '12px'
-                            }
-                        },
-                        crosshairs: {
-                            position: 'front',
-                            stroke: {
-                                color: totaleColor,
-                                width: 1,
-                                dashArray: 3
-                            }
-                        },
-                        tooltip: {
-                            enabled: true,
-                            formatter: undefined,
-                            offsetY: 0,
-                            style: {
-                                fontSize: '12px'
-                            }
-                        }
-                    },
-                    yaxis: {
-                        labels: {
-                            style: {
-                                colors: labelColor,
-                                fontSize: '12px'
-                            }
-                        }
-                    },
-                    states: {
-                        normal: {
-                            filter: {
-                                type: 'none',
-                                value: 0
-                            }
-                        },
-                        hover: {
-                            filter: {
-                                type: 'none',
-                                value: 0
-                            }
-                        },
-                        active: {
-                            allowMultipleDataPointsSelection: false,
-                            filter: {
-                                type: 'none',
-                                value: 0
-                            }
-                        }
-                    },
-                    tooltip: {
-                        style: {
-                            fontSize: '12px'
-                        },
-                        y: {
-                            formatter: function (val) {
-                                return '€' + val;
-                            }
-                        }
-                    },
-                    colors: [totaleLightColor],
-                    grid: {
-                        borderColor: borderColor,
-                        strokeDashArray: 4,
-                        yaxis: {
-                            lines: {
-                                show: true
-                            }
-                        }
-                    },
-                    markers: {
-                        strokeColor: totaleColor,
-                        strokeWidth: 3
-                    }
-                };
-
-                var chart = new ApexCharts(element, options);
-                chart.render();
-
-            }
-
-
+            const data = (datiCurve.arrMese || []).map(function (mese, idx) {
+                return {mese: mese, totale: Number((datiCurve.arrOk || [])[idx] || 0)};
+            });
+            series.data.setAll(data);
         });
     </script>
 @endpush

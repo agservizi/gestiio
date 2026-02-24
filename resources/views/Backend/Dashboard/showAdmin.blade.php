@@ -198,7 +198,7 @@
                                 <span class="fs-2qx fw-bolder">{{ number_format((int) $datiTortaEsiti['totale']) }}</span>
                                 <span class="fs-6 fw-bold text-gray-400">Totali</span>
                             </div>
-                            <canvas id="kt_card_widget_17_chart"></canvas>
+                            <div id="kt_card_widget_17_chart" style="width: 150px; height: 150px;"></div>
                         </div>
                         <div class="d-flex flex-column justify-content-center flex-row-fluid pe-0 pe-xl-5">
                             @for($n=0;$n<count($datiTortaEsiti['labels']);$n++)
@@ -398,62 +398,51 @@
     </div>
 @endsection
 @push('customScript')
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
     <script>
         $(function () {
             $('#mese').on('select2:select', function (e) {
                 location.href = location.pathname + '?mese=' + $(this).val();
             });
 
-            var KTCardsWidget17 = {
-                init: function () {
-                    !function () {
+            const target = document.getElementById('kt_card_widget_17_chart');
+            if (!target || typeof am5 === 'undefined') return;
 
-                        var target = document.getElementById("kt_card_widget_17_chart");
-                        if (target) {
-                            var datiTortaEsiti =@json($datiTortaEsiti);
+            function hexToColorNumber(color) {
+                const hex = (color || '').trim().replace('#', '');
+                if (!hex) return 0x009ef7;
+                return parseInt(hex.length === 3 ? hex.split('').map(function (c) { return c + c; }).join('') : hex, 16);
+            }
 
-                            var s = target.getContext("2d");
-                            new Chart(s, {
-                                type: "doughnut",
-                                data: {
-                                    datasets: [{
-                                        data: datiTortaEsiti['data'],
-                                        backgroundColor: datiTortaEsiti['backgroundColor']
-                                    }], labels: datiTortaEsiti['labels']
-                                },
-                                options: {
-                                    chart: {fontFamily: "inherit"},
-                                    cutoutPercentage: 75,
-                                    responsive: !0,
-                                    maintainAspectRatio: !1,
-                                    cutout: "75%",
-                                    title: {display: !1},
-                                    animation: {animateScale: !0, animateRotate: !0},
-                                    tooltips: {
-                                        enabled: !0,
-                                        intersect: !1,
-                                        mode: "nearest",
-                                        bodySpacing: 5,
-                                        yPadding: 10,
-                                        xPadding: 10,
-                                        caretPadding: 0,
-                                        displayColors: !1,
-                                        backgroundColor: "#20D489",
-                                        titleFontColor: "#ffffff",
-                                        cornerRadius: 4,
-                                        footerSpacing: 0,
-                                        titleSpacing: 0
-                                    },
-                                    plugins: {legend: {display: !1}}
-                                }
-                            })
-                        }
-                    }()
-                }
-            };
-            "undefined" != typeof module && (module.exports = KTCardsWidget17), KTUtil.onDOMContentLoaded((function () {
-                KTCardsWidget17.init()
+            const datiTortaEsiti = @json($datiTortaEsiti);
+            const root = am5.Root.new(target);
+            root.setThemes([am5themes_Animated.new(root)]);
+
+            const chart = root.container.children.push(am5percent.PieChart.new(root, {
+                layout: root.verticalLayout
             }));
+
+            const series = chart.series.push(am5percent.PieSeries.new(root, {
+                valueField: 'value',
+                categoryField: 'label',
+                innerRadius: am5.percent(75)
+            }));
+
+            series.labels.template.setAll({forceHidden: true});
+            series.ticks.template.setAll({forceHidden: true});
+            series.slices.template.setAll({strokeOpacity: 0});
+            series.set('colors', am5.ColorSet.new(root, {
+                colors: (datiTortaEsiti.backgroundColor || []).map(function (color) {
+                    return am5.color(hexToColorNumber(color));
+                })
+            }));
+
+            const pieData = (datiTortaEsiti.labels || []).map(function (label, idx) {
+                return {label: label, value: Number((datiTortaEsiti.data || [])[idx] || 0)};
+            });
+            series.data.setAll(pieData);
         });
     </script>
 @endpush
