@@ -5,7 +5,7 @@ return [
 
     'tag_title' => env('APP_NAME'),
     'log_rocket' => '',
-    'versione' => '3.0',
+    'versione' => '3.0.1',
 
     'mostra_accessi_test' => false,
     'accessi_test' => [
