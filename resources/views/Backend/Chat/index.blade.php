@@ -379,6 +379,9 @@
             let activeLastMessageId = null;
             let loadMessagesRequestSeq = 0;
             let pollRequestSeq = 0;
+            let currentLoadRequest = null;
+            let currentPollRequest = null;
+            const threadMessagesCache = {};
             const mentionUsers = @json($mentionUsers ?? []);
 
             /* ================= SUONO NOTIFICA ================= */
@@ -539,6 +542,38 @@
                     'Caricamento conversazione...' +
                     '</div>'
                 );
+            }
+
+            function cacheThreadMessages(threadId, payload) {
+                const numericThreadId = parseInt(threadId || 0, 10);
+                if (!numericThreadId || !payload || !payload.html) return;
+
+                const prev = threadMessagesCache[numericThreadId] || {};
+                threadMessagesCache[numericThreadId] = {
+                    html: payload.html,
+                    oldestId: payload.oldestId ?? prev.oldestId ?? null,
+                    hasMore: payload.hasMore !== undefined ? !!payload.hasMore : (prev.hasMore ?? true),
+                    ultimoId: payload.ultimoId ?? prev.ultimoId ?? null,
+                    pinnedHtml: payload.pinnedHtml ?? prev.pinnedHtml,
+                };
+            }
+
+            function renderMessagesFromCache(threadId) {
+                const numericThreadId = parseInt(threadId || 0, 10);
+                if (!numericThreadId) return false;
+
+                const cached = threadMessagesCache[numericThreadId];
+                if (!cached || !cached.html) return false;
+
+                $('#chat-messages').html(cached.html);
+                oldestLoadedMessageId = cached.oldestId ?? null;
+                hasMoreHistory = cached.hasMore ?? true;
+                activeLastMessageId = cached.ultimoId ?? activeLastMessageId;
+                if (cached.pinnedHtml !== undefined) {
+                    $('#chat-pinned-content').html(cached.pinnedHtml);
+                }
+                setComposerEnabled(true);
+                return true;
             }
 
             function captureMessagesScrollState() {
@@ -736,8 +771,11 @@
                 if (beforeId) payload.before_id = beforeId;
                 const requestSeq = ++loadMessagesRequestSeq;
                 const requestedThreadId = threadId;
+                if (currentLoadRequest && currentLoadRequest.readyState !== 4) {
+                    currentLoadRequest.abort();
+                }
 
-                $.get(messagesUrl(threadId), payload, function (response) {
+                currentLoadRequest = $.get(messagesUrl(threadId), payload, function (response) {
                     if (requestSeq !== loadMessagesRequestSeq || requestedThreadId !== activeThreadId) {
                         return;
                     }
@@ -750,6 +788,13 @@
                         appendHistory(response.html);
                     } else {
                         $('#chat-messages').html(response.html);
+                        cacheThreadMessages(threadId, {
+                            html: response.html,
+                            oldestId: response.oldestId || null,
+                            hasMore: !!response.hasMore,
+                            ultimoId: response.ultimoId !== undefined && response.ultimoId !== null ? (parseInt(response.ultimoId, 10) || null) : null,
+                            pinnedHtml: response.pinnedHtml,
+                        });
                     }
                     oldestLoadedMessageId = response.oldestId || oldestLoadedMessageId;
                     hasMoreHistory = !!response.hasMore;
@@ -773,6 +818,9 @@
                         window.history.replaceState({}, '', nextUrl.toString());
                     }
                 }).fail(function (error) {
+                    if (error?.statusText === 'abort') {
+                        return;
+                    }
                     if (handleChatForbidden(error)) {
                         return;
                     }
@@ -786,8 +834,11 @@
             function refreshPoll() {
                 const requestedThreadId = activeThreadId;
                 const requestSeq = ++pollRequestSeq;
+                if (currentPollRequest && currentPollRequest.readyState !== 4) {
+                    currentPollRequest.abort();
+                }
 
-                $.get(pollUrl, {thread_id: requestedThreadId}, function (response) {
+                currentPollRequest = $.get(pollUrl, {thread_id: requestedThreadId}, function (response) {
                     if (requestSeq !== pollRequestSeq) {
                         return;
                     }
@@ -807,6 +858,11 @@
                         const scrollState = captureMessagesScrollState();
 
                         $('#chat-messages').html(response.messaggiHtml);
+                        cacheThreadMessages(requestedThreadId, {
+                            html: response.messaggiHtml,
+                            ultimoId: incomingLastId,
+                            pinnedHtml: response.pinnedHtml,
+                        });
                         if (scrollState && !scrollState.nearBottom) {
                             restoreMessagesScrollState(scrollState);
                         } else {
@@ -892,6 +948,9 @@
                         }
                     }
                 }).fail(function (error) {
+                    if (error?.statusText === 'abort') {
+                        return;
+                    }
                     if (handleChatForbidden(error)) {
                         return;
                     }
@@ -911,7 +970,9 @@
                     $('.chat-thread-item').removeClass('active');
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
                     syncThreadActiveStyles();
-                    showMessagesLoading();
+                    if (!renderMessagesFromCache(threadId)) {
+                        showMessagesLoading();
+                    }
                 }
                 loadMessages(threadId, true);
             });
@@ -1487,6 +1548,13 @@
                 if (lastRenderedId > 0) {
                     activeLastMessageId = lastRenderedId;
                 }
+                cacheThreadMessages(activeThreadId, {
+                    html: $('#chat-messages').html(),
+                    oldestId: parseInt($('.chat-msg-row').first().data('msg-id') || 0, 10) || null,
+                    hasMore: true,
+                    ultimoId: lastRenderedId > 0 ? lastRenderedId : null,
+                    pinnedHtml: $('#chat-pinned-content').html(),
+                });
             } else {
                 setComposerEnabled(false);
             }
