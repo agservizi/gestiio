@@ -530,6 +530,15 @@
                 box.scrollTop(box[0].scrollHeight);
             }
 
+            function showMessagesLoading() {
+                $('#chat-messages').html(
+                    '<div class="h-100 d-flex align-items-center justify-content-center text-muted fs-6 py-10">' +
+                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+                    'Caricamento conversazione...' +
+                    '</div>'
+                );
+            }
+
             function captureMessagesScrollState() {
                 const box = $('#chat-messages')[0];
                 if (!box) return null;
@@ -887,6 +896,7 @@
                     $('.chat-thread-item').removeClass('active');
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
                     syncThreadActiveStyles();
+                    showMessagesLoading();
                 }
                 loadMessages(threadId, true);
             });
