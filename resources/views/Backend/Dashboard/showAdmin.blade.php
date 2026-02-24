@@ -394,6 +394,7 @@
     </div>
 @endsection
 @push('customScript')
+    <script src="https://code.highcharts.com/highcharts.js"></script>
     <script>
         $(function () {
             $('#mese').on('select2:select', function (e) {
@@ -401,30 +402,60 @@
             });
 
             var target = document.getElementById('kt_card_widget_17_chart');
-            if (!target || typeof ApexCharts === 'undefined') return;
+            if (!target || typeof Highcharts === 'undefined') return;
 
             var datiTortaEsiti = @json($datiTortaEsiti);
             target.innerHTML = '';
 
-            new ApexCharts(target, {
+            var categories = datiTortaEsiti['labels'] || [];
+            var values = datiTortaEsiti['data'] || [];
+            var colors = datiTortaEsiti['backgroundColor'] || [];
+            var points = categories.map(function (label, idx) {
+                return {
+                    name: label,
+                    y: Number(values[idx] || 0),
+                    color: colors[idx]
+                };
+            });
+
+            Highcharts.chart('kt_card_widget_17_chart', {
                 chart: {
                     type: 'pie',
                     height: 170,
-                    toolbar: {show: false}
+                    backgroundColor: 'transparent',
+                    spacing: [0, 0, 0, 0]
                 },
-                series: datiTortaEsiti['data'] || [],
-                labels: datiTortaEsiti['labels'] || [],
-                colors: datiTortaEsiti['backgroundColor'] || [],
-                dataLabels: {
-                    enabled: true,
-                    formatter: function (val) {
-                        return Math.round(val) + '%';
+                title: {text: null},
+                credits: {enabled: false},
+                tooltip: {
+                    pointFormatter: function () {
+                        return '<span style="color:' + this.color + '">\u25CF</span> ' + this.name + ': <b>' + this.y + '</b>';
                     }
                 },
-                legend: {show: false},
-                stroke: {width: 1, colors: ['#ffffff']},
-                noData: {text: 'Nessun dato'}
-            }).render();
+                plotOptions: {
+                    pie: {
+                        innerSize: '68%',
+                        borderWidth: 1,
+                        borderColor: '#ffffff',
+                        dataLabels: {
+                            enabled: true,
+                            formatter: function () {
+                                return Math.round(this.percentage) + '%';
+                            },
+                            style: {
+                                fontSize: '10px',
+                                textOutline: 'none'
+                            }
+                        },
+                        showInLegend: false
+                    }
+                },
+                series: [{
+                    name: 'Esiti',
+                    colorByPoint: true,
+                    data: points
+                }]
+            });
         });
     </script>
 @endpush
