@@ -230,10 +230,6 @@
 @endsection
 
 @push('customScript')
-    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
     <script>
         $(function () {
             const statusLabels = @json($statusLabels);
@@ -243,7 +239,6 @@
             const trendLabels = @json($trend->keys()->values());
             const trendValues = @json($trend->values());
             const overlay = $('#ticket-loading-overlay');
-            const chartRoots = [];
 
             function uiPalette() {
                 const root = getComputedStyle(document.documentElement);
@@ -258,175 +253,55 @@
                 };
             }
 
-            function clearCharts() {
-                while (chartRoots.length) {
-                    const root = chartRoots.pop();
-                    if (root && typeof root.dispose === 'function') {
-                        root.dispose();
-                    }
-                }
-            }
-
-            function setNoData(root, text) {
-                const label = am5.Label.new(root, {
-                    text: text,
-                    centerX: am5.p50,
-                    centerY: am5.p50,
-                    x: am5.p50,
-                    y: am5.p50,
-                    fill: am5.color(0xa1a5b7),
-                    fontSize: 12
-                });
-                root.container.children.push(label);
-            }
-
             function renderCharts() {
-                if (typeof am5 === 'undefined') {
+                if (typeof ApexCharts === 'undefined') {
                     return;
                 }
-                clearCharts();
                 const palette = uiPalette();
 
                 const statusEl = document.querySelector('#ticket_status_chart');
                 if (statusEl) {
-                    const root = am5.Root.new(statusEl);
-                    chartRoots.push(root);
-                    root.setThemes([am5themes_Animated.new(root)]);
-
-                    const chart = root.container.children.push(am5percent.PieChart.new(root, {
-                        layout: root.verticalLayout
-                    }));
-
-                    const series = chart.series.push(am5percent.PieSeries.new(root, {
-                        valueField: 'value',
-                        categoryField: 'label',
-                        legendLabelText: '{category}',
-                        legendValueText: '{value}',
-                    }));
-                    series.labels.template.setAll({forceHidden: true});
-                    series.ticks.template.setAll({forceHidden: true});
-                    series.slices.template.setAll({strokeOpacity: 0});
-                    series.set('colors', am5.ColorSet.new(root, {
-                        colors: [
-                            am5.color(palette.primary),
-                            am5.color(palette.success),
-                            am5.color(palette.warning),
-                            am5.color(palette.danger),
-                            am5.color(palette.info),
-                            am5.color(palette.gray500)
-                        ]
-                    }));
-
-                    const pieData = statusLabels.map(function (label, idx) {
-                        return {label: label, value: Number(statusValues[idx] || 0)};
-                    });
-
-                    if (!pieData.some(function (d) { return d.value > 0; })) {
-                        setNoData(root, 'Nessun dato');
-                    } else {
-                        series.data.setAll(pieData);
-                        const legend = chart.children.push(am5.Legend.new(root, {
-                            centerX: am5.p50,
-                            x: am5.p50,
-                            layout: root.horizontalLayout
-                        }));
-                        legend.data.setAll(series.dataItems);
-                    }
+                    statusEl.innerHTML = '';
+                    new ApexCharts(statusEl, {
+                        chart: {type: 'donut', height: 280},
+                        series: statusValues,
+                        labels: statusLabels,
+                        legend: {position: 'bottom'},
+                        dataLabels: {enabled: false},
+                        colors: [palette.primary, palette.success, palette.warning, palette.danger, palette.info, palette.gray500],
+                        noData: {text: 'Nessun dato'}
+                    }).render();
                 }
 
                 const assigneeEl = document.querySelector('#ticket_assignee_chart');
                 if (assigneeEl) {
-                    const root = am5.Root.new(assigneeEl);
-                    chartRoots.push(root);
-                    root.setThemes([am5themes_Animated.new(root)]);
-
-                    const chart = root.container.children.push(am5xy.XYChart.new(root, {
-                        panX: false,
-                        panY: false,
-                        layout: root.verticalLayout
-                    }));
-
-                    const xRenderer = am5xy.AxisRendererX.new(root, {minGridDistance: 20});
-                    xRenderer.grid.template.setAll({strokeOpacity: 0});
-                    xRenderer.labels.template.setAll({rotation: -25, centerY: am5.p50, centerX: am5.p100});
-                    const xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
-                        categoryField: 'label',
-                        renderer: xRenderer
-                    }));
-
-                    const yRenderer = am5xy.AxisRendererY.new(root, {});
-                    yRenderer.grid.template.setAll({stroke: am5.color(palette.gray300), strokeOpacity: 0.7});
-                    const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {renderer: yRenderer, min: 0}));
-
-                    const series = chart.series.push(am5xy.ColumnSeries.new(root, {
-                        name: 'Ticket',
-                        xAxis: xAxis,
-                        yAxis: yAxis,
-                        valueYField: 'value',
-                        categoryXField: 'label',
-                        fill: am5.color(palette.primary),
-                        stroke: am5.color(palette.primary)
-                    }));
-                    series.columns.template.setAll({cornerRadiusTL: 6, cornerRadiusTR: 6});
-
-                    const barData = assigneeLabels.map(function (label, idx) {
-                        return {label: label, value: Number(assigneeValues[idx] || 0)};
-                    });
-
-                    if (!barData.some(function (d) { return d.value > 0; })) {
-                        setNoData(root, 'Nessun dato');
-                    } else {
-                        xAxis.data.setAll(barData);
-                        series.data.setAll(barData);
-                    }
+                    assigneeEl.innerHTML = '';
+                    new ApexCharts(assigneeEl, {
+                        chart: {type: 'bar', height: 280, toolbar: {show: false}},
+                        series: [{name: 'Ticket', data: assigneeValues}],
+                        xaxis: {categories: assigneeLabels},
+                        plotOptions: {bar: {borderRadius: 4, horizontal: false}},
+                        dataLabels: {enabled: false},
+                        colors: [palette.primary],
+                        grid: {borderColor: palette.gray300},
+                        noData: {text: 'Nessun dato'}
+                    }).render();
                 }
 
                 const trendEl = document.querySelector('#ticket_trend_chart');
                 if (trendEl) {
-                    const root = am5.Root.new(trendEl);
-                    chartRoots.push(root);
-                    root.setThemes([am5themes_Animated.new(root)]);
-
-                    const chart = root.container.children.push(am5xy.XYChart.new(root, {
-                        panX: false,
-                        panY: false,
-                        layout: root.verticalLayout
-                    }));
-
-                    const xRenderer = am5xy.AxisRendererX.new(root, {minGridDistance: 20});
-                    xRenderer.grid.template.setAll({strokeOpacity: 0});
-                    const xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
-                        categoryField: 'label',
-                        renderer: xRenderer
-                    }));
-
-                    const yRenderer = am5xy.AxisRendererY.new(root, {});
-                    yRenderer.grid.template.setAll({stroke: am5.color(palette.gray300), strokeOpacity: 0.7});
-                    const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {renderer: yRenderer, min: 0}));
-
-                    const series = chart.series.push(am5xy.LineSeries.new(root, {
-                        name: 'Aperture',
-                        xAxis: xAxis,
-                        yAxis: yAxis,
-                        valueYField: 'value',
-                        categoryXField: 'label',
-                        stroke: am5.color(palette.success),
-                        fill: am5.color(palette.success)
-                    }));
-
-                    series.strokes.template.setAll({strokeWidth: 2});
-                    series.fills.template.setAll({visible: true, fillOpacity: 0.15});
-
-                    const lineData = trendLabels.map(function (label, idx) {
-                        return {label: label, value: Number(trendValues[idx] || 0)};
-                    });
-
-                    if (!lineData.some(function (d) { return d.value > 0; })) {
-                        setNoData(root, 'Nessun dato');
-                    } else {
-                        xAxis.data.setAll(lineData);
-                        series.data.setAll(lineData);
-                    }
+                    trendEl.innerHTML = '';
+                    new ApexCharts(trendEl, {
+                        chart: {type: 'area', height: 280, toolbar: {show: false}},
+                        series: [{name: 'Aperture', data: trendValues}],
+                        xaxis: {categories: trendLabels},
+                        stroke: {curve: 'smooth', width: 2},
+                        dataLabels: {enabled: false},
+                        colors: [palette.success],
+                        fill: {type: 'gradient', gradient: {opacityFrom: 0.45, opacityTo: 0.05}},
+                        grid: {borderColor: palette.gray300},
+                        noData: {text: 'Nessun dato'}
+                    }).render();
                 }
             }
 

@@ -398,95 +398,39 @@
     </div>
 @endsection
 @push('customScript')
-    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
     <script>
         $(function () {
             $('#mese').on('select2:select', function (e) {
                 location.href = location.pathname + '?mese=' + $(this).val();
             });
 
-            const target = document.getElementById('kt_card_widget_17_chart');
-            if (!target || typeof am5 === 'undefined') return;
+            var target = document.getElementById('kt_card_widget_17_chart');
+            if (!target || typeof ApexCharts === 'undefined') return;
 
-            function hexToColorNumber(color) {
-                const hex = (color || '').trim().replace('#', '');
-                if (!hex) return 0x009ef7;
-                return parseInt(hex.length === 3 ? hex.split('').map(function (c) { return c + c; }).join('') : hex, 16);
-            }
+            var datiTortaEsiti = @json($datiTortaEsiti);
+            target.innerHTML = '';
 
-            const datiTortaEsiti = @json($datiTortaEsiti);
-            const root = am5.Root.new(target);
-            root.setThemes([am5themes_Animated.new(root)]);
-
-            const chart = root.container.children.push(am5percent.PieChart.new(root, {
-                layout: root.verticalLayout
-            }));
-
-            const series = chart.series.push(am5percent.PieSeries.new(root, {
-                valueField: 'value',
-                categoryField: 'label'
-            }));
-
-            series.labels.template.setAll({forceHidden: true});
-            series.ticks.template.setAll({forceHidden: true});
-            series.slices.template.setAll({strokeOpacity: 0});
-            series.set('colors', am5.ColorSet.new(root, {
-                colors: (datiTortaEsiti.backgroundColor || []).map(function (color) {
-                    return am5.color(hexToColorNumber(color));
-                })
-            }));
-
-            const pieData = (datiTortaEsiti.labels || []).map(function (label, idx) {
-                return {label: label, value: Number((datiTortaEsiti.data || [])[idx] || 0)};
-            });
-
-            const timelineLabel = chart.seriesContainer.children.push(am5.Label.new(root, {
-                text: '',
-                centerX: am5.p50,
-                x: am5.p50,
-                centerY: am5.p50,
-                y: am5.p50,
-                fontSize: 13,
-                fontWeight: '600',
-                fill: am5.color(0x7e8299)
-            }));
-
-            const steps = ['Storico', 'Mese -2', 'Mese -1', 'Attuale'];
-            const progressByStep = [0.55, 0.72, 0.88, 1];
-
-            const timelineFrames = steps.map(function (step, stepIndex) {
-                const progress = progressByStep[stepIndex] || 1;
-                const frameData = pieData.map(function (item, idx) {
-                    const skewBase = ((idx + 1) / Math.max(1, pieData.length)) - 0.5;
-                    const skew = 1 + (skewBase * 0.12 * (stepIndex / Math.max(1, steps.length - 1)));
-                    return {
-                        label: item.label,
-                        value: Math.max(0, Math.round(item.value * progress * skew))
-                    };
-                });
-                return {label: step, data: frameData};
-            });
-
-            let frameIndex = 0;
-            function renderFrame(index) {
-                const frame = timelineFrames[index] || timelineFrames[0];
-                if (!frame) return;
-                timelineLabel.set('text', frame.label);
-                series.data.setAll(frame.data);
-            }
-
-            renderFrame(frameIndex);
-
-            const timer = setInterval(function () {
-                frameIndex = (frameIndex + 1) % timelineFrames.length;
-                renderFrame(frameIndex);
-            }, 2200);
-
-            root.events.on('dispose', function () {
-                clearInterval(timer);
-            });
+            new ApexCharts(target, {
+                chart: {
+                    type: 'donut',
+                    height: 150,
+                    toolbar: {show: false}
+                },
+                series: datiTortaEsiti['data'] || [],
+                labels: datiTortaEsiti['labels'] || [],
+                colors: datiTortaEsiti['backgroundColor'] || [],
+                dataLabels: {enabled: false},
+                legend: {show: false},
+                stroke: {width: 0},
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '75%'
+                        }
+                    }
+                },
+                noData: {text: 'Nessun dato'}
+            }).render();
         });
     </script>
 @endpush
