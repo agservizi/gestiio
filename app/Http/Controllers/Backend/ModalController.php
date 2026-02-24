@@ -92,12 +92,12 @@ class ModalController extends Controller
                 $authUser = Auth::user();
                 $canUploadDocumenti = $this->userHasAnyPermission($authUser, ['admin']);
                 abort_unless($canUploadDocumenti, 403);
-                $record = CartellaFiles::find($id);
-                abort_if(!$record, 404);
+                $record = ((int) $id) > 0 ? CartellaFiles::find($id) : null;
+                abort_if(((int) $id) > 0 && !$record, 404);
                 $canDeleteFiles = $this->userHasAnyPermission($authUser, ['admin']);
                 return view('Backend.CartellaFiles.modalDropzone', [
                     'id' => $id,
-                    'titoloPagina' => 'Carica file in ' . $record->nome,
+                    'titoloPagina' => 'Carica file in ' . ($record?->nome ?? 'Root'),
                     'canDeleteFiles' => $canDeleteFiles,
                 ]);
 
@@ -314,14 +314,20 @@ class ModalController extends Controller
         }
 
         if (method_exists($user, 'hasAnyPermission')) {
-            if ((bool) call_user_func([$user, 'hasAnyPermission'], $permissions)) {
-                return true;
+            try {
+                if ((bool) call_user_func([$user, 'hasAnyPermission'], $permissions)) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
             }
         }
 
         if (method_exists($user, 'hasAnyRole')) {
-            if ((bool) call_user_func([$user, 'hasAnyRole'], $permissions)) {
-                return true;
+            try {
+                if ((bool) call_user_func([$user, 'hasAnyRole'], $permissions)) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
             }
         }
 

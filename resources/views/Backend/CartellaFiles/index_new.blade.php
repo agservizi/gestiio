@@ -34,7 +34,7 @@
         <input id="filter_data_da" type="date" class="form-control form-control-sm w-auto" title="Da"/>
         <input id="filter_data_a" type="date" class="form-control form-control-sm w-auto" title="A"/>
 
-        @if($canUploadFiles && $cartellaId)
+        @if($canUploadFiles)
             <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
                href="{{action([\App\Http\Controllers\Backend\ModalController::class,'show'],['upload-documento',$cartellaId])}}">
                 Upload

@@ -632,14 +632,20 @@ class CartellaFilesController extends Controller
         }
 
         if (method_exists($user, 'hasAnyPermission')) {
-            if ((bool) call_user_func([$user, 'hasAnyPermission'], $permissions)) {
-                return true;
+            try {
+                if ((bool) call_user_func([$user, 'hasAnyPermission'], $permissions)) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
             }
         }
 
         if (method_exists($user, 'hasAnyRole')) {
-            if ((bool) call_user_func([$user, 'hasAnyRole'], $permissions)) {
-                return true;
+            try {
+                if ((bool) call_user_func([$user, 'hasAnyRole'], $permissions)) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
             }
         }
 
