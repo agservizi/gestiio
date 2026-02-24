@@ -187,8 +187,26 @@ class TicketsController extends Controller
     {
         if ($servizioType === 'contratto-energia' && $servizio instanceof ContrattoEnergia) {
             $codiceInterno = $servizio->codice_contratto_interno ?: ('OP' . str_pad((string)$servizio->id, 11, '0', STR_PAD_LEFT));
-            $codiceEsterno = $servizio->codice_contratto ? ' | Esterno: ' . $servizio->codice_contratto : '';
-            return 'Ticket contratto energia ' . $codiceInterno . $codiceEsterno;
+            $gestore = $servizio->gestore?->nome ?: 'N/D';
+            $cliente = trim((string)($servizio->denominazione ?: $servizio->nominativo()));
+            $documento = trim((string)($servizio->codice_fiscale ?: $servizio->partita_iva ?: ''));
+
+            $parts = [
+                'Ticket Contratto Energia',
+                'Gestore: ' . $gestore,
+                'Cod. interno: ' . $codiceInterno,
+                'Cod. esterno: ' . ($servizio->codice_contratto ?: 'N/D'),
+            ];
+
+            if ($cliente !== '') {
+                $parts[] = 'Cliente: ' . $cliente;
+            }
+
+            if ($documento !== '') {
+                $parts[] = 'CF/P.IVA: ' . $documento;
+            }
+
+            return implode(' | ', $parts);
         }
 
         return (string)($servizio->oggetto ?? '');
