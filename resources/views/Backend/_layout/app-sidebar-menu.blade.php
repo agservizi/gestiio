@@ -511,14 +511,22 @@
 
                         <!--begin:Menu sub-->
                         <div class="menu-sub menu-sub-accordion">
-                            <div class="menu-item">
-                                <a class="menu-link"
-                                   href="{{ route('settings') }}#controlli-contratti">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
+                                <span class="menu-link">
                                     <span class="menu-title">Controlli contratti</span>
-                                </a>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion">
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{ route('settings') }}#controlli-contratti">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Verifica CF rischio</span>
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
                                 <!--begin:Menu link-->
