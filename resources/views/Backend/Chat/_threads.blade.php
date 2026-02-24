@@ -12,6 +12,7 @@
     @endphp
     <div class="list-group-item list-group-item-action border-0 py-3 px-4 chat-thread-item {{$isActive ? 'active' : ''}}"
          data-thread-id="{{$thread->id}}"
+         data-thread-name="{{$altro?->nominativo() ?? 'Conversazione'}}"
          data-chat-allowed="{{$canChat ? 1 : 0}}"
          style="cursor: {{$canChat ? 'pointer' : 'not-allowed'}};">
         <div class="d-flex justify-content-between align-items-start gap-3">

@@ -224,12 +224,14 @@
             <div class="card h-100 overflow-hidden">
                 <div class="card-header border-0 pt-5 pb-3">
                     <h3 class="card-title m-0 fw-bolder fs-4">
-                        @if($threadAttivo && $threadAttivo->getRelation('altroPartecipante'))
-                            Chat con {{$threadAttivo->getRelation('altroPartecipante')->nominativo()}}
-                            <span id="chat-header-online-status" class="fw-normal text-muted"></span>
-                        @else
-                            Chat interna
-                        @endif
+                        <span id="chat-header-title">
+                            @if($threadAttivo && $threadAttivo->getRelation('altroPartecipante'))
+                                Chat con {{$threadAttivo->getRelation('altroPartecipante')->nominativo()}}
+                            @else
+                                Chat interna
+                            @endif
+                        </span>
+                        <span id="chat-header-online-status" class="fw-normal text-muted"></span>
                     </h3>
                 </div>
                 <div class="card-body d-flex flex-column pt-0 px-5 pb-5 overflow-hidden">
@@ -624,6 +626,32 @@
                 });
             }
 
+            function getThreadNameById(threadId) {
+                const numericThreadId = parseInt(threadId || 0, 10);
+                if (!numericThreadId) return null;
+
+                const $item = $('.chat-thread-item[data-thread-id="' + numericThreadId + '"]');
+                if (!$item.length) return null;
+
+                const fromData = (($item.data('thread-name') || '') + '').trim();
+                if (fromData) return fromData;
+
+                const fromTitle = ($item.find('.chat-thread-title').clone().children().remove().end().text() || '').trim();
+                return fromTitle || null;
+            }
+
+            function updateChatHeader(threadId, threadName = null) {
+                const numericThreadId = parseInt(threadId || 0, 10);
+                if (!numericThreadId) {
+                    $('#chat-header-title').text('Chat interna');
+                    $('#chat-header-online-status').text('');
+                    return;
+                }
+
+                const resolvedName = (threadName || getThreadNameById(numericThreadId) || 'Conversazione').trim();
+                $('#chat-header-title').text('Chat con ' + resolvedName);
+            }
+
             function setComposerEnabled(enabled) {
                 $('#chat-messaggio').prop('disabled', !enabled);
                 $('#chat-send-button').prop('disabled', !enabled);
@@ -761,6 +789,7 @@
                     setComposerEnabled(false);
                     $('.chat-thread-item').removeClass('active');
                     syncThreadActiveStyles();
+                    updateChatHeader(null);
                     oldestLoadedMessageId = null;
                     hasMoreHistory = false;
                     activeLastMessageId = null;
@@ -801,6 +830,7 @@
                     $('.chat-thread-item').removeClass('active');
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
                     syncThreadActiveStyles();
+                    updateChatHeader(threadId);
                     setComposerEnabled(true);
                     sendTypingStatus(false);
                     clearReply();
@@ -848,6 +878,9 @@
                         if (activeThreadId) {
                             $('.chat-thread-item').removeClass('active');
                             $('.chat-thread-item[data-thread-id="' + activeThreadId + '"]').addClass('active');
+                            updateChatHeader(activeThreadId);
+                        } else {
+                            updateChatHeader(null);
                         }
                         syncThreadActiveStyles();
                         renderForwardTargets();
@@ -970,6 +1003,7 @@
                     $('.chat-thread-item').removeClass('active');
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
                     syncThreadActiveStyles();
+                    updateChatHeader(threadId);
                     if (!renderMessagesFromCache(threadId)) {
                         showMessagesLoading();
                     }
@@ -1561,6 +1595,7 @@
 
             renderForwardTargets();
             syncThreadActiveStyles();
+            updateChatHeader(activeThreadId);
             initWebPushNotifications();
             unlockNotificationSound();
 
