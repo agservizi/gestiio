@@ -840,9 +840,23 @@ class ContrattoEnergiaController extends Controller
         $ContrattoEnergia = ContrattoEnergia::withCount('allegati')->find($id);
         abort_if(!$ContrattoEnergia, 404, 'Questo ContrattoEnergia non esiste');
 
+        $request->validate([
+            'esito_id' => ['required'],
+            'codice_contratto' => ['nullable', 'string', 'max:255'],
+            'motivo_ko' => ['nullable', 'string', 'max:254'],
+        ]);
+
         $esitoPrima = $ContrattoEnergia->esito_id;
 
         $esito = EsitoContrattoEnergia::find($request->input('esito_id'));
+        if (!$esito) {
+            return response()->json(['success' => false, 'message' => 'Stato selezionato non valido.'], 422);
+        }
+
+        if ((int)$esito->chiedi_motivo === 1 && trim((string)$request->input('motivo_ko')) === '') {
+            return response()->json(['success' => false, 'message' => 'La motivazione KO è obbligatoria per lo stato selezionato.'], 422);
+        }
+
         $motivoKoprima = $ContrattoEnergia->motivo_ko;
         if ($this->currentUser()->hasPermissionTo('admin')) {
             $ContrattoEnergia->pagato = getInputCheckbox($request->input('pagato'));
