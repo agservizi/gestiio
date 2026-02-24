@@ -519,7 +519,7 @@
                                 <div class="menu-sub menu-sub-accordion">
                                     <div class="menu-item">
                                         <a class="menu-link"
-                                           href="{{ route('settings') }}#controlli-contratti">
+                                           href="{{ route('controlli-contratti') }}">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>

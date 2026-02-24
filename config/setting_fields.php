@@ -1,29 +1,5 @@
 <?php
 return [
-    'app' => [
-        'title' => '',
-        'desc' => 'Dati generali',
-        'elements' => [
-            [
-                'type' => 'text', // input fields type
-                'data' => 'float', // data type, string, int, boolean
-                'name' => 'prezzo_documento', // unique name for field
-                'label' => 'Prezzo documento', // you know what label it is
-                'rules' => 'required', // validation rule of laravel
-                'class' => 'importo', // any class for input
-                'value' => '' // default value if you want
-            ],
-            [
-                'type' => 'text', // input fields type
-                'data' => 'string', // data type, string, int, boolean
-                'name' => 'paypal_client_id', // unique name for field
-                'label' => 'Paypal client id', // you know what label it is
-                'rules' => 'required', // validation rule of laravel
-                'class' => '', // any class for input
-                'value' => '' // default value if you want
-            ]
-        ]
-    ],
     'controlli_contratti' => [
         'title' => 'Controlli contratti',
         'desc' => 'Blocchi automatici su codice fiscale per telefonia/energia (semaforo rosso).',

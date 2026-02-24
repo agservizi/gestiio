@@ -188,6 +188,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
 
     //Impostazioni
     Route::get('/settings', [\App\Http\Controllers\Backend\SettingController::class, 'index'])->name('settings');
+    Route::get('/controlli-contratti', [\App\Http\Controllers\Backend\SettingController::class, 'index'])->name('controlli-contratti');
     Route::post('/settings', [\App\Http\Controllers\Backend\SettingController::class, 'store'])->name('settings.store');
 
 
