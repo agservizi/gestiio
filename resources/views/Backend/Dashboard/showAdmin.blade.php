@@ -193,8 +193,8 @@
                     </div>
 
                     <div class="d-flex flex-wrap align-items-center">
-                        <div class="position-relative d-flex flex-center h-240px w-240px me-5 mb-7 mb-xl-0">
-                            <div id="kt_card_widget_17_chart" style="width: 240px; height: 240px;"></div>
+                        <div class="position-relative d-flex flex-center h-280px w-280px me-5 mb-7 mb-xl-0">
+                            <div id="kt_card_widget_17_chart" style="width: 280px; height: 280px;"></div>
                         </div>
                         <div class="d-flex flex-column justify-content-center flex-row-fluid pe-0 pe-xl-5">
                             @for($n=0;$n<count($datiTortaEsiti['labels']);$n++)
@@ -421,7 +421,7 @@
             Highcharts.chart('kt_card_widget_17_chart', {
                 chart: {
                     type: 'pie',
-                    height: 240,
+                    height: 280,
                     backgroundColor: 'transparent',
                     spacing: [0, 0, 0, 0]
                 },
