@@ -19,6 +19,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\DocumentiScadenzeReminder::class,
         \App\Console\Commands\PollOpenApiVisure::class,
         \App\Console\Commands\SyncTipoVisuraOpenApiHash::class,
+        \App\Console\Commands\TicketsAuditIntegrity::class,
     ];
 
     /**

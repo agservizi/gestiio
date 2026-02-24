@@ -160,14 +160,18 @@
                             <td>
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
                                     <span>{{$record->oggetto}}</span>
-                                    {!! $record->causaleTicket->labelCausaleTicket() !!}
+                                    @if($record->causaleTicket)
+                                        {!! $record->causaleTicket->labelCausaleTicket() !!}
+                                    @else
+                                        <span class="badge badge-light">Senza causale</span>
+                                    @endif
                                     @if($record->lettura?->messaggio_letto===0)
                                         <span class="badge badge-danger">Nuovo</span>
                                     @endif
                                 </div>
                                 <div class="text-muted fs-8 mt-1">{{$record->classeServizio()}}</div>
                             </td>
-                            <td>{{$record->utente->nominativo()}}</td>
+                            <td>{{$record->utente?->nominativo() ?? '-'}}</td>
                             <td>
                                 {{$record->assegnatario?->nominativo() ?? '-'}}
                                 @if(!$record->agente_id)

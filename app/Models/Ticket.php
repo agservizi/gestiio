@@ -39,7 +39,10 @@ class Ticket extends Model
 
     public function causaleTicket(): HasOne
     {
-        return $this->hasOne(CausaleTicket::class,'id','causale_ticket_id');
+        return $this->hasOne(CausaleTicket::class, 'id', 'causale_ticket_id')
+            ->withDefault([
+                'descrizione_causale' => 'Senza causale',
+            ]);
     }
 
     public function lettura(): HasOne
