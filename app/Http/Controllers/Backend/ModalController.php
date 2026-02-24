@@ -90,11 +90,11 @@ class ModalController extends Controller
 
             case 'upload-documento':
                 $authUser = Auth::user();
-                $canUploadDocumenti = $this->userHasAnyPermission($authUser, ['admin', 'agente', 'operatore', 'supervisore']);
+                $canUploadDocumenti = $this->userHasAnyPermission($authUser, ['admin']);
                 abort_unless($canUploadDocumenti, 403);
                 $record = CartellaFiles::find($id);
                 abort_if(!$record, 404);
-                $canDeleteFiles = $this->userHasAnyPermission($authUser, ['admin', 'supervisore']);
+                $canDeleteFiles = $this->userHasAnyPermission($authUser, ['admin']);
                 return view('Backend.CartellaFiles.modalDropzone', [
                     'id' => $id,
                     'titoloPagina' => 'Carica file in ' . $record->nome,
@@ -314,12 +314,39 @@ class ModalController extends Controller
         }
 
         if (method_exists($user, 'hasAnyPermission')) {
-            return (bool) call_user_func([$user, 'hasAnyPermission'], $permissions);
+            if ((bool) call_user_func([$user, 'hasAnyPermission'], $permissions)) {
+                return true;
+            }
+        }
+
+        if (method_exists($user, 'hasAnyRole')) {
+            if ((bool) call_user_func([$user, 'hasAnyRole'], $permissions)) {
+                return true;
+            }
+        }
+
+        if (method_exists($user, 'hasPermissionTo')) {
+            foreach ($permissions as $permission) {
+                try {
+                    if ((bool) call_user_func([$user, 'hasPermissionTo'], $permission)) {
+                        return true;
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+
+        if (method_exists($user, 'hasRole')) {
+            foreach ($permissions as $permission) {
+                if ((bool) call_user_func([$user, 'hasRole'], $permission)) {
+                    return true;
+                }
+            }
         }
 
         if (method_exists($user, 'can')) {
             foreach ($permissions as $permission) {
-                if ($user->can($permission)) {
+                if ((bool) call_user_func([$user, 'can'], $permission)) {
                     return true;
                 }
             }

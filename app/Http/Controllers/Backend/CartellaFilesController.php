@@ -580,17 +580,17 @@ class CartellaFilesController extends Controller
 
     protected function canManageFolders(): bool
     {
-        return $this->currentUserHasAnyPermission(['admin', 'supervisore']);
+        return $this->currentUserHasAnyPermission(['admin']);
     }
 
     protected function canUploadFiles(): bool
     {
-        return $this->currentUserHasAnyPermission(['admin', 'agente', 'operatore', 'supervisore']);
+        return $this->currentUserHasAnyPermission(['admin']);
     }
 
     protected function canDeleteFiles(): bool
     {
-        return $this->currentUserHasAnyPermission(['admin', 'supervisore']);
+        return $this->currentUserHasAnyPermission(['admin']);
     }
 
     protected function parseTags(?string $rawTags): array
@@ -632,12 +632,39 @@ class CartellaFilesController extends Controller
         }
 
         if (method_exists($user, 'hasAnyPermission')) {
-            return (bool) call_user_func([$user, 'hasAnyPermission'], $permissions);
+            if ((bool) call_user_func([$user, 'hasAnyPermission'], $permissions)) {
+                return true;
+            }
+        }
+
+        if (method_exists($user, 'hasAnyRole')) {
+            if ((bool) call_user_func([$user, 'hasAnyRole'], $permissions)) {
+                return true;
+            }
+        }
+
+        if (method_exists($user, 'hasPermissionTo')) {
+            foreach ($permissions as $permission) {
+                try {
+                    if ((bool) call_user_func([$user, 'hasPermissionTo'], $permission)) {
+                        return true;
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+
+        if (method_exists($user, 'hasRole')) {
+            foreach ($permissions as $permission) {
+                if ((bool) call_user_func([$user, 'hasRole'], $permission)) {
+                    return true;
+                }
+            }
         }
 
         if (method_exists($user, 'can')) {
             foreach ($permissions as $permission) {
-                if ($user->can($permission)) {
+                if ((bool) call_user_func([$user, 'can'], $permission)) {
                     return true;
                 }
             }
