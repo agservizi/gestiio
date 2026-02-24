@@ -223,17 +223,20 @@
             }
 
             function initTooltips() {
-                if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+                if (typeof KTApp !== 'undefined' && KTApp && typeof KTApp.createInstances === 'function') {
+                    KTApp.createInstances();
                     return;
                 }
-                const nodes = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                nodes.forEach(function (el) {
-                    const current = bootstrap.Tooltip.getInstance(el);
-                    if (current) {
-                        current.dispose();
-                    }
-                    new bootstrap.Tooltip(el);
-                });
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    const nodes = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    nodes.forEach(function (el) {
+                        const current = bootstrap.Tooltip.getInstance(el);
+                        if (current) {
+                            current.dispose();
+                        }
+                        new bootstrap.Tooltip(el);
+                    });
+                }
             }
 
             function refreshElenco(url = currentDocumentiUrl) {
