@@ -99,7 +99,6 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('documento/{id}/versione', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'uploadVersion']);
     Route::post('documento/{id}/versione/{versionId}/rollback', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'rollbackVersion']);
     Route::post('documento-scadenza', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'setExpiry']);
-    Route::post('documenti/{cartellaId}/template', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'applyTemplate']);
     Route::post('documenti/{id}/visibilita', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'setFolderVisibility']);
     Route::post('documento-share', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'createShareLink']);
     Route::get('documenti-audit-export', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'exportAuditCsv']);

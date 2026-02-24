@@ -46,9 +46,6 @@
             <a class="btn btn-sm btn-light-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
                id="btn-nuova-cartella"
                href="{{action([$controller,'create'],$cartellaId)}}">{{ $testoNuovo }}</a>
-            <button type="button" id="btn-apply-template" class="btn btn-sm btn-light-info fw-bold">
-                Template cartelle
-            </button>
             <button type="button" id="btn-share-current-folder" class="btn btn-sm btn-light-success fw-bold">
                 Share cartella
             </button>
@@ -137,7 +134,6 @@
         const createShareUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'createShareLink']) }}';
         const uploadVersionUrlTemplate = '{{ url('/backend/documento/__ID__/versione') }}';
         const rollbackVersionUrlTemplate = '{{ url('/backend/documento/__ID__/versione/__VERSION_ID__/rollback') }}';
-        const applyTemplateUrlTemplate = '{{ url('/backend/documenti/__ID__/template') }}';
         const setFolderVisibilityUrlTemplate = '{{ url('/backend/documenti/__ID__/visibilita') }}';
         const folderOptions = @json($folderOptions ?? []);
         const shareBaseUrl = @json($shareBaseUrl ?? '');
@@ -155,7 +151,6 @@
             const $downloadBtn = $('#download-multiplo-btn');
             const $btnNuovaCartella = $('#btn-nuova-cartella');
             const $btnUploadDocumento = $('#btn-upload-documenti');
-            const $btnTemplate = $('#btn-apply-template');
             const $btnShareCurrentFolder = $('#btn-share-current-folder');
             const $btnAuditExport = $('#btn-audit-export');
             const $versionFileInput = $('#file-version-input');
@@ -339,34 +334,6 @@
                 e.preventDefault();
                 const params = new URLSearchParams(currentFilters());
                 window.open(auditExportBaseUrl + '?' + params.toString(), '_blank');
-            });
-
-            $btnTemplate.on('click', function () {
-                Swal.fire({
-                    title: 'Template cartelle',
-                    input: 'select',
-                    inputOptions: {
-                        subentri_volture: 'Subentri/Volture',
-                        contratto_standard: 'Contratto standard',
-                        kpi_audit: 'KPI/Audit'
-                    },
-                    inputValue: 'subentri_volture',
-                    showCancelButton: true,
-                    confirmButtonText: 'Applica'
-                }).then(function (result) {
-                    if (!result.value) {
-                        return;
-                    }
-                    $.ajax({
-                        url: applyTemplateUrlTemplate.replace('__ID__', String(currentCartellaId())),
-                        type: 'POST',
-                        headers: csrfHeaders(),
-                        data: {template: result.value},
-                        success: function () {
-                            refreshElenco();
-                        }
-                    });
-                });
             });
 
             $btnShareCurrentFolder.on('click', function () {

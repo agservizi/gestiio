@@ -614,66 +614,6 @@ class CartellaFilesController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function applyTemplate(Request $request, $cartellaId = 0)
-    {
-        abort_unless($this->canManageFolders(), 403);
-
-        $request->validate([
-            'template' => ['nullable', 'string', 'in:subentri_volture,contratto_standard,kpi_audit'],
-        ]);
-
-        $template = (string)$request->input('template', 'subentri_volture');
-        $parentId = (int)$cartellaId ?: null;
-        if ($parentId) {
-            $parent = CartellaFiles::find($parentId);
-            abort_if(!$parent, 404, 'Cartella non trovata');
-        }
-
-        $structures = [
-            'subentri_volture' => [
-                'Documenti Per Subentri E Volture Da Firmare (cliente)',
-                'Documenti Firmati',
-                'Anagrafiche e Delega',
-                'Storico Comunicazioni',
-            ],
-            'contratto_standard' => [
-                '01_Anagrafica',
-                '02_Privacy',
-                '03_Contratto Firmato',
-                '04_Allegati Tecnici',
-                '05_Post Vendita',
-            ],
-            'kpi_audit' => [
-                'Audit',
-                'KPI',
-                'Report Settimanali',
-                'Report Mensili',
-            ],
-        ];
-
-        foreach ($structures[$template] as $name) {
-            $exists = CartellaFiles::query()
-                ->where('parent_id', $parentId)
-                ->where('nome', $name)
-                ->exists();
-            if ($exists) {
-                continue;
-            }
-            $folder = new CartellaFiles();
-            $folder->parent_id = $parentId;
-            $folder->nome = $name;
-            $folder->save();
-        }
-        CartellaFiles::fixTree();
-
-        $this->registraAudit('apply_folder_template', null, [
-            'cartella_id' => $parentId,
-            'filename_originale' => '[template] ' . $template,
-        ]);
-
-        return response()->json(['success' => true]);
-    }
-
     public function preview($id)
     {
         abort_unless($this->canViewDocumenti(), 403);
