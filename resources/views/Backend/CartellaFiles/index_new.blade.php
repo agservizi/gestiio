@@ -36,6 +36,7 @@
 
         @if($canUploadFiles)
             <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
+               id="btn-upload-documenti"
                href="{{action([\App\Http\Controllers\Backend\ModalController::class,'show'],['upload-documento',$cartellaId])}}">
                 Upload
             </a>
@@ -43,6 +44,7 @@
 
         @if($canManageFolders)
             <a class="btn btn-sm btn-light-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
+               id="btn-nuova-cartella"
                href="{{action([$controller,'create'],$cartellaId)}}">{{ $testoNuovo }}</a>
         @endif
 
@@ -115,6 +117,8 @@
 @push('customScript')
     <script>
         const baseDocumentiUrl = '{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'index'], $cartellaId) }}';
+        const createCartellaUrlTemplate = '{{ action([$controller, 'create'], ['cartellaId' => '__CARTELLA_ID__']) }}';
+        const uploadDocumentoUrlTemplate = '{{ action([\App\Http\Controllers\Backend\ModalController::class, 'show'], ['upload-documento', '__CARTELLA_ID__']) }}';
 
         $(function () {
             const $filterSearch = $('#filter_search');
@@ -126,7 +130,10 @@
             const $filterCategoria = $('#filter_categoria_documentale');
             const $filterTag = $('#filter_tag_documentale');
             const $downloadBtn = $('#download-multiplo-btn');
+            const $btnNuovaCartella = $('#btn-nuova-cartella');
+            const $btnUploadDocumento = $('#btn-upload-documenti');
             const selectedFileIds = new Set();
+            let currentDocumentiUrl = baseDocumentiUrl;
 
             function currentFilters() {
                 return {
@@ -147,6 +154,27 @@
                 $downloadBtn.text('Scarica selezionati (' + count + ')');
             }
 
+            function resolveCartellaIdFromUrl(url) {
+                try {
+                    const parsed = new URL(url, window.location.origin);
+                    const cleanPath = (parsed.pathname || '').replace(/\/+$/, '');
+                    const match = cleanPath.match(/\/documenti\/(\d+)$/);
+                    return match ? Number(match[1]) : 0;
+                } catch (e) {
+                    return 0;
+                }
+            }
+
+            function updateContextActions(cartellaId) {
+                const id = Number.isFinite(cartellaId) ? cartellaId : 0;
+                if ($btnNuovaCartella.length) {
+                    $btnNuovaCartella.attr('href', createCartellaUrlTemplate.replace('__CARTELLA_ID__', String(id)));
+                }
+                if ($btnUploadDocumento.length) {
+                    $btnUploadDocumento.attr('href', uploadDocumentoUrlTemplate.replace('__CARTELLA_ID__', String(id)));
+                }
+            }
+
             function syncSelectionState() {
                 $('.file-select').each(function () {
                     const id = Number($(this).val());
@@ -155,13 +183,17 @@
                 updateDownloadButton();
             }
 
-            function refreshElenco(url = baseDocumentiUrl) {
+            function refreshElenco(url = currentDocumentiUrl) {
+                const targetUrl = url || currentDocumentiUrl;
+                const targetCartellaId = resolveCartellaIdFromUrl(targetUrl);
                 $.ajax({
-                    url,
+                    url: targetUrl,
                     type: 'GET',
                     dataType: 'json',
                     data: currentFilters(),
                     success: function (response) {
+                        currentDocumentiUrl = targetUrl;
+                        updateContextActions(targetCartellaId);
                         $('#elenco-files').html(base64_decode(response.html));
                         syncSelectionState();
                     },
@@ -259,6 +291,7 @@
                 $('#download-multiplo-form').trigger('submit');
             });
 
+            updateContextActions(resolveCartellaIdFromUrl(currentDocumentiUrl));
             syncSelectionState();
         });
     </script>
