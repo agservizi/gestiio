@@ -29,13 +29,38 @@
                                     <p class="fw-bold">{{ $fields['desc'] }}</p>
 
                                     <div class="panel-body">
-                                        <div class="row">
-                                            <div class="col-md-7  col-md-offset-2">
-                                                @foreach($fields['elements'] as $field)
-                                                    @includeIf('Backend.Setting.Fields.' . $field['type'] )
-                                                @endforeach
+                                        @if($section === 'controlli_contratti')
+                                            @php
+                                                $telefoniaFields = collect($fields['elements'])->filter(function ($field) {
+                                                    return \Illuminate\Support\Str::startsWith($field['name'], 'blocco_contratti_telefonia_');
+                                                });
+                                                $energiaFields = collect($fields['elements'])->filter(function ($field) {
+                                                    return \Illuminate\Support\Str::startsWith($field['name'], 'blocco_contratti_energia_');
+                                                });
+                                            @endphp
+                                            <div class="row g-8">
+                                                <div class="col-12 col-lg-6">
+                                                    <h5 class="mb-4">Telefonia</h5>
+                                                    @foreach($telefoniaFields as $field)
+                                                        @includeIf('Backend.Setting.Fields.' . $field['type'])
+                                                    @endforeach
+                                                </div>
+                                                <div class="col-12 col-lg-6">
+                                                    <h5 class="mb-4">Energia</h5>
+                                                    @foreach($energiaFields as $field)
+                                                        @includeIf('Backend.Setting.Fields.' . $field['type'])
+                                                    @endforeach
+                                                </div>
                                             </div>
-                                        </div>
+                                        @else
+                                            <div class="row">
+                                                <div class="col-md-7  col-md-offset-2">
+                                                    @foreach($fields['elements'] as $field)
+                                                        @includeIf('Backend.Setting.Fields.' . $field['type'] )
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
                                     </div>
 
                                 </div>
