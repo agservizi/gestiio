@@ -46,18 +46,40 @@
             <a class="btn btn-sm btn-light-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
                id="btn-nuova-cartella"
                href="{{action([$controller,'create'],$cartellaId)}}">{{ $testoNuovo }}</a>
-            <button type="button" id="btn-share-current-folder" class="btn btn-sm btn-light-success fw-bold">
-                Share cartella
-            </button>
-            <a id="btn-audit-export" class="btn btn-sm btn-light-dark fw-bold"
-               href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'exportAuditCsv']) }}">
-                Export audit CSV
-            </a>
         @endif
 
-        <button type="button" id="download-multiplo-btn" class="btn btn-sm btn-light-success fw-bold" disabled>
-            Scarica selezionati (0)
-        </button>
+        <div class="d-inline-flex align-items-center gap-2 flex-nowrap text-nowrap">
+            @if($canManageFolders)
+                <button type="button" id="btn-share-current-folder" class="btn btn-sm btn-icon btn-light-success"
+                        data-bs-toggle="tooltip" data-bs-placement="top" title="Share cartella">
+                    <span class="svg-icon svg-icon-4 m-0">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 6C17.6569 6 19 4.65685 19 3C19 1.34315 17.6569 0 16 0C14.3431 0 13 1.34315 13 3C13 3.35064 13.0602 3.6872 13.1707 4L7.82929 7C7.30627 6.38625 6.52847 6 5.66667 6C4.08985 6 2.8 7.28985 2.8 8.86667C2.8 10.4435 4.08985 11.7333 5.66667 11.7333C6.52847 11.7333 7.30627 11.3471 7.82929 10.7333L13.1707 13.7333C13.0602 14.0461 13 14.3826 13 14.7333C13 16.3902 14.3431 17.7333 16 17.7333C17.6569 17.7333 19 16.3902 19 14.7333C19 13.0765 17.6569 11.7333 16 11.7333C15.1382 11.7333 14.3604 12.1196 13.8374 12.7333L8.496 9.73333C8.60649 9.42053 8.66667 9.08397 8.66667 8.73333C8.66667 8.3827 8.60649 8.04613 8.496 7.73333L13.8374 4.73333C14.3604 5.34708 15.1382 5.73333 16 5.73333V6Z" fill="currentColor"/>
+                        </svg>
+                    </span>
+                </button>
+                <a id="btn-audit-export" class="btn btn-sm btn-icon btn-light-dark"
+                   href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'exportAuditCsv']) }}"
+                   data-bs-toggle="tooltip" data-bs-placement="top" title="Export audit CSV">
+                    <span class="svg-icon svg-icon-4 m-0">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path opacity="0.3" d="M6 2H14L20 8V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V4C4 2.89543 4.89543 2 6 2Z" fill="currentColor"/>
+                            <path d="M14 2V8H20M12 11V17M12 17L9.5 14.5M12 17L14.5 14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </a>
+            @endif
+
+            <button type="button" id="download-multiplo-btn" class="btn btn-sm btn-icon btn-light-success" disabled
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Scarica selezionati">
+                <span class="svg-icon svg-icon-4 m-0">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 3V13M12 13L8.5 9.5M12 13L15.5 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M4 15V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </span>
+            </button>
+        </div>
     </div>
 @endsection
 
@@ -174,7 +196,15 @@
             function updateDownloadButton() {
                 const count = selectedFileIds.size;
                 $downloadBtn.prop('disabled', count === 0);
-                $downloadBtn.text('Scarica selezionati (' + count + ')');
+                const tooltipText = 'Scarica selezionati (' + count + ')';
+                $downloadBtn.attr('title', tooltipText);
+                $downloadBtn.attr('data-bs-original-title', tooltipText);
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    const instance = bootstrap.Tooltip.getInstance($downloadBtn[0]);
+                    if (instance && typeof instance.setContent === 'function') {
+                        instance.setContent({'.tooltip-inner': tooltipText});
+                    }
+                }
             }
 
             function resolveCartellaIdFromUrl(url) {
