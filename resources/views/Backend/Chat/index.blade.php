@@ -377,6 +377,8 @@
             let loadingHistory = false;
             let selectedForwardIds = [];
             let activeLastMessageId = null;
+            let loadMessagesRequestSeq = 0;
+            let pollRequestSeq = 0;
             const mentionUsers = @json($mentionUsers ?? []);
 
             /* ================= SUONO NOTIFICA ================= */
@@ -732,8 +734,14 @@
 
                 const payload = {};
                 if (beforeId) payload.before_id = beforeId;
+                const requestSeq = ++loadMessagesRequestSeq;
+                const requestedThreadId = threadId;
 
                 $.get(messagesUrl(threadId), payload, function (response) {
+                    if (requestSeq !== loadMessagesRequestSeq || requestedThreadId !== activeThreadId) {
+                        return;
+                    }
+
                     activeThreadId = threadId;
                     if (response.ultimoId !== undefined && response.ultimoId !== null) {
                         activeLastMessageId = parseInt(response.ultimoId, 10) || null;
@@ -776,7 +784,14 @@
 
             /* ================= POLLING ================= */
             function refreshPoll() {
-                $.get(pollUrl, {thread_id: activeThreadId}, function (response) {
+                const requestedThreadId = activeThreadId;
+                const requestSeq = ++pollRequestSeq;
+
+                $.get(pollUrl, {thread_id: requestedThreadId}, function (response) {
+                    if (requestSeq !== pollRequestSeq) {
+                        return;
+                    }
+
                     if (response.threadsHtml !== undefined) {
                         $('#chat-threads').html(response.threadsHtml);
                         if (activeThreadId) {
@@ -786,7 +801,7 @@
                         syncThreadActiveStyles();
                         renderForwardTargets();
                     }
-                    if (activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
+                    if (requestedThreadId && requestedThreadId === activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
                         const incomingLastId = parseInt(response.activeLastMessageId || 0, 10) || null;
                         const incomingSenderId = parseInt(response.activeLastMessageSenderId || 0, 10) || null;
                         const scrollState = captureMessagesScrollState();
