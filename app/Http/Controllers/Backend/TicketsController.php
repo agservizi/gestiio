@@ -117,6 +117,8 @@ class TicketsController extends Controller
         $authUser = Auth::user();
 
         $record = new Ticket();
+        $defaultDestinatarioTipo = null;
+        $defaultDestinatarioId = null;
 
         if ($request->input('servizio_type')) {
             switch ($request->input('servizio_type')) {
@@ -139,6 +141,16 @@ class TicketsController extends Controller
             if ($servizio) {
                 $record->servizio()->associate($servizio);
                 $record->oggetto = $this->buildDefaultOggettoFromServizio($request->input('servizio_type'), $servizio);
+
+                if (
+                    $authUser->hasPermissionTo('admin')
+                    && $request->input('servizio_type') === 'contratto-energia'
+                    && $servizio instanceof ContrattoEnergia
+                    && $servizio->agente_id
+                ) {
+                    $defaultDestinatarioTipo = 'agente';
+                    $defaultDestinatarioId = (int)$servizio->agente_id;
+                }
             }
         }
 
@@ -180,6 +192,8 @@ class TicketsController extends Controller
             'agentiDestinatari' => $agentiDestinatari,
             'supervisoriDestinatari' => $supervisoriDestinatari,
             'operatoriDestinatari' => $operatoriDestinatari,
+            'defaultDestinatarioTipo' => $defaultDestinatarioTipo,
+            'defaultDestinatarioId' => $defaultDestinatarioId,
         ]);
     }
 
@@ -259,6 +273,13 @@ class TicketsController extends Controller
 
         $destinatarioTipo = $request->input('destinatario_tipo');
         $destinatarioId = $request->input('destinatario_id');
+        $isTicketContrattoEnergia = $request->input('servizio_type') === 'contratto-energia';
+
+        if (!$authUser->hasPermissionTo('admin') && $isTicketContrattoEnergia) {
+            // Ticket energia aperto da agente/operatore/supervisore: destinatario sempre admin.
+            $destinatarioTipo = 'admin';
+            $destinatarioId = $this->trovaAdminDestinatarioId(Auth::id());
+        }
 
         if ($authUser->hasAnyPermission(['agente', 'supervisore', 'operatore'])) {
             $ticket->agente_id = Auth::id();

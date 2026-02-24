@@ -25,7 +25,8 @@
                     @if($admin)
                         <label class="fw-bold fs-6 required pt-2">Destinatario</label>
                         <div class="mt-5 mb-3">
-                            @php($destinatarioTipo=old('destinatario_tipo','agente'))
+                            @php($destinatarioTipo=old('destinatario_tipo',$defaultDestinatarioTipo ?? 'agente'))
+                            @php($destinatarioIdSelezionato=(string)old('destinatario_id', $defaultDestinatarioId ?? ''))
                             <div class="form-check form-check-custom form-check-solid mx-5" style="display: inline;">
                                 <input class="form-check-input destinatario-tipo" type="radio" value="agente"
                                        id="destinatarioTipoAgente" name="destinatario_tipo"
@@ -50,17 +51,17 @@
                             <select class="form-select form-select-solid" name="destinatario_id" id="destinatario_id">
                                 <option value="">Seleziona destinatario</option>
                                 @foreach($agentiDestinatari as $agenteDestinatario)
-                                    <option value="{{$agenteDestinatario->id}}" data-tipo="agente" {{(string)old('destinatario_id')===(string)$agenteDestinatario->id?'selected':''}}>
+                                    <option value="{{$agenteDestinatario->id}}" data-tipo="agente" {{$destinatarioIdSelezionato===(string)$agenteDestinatario->id?'selected':''}}>
                                         {{$agenteDestinatario->cognome}} {{$agenteDestinatario->nome}}
                                     </option>
                                 @endforeach
                                 @foreach($supervisoriDestinatari as $supervisoreDestinatario)
-                                    <option value="{{$supervisoreDestinatario->id}}" data-tipo="supervisore" {{(string)old('destinatario_id')===(string)$supervisoreDestinatario->id?'selected':''}}>
+                                    <option value="{{$supervisoreDestinatario->id}}" data-tipo="supervisore" {{$destinatarioIdSelezionato===(string)$supervisoreDestinatario->id?'selected':''}}>
                                         {{$supervisoreDestinatario->cognome}} {{$supervisoreDestinatario->nome}}
                                     </option>
                                 @endforeach
                                 @foreach($operatoriDestinatari as $operatoreDestinatario)
-                                    <option value="{{$operatoreDestinatario->id}}" data-tipo="operatore" {{(string)old('destinatario_id')===(string)$operatoreDestinatario->id?'selected':''}}>
+                                    <option value="{{$operatoreDestinatario->id}}" data-tipo="operatore" {{$destinatarioIdSelezionato===(string)$operatoreDestinatario->id?'selected':''}}>
                                         {{$operatoreDestinatario->cognome}} {{$operatoreDestinatario->nome}}
                                     </option>
                                 @endforeach
