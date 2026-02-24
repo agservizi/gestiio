@@ -138,6 +138,7 @@ class TicketsController extends Controller
 
             if ($servizio) {
                 $record->servizio()->associate($servizio);
+                $record->oggetto = $this->buildDefaultOggettoFromServizio($request->input('servizio_type'), $servizio);
             }
         }
 
@@ -180,6 +181,17 @@ class TicketsController extends Controller
             'supervisoriDestinatari' => $supervisoriDestinatari,
             'operatoriDestinatari' => $operatoriDestinatari,
         ]);
+    }
+
+    protected function buildDefaultOggettoFromServizio(string $servizioType, $servizio): string
+    {
+        if ($servizioType === 'contratto-energia' && $servizio instanceof ContrattoEnergia) {
+            $codiceInterno = $servizio->codice_contratto_interno ?: ('OP' . str_pad((string)$servizio->id, 11, '0', STR_PAD_LEFT));
+            $codiceEsterno = $servizio->codice_contratto ? ' | Esterno: ' . $servizio->codice_contratto : '';
+            return 'Ticket contratto energia ' . $codiceInterno . $codiceEsterno;
+        }
+
+        return (string)($servizio->oggetto ?? '');
     }
 
     /**
