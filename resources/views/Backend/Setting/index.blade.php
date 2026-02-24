@@ -19,10 +19,12 @@
 
                             @foreach(config('setting_fields') as $section => $fields)
                                 <div class="panel panel-info" @if($section === 'controlli_contratti') id="controlli-contratti" @endif>
-                                    <div class="panel-heading">
-                                        <i class="{{ \Illuminate\Support\Arr::get($fields, 'icon', 'glyphicon glyphicon-flash') }}"></i>
-                                        <h4> {{ $fields['title'] }}</h4>
-                                    </div>
+                                    @if(!(($isControlliContrattiPage ?? false) && $section === 'controlli_contratti'))
+                                        <div class="panel-heading">
+                                            <i class="{{ \Illuminate\Support\Arr::get($fields, 'icon', 'glyphicon glyphicon-flash') }}"></i>
+                                            <h4> {{ $fields['title'] }}</h4>
+                                        </div>
+                                    @endif
 
                                     <p class="fw-bold">{{ $fields['desc'] }}</p>
 
@@ -44,10 +46,12 @@
 
                         @if(!array_key_exists('controlli_contratti', config('setting_fields', [])))
                             <div class="panel panel-info" id="controlli-contratti">
-                                <div class="panel-heading">
-                                    <i class="glyphicon glyphicon-flash"></i>
-                                    <h4>Controlli contratti</h4>
-                                </div>
+                                @if(!($isControlliContrattiPage ?? false))
+                                    <div class="panel-heading">
+                                        <i class="glyphicon glyphicon-flash"></i>
+                                        <h4>Controlli contratti</h4>
+                                    </div>
+                                @endif
 
                                 <p class="fw-bold">Blocchi automatici su codice fiscale per telefonia/energia (semaforo rosso).</p>
 

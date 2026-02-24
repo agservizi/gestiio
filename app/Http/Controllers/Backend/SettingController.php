@@ -10,8 +10,11 @@ class SettingController extends Controller
 {
     public function index()
     {
+        $isControlliContrattiPage = request()->routeIs('controlli-contratti');
+
         return view('Backend.Setting.index', [
-            'titoloPagina' => 'Impostazioni'
+            'titoloPagina' => $isControlliContrattiPage ? 'Controlli contratti' : 'Impostazioni',
+            'isControlliContrattiPage' => $isControlliContrattiPage,
         ]);
     }
 
