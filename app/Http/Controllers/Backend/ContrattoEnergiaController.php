@@ -695,7 +695,7 @@ class ContrattoEnergiaController extends Controller
 
     protected function checkCodiceFiscaleRisk(string $codiceFiscale): array
     {
-        return app(ContrattiCfRiskService::class)->check($codiceFiscale);
+        return app(ContrattiCfRiskService::class)->check($codiceFiscale, ContrattiCfRiskService::DOMAIN_ENERGIA);
     }
 
     protected function redirectCodiceFiscaleBloccato(array $risk)

@@ -6,19 +6,24 @@ use App\Models\Setting;
 
 class ContrattiCfRiskService
 {
+    public const DOMAIN_TELEFONIA = 'telefonia';
+    public const DOMAIN_ENERGIA = 'energia';
+
     private const STATUS_LABELS = [
         'morosita' => 'Morosita',
         'blacklist' => 'Blacklist',
         'credit_check' => 'Credit check negativo',
     ];
 
-    public function check(?string $codiceFiscale): array
+    public function check(?string $codiceFiscale, string $domain = self::DOMAIN_TELEFONIA): array
     {
+        $domain = $this->normalizeDomain($domain);
         $normalized = $this->normalizeCodiceFiscale($codiceFiscale);
-        $enabled = $this->isEnabled();
+        $enabled = $this->isEnabled($domain);
 
         if ($normalized === '') {
             return [
+                'domain' => $domain,
                 'enabled' => $enabled,
                 'codice_fiscale' => '',
                 'blocked' => false,
@@ -28,7 +33,7 @@ class ContrattiCfRiskService
             ];
         }
 
-        $lists = $this->lists();
+        $lists = $this->lists($domain);
         $statuses = [];
 
         foreach ($lists as $status => $cfList) {
@@ -44,6 +49,7 @@ class ContrattiCfRiskService
         $blocked = $enabled && !empty($statuses);
 
         return [
+            'domain' => $domain,
             'enabled' => $enabled,
             'codice_fiscale' => $normalized,
             'blocked' => $blocked,
@@ -55,19 +61,44 @@ class ContrattiCfRiskService
         ];
     }
 
-    public function isEnabled(): bool
+    public function isEnabled(string $domain = self::DOMAIN_TELEFONIA): bool
     {
-        $val = Setting::get('blocco_contratti_verifica_cf_attivo', '0');
+        $domain = $this->normalizeDomain($domain);
+        $domainKey = 'blocco_contratti_' . $domain . '_verifica_cf_attivo';
+        $val = Setting::get($domainKey, null);
+        if ($val === null || $val === '') {
+            $val = Setting::get('blocco_contratti_verifica_cf_attivo', '0');
+        }
+
         return in_array((string) $val, ['1', 'true', 'on'], true);
     }
 
-    private function lists(): array
+    private function lists(string $domain): array
     {
+        $domain = $this->normalizeDomain($domain);
         return [
-            'morosita' => $this->parseList((string) Setting::get('blocco_contratti_cf_morosita', '')),
-            'blacklist' => $this->parseList((string) Setting::get('blocco_contratti_cf_blacklist', '')),
-            'credit_check' => $this->parseList((string) Setting::get('blocco_contratti_cf_credit_check', '')),
+            'morosita' => $this->parseList(
+                (string) $this->settingForDomain($domain, 'cf_morosita', 'blocco_contratti_cf_morosita')
+            ),
+            'blacklist' => $this->parseList(
+                (string) $this->settingForDomain($domain, 'cf_blacklist', 'blocco_contratti_cf_blacklist')
+            ),
+            'credit_check' => $this->parseList(
+                (string) $this->settingForDomain($domain, 'cf_credit_check', 'blocco_contratti_cf_credit_check')
+            ),
         ];
+    }
+
+    private function settingForDomain(string $domain, string $suffix, string $legacyKey): string
+    {
+        $domainKey = 'blocco_contratti_' . $domain . '_' . $suffix;
+        $value = Setting::get($domainKey, null);
+
+        if ($value === null || $value === '') {
+            $value = Setting::get($legacyKey, '');
+        }
+
+        return (string) $value;
     }
 
     private function parseList(string $raw): array
@@ -85,5 +116,15 @@ class ContrattiCfRiskService
         $value = strtoupper(trim((string) $cf));
         return preg_replace('/[^A-Z0-9]/', '', $value) ?: '';
     }
-}
 
+    private function normalizeDomain(string $domain): string
+    {
+        $domain = strtolower(trim($domain));
+
+        if ($domain === self::DOMAIN_ENERGIA) {
+            return self::DOMAIN_ENERGIA;
+        }
+
+        return self::DOMAIN_TELEFONIA;
+    }
+}

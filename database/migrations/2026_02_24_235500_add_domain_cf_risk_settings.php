@@ -4,9 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         $defaults = [
@@ -18,17 +15,11 @@ return new class extends Migration {
             'blocco_contratti_energia_cf_morosita' => '',
             'blocco_contratti_energia_cf_blacklist' => '',
             'blocco_contratti_energia_cf_credit_check' => '',
-            // Legacy global keys kept for backward compatibility fallback.
-            'blocco_contratti_verifica_cf_attivo' => '0',
-            'blocco_contratti_cf_morosita' => '',
-            'blocco_contratti_cf_blacklist' => '',
-            'blocco_contratti_cf_credit_check' => '',
         ];
 
         foreach ($defaults as $name => $val) {
-            $existing = DB::table('settings')->where('name', $name)->first();
-
-            if ($existing) {
+            $exists = DB::table('settings')->where('name', $name)->exists();
+            if ($exists) {
                 continue;
             }
 
@@ -42,9 +33,6 @@ return new class extends Migration {
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         DB::table('settings')->whereIn('name', [
@@ -56,10 +44,6 @@ return new class extends Migration {
             'blocco_contratti_energia_cf_morosita',
             'blocco_contratti_energia_cf_blacklist',
             'blocco_contratti_energia_cf_credit_check',
-            'blocco_contratti_verifica_cf_attivo',
-            'blocco_contratti_cf_morosita',
-            'blocco_contratti_cf_blacklist',
-            'blocco_contratti_cf_credit_check',
         ])->delete();
     }
 };

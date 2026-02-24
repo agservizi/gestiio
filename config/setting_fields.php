@@ -2,13 +2,13 @@
 return [
     'controlli_contratti' => [
         'title' => 'Controlli contratti',
-        'desc' => 'Blocchi automatici su codice fiscale per telefonia/energia (semaforo rosso).',
+        'desc' => 'Blocchi automatici su codice fiscale separati per Telefonia ed Energia.',
         'elements' => [
             [
                 'type' => 'text',
                 'data' => 'string',
-                'name' => 'blocco_contratti_verifica_cf_attivo',
-                'label' => 'Controllo CF attivo (1/0)',
+                'name' => 'blocco_contratti_telefonia_verifica_cf_attivo',
+                'label' => 'Telefonia - Controllo CF attivo (1/0)',
                 'rules' => 'nullable|in:0,1',
                 'class' => '',
                 'value' => '0'
@@ -16,8 +16,8 @@ return [
             [
                 'type' => 'textarea',
                 'data' => 'string',
-                'name' => 'blocco_contratti_cf_morosita',
-                'label' => 'CF in morosita',
+                'name' => 'blocco_contratti_telefonia_cf_morosita',
+                'label' => 'Telefonia - CF in morosita',
                 'rules' => 'nullable|string',
                 'class' => '',
                 'help' => 'Inserisci uno o piu codici fiscali separati da invio, virgola o punto e virgola.',
@@ -26,8 +26,8 @@ return [
             [
                 'type' => 'textarea',
                 'data' => 'string',
-                'name' => 'blocco_contratti_cf_blacklist',
-                'label' => 'CF in blacklist',
+                'name' => 'blocco_contratti_telefonia_cf_blacklist',
+                'label' => 'Telefonia - CF in blacklist',
                 'rules' => 'nullable|string',
                 'class' => '',
                 'help' => 'Inserisci uno o piu codici fiscali separati da invio, virgola o punto e virgola.',
@@ -36,8 +36,47 @@ return [
             [
                 'type' => 'textarea',
                 'data' => 'string',
-                'name' => 'blocco_contratti_cf_credit_check',
-                'label' => 'CF con credit check negativo',
+                'name' => 'blocco_contratti_telefonia_cf_credit_check',
+                'label' => 'Telefonia - CF con credit check negativo',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Inserisci uno o piu codici fiscali separati da invio, virgola o punto e virgola.',
+                'value' => ''
+            ],
+            [
+                'type' => 'text',
+                'data' => 'string',
+                'name' => 'blocco_contratti_energia_verifica_cf_attivo',
+                'label' => 'Energia - Controllo CF attivo (1/0)',
+                'rules' => 'nullable|in:0,1',
+                'class' => '',
+                'value' => '0'
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_energia_cf_morosita',
+                'label' => 'Energia - CF in morosita',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Inserisci uno o piu codici fiscali separati da invio, virgola o punto e virgola.',
+                'value' => ''
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_energia_cf_blacklist',
+                'label' => 'Energia - CF in blacklist',
+                'rules' => 'nullable|string',
+                'class' => '',
+                'help' => 'Inserisci uno o piu codici fiscali separati da invio, virgola o punto e virgola.',
+                'value' => ''
+            ],
+            [
+                'type' => 'textarea',
+                'data' => 'string',
+                'name' => 'blocco_contratti_energia_cf_credit_check',
+                'label' => 'Energia - CF con credit check negativo',
                 'rules' => 'nullable|string',
                 'class' => '',
                 'help' => 'Inserisci uno o piu codici fiscali separati da invio, virgola o punto e virgola.',

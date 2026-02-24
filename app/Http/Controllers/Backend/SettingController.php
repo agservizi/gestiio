@@ -22,10 +22,14 @@ class SettingController extends Controller
     {
         $rules = Setting::getValidationRules();
         $fallbackRules = [
-            'blocco_contratti_verifica_cf_attivo' => 'nullable|in:0,1',
-            'blocco_contratti_cf_morosita' => 'nullable|string',
-            'blocco_contratti_cf_blacklist' => 'nullable|string',
-            'blocco_contratti_cf_credit_check' => 'nullable|string',
+            'blocco_contratti_telefonia_verifica_cf_attivo' => 'nullable|in:0,1',
+            'blocco_contratti_telefonia_cf_morosita' => 'nullable|string',
+            'blocco_contratti_telefonia_cf_blacklist' => 'nullable|string',
+            'blocco_contratti_telefonia_cf_credit_check' => 'nullable|string',
+            'blocco_contratti_energia_verifica_cf_attivo' => 'nullable|in:0,1',
+            'blocco_contratti_energia_cf_morosita' => 'nullable|string',
+            'blocco_contratti_energia_cf_blacklist' => 'nullable|string',
+            'blocco_contratti_energia_cf_credit_check' => 'nullable|string',
         ];
 
         foreach ($fallbackRules as $key => $rule) {
