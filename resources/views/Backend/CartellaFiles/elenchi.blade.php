@@ -64,7 +64,7 @@
                 <td>-</td>
                 <td class="text-end" data-kt-filemanager-table="action_dropdown">
                     @if($canManageFolders)
-                        <div class="d-flex justify-content-end gap-2 flex-wrap">
+                        <div class="d-inline-flex align-items-center justify-content-end gap-2 text-nowrap">
                             <button type="button" class="btn btn-sm btn-icon btn-light-info folder-move" data-folder-id="{{ $cartella->id }}" title="Sposta">
                                 <span class="svg-icon svg-icon-4 m-0">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
