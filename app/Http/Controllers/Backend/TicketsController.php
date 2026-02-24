@@ -144,8 +144,11 @@ class TicketsController extends Controller
 
                 if (
                     $authUser->hasPermissionTo('admin')
-                    && $request->input('servizio_type') === 'contratto-energia'
-                    && $servizio instanceof ContrattoEnergia
+                    && in_array($request->input('servizio_type'), ['contratto-energia', 'contratto-telefonia'], true)
+                    && (
+                        $servizio instanceof ContrattoEnergia
+                        || $servizio instanceof ContrattoTelefonia
+                    )
                     && $servizio->agente_id
                 ) {
                     $defaultDestinatarioTipo = 'agente';
@@ -297,10 +300,10 @@ class TicketsController extends Controller
 
         $destinatarioTipo = $request->input('destinatario_tipo');
         $destinatarioId = $request->input('destinatario_id');
-        $isTicketContrattoEnergia = $request->input('servizio_type') === 'contratto-energia';
+        $isTicketServizioContratto = in_array($request->input('servizio_type'), ['contratto-energia', 'contratto-telefonia'], true);
 
-        if (!$authUser->hasPermissionTo('admin') && $isTicketContrattoEnergia) {
-            // Ticket energia aperto da agente/operatore/supervisore: destinatario sempre admin.
+        if (!$authUser->hasPermissionTo('admin') && $isTicketServizioContratto) {
+            // Ticket contratto (energia/telefonia) aperto da agente/operatore/supervisore: destinatario sempre admin.
             $destinatarioTipo = 'admin';
             $destinatarioId = $this->trovaAdminDestinatarioId(Auth::id());
         }
