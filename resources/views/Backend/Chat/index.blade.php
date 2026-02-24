@@ -210,7 +210,6 @@
                 <div class="card-header border-0 pt-5 pb-3">
                     <h3 class="card-title align-items-start flex-column m-0">
                         <span class="card-label fw-bolder fs-4">Conversazioni</span>
-                        <span class="text-muted mt-1 fw-bold fs-7">Admin ↔ Agente/Supervisore · Agente ↔ Supervisore (servizio attivo condiviso)</span>
                     </h3>
                 </div>
                 <div class="card-body p-0">
@@ -743,6 +742,10 @@
                 $.get(pollUrl, {thread_id: activeThreadId}, function (response) {
                     if (response.threadsHtml !== undefined) {
                         $('#chat-threads').html(response.threadsHtml);
+                        if (activeThreadId) {
+                            $('.chat-thread-item').removeClass('active');
+                            $('.chat-thread-item[data-thread-id="' + activeThreadId + '"]').addClass('active');
+                        }
                         renderForwardTargets();
                     }
                     if (activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
@@ -850,6 +853,11 @@
                     return;
                 }
                 const threadId = parseInt($(this).data('thread-id'), 10);
+                if (threadId) {
+                    activeThreadId = threadId;
+                    $('.chat-thread-item').removeClass('active');
+                    $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
+                }
                 loadMessages(threadId, true);
             });
 
