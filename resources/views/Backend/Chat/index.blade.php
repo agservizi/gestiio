@@ -123,13 +123,20 @@
         #chat-mention-suggest {
             position: absolute;
             z-index: 30;
+            left: 0;
+            right: 0;
+            bottom: calc(100% + 6px);
             background: #fff;
             border: 1px solid #e4e6ef;
             border-radius: 8px;
-            min-width: 220px;
+            min-width: 100%;
             max-height: 220px;
             overflow-y: auto;
             box-shadow: 0 3px 12px rgba(0, 0, 0, .12);
+        }
+
+        .chat-message-input-wrap {
+            position: relative;
         }
 
         #chat-mention-suggest .chat-mention-item {
@@ -325,8 +332,10 @@
                         <div class="d-flex gap-3 align-items-end">
                             <div class="flex-grow-1">
                                 <label class="form-label fw-bold fs-7 mb-2">Messaggio</label>
-                                <textarea name="messaggio" id="chat-messaggio" class="form-control" rows="3" placeholder="Scrivi qui..." {{$threadAttivo ? '' : 'disabled'}}></textarea>
-                                <div id="chat-mention-suggest" class="d-none"></div>
+                                <div class="chat-message-input-wrap">
+                                    <textarea name="messaggio" id="chat-messaggio" class="form-control" rows="3" placeholder="Scrivi qui..." {{$threadAttivo ? '' : 'disabled'}}></textarea>
+                                    <div id="chat-mention-suggest" class="d-none"></div>
+                                </div>
                                 <div class="mt-3">
                                     <input type="file" id="chat-allegati" name="allegati[]" class="form-control form-control-sm" multiple {{$threadAttivo ? '' : 'disabled'}}>
                                     <div id="chat-allegati-info" class="text-muted fs-8 mt-1"></div>
