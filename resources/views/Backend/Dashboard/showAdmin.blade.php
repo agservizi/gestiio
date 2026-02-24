@@ -194,11 +194,11 @@
 
                     <div class="d-flex flex-wrap align-items-center">
                         <div class="position-relative d-flex flex-center h-150px w-150px me-5 mb-7 mb-xl-0">
-                            <div class="position-absolute translate-middle start-50 top-50 d-flex flex-column flex-center">
+                            <div class="position-absolute translate-middle start-50 top-50 d-flex flex-column flex-center" style="z-index: 2; pointer-events: none;">
                                 <span class="fs-2qx fw-bolder">{{ number_format((int) $datiTortaEsiti['totale']) }}</span>
                                 <span class="fs-6 fw-bold text-gray-400">Totali</span>
                             </div>
-                            <div id="kt_card_widget_17_chart" style="width: 150px; height: 150px;"></div>
+                            <div id="kt_card_widget_17_chart" style="width: 150px; height: 150px; z-index: 1;"></div>
                         </div>
                         <div class="d-flex flex-column justify-content-center flex-row-fluid pe-0 pe-xl-5">
                             @for($n=0;$n<count($datiTortaEsiti['labels']);$n++)
@@ -425,7 +425,7 @@
                 plotOptions: {
                     pie: {
                         donut: {
-                            size: '75%'
+                            size: '82%'
                         }
                     }
                 },
