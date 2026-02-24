@@ -65,10 +65,33 @@
                 <td class="text-end" data-kt-filemanager-table="action_dropdown">
                     @if($canManageFolders)
                         <div class="d-flex justify-content-end gap-2 flex-wrap">
-                            <button type="button" class="btn btn-sm btn-light-info folder-move" data-folder-id="{{ $cartella->id }}">Sposta</button>
-                            <button type="button" class="btn btn-sm btn-light-warning folder-visibility" data-folder-id="{{ $cartella->id }}" data-folder-roles="{{ implode(',', (array)($cartella->visibilita_ruoli ?? [])) }}">Visibilità</button>
+                            <button type="button" class="btn btn-sm btn-icon btn-light-info folder-move" data-folder-id="{{ $cartella->id }}" title="Sposta">
+                                <span class="svg-icon svg-icon-4 m-0">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 2L15 5H13V9H11V5H9L12 2Z" fill="currentColor"/>
+                                        <path d="M22 12L19 15V13H15V11H19V9L22 12Z" fill="currentColor"/>
+                                        <path d="M12 22L9 19H11V15H13V19H15L12 22Z" fill="currentColor"/>
+                                        <path d="M2 12L5 9V11H9V13H5V15L2 12Z" fill="currentColor"/>
+                                    </svg>
+                                </span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-icon btn-light-warning folder-visibility" data-folder-id="{{ $cartella->id }}" data-folder-roles="{{ implode(',', (array)($cartella->visibilita_ruoli ?? [])) }}" title="Visibilità">
+                                <span class="svg-icon svg-icon-4 m-0">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path opacity="0.3" d="M2 12C4.5 7.5 8 5 12 5C16 5 19.5 7.5 22 12C19.5 16.5 16 19 12 19C8 19 4.5 16.5 2 12Z" fill="currentColor"/>
+                                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                                    </svg>
+                                </span>
+                            </button>
                             <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'edit'],['cartellaId'=>$cartellaId,'cartella'=>$cartella->id]) }}"
-                               class="btn btn-sm btn-light-primary" data-target="kt_modal" data-toggle="modal-ajax">Modifica</a>
+                               class="btn btn-sm btn-icon btn-light-primary" data-target="kt_modal" data-toggle="modal-ajax" title="Modifica">
+                                <span class="svg-icon svg-icon-4 m-0">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path opacity="0.3" d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25Z" fill="currentColor"/>
+                                        <path d="M20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z" fill="currentColor"/>
+                                    </svg>
+                                </span>
+                            </a>
                         </div>
                     @endif
                 </td>
