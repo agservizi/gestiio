@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Http\Funzioni\Twilio;
 use App\Models\AllegatoContratto;
 use App\Models\AllegatoServizio;
 use App\Models\Cliente;
@@ -26,9 +25,10 @@ use App\Rules\CodiceFiscaleRule;
 use App\Rules\DataItalianaRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ServizioFinanziario;
-use DB;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Models\ServizioFinanziario;
 use function App\getInputCheckbox;
 use function App\getInputNumero;
 use function App\getInputToUpper;
@@ -36,6 +36,13 @@ use function App\getInputToUpper;
 class ServizioFinanziarioController extends Controller
 {
     protected $conFiltro = false;
+
+    protected function currentUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        return $user;
+    }
 
 
     /**
@@ -58,7 +65,7 @@ class ServizioFinanziarioController extends Controller
             }]
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        $orderByUser = $this->currentUser()->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -70,14 +77,14 @@ class ServizioFinanziarioController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
-        $puoModificare = Auth::user()->hasPermissionTo('admin');
+        $puoModificare = $this->currentUser()->hasPermissionTo('admin');
 
         if ($request->ajax()) {
 
@@ -87,7 +94,7 @@ class ServizioFinanziarioController extends Controller
                     'controller' => $nomeClasse,
                     'puoModificare' => $puoModificare
 
-                ]))
+                ])->render())
             ];
 
         }
@@ -154,7 +161,7 @@ class ServizioFinanziarioController extends Controller
         $record->uid = Str::ulid();
 
         $classeProdotto = 'App\Models\\' . $servizio;
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         }
 
@@ -199,7 +206,7 @@ class ServizioFinanziarioController extends Controller
         DB::commit();
 
         $this->inviaNotifiche($record);
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             Notifica::notificaAdAdmin('Nuovo servizio finanziario', '<span class="fw-bold">' . $record->tipoProdottoBlade() . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
         }
 
@@ -361,8 +368,8 @@ class ServizioFinanziarioController extends Controller
             'html' => base64_encode(view($view, [
                 'records' => $records,
                 'controller' => ContrattoTelefoniaController::class,
-                'puoModificare' => Auth::user()->hasPermissionTo('admin')
-            ]))
+                'puoModificare' => $this->currentUser()->hasPermissionTo('admin')
+            ])->render())
         ];
     }
 
@@ -419,7 +426,7 @@ class ServizioFinanziarioController extends Controller
         })->afterResponse();
 
         //Notifica noreply@gestiio.it
-        if (Auth::user()->hasPermissionTo('agente')) {
+        if ($this->currentUser()->hasPermissionTo('agente')) {
             dispatch(function () use ($servizioFinanziario) {
                 $user = new User();
                 $user->email = 'noreply@gestiio.it';
@@ -451,7 +458,7 @@ class ServizioFinanziarioController extends Controller
             $user->cognome = $servizioFinanziario->cognome;
             $user->email = $servizioFinanziario->email;
             $password = rand(11111111, 99999999);
-            $user->password = \Hash::make($password);
+            $user->password = Hash::make($password);
             $user->telefono = $servizioFinanziario->cellulare;
             $user->save();
 

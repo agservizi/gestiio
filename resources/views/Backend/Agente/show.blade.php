@@ -48,15 +48,6 @@
                        class="menu-link px-3 azione">Invia mail password reset</a>
                 </div>
 
-                <div class="separator mt-3 mb-3 opacity-75"></div>
-                <div class="menu-item px-3">
-                    <a href="{{action([$controller,'azioni'],['id'=>$record->id,'azione'=>'abilita-sms'])}}"
-                       class="menu-link px-3 azione">Abilita autenticazione 2fa</a>
-                </div>
-                <div class="menu-item px-3">
-                    <a href="{{action([$controller,'azioni'],['id'=>$record->id,'azione'=>'disabilita-sms'])}}"
-                       class="menu-link px-3 azione">Disabilita autenticazione 2fa</a>
-                </div>
             </div>
             <!--end::Menu 3-->
         </div>

@@ -14,11 +14,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
-Route::post('/twilio-status',[\App\Http\Controllers\Frontend\TwilioController::class,'statusCallback']);
-Route::post('/twilio-message',[\App\Http\Controllers\Frontend\TwilioController::class,'messageCallback']);
-
-
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });

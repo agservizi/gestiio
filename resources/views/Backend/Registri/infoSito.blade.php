@@ -51,7 +51,7 @@
                         <span class="fs-2hx fw-bold text-white me-2 lh-1 ls-n2">{{in_array('two-factor-authentication',config('fortify.features'))?'Abilitata':'Disabilitata'}}</span>
                         <!--end::Amount-->
                         <!--begin::Subtitle-->
-                        <span class="text-white opacity-50 pt-1 fw-semibold fs-6">Autenticazione Sms</span>
+                        <span class="text-white opacity-50 pt-1 fw-semibold fs-6">Autenticazione 2FA</span>
                         <!--end::Subtitle-->
                     </div>
                     <!--end::Title-->

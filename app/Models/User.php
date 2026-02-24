@@ -59,13 +59,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'extra' => 'array'
     ];
 
-
-    public function routeNotificationForTwilio()
-    {
-        return $this->telefono;
-    }
-
-
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI

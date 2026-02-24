@@ -217,24 +217,11 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::get('produzione-operatore', [\App\Http\Controllers\Backend\ProduzioneOperatoreController::class, 'index']);
     Route::get('produzione-operatore/{id}/crea-proforma', [\App\Http\Controllers\Backend\ProduzioneOperatoreController::class, 'creaProforma']);
 
-    $testTwilioController = 'App\\Http\\Controllers\\TestTwilio';
-    if (class_exists($testTwilioController)) {
-        Route::get('test-twilio', [$testTwilioController, 'show']);
-        Route::post('test-twilio', [$testTwilioController, 'post']);
-    }
-
     Route::resource('/tipo-contratto', \App\Http\Controllers\Backend\TipoContrattoController::class)->except(['show']);
     Route::resource('/tipo-caf-patronato', \App\Http\Controllers\Backend\TipoCafPatronatoController::class)->except(['show']);
     Route::resource('/tipo-esito', \App\Http\Controllers\Backend\EsitoTelefoniaController::class)->except(['show']);
     Route::resource('/tipo-visura', \App\Http\Controllers\Backend\TipoVisuraController::class)->except(['show']);
     Route::resource('/offerta-sim', \App\Http\Controllers\Backend\OffertaSimController::class)->except(['show']);
-
-    //Sms
-    Route::get('/sms', [\App\Http\Controllers\Backend\SmsController::class, 'index']);
-    Route::get('/sms/{id}', [\App\Http\Controllers\Backend\SmsController::class, 'show']);
-    Route::get('/invia-sms', [\App\Http\Controllers\Backend\SmsController::class, 'create']);
-    Route::post('/invia-sms', [\App\Http\Controllers\Backend\SmsController::class, 'store']);
-
 
     //Gestori
     Route::resource('/gestore', \App\Http\Controllers\Backend\GestoreController::class)->except(['show']);

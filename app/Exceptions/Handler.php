@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Throwable;
-use Twilio\Exceptions\RestException;
 
 class Handler extends ExceptionHandler
 {
@@ -18,9 +17,7 @@ class Handler extends ExceptionHandler
      *
      * @var array<int, class-string<Throwable>>
      */
-    protected $dontReport = [
-        RestException::class,
-    ];
+    protected $dontReport = [];
 
     /**
      * A list of the inputs that are never flashed for validation exceptions.

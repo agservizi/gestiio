@@ -21,7 +21,6 @@ use App\Rules\PasswordRules;
 use App\Rules\TelefonoItalianoRule;
 use App\Rules\TelefonoRule;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Agente;
 use Illuminate\Support\Facades\DB;
@@ -32,33 +31,11 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
-use Laravel\Fortify\Fortify;
-use Laravel\Fortify\RecoveryCode;
 use Spatie\Permission\Models\Permission;
 
 class AgenteController extends Controller
 {
     protected $conFiltro = false;
-
-
-    /**
-     * The two factor authentication provider.
-     *
-     * @var \Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider
-     */
-    protected $provider;
-
-    /**
-     * Create a new action instance.
-     *
-     * @param \Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider $provider
-     * @return void
-     */
-    public function __construct(TwoFactorAuthenticationProvider $provider)
-    {
-        $this->provider = $provider;
-    }
 
 
     /**
@@ -240,15 +217,6 @@ class AgenteController extends Controller
         $this->salvaDatiUtente($record, $request);
         $this->salvadatiAgente(new Agente(), $request, $record);
 
-        /*
-        $record->forceFill([
-            'two_factor_secret' => encrypt($this->provider->generateSecretKey()),
-            'two_factor_recovery_codes' => encrypt(json_encode(Collection::times(8, function () {
-                return RecoveryCode::generate();
-            })->all())),
-        ])->save();
-        */
-
         return $this->backToIndex();
     }
 
@@ -379,28 +347,6 @@ class AgenteController extends Controller
             return ['success' => false, 'message' => 'Questo utente non esiste'];
         }
         switch ($azione) {
-
-            case 'abilita-sms':
-                $u->forceFill([
-                    'two_factor_secret' => encrypt($this->provider->generateSecretKey()),
-                    'two_factor_recovery_codes' => encrypt(json_encode(Collection::times(8, function () {
-                        return RecoveryCode::generate();
-                    })->all())),
-                ])->save();
-                return ['success' => true, 'title' => 'Accesso con verifica sms', 'message' => 'La verifica accesso sms è stata abilitata'];
-
-            case 'disabilita-sms':
-                if (!is_null($u->two_factor_secret) ||
-                    !is_null($u->two_factor_recovery_codes) ||
-                    !is_null($u->two_factor_confirmed_at)) {
-                    $u->forceFill([
-                            'two_factor_secret' => null,
-                            'two_factor_recovery_codes' => null,
-                        ] + (Fortify::confirmsTwoFactorAuthentication() ? [
-                            'two_factor_confirmed_at' => null,
-                        ] : []))->save();
-                }
-                return ['success' => true, 'title' => 'Accesso con verifica sms', 'message' => 'La verifica accesso sms è stata disabilitata'];
 
             case 'sospendi':
                 $u->syncPermissions([]);

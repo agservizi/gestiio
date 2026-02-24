@@ -39,7 +39,6 @@ return [
     ],
 
     'openapi' => [
-        'bearer_sms' => env('OPENAPI_BEARER_SMS'),
         'bearer_visure_camerali' => env('OPENAPI_BEARER_VISURE_CAMERALI'),
         'bearer_visure' => env('OPENAPI_BEARER_VISURE', env('OPENAPI_BEARER')),
         'bearer_catasto' => env('OPENAPI_BEARER_CATASTO'),
