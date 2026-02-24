@@ -223,6 +223,30 @@ class TicketsController extends Controller
             return implode(' | ', $parts);
         }
 
+        if ($servizioType === 'contratto-telefonia' && $servizio instanceof ContrattoTelefonia) {
+            $codiceInterno = $servizio->codice_contratto_interno ?: ('TEL' . str_pad((string)$servizio->id, 11, '0', STR_PAD_LEFT));
+            $tipoContratto = $servizio->tipoContratto?->nome ?: 'N/D';
+            $cliente = trim((string)$servizio->nominativo());
+            $documento = trim((string)($servizio->codice_fiscale ?: $servizio->partita_iva ?: ''));
+
+            $parts = [
+                'Ticket Contratto Telefonia',
+                'Tipo: ' . $tipoContratto,
+                'Cod. interno: ' . $codiceInterno,
+                'Cod. esterno: ' . ($servizio->codice_contratto ?: 'N/D'),
+            ];
+
+            if ($cliente !== '') {
+                $parts[] = 'Cliente: ' . $cliente;
+            }
+
+            if ($documento !== '') {
+                $parts[] = 'CF/P.IVA: ' . $documento;
+            }
+
+            return implode(' | ', $parts);
+        }
+
         return (string)($servizio->oggetto ?? '');
     }
 
