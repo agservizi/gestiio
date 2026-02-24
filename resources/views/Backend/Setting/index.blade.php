@@ -40,29 +40,49 @@
                                             @endphp
                                             <div class="row g-8 mb-8">
                                                 <div class="col-12 col-lg-6">
-                                                    <div class="p-4 border rounded bg-light">
-                                                        <h6 class="mb-3">Gestori Telefonia (backend/gestore)</h6>
-                                                        <div class="small text-muted mb-2">Usa questi ID nel formato: <code>ID_GESTORE: CF1,CF2</code></div>
-                                                        <ul class="mb-0 ps-4">
-                                                            @forelse(($gestoriTelefonia ?? collect()) as $gestore)
-                                                                <li><strong>{{ $gestore->id }}</strong> - {{ $gestore->nome }}</li>
-                                                            @empty
-                                                                <li>Nessun gestore telefonia disponibile.</li>
-                                                            @endforelse
-                                                        </ul>
+                                                    <div class="accordion" id="accordionGestoriTelefonia">
+                                                        <div class="accordion-item border rounded bg-light">
+                                                            <h2 class="accordion-header" id="headingGestoriTelefonia">
+                                                                <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGestoriTelefonia" aria-expanded="false" aria-controls="collapseGestoriTelefonia">
+                                                                    Gestori Telefonia (backend/gestore)
+                                                                </button>
+                                                            </h2>
+                                                            <div id="collapseGestoriTelefonia" class="accordion-collapse collapse" aria-labelledby="headingGestoriTelefonia" data-bs-parent="#accordionGestoriTelefonia">
+                                                                <div class="accordion-body pt-3">
+                                                                    <div class="small text-muted mb-2">Usa questi ID nel formato: <code>ID_GESTORE: CF1,CF2</code></div>
+                                                                    <ul class="mb-0 ps-4">
+                                                                        @forelse(($gestoriTelefonia ?? collect()) as $gestore)
+                                                                            <li><strong>{{ $gestore->id }}</strong> - {{ $gestore->nome }}</li>
+                                                                        @empty
+                                                                            <li>Nessun gestore telefonia disponibile.</li>
+                                                                        @endforelse
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div class="col-12 col-lg-6">
-                                                    <div class="p-4 border rounded bg-light">
-                                                        <h6 class="mb-3">Gestori Energia (backend/gestore-contratto-energia)</h6>
-                                                        <div class="small text-muted mb-2">Usa questi ID nel formato: <code>ID_GESTORE: CF1,CF2</code></div>
-                                                        <ul class="mb-0 ps-4">
-                                                            @forelse(($gestoriEnergia ?? collect()) as $gestore)
-                                                                <li><strong>{{ $gestore->id }}</strong> - {{ $gestore->nome }}</li>
-                                                            @empty
-                                                                <li>Nessun gestore energia disponibile.</li>
-                                                            @endforelse
-                                                        </ul>
+                                                    <div class="accordion" id="accordionGestoriEnergia">
+                                                        <div class="accordion-item border rounded bg-light">
+                                                            <h2 class="accordion-header" id="headingGestoriEnergia">
+                                                                <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGestoriEnergia" aria-expanded="false" aria-controls="collapseGestoriEnergia">
+                                                                    Gestori Energia (backend/gestore-contratto-energia)
+                                                                </button>
+                                                            </h2>
+                                                            <div id="collapseGestoriEnergia" class="accordion-collapse collapse" aria-labelledby="headingGestoriEnergia" data-bs-parent="#accordionGestoriEnergia">
+                                                                <div class="accordion-body pt-3">
+                                                                    <div class="small text-muted mb-2">Usa questi ID nel formato: <code>ID_GESTORE: CF1,CF2</code></div>
+                                                                    <ul class="mb-0 ps-4">
+                                                                        @forelse(($gestoriEnergia ?? collect()) as $gestore)
+                                                                            <li><strong>{{ $gestore->id }}</strong> - {{ $gestore->nome }}</li>
+                                                                        @empty
+                                                                            <li>Nessun gestore energia disponibile.</li>
+                                                                        @endforelse
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
