@@ -222,6 +222,20 @@
                 updateDownloadButton();
             }
 
+            function initTooltips() {
+                if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+                    return;
+                }
+                const nodes = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                nodes.forEach(function (el) {
+                    const current = bootstrap.Tooltip.getInstance(el);
+                    if (current) {
+                        current.dispose();
+                    }
+                    new bootstrap.Tooltip(el);
+                });
+            }
+
             function refreshElenco(url = currentDocumentiUrl) {
                 const targetUrl = url || currentDocumentiUrl;
                 const targetCartellaId = resolveCartellaIdFromUrl(targetUrl);
@@ -234,6 +248,7 @@
                         currentDocumentiUrl = targetUrl;
                         updateContextActions(targetCartellaId);
                         $('#elenco-files').html(base64_decode(response.html));
+                        initTooltips();
                         syncSelectionState();
                     },
                     error: function (xhr) {
@@ -577,6 +592,7 @@
             });
 
             updateContextActions(resolveCartellaIdFromUrl(currentDocumentiUrl));
+            initTooltips();
             syncSelectionState();
         });
     </script>

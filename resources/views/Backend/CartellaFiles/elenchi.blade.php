@@ -65,7 +65,7 @@
                 <td class="text-end" data-kt-filemanager-table="action_dropdown">
                     @if($canManageFolders)
                         <div class="d-inline-flex align-items-center justify-content-end gap-2 text-nowrap">
-                            <button type="button" class="btn btn-sm btn-icon btn-light-info folder-move" data-folder-id="{{ $cartella->id }}" title="Sposta">
+                            <button type="button" class="btn btn-sm btn-icon btn-light-info folder-move" data-folder-id="{{ $cartella->id }}" title="Sposta" data-bs-toggle="tooltip" data-bs-placement="top">
                                 <span class="svg-icon svg-icon-4 m-0">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M12 2L15 5H13V9H11V5H9L12 2Z" fill="currentColor"/>
@@ -75,7 +75,7 @@
                                     </svg>
                                 </span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-icon btn-light-warning folder-visibility" data-folder-id="{{ $cartella->id }}" data-folder-roles="{{ implode(',', (array)($cartella->visibilita_ruoli ?? [])) }}" title="Visibilità">
+                            <button type="button" class="btn btn-sm btn-icon btn-light-warning folder-visibility" data-folder-id="{{ $cartella->id }}" data-folder-roles="{{ implode(',', (array)($cartella->visibilita_ruoli ?? [])) }}" title="Visibilità" data-bs-toggle="tooltip" data-bs-placement="top">
                                 <span class="svg-icon svg-icon-4 m-0">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path opacity="0.3" d="M2 12C4.5 7.5 8 5 12 5C16 5 19.5 7.5 22 12C19.5 16.5 16 19 12 19C8 19 4.5 16.5 2 12Z" fill="currentColor"/>
@@ -84,7 +84,7 @@
                                 </span>
                             </button>
                             <a href="{{ action([\App\Http\Controllers\Backend\CartellaFilesController::class,'edit'],['cartellaId'=>$cartellaId,'cartella'=>$cartella->id]) }}"
-                               class="btn btn-sm btn-icon btn-light-primary" data-target="kt_modal" data-toggle="modal-ajax" title="Modifica">
+                               class="btn btn-sm btn-icon btn-light-primary" data-target="kt_modal" data-toggle="modal-ajax" title="Modifica" data-bs-toggle="tooltip" data-bs-placement="top">
                                 <span class="svg-icon svg-icon-4 m-0">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path opacity="0.3" d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25Z" fill="currentColor"/>
