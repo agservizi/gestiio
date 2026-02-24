@@ -48,7 +48,7 @@
                 @endif
                 @if(Auth::user()->hasAnyPermission(['admin','supervisore']))
                     <div class="menu-item px-3">
-                        <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['contratto_id'=>$record->id])}}"
+                        <a href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_id'=>$record->id,'servizio_type'=>'contratto-telefonia'])}}"
                            data-targetZ="kt_modal" data-toggleZ="modal-ajax"
                            class="menu-link px-3">Nuovo ticket</a>
                     </div>
