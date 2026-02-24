@@ -441,7 +441,52 @@
             const pieData = (datiTortaEsiti.labels || []).map(function (label, idx) {
                 return {label: label, value: Number((datiTortaEsiti.data || [])[idx] || 0)};
             });
-            series.data.setAll(pieData);
+
+            const timelineLabel = chart.seriesContainer.children.push(am5.Label.new(root, {
+                text: '',
+                centerX: am5.p50,
+                x: am5.p50,
+                centerY: am5.p50,
+                y: am5.p50,
+                fontSize: 13,
+                fontWeight: '600',
+                fill: am5.color(0x7e8299)
+            }));
+
+            const steps = ['Storico', 'Mese -2', 'Mese -1', 'Attuale'];
+            const progressByStep = [0.55, 0.72, 0.88, 1];
+
+            const timelineFrames = steps.map(function (step, stepIndex) {
+                const progress = progressByStep[stepIndex] || 1;
+                const frameData = pieData.map(function (item, idx) {
+                    const skewBase = ((idx + 1) / Math.max(1, pieData.length)) - 0.5;
+                    const skew = 1 + (skewBase * 0.12 * (stepIndex / Math.max(1, steps.length - 1)));
+                    return {
+                        label: item.label,
+                        value: Math.max(0, Math.round(item.value * progress * skew))
+                    };
+                });
+                return {label: step, data: frameData};
+            });
+
+            let frameIndex = 0;
+            function renderFrame(index) {
+                const frame = timelineFrames[index] || timelineFrames[0];
+                if (!frame) return;
+                timelineLabel.set('text', frame.label);
+                series.data.setAll(frame.data);
+            }
+
+            renderFrame(frameIndex);
+
+            const timer = setInterval(function () {
+                frameIndex = (frameIndex + 1) % timelineFrames.length;
+                renderFrame(frameIndex);
+            }, 2200);
+
+            root.events.on('dispose', function () {
+                clearInterval(timer);
+            });
         });
     </script>
 @endpush
