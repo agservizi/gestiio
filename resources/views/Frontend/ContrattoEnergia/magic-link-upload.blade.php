@@ -30,18 +30,12 @@
             margin: 32px auto;
         }
 
-        .ce-card {
-            background: var(--ce-card);
-            border: 1px solid var(--ce-border);
-            border-radius: 18px;
-            box-shadow: 0 18px 50px rgba(16, 35, 63, .07);
-            overflow: hidden;
-        }
-
         .ce-hero {
             padding: 24px 28px;
             background: linear-gradient(135deg, #0d2f66 0%, #0b57d0 55%, #3b82f6 100%);
             color: #fff;
+            border-radius: 18px;
+            box-shadow: 0 18px 50px rgba(16, 35, 63, .07);
         }
 
         .ce-title {
@@ -56,7 +50,7 @@
         }
 
         .ce-content {
-            padding: 22px 24px 26px;
+            padding: 22px 4px 26px;
         }
 
         .ce-grid {
@@ -171,76 +165,74 @@
 </head>
 <body>
 <div class="ce-wrap">
-    <div class="ce-card">
-        <div class="ce-hero">
-            <div class="ce-title">Completamento pratica energia</div>
-            <div class="ce-subtitle">Carica i documenti firmati di voltura/subentro tramite link sicuro.</div>
-        </div>
+    <div class="ce-hero">
+        <div class="ce-title">Completamento pratica energia</div>
+        <div class="ce-subtitle">Carica i documenti firmati di voltura/subentro tramite link sicuro.</div>
+    </div>
 
-        <div class="ce-content">
-            @if(session('status'))
-                <div class="alert alert-success">{{ session('status') }}</div>
-            @endif
+    <div class="ce-content">
+        @if(session('status'))
+            <div class="alert alert-success">{{ session('status') }}</div>
+        @endif
 
-            @if($errors->any())
-                <div class="alert alert-danger">
-                    <ul class="mb-0 ps-4">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <div class="ce-grid">
-                <div class="ce-info">
-                    <div class="ce-row"><span class="k">Pratica</span><strong>#{{ $contratto->id }}</strong></div>
-                    <div class="ce-row"><span class="k">Cliente</span><strong>{{ $contratto->nominativo() }}</strong></div>
-                    <div class="ce-row"><span class="k">Gestore</span><strong>{{ $contratto->gestore?->nome ?? '-' }}</strong></div>
-                    <div class="ce-row"><span class="k">Email</span><strong>{{ $contratto->email }}</strong></div>
-                    <div class="ce-row"><span class="k">Scadenza link</span><strong>{{ optional($magicLink->expires_at)->format('d/m/Y H:i') }}</strong></div>
-                </div>
-                <div class="ce-actions">
-                    <div class="fw-semibold mb-2">Documento da compilare e firmare</div>
-                    <a class="btn btn-light-primary w-100 mb-2" href="{{ $templateUrl }}">Scarica modulo PDF</a>
-                    <div class="text-muted fs-8">Compila e firma il modulo, poi caricalo insieme agli altri allegati necessari.</div>
-                </div>
+        @if($errors->any())
+            <div class="alert alert-danger">
+                <ul class="mb-0 ps-4">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
             </div>
+        @endif
 
-            @if($alreadyUploaded)
-                <div class="alert alert-success mb-0">Documenti già ricevuti. Il backend procederà al completamento della pratica.</div>
-            @elseif($isExpired)
-                <div class="alert alert-warning mb-0">Questo link è scaduto. Richiedi un nuovo invio documenti.</div>
-            @elseif($canUpload)
-                <form method="POST" enctype="multipart/form-data" action="{{ route('frontend.contratto-energia.magic.store', ['token' => $token]) }}" id="ce-form-upload">
-                    @csrf
-
-                    <input type="file" class="d-none" id="documenti_firmati" name="documenti_firmati[]" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple required>
-
-                    <div class="ce-dropzone" id="ce-dropzone">
-                        <div class="fs-6 fw-bold mb-1">Trascina qui i documenti firmati</div>
-                        <div class="text-muted fs-8 mb-3">oppure clicca per selezionare più allegati</div>
-                        <span class="ce-chip success">Formati: PDF, JPG, PNG, WEBP · max 10MB per file</span>
-                    </div>
-
-                    <div class="ce-files" id="ce-files"></div>
-
-                    <div class="form-check mt-4">
-                        <input class="form-check-input" type="checkbox" value="1" id="conferma_firma" name="conferma_firma" required>
-                        <label class="form-check-label" for="conferma_firma">
-                            Confermo di aver firmato il documento in tutte le parti obbligatorie.
-                        </label>
-                    </div>
-
-                    <div class="ce-footer">
-                        <div class="text-muted fs-8">Il link è monouso: dopo l'invio non potrà essere riutilizzato.</div>
-                        <button type="submit" class="btn btn-primary ce-submit" id="ce-submit" disabled>Invia documenti</button>
-                    </div>
-                </form>
-            @else
-                <div class="alert alert-warning mb-0">Questo link non è più valido.</div>
-            @endif
+        <div class="ce-grid">
+            <div class="ce-info">
+                <div class="ce-row"><span class="k">Pratica</span><strong>#{{ $contratto->id }}</strong></div>
+                <div class="ce-row"><span class="k">Cliente</span><strong>{{ $contratto->nominativo() }}</strong></div>
+                <div class="ce-row"><span class="k">Gestore</span><strong>{{ $contratto->gestore?->nome ?? '-' }}</strong></div>
+                <div class="ce-row"><span class="k">Email</span><strong>{{ $contratto->email }}</strong></div>
+                <div class="ce-row"><span class="k">Scadenza link</span><strong>{{ optional($magicLink->expires_at)->format('d/m/Y H:i') }}</strong></div>
+            </div>
+            <div class="ce-actions">
+                <div class="fw-semibold mb-2">Documento da compilare e firmare</div>
+                <a class="btn btn-light-primary w-100 mb-2" href="{{ $templateUrl }}">Scarica modulo PDF</a>
+                <div class="text-muted fs-8">Compila e firma il modulo, poi caricalo insieme agli altri allegati necessari.</div>
+            </div>
         </div>
+
+        @if($alreadyUploaded)
+            <div class="alert alert-success mb-0">Documenti già ricevuti. Il backend procederà al completamento della pratica.</div>
+        @elseif($isExpired)
+            <div class="alert alert-warning mb-0">Questo link è scaduto. Richiedi un nuovo invio documenti.</div>
+        @elseif($canUpload)
+            <form method="POST" enctype="multipart/form-data" action="{{ route('frontend.contratto-energia.magic.store', ['token' => $token]) }}" id="ce-form-upload">
+                @csrf
+
+                <input type="file" class="d-none" id="documenti_firmati" name="documenti_firmati[]" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple required>
+
+                <div class="ce-dropzone" id="ce-dropzone">
+                    <div class="fs-6 fw-bold mb-1">Trascina qui i documenti firmati</div>
+                    <div class="text-muted fs-8 mb-3">oppure clicca per selezionare più allegati</div>
+                    <span class="ce-chip success">Formati: PDF, JPG, PNG, WEBP · max 10MB per file</span>
+                </div>
+
+                <div class="ce-files" id="ce-files"></div>
+
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" value="1" id="conferma_firma" name="conferma_firma" required>
+                    <label class="form-check-label" for="conferma_firma">
+                        Confermo di aver firmato il documento in tutte le parti obbligatorie.
+                    </label>
+                </div>
+
+                <div class="ce-footer">
+                    <div class="text-muted fs-8">Il link è monouso: dopo l'invio non potrà essere riutilizzato.</div>
+                    <button type="submit" class="btn btn-primary ce-submit" id="ce-submit" disabled>Invia documenti</button>
+                </div>
+            </form>
+        @else
+            <div class="alert alert-warning mb-0">Questo link non è più valido.</div>
+        @endif
     </div>
 </div>
 
