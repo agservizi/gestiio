@@ -13,10 +13,12 @@ use App\Models\GestoreContrattoEnergia;
 use App\Models\Notifica;
 use App\Models\TabMotivoKo;
 use App\Models\User;
+use App\Models\ContrattoEnergiaMagicLink;
 use App\Notifications\NotificaAdminContrattoEnergia;
 use App\Notifications\NotificaAgenteCambioEsitoContrattoEnergia;
 use App\Notifications\NotificaAgenteNuovoContrattoEnergia;
 use App\Notifications\NotificaClienteContrattoEnergia;
+use App\Notifications\NotificaClienteRichiestaDocumentiContrattoEnergia;
 use App\Notifications\NotificaDatiAccessoClienteContrattoEnergia;
 use App\Notifications\NotificaGenericaGestoreContrattoEnergia;
 use App\Rules\CodiceFiscaleRule;
@@ -29,6 +31,7 @@ use App\Models\ContrattoEnergia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -956,6 +959,33 @@ class ContrattoEnergiaController extends Controller
 
             }
 
+            if ($this->isRichiestaDocumentiEsito($esito) && filter_var($ContrattoEnergia->email, FILTER_VALIDATE_EMAIL)) {
+                dispatch(function () use ($ContrattoEnergia) {
+                    try {
+                        [$magicLink, $plainToken] = ContrattoEnergiaMagicLink::createRichiestaDocumentiLink(
+                            $ContrattoEnergia,
+                            Auth::id(),
+                            72
+                        );
+
+                        $magicUrl = route('frontend.contratto-energia.magic.show', ['token' => $plainToken]);
+                        Notification::route('mail', $ContrattoEnergia->email)
+                            ->notify(new NotificaClienteRichiestaDocumentiContrattoEnergia(
+                                $ContrattoEnergia,
+                                $magicUrl,
+                                optional($magicLink->expires_at)->format('d/m/Y H:i')
+                            ));
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                        Notifica::notificaAdAdmin(
+                            'Errore invio magic-link documenti',
+                            'Contratto energia #' . $ContrattoEnergia->id . ': ' . $exception->getMessage(),
+                            'error'
+                        );
+                    }
+                })->afterResponse();
+            }
+
             if ($request->input('ruolo') == 'supervisore') {
                 Notifica::notificaAdAdmin('Cambio stato', 'Esito per il ContrattoEnergia di ' . $ContrattoEnergia->nominativo() . ' modificato a ' . $esito->nome);
             }
@@ -1237,6 +1267,16 @@ class ContrattoEnergiaController extends Controller
         ];
 
         return $rules;
+    }
+
+    protected function isRichiestaDocumentiEsito(?EsitoContrattoEnergia $esito): bool
+    {
+        if (!$esito) {
+            return false;
+        }
+
+        $nome = strtolower(trim((string) $esito->nome));
+        return Str::contains($nome, ['richiesta documenti', 'richiesta documento']);
     }
 
     protected function determinaCategoriaPratica(

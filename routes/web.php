@@ -42,6 +42,13 @@ Route::match(['get', 'post'], '/documenti/condivisi/{token}', [\App\Http\Control
 
 Route::get('/pagina/{pagina}', [\App\Http\Controllers\PagineController::class, 'show']);
 
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('/contratto-energia/documenti/{token}', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'show'])
+        ->name('frontend.contratto-energia.magic.show');
+    Route::post('/contratto-energia/documenti/{token}', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'store'])
+        ->name('frontend.contratto-energia.magic.store');
+});
+
 Route::group(['middleware' => ['auth']], function () {
 
     Route::get('area-personale', [\App\Http\Controllers\Frontend\AreaUtenteController::class, 'show']);
@@ -85,4 +92,3 @@ Route::get('/stop-impersona', function () {
 if (env('APP_ENV') == 'local') {
     Route::get('login-id/{id}', [\App\Http\Controllers\LogOut::class, 'loginId']);
 }
-
