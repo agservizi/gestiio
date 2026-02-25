@@ -9,18 +9,25 @@
     <link href="/assets_backend/css/style10.bundle.css" rel="stylesheet" type="text/css"/>
     <style>
         .ce-dropzone {
-            border: 2px dashed var(--bs-primary-light);
+            border: 3px dashed #3b82f6;
             border-radius: .625rem;
-            background: var(--bs-primary-lightest);
+            background: #f5f9ff;
             padding: 2.5rem 1.5rem;
             text-align: center;
             cursor: pointer;
             transition: all .2s ease;
+            box-shadow: inset 0 0 0 2px rgba(59, 130, 246, .08);
         }
 
         .ce-dropzone.drag {
-            border-color: var(--bs-primary);
-            background: #f1f6ff;
+            border-color: #2563eb;
+            background: #eaf2ff;
+            box-shadow: inset 0 0 0 2px rgba(37, 99, 235, .16);
+        }
+
+        .ce-dropzone:hover {
+            border-color: #2563eb;
+            background: #eef4ff;
         }
 
         .ce-files {
