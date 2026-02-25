@@ -271,7 +271,7 @@
                         </div>
                     </div>
 
-                    <div id="chat-pinned-panel" class="mb-2 p-2 bg-light rounded">
+                    <div id="chat-pinned-panel" class="mb-2 p-2 bg-light rounded {{ isset($pinnedMessages) && $pinnedMessages->isNotEmpty() ? '' : 'd-none' }}">
                         <div class="fw-bold fs-8 mb-1">Messaggi in evidenza</div>
                         <div id="chat-pinned-content">
                             @include('Backend.Chat._pinned', ['pinnedMessages' => $pinnedMessages ?? collect()])
@@ -582,9 +582,15 @@
                 activeLastMessageId = cached.ultimoId ?? activeLastMessageId;
                 if (cached.pinnedHtml !== undefined) {
                     $('#chat-pinned-content').html(cached.pinnedHtml);
+                    refreshPinnedPanelVisibility();
                 }
                 setComposerEnabled(true);
                 return true;
+            }
+
+            function refreshPinnedPanelVisibility() {
+                const hasPinned = $('#chat-pinned-content').find('.chat-pinned-jump').length > 0;
+                $('#chat-pinned-panel').toggleClass('d-none', !hasPinned);
             }
 
             function captureMessagesScrollState() {
@@ -848,6 +854,7 @@
                     }
                     if (response.pinnedHtml !== undefined) {
                         $('#chat-pinned-content').html(response.pinnedHtml);
+                        refreshPinnedPanelVisibility();
                     }
                     renderForwardTargets();
 
@@ -964,6 +971,7 @@
 
                     if (response.pinnedHtml !== undefined) {
                         $('#chat-pinned-content').html(response.pinnedHtml);
+                        refreshPinnedPanelVisibility();
                     }
 
                     // Typing
@@ -1601,6 +1609,8 @@
             } else {
                 setComposerEnabled(false);
             }
+
+            refreshPinnedPanelVisibility();
 
             renderForwardTargets();
             syncThreadActiveStyles();

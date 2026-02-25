@@ -9,6 +9,4 @@
             </button>
         @endforeach
     </div>
-@else
-    <div class="text-muted fs-8">Nessun messaggio in evidenza.</div>
 @endif
