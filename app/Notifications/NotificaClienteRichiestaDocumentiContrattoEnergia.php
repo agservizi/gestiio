@@ -35,6 +35,7 @@ class NotificaClienteRichiestaDocumentiContrattoEnergia extends Notification
             ->greeting('Ciao ' . ($nome !== '' ? $nome : 'Cliente'))
             ->line('Per completare la tua pratica energia servono documenti aggiuntivi.')
             ->line(new HtmlString('<strong>Documento richiesto: Voltura/Subentro firmato in tutte le parti obbligatorie.</strong>'))
+            ->line('Nel form ti verrà richiesto anche il link di attivazione inviato dal gestore (ENEL via email, A2A via email/SMS).')
             ->action('Scarica modulo da firmare', $this->templateUrl)
             ->line('Accedi con il link qui sotto (senza login) e carica il documento richiesto.')
             ->action('Carica documento firmato', $this->magicUrl)

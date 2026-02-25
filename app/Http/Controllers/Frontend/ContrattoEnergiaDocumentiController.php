@@ -36,6 +36,7 @@ class ContrattoEnergiaDocumentiController extends Controller
 
         $contratto = ContrattoEnergia::query()->findOrFail($record->contratto_energia_id);
         $templateUrl = route('frontend.contratto-energia.magic.template');
+        [$activationLabel, $activationPlaceholder] = $this->activationLinkUiText($contratto);
 
         return view('Frontend.ContrattoEnergia.magic-link-upload', [
             'titoloPagina' => 'Caricamento documento firmato',
@@ -43,6 +44,8 @@ class ContrattoEnergiaDocumentiController extends Controller
             'magicLink' => $record,
             'contratto' => $contratto,
             'templateUrl' => $templateUrl,
+            'activationLabel' => $activationLabel,
+            'activationPlaceholder' => $activationPlaceholder,
             'canUpload' => $record->isUsable(),
             'alreadyUploaded' => (bool) $record->used_at,
             'isExpired' => $record->isExpired(),
@@ -61,11 +64,14 @@ class ContrattoEnergiaDocumentiController extends Controller
         $request->validate([
             'documenti_firmati' => ['required', 'array', 'min:1', 'max:10'],
             'documenti_firmati.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'link_attivazione_gestore' => ['required', 'url', 'max:2000'],
             'conferma_firma' => ['accepted'],
         ], [
             'documenti_firmati.required' => 'Carica almeno un documento firmato prima di inviare.',
             'documenti_firmati.min' => 'Carica almeno un documento firmato prima di inviare.',
             'documenti_firmati.max' => 'Puoi caricare massimo 10 allegati alla volta.',
+            'link_attivazione_gestore.required' => 'Incolla il link di attivazione del gestore prima di inviare.',
+            'link_attivazione_gestore.url' => 'Il link di attivazione non è valido.',
             'conferma_firma.accepted' => 'Devi confermare che il documento è stato firmato in tutte le parti obbligatorie.',
         ]);
 
@@ -92,6 +98,7 @@ class ContrattoEnergiaDocumentiController extends Controller
             $savedFiles++;
         }
 
+        $contratto->link_attivazione_gestore = trim((string) $request->input('link_attivazione_gestore'));
         $contratto->note = trim((string) $contratto->note . "\n[" . now()->format('d/m/Y H:i') . "] Documenti voltura/subentro firmati caricati dal cliente via magic-link: " . $savedFiles . ' allegato/i.');
         $contratto->save();
 
@@ -117,5 +124,29 @@ class ContrattoEnergiaDocumentiController extends Controller
         }
 
         return null;
+    }
+
+    private function activationLinkUiText(ContrattoEnergia $contratto): array
+    {
+        $gestoreNome = strtolower((string) optional($contratto->gestore)->nome);
+
+        if (Str::contains($gestoreNome, 'enel')) {
+            return [
+                'Link attivazione ENEL',
+                'Incolla il link attivazione ENEL arrivato via email',
+            ];
+        }
+
+        if (Str::contains($gestoreNome, 'a2a')) {
+            return [
+                'Link attivazione A2A',
+                'Incolla il link di attivazione A2A arrivato via email/SMS',
+            ];
+        }
+
+        return [
+            'Link attivazione del gestore',
+            'Incolla il link di attivazione ricevuto dal gestore (email/SMS)',
+        ];
     }
 }

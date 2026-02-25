@@ -130,6 +130,18 @@
 
                 <div class="ce-files" id="ce-files"></div>
 
+                <div class="mt-5">
+                    <label for="link_attivazione_gestore" class="form-label fw-semibold">{{ $activationLabel ?? 'Link attivazione del gestore' }}</label>
+                    <input type="url"
+                           class="form-control"
+                           id="link_attivazione_gestore"
+                           name="link_attivazione_gestore"
+                           placeholder="{{ $activationPlaceholder ?? 'Incolla il link di attivazione ricevuto dal gestore (email/SMS)' }}"
+                           value="{{ old('link_attivazione_gestore', $contratto->link_attivazione_gestore ?? '') }}"
+                           required>
+                    <div class="form-text">Incolla l'URL completo (es. https://...)</div>
+                </div>
+
                 <div class="form-check mt-4">
                     <input class="form-check-input" type="checkbox" value="1" id="conferma_firma" name="conferma_firma" required>
                     <label class="form-check-label" for="conferma_firma">
@@ -159,6 +171,7 @@
         var fileInput = document.getElementById('documenti_firmati');
         var filesBox = document.getElementById('ce-files');
         var check = document.getElementById('conferma_firma');
+        var activationLink = document.getElementById('link_attivazione_gestore');
         var submitBtn = document.getElementById('ce-submit');
 
         function bytesToSize(bytes) {
@@ -192,7 +205,8 @@
         function refreshSubmitState() {
             var hasFiles = (fileInput.files || []).length > 0;
             var accepted = !!check.checked;
-            submitBtn.disabled = !(hasFiles && accepted);
+            var hasLink = !!(activationLink.value || '').trim();
+            submitBtn.disabled = !(hasFiles && accepted && hasLink);
         }
 
         function setFilesFromList(fileList) {
@@ -248,6 +262,7 @@
         });
 
         check.addEventListener('change', refreshSubmitState);
+        activationLink.addEventListener('input', refreshSubmitState);
 
         form.addEventListener('submit', function (e) {
             refreshSubmitState();
