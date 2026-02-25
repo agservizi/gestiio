@@ -23,11 +23,15 @@
         body {
             background: radial-gradient(circle at 0% 0%, #edf3ff 0%, var(--ce-bg) 45%);
             color: var(--ce-title);
+            min-height: 100vh;
         }
 
         .ce-wrap {
-            width: min(980px, calc(100vw - 24px));
-            margin: 32px auto;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
         }
 
         .ce-hero {
@@ -159,6 +163,10 @@
         @media (max-width: 900px) {
             .ce-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .ce-wrap {
+                padding: 12px;
             }
         }
     </style>
