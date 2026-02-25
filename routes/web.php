@@ -43,6 +43,8 @@ Route::match(['get', 'post'], '/documenti/condivisi/{token}', [\App\Http\Control
 Route::get('/pagina/{pagina}', [\App\Http\Controllers\PagineController::class, 'show']);
 
 Route::middleware('throttle:20,1')->group(function () {
+    Route::get('/contratto-energia/documenti/template', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'downloadTemplate'])
+        ->name('frontend.contratto-energia.magic.template');
     Route::get('/contratto-energia/documenti/{token}', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'show'])
         ->name('frontend.contratto-energia.magic.show');
     Route::post('/contratto-energia/documenti/{token}', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'store'])

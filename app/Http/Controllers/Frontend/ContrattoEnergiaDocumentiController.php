@@ -9,9 +9,20 @@ use App\Models\ContrattoEnergiaMagicLink;
 use App\Models\Notifica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ContrattoEnergiaDocumentiController extends Controller
 {
+    private const TEMPLATE_FILENAME_PREFIX = 'Dichiarazione relativa al titolo di occupazione';
+
+    public function downloadTemplate(): BinaryFileResponse
+    {
+        $path = $this->resolveTemplatePath();
+        abort_if(!$path, 404, 'Documento non disponibile');
+
+        return response()->download($path);
+    }
+
     public function show(string $token)
     {
         $record = ContrattoEnergiaMagicLink::query()
@@ -24,12 +35,14 @@ class ContrattoEnergiaDocumentiController extends Controller
         }
 
         $contratto = ContrattoEnergia::query()->findOrFail($record->contratto_energia_id);
+        $templateUrl = route('frontend.contratto-energia.magic.template');
 
         return view('Frontend.ContrattoEnergia.magic-link-upload', [
             'titoloPagina' => 'Caricamento documento firmato',
             'token' => $token,
             'magicLink' => $record,
             'contratto' => $contratto,
+            'templateUrl' => $templateUrl,
             'canUpload' => $record->isUsable(),
             'alreadyUploaded' => (bool) $record->used_at,
             'isExpired' => $record->isExpired(),
@@ -46,44 +59,63 @@ class ContrattoEnergiaDocumentiController extends Controller
         }
 
         $request->validate([
-            'documento_firmato' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'documenti_firmati' => ['required', 'array', 'min:1', 'max:10'],
+            'documenti_firmati.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
             'conferma_firma' => ['accepted'],
         ], [
-            'documento_firmato.required' => 'Carica il documento firmato prima di inviare.',
+            'documenti_firmati.required' => 'Carica almeno un documento firmato prima di inviare.',
+            'documenti_firmati.min' => 'Carica almeno un documento firmato prima di inviare.',
+            'documenti_firmati.max' => 'Puoi caricare massimo 10 allegati alla volta.',
             'conferma_firma.accepted' => 'Devi confermare che il documento è stato firmato in tutte le parti obbligatorie.',
         ]);
 
         $contratto = ContrattoEnergia::query()->findOrFail($record->contratto_energia_id);
-        $filePath = $request->file('documento_firmato');
-
-        $ext = strtolower((string) $filePath->extension());
-        $savedName = Str::ulid() . '.' . $ext;
+        $uploadedFiles = $request->file('documenti_firmati', []);
+        $savedFiles = 0;
         $cartella = config('configurazione.allegati_contratti_energia.cartella');
-        $filePath->storeAs($cartella, $savedName);
 
-        $allegato = new AllegatoContrattoEnergia();
-        $allegato->contratto_energia_id = $contratto->id;
-        $allegato->uid = null;
-        $allegato->path_filename = $cartella . '/' . $savedName;
-        $allegato->filename_originale = 'VOLTURA_SUBENTRO_FIRMATO__' . $filePath->getClientOriginalName();
-        $allegato->mime_type = $filePath->getMimeType();
-        $allegato->dimensione_file = $filePath->getSize();
-        $content = file_get_contents($filePath->getRealPath());
-        $allegato->file_contenuto_base64 = $content !== false ? base64_encode($content) : null;
-        $allegato->save();
+        foreach ($uploadedFiles as $filePath) {
+            $ext = strtolower((string) $filePath->extension());
+            $savedName = Str::ulid() . '.' . $ext;
+            $filePath->storeAs($cartella, $savedName);
 
-        $contratto->note = trim((string) $contratto->note . "\n[" . now()->format('d/m/Y H:i') . "] Documento voltura/subentro firmato caricato dal cliente via magic-link.");
+            $allegato = new AllegatoContrattoEnergia();
+            $allegato->contratto_energia_id = $contratto->id;
+            $allegato->uid = null;
+            $allegato->path_filename = $cartella . '/' . $savedName;
+            $allegato->filename_originale = 'VOLTURA_SUBENTRO_FIRMATO__' . $filePath->getClientOriginalName();
+            $allegato->mime_type = $filePath->getMimeType();
+            $allegato->dimensione_file = $filePath->getSize();
+            $content = file_get_contents($filePath->getRealPath());
+            $allegato->file_contenuto_base64 = $content !== false ? base64_encode($content) : null;
+            $allegato->save();
+            $savedFiles++;
+        }
+
+        $contratto->note = trim((string) $contratto->note . "\n[" . now()->format('d/m/Y H:i') . "] Documenti voltura/subentro firmati caricati dal cliente via magic-link: " . $savedFiles . ' allegato/i.');
         $contratto->save();
 
         $record->markUsed($request->ip());
 
         Notifica::notificaAdAdmin(
             'Documento cliente ricevuto',
-            'Contratto energia #' . $contratto->id . ' (' . $contratto->nominativo() . ') - caricamento documento voltura/subentro firmato completato da magic-link.'
+            'Contratto energia #' . $contratto->id . ' (' . $contratto->nominativo() . ') - caricamento documenti voltura/subentro firmati completato da magic-link: ' . $savedFiles . ' allegato/i.'
         );
 
         return redirect()
             ->route('frontend.contratto-energia.magic.show', ['token' => $token])
-            ->with('status', 'Documento ricevuto correttamente. La pratica verrà completata dal backend.');
+            ->with('status', 'Documenti ricevuti correttamente. La pratica verrà completata dal backend.');
+    }
+
+    private function resolveTemplatePath(): ?string
+    {
+        $candidates = glob(base_path('docs/*.pdf')) ?: [];
+        foreach ($candidates as $file) {
+            if (Str::startsWith(basename($file), self::TEMPLATE_FILENAME_PREFIX)) {
+                return $file;
+            }
+        }
+
+        return null;
     }
 }

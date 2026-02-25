@@ -973,6 +973,7 @@ class ContrattoEnergiaController extends Controller
                             ->notify(new NotificaClienteRichiestaDocumentiContrattoEnergia(
                                 $ContrattoEnergia,
                                 $magicUrl,
+                                route('frontend.contratto-energia.magic.template'),
                                 optional($magicLink->expires_at)->format('d/m/Y H:i')
                             ));
                     } catch (\Throwable $exception) {

@@ -17,6 +17,7 @@ class NotificaClienteRichiestaDocumentiContrattoEnergia extends Notification
     public function __construct(
         protected ContrattoEnergia $contratto,
         protected string $magicUrl,
+        protected string $templateUrl,
         protected string $expiresAtLabel
     ) {
     }
@@ -34,6 +35,7 @@ class NotificaClienteRichiestaDocumentiContrattoEnergia extends Notification
             ->greeting('Ciao ' . ($nome !== '' ? $nome : 'Cliente'))
             ->line('Per completare la tua pratica energia servono documenti aggiuntivi.')
             ->line(new HtmlString('<strong>Documento richiesto: Voltura/Subentro firmato in tutte le parti obbligatorie.</strong>'))
+            ->action('Scarica modulo da firmare', $this->templateUrl)
             ->line('Accedi con il link qui sotto (senza login) e carica il documento richiesto.')
             ->action('Carica documento firmato', $this->magicUrl)
             ->line('Il link scade il: ' . $this->expiresAtLabel)
