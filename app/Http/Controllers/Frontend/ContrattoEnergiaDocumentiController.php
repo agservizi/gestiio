@@ -7,13 +7,16 @@ use App\Models\AllegatoContrattoEnergia;
 use App\Models\ContrattoEnergia;
 use App\Models\ContrattoEnergiaMagicLink;
 use App\Models\Notifica;
+use App\Notifications\NotificaAdminDocumentiContrattoEnergiaRicevuti;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ContrattoEnergiaDocumentiController extends Controller
 {
     private const TEMPLATE_FILENAME_PREFIX = 'Dichiarazione relativa al titolo di occupazione';
+    private const DESTINATARIO_ADMIN_DOCUMENTI = 'ag.servizi16@gmail.com';
 
     public function downloadTemplate(): BinaryFileResponse
     {
@@ -108,6 +111,8 @@ class ContrattoEnergiaDocumentiController extends Controller
             'Documento cliente ricevuto',
             'Contratto energia #' . $contratto->id . ' (' . $contratto->nominativo() . ') - caricamento documenti voltura/subentro firmati completato da magic-link: ' . $savedFiles . ' allegato/i.'
         );
+        Notification::route('mail', self::DESTINATARIO_ADMIN_DOCUMENTI)
+            ->notify(new NotificaAdminDocumentiContrattoEnergiaRicevuti($contratto, $savedFiles));
 
         return redirect()
             ->route('frontend.contratto-energia.magic.show', ['token' => $token])
