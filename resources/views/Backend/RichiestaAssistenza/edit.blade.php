@@ -1,5 +1,4 @@
-@php($isAjaxModal = request()->ajax())
-@extends($isAjaxModal ? 'Backend._components.modal' : 'Backend._layout._main', $isAjaxModal ? ['centered' => true] : [])
+@extends('Backend._layout._main')
 @section('toolbar')
 @endsection
 
