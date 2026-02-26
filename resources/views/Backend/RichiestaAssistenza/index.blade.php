@@ -60,7 +60,7 @@
 @endsection
 @push('customScript')
     <script>
-        const indexUrl = "{{ action([$controller, 'index']) }}";
+        window.indexUrl = "{{ action([$controller, 'index']) }}";
 
         $(function () {
             searchHandler();
