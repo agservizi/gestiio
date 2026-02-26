@@ -204,12 +204,28 @@
 @endsection
 @push('customScript')
     <script src="/assets_backend/js-miei/select2_it.js"></script>
+    <script type="application/json" id="contratto-energia-edit-config">
+        @json([
+            'cfRiskCheckUrl' => action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'verificaCodiceFiscaleRischio']),
+            'initialCfRiskBlock' => session('cf_risk_block'),
+            'recordId' => $record->id ? (int) $record->id : null,
+            'switchCategoriaUrl' => $record->id ? action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'switchCategoria'], [$record->id]) : null,
+            'categoriaDefault' => old('categoria_pratica', $categoriaPratica ?? 'consumer'),
+            'contrattoEnergiaId' => $record->id ?? -1,
+            'allegatiEsistenti' => \App\Models\AllegatoContrattoEnergia::perBlade($uid, $record->id),
+            'deleteAllegatoUrl' => action([$controller, 'deleteAllegato']),
+            'clienteCfUrl' => action([\App\Http\Controllers\Backend\AjaxController::class, 'post'], 'cliente-cf'),
+            'csrfToken' => csrf_token(),
+        ])
+    </script>
     <script>
 
 
         $(function () {
-            var cfRiskCheckUrl = '{{ action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'verificaCodiceFiscaleRischio']) }}';
-            var initialCfRiskBlock = @json(session('cf_risk_block'));
+            var configNode = document.getElementById('contratto-energia-edit-config');
+            var editConfig = configNode ? JSON.parse(configNode.textContent) : {};
+            var cfRiskCheckUrl = editConfig.cfRiskCheckUrl || '';
+            var initialCfRiskBlock = editConfig.initialCfRiskBlock || null;
             var cfRiskLocked = false;
 
             function setContractButtonsLocked(locked) {
@@ -251,7 +267,7 @@
                     type: 'POST',
                     dataType: 'json',
                     data: {
-                        _token: '{{ csrf_token() }}',
+                        _token: editConfig.csrfToken,
                         codice_fiscale: cf,
                         gestore_id: $('#gestore_id').val() || null
                     }
@@ -264,8 +280,8 @@
                 applyCfRiskState(initialCfRiskBlock, true);
             }
 
-            var recordId = {!! $record->id ? (int) $record->id : 'null' !!};
-            var switchCategoriaUrl = @json($record->id ? action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'switchCategoria'], [$record->id]) : null);
+            var recordId = editConfig.recordId;
+            var switchCategoriaUrl = editConfig.switchCategoriaUrl;
 
             eliminaHandler('Questa voce verrà eliminata definitivamente');
             if ($('#agente_id').is("select")) {
@@ -283,7 +299,7 @@
                 $('#nome, #cognome').prop('required', !isBusiness);
             }
 
-            toggleCategoriaPratica($('#categoria_pratica').val() || '{{ old('categoria_pratica', $categoriaPratica ?? 'consumer') }}');
+            toggleCategoriaPratica($('#categoria_pratica').val() || editConfig.categoriaDefault);
 
             $('.js-categoria-tab:not([disabled])').on('click', function () {
                 var categoria = $(this).data('categoria');
@@ -315,7 +331,7 @@
                             type: 'POST',
                             dataType: 'json',
                             data: {
-                                _token: '{{ csrf_token() }}',
+                                _token: editConfig.csrfToken,
                                 categoria_pratica: categoria
                             },
                             success: function (resp) {
@@ -403,10 +419,10 @@
                     thisDropzone = this;
                     this.on("sending", function (file, xhr, formData) {
                         formData.append("uid", $('#uid').val());
-                        formData.append("contratto_energia_id", {{$record->id??-1}});
+                        formData.append("contratto_energia_id", editConfig.contrattoEnergiaId);
                         console.log(formData)
                     });
-                    const esistenti =@json(\App\Models\AllegatoContrattoEnergia::perBlade($uid,$record->id));
+                    const esistenti = editConfig.allegatiEsistenti;
                     if (esistenti) {
                         $.each(esistenti, function (key, value) {
 
@@ -452,7 +468,7 @@
                             'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
                         },
                         type: 'DELETE',
-                        url: '{{ action([$controller,'deleteAllegato']) }}',
+                        url: editConfig.deleteAllegatoUrl,
                         data: {
                             id: file.id
                         },
@@ -473,8 +489,13 @@
                 requestCfRisk(true);
             });
 
+            var bypassCfRiskSubmit = false;
             $('form').on('submit.cfRisk', function (event) {
                 var form = this;
+
+                if (bypassCfRiskSubmit) {
+                    return;
+                }
 
                 if (cfRiskLocked) {
                     event.preventDefault();
@@ -488,6 +509,11 @@
                         showCfRiskModal(resp);
                         return;
                     }
+                    bypassCfRiskSubmit = true;
+                    form.submit();
+                }).fail(function () {
+                    // Se il check CF non è raggiungibile, non bloccare il salvataggio del contratto.
+                    bypassCfRiskSubmit = true;
                     form.submit();
                 });
             });
@@ -505,7 +531,7 @@
                 if ($('#cognome').val() !== '') {
                     return;
                 }
-                var url = '{{action([\App\Http\Controllers\Backend\AjaxController::class,'post'],'cliente-cf')}}';
+                var url = editConfig.clienteCfUrl;
                 $.ajax({
                     url: url,
                     type: 'post',

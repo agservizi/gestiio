@@ -287,10 +287,16 @@ class ContrattoEnergia extends Model
             return true;
         }
 
-        if ($this->esito_id == 'bozza' || $this->esito_id == 'da-gestire') {
+        $editableEsiti = ['bozza', 'da-gestire', 'in-gestione', 'in_gestione'];
+        if (in_array((string) $this->esito_id, $editableEsiti, true)) {
             return true;
-        } else {
-            return false;
         }
+
+        $nomeEsito = strtolower(trim((string) optional($this->esito)->nome));
+        if ($nomeEsito === 'in gestione') {
+            return true;
+        }
+
+        return false;
     }
 }
