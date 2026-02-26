@@ -198,14 +198,21 @@ class RichiestaAssistenzaController extends Controller
     public function pdf($id)
     {
         $richiesta = RichiestaAssistenza::with('cliente')->with('prodotto')->find($id);
-        switch ($richiesta->prodotto_assistenza_id) {
-            case 1:
-                return $this->pdfNamirial($richiesta);
+        abort_if(!$richiesta, 404, 'Questa richiesta assistenza non esiste');
 
-            case 2:
-                return $this->pdfInfocert($richiesta);
+        $nomeProdotto = Str::lower((string) optional($richiesta->prodotto)->nome);
+        $isNamirial = (int) $richiesta->prodotto_assistenza_id === 1 || Str::contains($nomeProdotto, 'namirial');
+        $isInfocert = (int) $richiesta->prodotto_assistenza_id === 2 || Str::contains($nomeProdotto, 'infocert');
 
+        if ($isNamirial) {
+            return $this->pdfNamirial($richiesta);
         }
+
+        if ($isInfocert) {
+            return $this->pdfInfocert($richiesta);
+        }
+
+        abort(422, 'PDF non disponibile per il prodotto assistenza selezionato');
 
     }
 

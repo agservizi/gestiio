@@ -154,7 +154,7 @@
 @push('customScript')
     <script src="/assets_backend/js-miei/select2_it.js"></script>
     <script>
-        const urlSelect2 = "{{ action([\App\Http\Controllers\Backend\Select2::class, 'response']) }}";
+        urlSelect2 = "{{ action([\App\Http\Controllers\Backend\Select2::class, 'response']) }}";
         $(function () {
             eliminaHandler('Questa voce verrà eliminata definitivamente');
 
