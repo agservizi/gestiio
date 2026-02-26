@@ -204,8 +204,8 @@
 @endsection
 @push('customScript')
     <script src="/assets_backend/js-miei/select2_it.js"></script>
-    <script type="application/json" id="contratto-energia-edit-config">
-        @json([
+    @php
+        $contrattoEnergiaEditConfig = [
             'cfRiskCheckUrl' => action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'verificaCodiceFiscaleRischio']),
             'initialCfRiskBlock' => session('cf_risk_block'),
             'recordId' => $record->id ? (int) $record->id : null,
@@ -216,8 +216,9 @@
             'deleteAllegatoUrl' => action([$controller, 'deleteAllegato']),
             'clienteCfUrl' => action([\App\Http\Controllers\Backend\AjaxController::class, 'post'], 'cliente-cf'),
             'csrfToken' => csrf_token(),
-        ])
-    </script>
+        ];
+    @endphp
+    <script type="application/json" id="contratto-energia-edit-config">@json($contrattoEnergiaEditConfig)</script>
     <script>
 
 
