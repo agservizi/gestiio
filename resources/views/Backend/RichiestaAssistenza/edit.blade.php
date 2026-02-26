@@ -1,4 +1,5 @@
-@extends('Backend._layout._main')
+@php($isAjaxModal = request()->ajax())
+@extends($isAjaxModal ? 'Backend._components.modal' : 'Backend._layout._main', $isAjaxModal ? ['centered' => true] : [])
 @section('toolbar')
 @endsection
 
@@ -154,7 +155,7 @@
 @push('customScript')
     <script src="/assets_backend/js-miei/select2_it.js"></script>
     <script>
-        urlSelect2 = '{{action([\App\Http\Controllers\Backend\Select2::class,'response'])}}';
+        const urlSelect2 = "{{ action([\App\Http\Controllers\Backend\Select2::class, 'response']) }}";
         $(function () {
             eliminaHandler('Questa voce verrà eliminata definitivamente');
 
