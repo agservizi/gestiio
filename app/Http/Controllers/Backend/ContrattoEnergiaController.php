@@ -682,7 +682,9 @@ class ContrattoEnergiaController extends Controller
         }
 
 
-        return $this->backToIndex();
+        return redirect()
+            ->action([self::class, 'edit'], [$record->id])
+            ->with('status', 'Contratto energia aggiornato correttamente.');
     }
 
     public function verificaCodiceFiscaleRischio(Request $request): JsonResponse
