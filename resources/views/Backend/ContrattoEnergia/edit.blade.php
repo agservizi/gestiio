@@ -203,30 +203,38 @@
     </div>
 @endsection
 @push('customScript')
-    <script src="/assets_backend/js-miei/select2_it.js"></script>
     @php
-        $contrattoEnergiaEditConfig = [
+        $contrattoEnergiaConfig = [
             'cfRiskCheckUrl' => action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'verificaCodiceFiscaleRischio']),
             'initialCfRiskBlock' => session('cf_risk_block'),
             'recordId' => $record->id ? (int) $record->id : null,
             'switchCategoriaUrl' => $record->id ? action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'switchCategoria'], [$record->id]) : null,
-            'categoriaDefault' => old('categoria_pratica', $categoriaPratica ?? 'consumer'),
-            'contrattoEnergiaId' => $record->id ?? -1,
+            'defaultCategoria' => old('categoria_pratica', $categoriaPratica ?? 'consumer'),
+            'csrfToken' => csrf_token(),
+            'uploadAllegatoUrl' => action([$controller, 'uploadAllegato']),
+            'contrattoId' => $record->id ?? -1,
             'allegatiEsistenti' => \App\Models\AllegatoContrattoEnergia::perBlade($uid, $record->id),
             'deleteAllegatoUrl' => action([$controller, 'deleteAllegato']),
             'clienteCfUrl' => action([\App\Http\Controllers\Backend\AjaxController::class, 'post'], 'cliente-cf'),
-            'csrfToken' => csrf_token(),
         ];
     @endphp
-    <script type="application/json" id="contratto-energia-edit-config">@json($contrattoEnergiaEditConfig)</script>
+    <script id="contratto-energia-edit-config" type="application/json">{!! json_encode($contrattoEnergiaConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+    <script src="/assets_backend/js-miei/select2_it.js"></script>
     <script>
 
 
         $(function () {
-            var configNode = document.getElementById('contratto-energia-edit-config');
-            var editConfig = configNode ? JSON.parse(configNode.textContent) : {};
-            var cfRiskCheckUrl = editConfig.cfRiskCheckUrl || '';
-            var initialCfRiskBlock = editConfig.initialCfRiskBlock || null;
+            var configElement = document.getElementById('contratto-energia-edit-config');
+            var config = {};
+            try {
+                config = JSON.parse((configElement && configElement.textContent) ? configElement.textContent : '{}');
+            } catch (error) {
+                config = {};
+            }
+
+            var csrfToken = config.csrfToken || $('meta[name="csrf-token"]').attr('content') || $('meta[name="_token"]').attr('content') || '';
+            var cfRiskCheckUrl = config.cfRiskCheckUrl || '';
+            var initialCfRiskBlock = config.initialCfRiskBlock || null;
             var cfRiskLocked = false;
 
             function setContractButtonsLocked(locked) {
@@ -268,7 +276,7 @@
                     type: 'POST',
                     dataType: 'json',
                     data: {
-                        _token: editConfig.csrfToken,
+                        _token: csrfToken,
                         codice_fiscale: cf,
                         gestore_id: $('#gestore_id').val() || null
                     }
@@ -281,8 +289,8 @@
                 applyCfRiskState(initialCfRiskBlock, true);
             }
 
-            var recordId = editConfig.recordId;
-            var switchCategoriaUrl = editConfig.switchCategoriaUrl;
+            var recordId = typeof config.recordId === 'number' ? config.recordId : null;
+            var switchCategoriaUrl = config.switchCategoriaUrl || null;
 
             eliminaHandler('Questa voce verrà eliminata definitivamente');
             if ($('#agente_id').is("select")) {
@@ -300,7 +308,7 @@
                 $('#nome, #cognome').prop('required', !isBusiness);
             }
 
-            toggleCategoriaPratica($('#categoria_pratica').val() || editConfig.categoriaDefault);
+            toggleCategoriaPratica($('#categoria_pratica').val() || (config.defaultCategoria || 'consumer'));
 
             $('.js-categoria-tab:not([disabled])').on('click', function () {
                 var categoria = $(this).data('categoria');
@@ -332,7 +340,7 @@
                             type: 'POST',
                             dataType: 'json',
                             data: {
-                                _token: editConfig.csrfToken,
+                                _token: csrfToken,
                                 categoria_pratica: categoria
                             },
                             success: function (resp) {
@@ -407,23 +415,23 @@
             });
 
             var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
-                url: "{{action([$controller,'uploadAllegato'])}}", // Set the url for your upload script location
+                url: config.uploadAllegatoUrl, // Set the url for your upload script location
                 paramName: "file", // The name that will be used to transfer the file
                 maxFiles: 10,
                 maxFilesize: 20, // MB
                 addRemoveLinks: true,
                 //acceptedFiles: "image/*",
                 headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 init: function () {
                     thisDropzone = this;
                     this.on("sending", function (file, xhr, formData) {
                         formData.append("uid", $('#uid').val());
-                        formData.append("contratto_energia_id", editConfig.contrattoEnergiaId);
+                        formData.append("contratto_energia_id", config.contrattoId);
                         console.log(formData)
                     });
-                    const esistenti = editConfig.allegatiEsistenti;
+                    const esistenti = config.allegatiEsistenti || [];
                     if (esistenti) {
                         $.each(esistenti, function (key, value) {
 
@@ -466,10 +474,10 @@
                     console.log(name);
                     $.ajax({
                         headers: {
-                            'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
+                            'X-CSRF-TOKEN': csrfToken
                         },
                         type: 'DELETE',
-                        url: editConfig.deleteAllegatoUrl,
+                        url: config.deleteAllegatoUrl,
                         data: {
                             id: file.id
                         },
@@ -532,7 +540,7 @@
                 if ($('#cognome').val() !== '') {
                     return;
                 }
-                var url = editConfig.clienteCfUrl;
+                var url = config.clienteCfUrl;
                 $.ajax({
                     url: url,
                     type: 'post',
