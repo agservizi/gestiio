@@ -87,6 +87,29 @@
                             @endforeach
                         </div>
                     @endif
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="fw-bold fs-6 pt-2">Priorità</label>
+                            <select class="form-select form-select-solid mt-2 mb-5" name="priorita">
+                                <option value="">Automatica</option>
+                                @foreach(\App\Models\Ticket::PRIORITA_TICKETS as $key => $value)
+                                    <option value="{{$key}}" {{old('priorita')===$key?'selected':''}}>{{$value['testo']}}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold fs-6 pt-2">Team</label>
+                            <select class="form-select form-select-solid mt-2 mb-5" name="owner_team">
+                                <option value="">Automatico</option>
+                                @foreach(\App\Models\Ticket::TEAM_TICKETS as $key => $value)
+                                    <option value="{{$key}}" {{old('owner_team')===$key?'selected':''}}>{{$value}}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="alert alert-light-info border border-info border-dashed">
+                        Il sistema applicherà automaticamente priorità, team e scadenze SLA se lasci i campi su automatico.
+                    </div>
                     @include('Backend._inputs.inputTextArea',['campo'=>'messaggio','testo'=>'Messaggio','required'=>true,'autocomplete'=>'off'])
                     <div class="fv-row mt-2">
                         <div class="dropzone" id="kt_dropzonejs_example_1">

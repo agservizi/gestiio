@@ -13,6 +13,7 @@ use App\Models\Ticket;
 use App\Models\ContrattoEnergia;
 use App\Models\ContrattoTelefonia;
 use App\Models\MessaggioTicket;
+use App\Models\TicketStatusLog;
 use App\Models\User;
 use App\Notifications\NotificaAggiornamentoTicketAUtente;
 use App\Notifications\NotificaLetturaTicket;
@@ -37,8 +38,45 @@ class TicketsController extends Controller
     {
         /** @var User $authUser */
         $authUser = Auth::user();
-        $records = $this->applicaFiltri($request)->paginate();
+        $canUseKanban = $authUser->hasAnyPermission(['admin', 'supervisore', 'operatore']);
+        $currentView = $request->input('view', 'lista');
+        if (!$canUseKanban) {
+            $currentView = 'lista';
+        }
+
+        $baseQuery = $this->applicaFiltri($request);
+        $records = (clone $baseQuery)->paginate();
         $records->appends($request->query());
+        $metricheRecords = (clone $baseQuery)->get();
+
+        $kanbanColumns = collect(Ticket::STATI_TICKETS)->map(function ($config, $stato) use ($metricheRecords) {
+            $items = $metricheRecords
+                ->where('stato', $stato)
+                ->sortByDesc(fn (Ticket $ticket) => $ticket->workloadScore())
+                ->values();
+
+            return [
+                'key' => $stato,
+                'label' => $config['testo'],
+                'color' => $config['colore'],
+                'items' => $items,
+                'count' => $items->count(),
+            ];
+        })->values();
+
+        $metriche = [
+            'totale' => $metricheRecords->count(),
+            'non_assegnati' => $metricheRecords->whereNull('agente_id')->count(),
+            'in_carico_a_me' => $metricheRecords->where('agente_id', Auth::id())->count(),
+            'nuovi_da_leggere' => $metricheRecords->filter(fn (Ticket $ticket) => (int)($ticket->lettura?->messaggio_letto ?? 1) === 0)->count(),
+            'sla_violato' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->isSlaViolated())->count(),
+            'sla_in_scadenza' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->isSlaAtRisk())->count(),
+            'risolti_oggi' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->resolved_at?->isToday())->count(),
+            'carico_team' => $metricheRecords->groupBy(fn (Ticket $ticket) => $ticket->assegnatario?->nominativo() ?? 'Non assegnato')
+                ->map(fn ($items) => $items->count())
+                ->sortDesc()
+                ->take(8),
+        ];
 
         $assegnatariFiltro = collect();
         if ($authUser->hasAnyPermission(['admin', 'supervisore'])) {
@@ -61,6 +99,11 @@ class TicketsController extends Controller
             'admin' => $authUser->hasPermissionTo('admin'),
             'conFiltro' => $this->conFiltro,
             'assegnatariFiltro' => $assegnatariFiltro,
+            'metriche' => $metriche,
+            'kanbanColumns' => $kanbanColumns,
+            'currentView' => $currentView,
+            'canUseKanban' => $canUseKanban,
+            'isAgentView' => $authUser->hasPermissionTo('agente'),
 
         ]);
 
@@ -78,6 +121,9 @@ class TicketsController extends Controller
             ->with('assegnatario:id,nome,cognome')
             ->with('causaleTicket:id,descrizione_causale')
             ->with('lettura')
+            ->orderByRaw("CASE priorita WHEN 'urgente' THEN 4 WHEN 'alta' THEN 3 WHEN 'media' THEN 2 ELSE 1 END DESC")
+            ->orderByRaw('CASE WHEN resolution_due_at IS NULL THEN 1 ELSE 0 END ASC')
+            ->orderBy('resolution_due_at')
             ->orderByDesc('id');
 
         /** @var User $authUser */
@@ -98,6 +144,61 @@ class TicketsController extends Controller
         if ($request->input('stato')) {
             $queryBuilder->where('stato', $request->input('stato'));
             $this->conFiltro = true;
+        }
+
+        if ($request->filled('priorita')) {
+            $queryBuilder->where('priorita', $request->input('priorita'));
+            $this->conFiltro = true;
+        }
+
+        if ($request->filled('owner_team')) {
+            $queryBuilder->where('owner_team', $request->input('owner_team'));
+            $this->conFiltro = true;
+        }
+
+        if ($request->filled('q')) {
+            $search = trim((string)$request->input('q'));
+            $queryBuilder->where(function ($query) use ($search) {
+                $query->where('oggetto', 'like', '%' . $search . '%')
+                    ->orWhere('uid', 'like', '%' . $search . '%')
+                    ->orWhereHas('utente', function ($utenteQuery) use ($search) {
+                        $utenteQuery->where('nome', 'like', '%' . $search . '%')
+                            ->orWhere('cognome', 'like', '%' . $search . '%');
+                    });
+            });
+            $this->conFiltro = true;
+        }
+
+        if ($request->filled('sla')) {
+            $sla = $request->input('sla');
+            if ($sla === 'violato') {
+                $queryBuilder->where(function ($query) {
+                    $query->where(function ($innerQuery) {
+                        $innerQuery->whereNull('first_response_at')
+                            ->whereNotNull('first_response_due_at')
+                            ->where('first_response_due_at', '<', now());
+                    })->orWhere(function ($innerQuery) {
+                        $innerQuery->whereNotIn('stato', ['risolto', 'chiuso'])
+                            ->whereNotNull('resolution_due_at')
+                            ->where('resolution_due_at', '<', now());
+                    });
+                });
+                $this->conFiltro = true;
+            } elseif ($sla === 'in_scadenza') {
+                $limit = now()->addHours(2);
+                $queryBuilder->where(function ($query) use ($limit) {
+                    $query->where(function ($innerQuery) use ($limit) {
+                        $innerQuery->whereNull('first_response_at')
+                            ->whereNotNull('first_response_due_at')
+                            ->whereBetween('first_response_due_at', [now(), $limit]);
+                    })->orWhere(function ($innerQuery) use ($limit) {
+                        $innerQuery->whereNotIn('stato', ['risolto', 'chiuso'])
+                            ->whereNotNull('resolution_due_at')
+                            ->whereBetween('resolution_due_at', [now(), $limit]);
+                    });
+                });
+                $this->conFiltro = true;
+            }
         }
 
 
@@ -257,7 +358,7 @@ class TicketsController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-        * @return \Illuminate\Http\RedirectResponse
+        * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -267,6 +368,8 @@ class TicketsController extends Controller
         $regole = [
             'oggetto' => ['required'],
             'messaggio' => ['required'],
+            'priorita' => ['nullable', Rule::in(array_keys(Ticket::PRIORITA_TICKETS))],
+            'owner_team' => ['nullable', Rule::in(array_keys(Ticket::TEAM_TICKETS))],
         ];
         if ($authUser->hasPermissionTo('admin')) {
             $regole['destinatario_tipo'] = ['required_without:servizio_type', Rule::in(['agente', 'supervisore', 'operatore'])];
@@ -319,12 +422,18 @@ class TicketsController extends Controller
         }
 
         $ticket->oggetto = $request->input('oggetto');
-        $ticket->stato = 'aperto';
+        $ticket->priorita = $this->determineTicketPriority($request);
+        $ticket->owner_team = $this->determineOwnerTeam($request);
+        $ticket->stato = $ticket->agente_id ? 'da_prendere' : 'nuovo';
         $ticket->causale_ticket_id = $request->input('causale_ticket_id');
         $ticket->uid = $request->input('uid');
         $ticket->da_tipo_utente = $this->determinaDaTipoUtente();
         $ticket->a_tipo_utente = $this->determinaATipoUtente($ticket->da_tipo_utente, $destinatarioTipo);
+        $ticket->automation_notes = $this->buildAutomationNotes($ticket, true);
+        $this->applySlaDefaults($ticket);
+        $this->syncActivityTimestamps($ticket, true);
         $ticket->save();
+        $this->logStatusChange($ticket, null, $ticket->stato, 'Apertura ticket');
 
         $messaggio = new MessaggioTicket();
         $messaggio->ticket_id = $ticket->id;
@@ -332,6 +441,10 @@ class TicketsController extends Controller
         $messaggio->messaggio = $request->input('messaggio');
         $messaggio->uid = $request->input('uid');
         $messaggio->save();
+
+        $this->markFirstResponseIfNeeded($ticket, false);
+        $this->syncActivityTimestamps($ticket, false);
+        $ticket->save();
 
         $lettura = new LetturaTicket();
         $lettura->ticket_id = $ticket->id;
@@ -374,6 +487,16 @@ class TicketsController extends Controller
 
         })->afterResponse();
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'ticket_id' => $ticket->id,
+                'stato' => $ticket->stato,
+                'stato_label' => Ticket::STATI_TICKETS[$ticket->stato]['testo'] ?? $ticket->stato,
+                'sla' => $ticket->slaStatus(),
+            ]);
+        }
+
         return $this->backToIndex();
     }
 
@@ -391,6 +514,7 @@ class TicketsController extends Controller
         $record = Ticket::with('messaggi.utente')
             ->with('messaggi.allegati')
             ->with('assegnatario:id,nome,cognome')
+            ->with('statusLogs.utente:id,nome,cognome')
             ->find($id);
 
         abort_if(!$record, 404, 'Questo ticket non esiste');
@@ -439,8 +563,10 @@ class TicketsController extends Controller
             'record' => $record,
             'titoloPagina' => $record->oggetto,
             'admin' => $authUser->hasPermissionTo('admin'),
+            'canGestireStato' => $authUser->hasAnyPermission(['admin', 'supervisore', 'operatore']),
             'canGestireAssegnazione' => $canGestireAssegnazione,
             'assegnatariDestinatari' => $assegnatariDestinatari,
+            'aiSnapshot' => $record->aiSnapshot(),
         ]);
     }
 
@@ -460,17 +586,22 @@ class TicketsController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-        * @return \Illuminate\Http\RedirectResponse
+        * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
         /** @var User $authUser */
         $authUser = Auth::user();
-        $canGestireStato = $authUser->hasAnyPermission(['admin', 'supervisore']);
+        $canGestireStato = $authUser->hasAnyPermission(['admin', 'supervisore', 'operatore']);
         $canGestireAssegnazione = $authUser->hasAnyPermission(['admin', 'supervisore']);
+        $canGestireStrategia = $authUser->hasAnyPermission(['admin', 'supervisore']);
 
         if ($canGestireStato) {
-
+            $request->validate([
+                'stato' => ['nullable', Rule::in(array_keys(Ticket::STATI_TICKETS))],
+                'priorita' => ['nullable', Rule::in(array_keys(Ticket::PRIORITA_TICKETS))],
+                'owner_team' => ['nullable', Rule::in(array_keys(Ticket::TEAM_TICKETS))],
+            ]);
         } else {
             $request->validate([
                 'messaggio' => ['required']
@@ -483,6 +614,7 @@ class TicketsController extends Controller
         if ($authUser->hasAnyPermission(['agente', 'operatore'])) {
             abort_if((int)$ticket->agente_id !== (int)Auth::id() && (int)$ticket->user_id !== (int)Auth::id(), 403, 'Non autorizzato ad aggiornare questo ticket');
         }
+        $oldState = $ticket->stato;
 
         if ($request->filled('agente_id')) {
             abort_unless($canGestireAssegnazione, 403, 'Non autorizzato a riassegnare il ticket');
@@ -509,12 +641,25 @@ class TicketsController extends Controller
                     ['messaggio_letto' => 0]
                 );
             }
+
+            if (in_array($ticket->stato, ['nuovo', 'da_prendere'], true)) {
+                $ticket->stato = 'in_lavorazione';
+            }
         }
 
         if ($request->input('stato')) {
             abort_unless($canGestireStato, 403, 'Non autorizzato a modificare lo stato del ticket');
             $ticket->stato = $request->input('stato');
-            $ticket->save();
+        }
+
+        if ($request->filled('priorita')) {
+            abort_unless($canGestireStrategia, 403, 'Non autorizzato a modificare la priorita del ticket');
+            $ticket->priorita = $request->input('priorita');
+        }
+
+        if ($request->filled('owner_team')) {
+            abort_unless($canGestireStrategia, 403, 'Non autorizzato a modificare il team del ticket');
+            $ticket->owner_team = $request->input('owner_team');
         }
 
         if ($request->input('messaggio')) {
@@ -524,8 +669,8 @@ class TicketsController extends Controller
             $messaggio->messaggio = $request->input('messaggio');
             $messaggio->save();
             $ticket->touch();
-
-            $ticket = Ticket::find($messaggio->ticket_id);
+            $this->markFirstResponseIfNeeded($ticket, true);
+            $this->syncActivityTimestamps($ticket, false);
 
             LetturaTicket::where('ticket_id', $messaggio->ticket_id)->where('user_id', '<>', Auth::id())->get()->each(function ($record) {
                 $record->update(['messaggio_letto' => 0]);
@@ -537,6 +682,15 @@ class TicketsController extends Controller
             })->afterResponse();
 
 
+        }
+
+        $this->applySlaDefaults($ticket);
+        $this->syncResolutionState($ticket);
+        $ticket->automation_notes = $this->buildAutomationNotes($ticket, false);
+        $ticket->save();
+
+        if ($oldState !== $ticket->stato) {
+            $this->logStatusChange($ticket, $oldState, $ticket->stato, 'Aggiornamento manuale');
         }
 
 
@@ -594,6 +748,173 @@ class TicketsController extends Controller
                 $query->where('id', '<>', $escludiId);
             })
             ->value('id');
+    }
+
+    protected function determineTicketPriority(Request $request): string
+    {
+        $priorita = $request->input('priorita');
+        if (is_string($priorita) && array_key_exists($priorita, Ticket::PRIORITA_TICKETS)) {
+            return $priorita;
+        }
+
+        $oggetto = mb_strtolower((string)$request->input('oggetto'));
+        if (str_contains($oggetto, 'blocco') || str_contains($oggetto, 'urgente')) {
+            return 'urgente';
+        }
+
+        if (str_contains($oggetto, 'errore') || str_contains($oggetto, 'ko')) {
+            return 'alta';
+        }
+
+        $servizioType = (string)$request->input('servizio_type');
+        if (in_array($servizioType, ['contratto-energia', 'contratto-telefonia'], true)) {
+            return 'media';
+        }
+
+        return 'bassa';
+    }
+
+    protected function determineOwnerTeam(Request $request): string
+    {
+        $ownerTeam = $request->input('owner_team');
+        if (is_string($ownerTeam) && array_key_exists($ownerTeam, Ticket::TEAM_TICKETS)) {
+            return $ownerTeam;
+        }
+
+        $servizioType = (string)$request->input('servizio_type');
+        if ($servizioType === 'contratto-energia' || $servizioType === 'contratto-telefonia') {
+            return 'commerciale';
+        }
+
+        $oggetto = mb_strtolower((string)$request->input('oggetto'));
+        if (str_contains($oggetto, 'fattura') || str_contains($oggetto, 'pagamento')) {
+            return 'amministrazione';
+        }
+
+        return 'helpdesk';
+    }
+
+    protected function applySlaDefaults(Ticket $ticket): void
+    {
+        $priority = $ticket->priorita ?: 'media';
+
+        $firstResponseHours = match ($priority) {
+            'urgente' => 1,
+            'alta' => 2,
+            'media' => 4,
+            default => 8,
+        };
+
+        $resolutionHours = match ($priority) {
+            'urgente' => 8,
+            'alta' => 16,
+            'media' => 24,
+            default => 48,
+        };
+
+        if (!$ticket->first_response_due_at) {
+            $ticket->first_response_due_at = $ticket->created_at
+                ? $ticket->created_at->copy()->addHours($firstResponseHours)
+                : now()->addHours($firstResponseHours);
+        }
+
+        if (!$ticket->resolution_due_at) {
+            $anchor = $ticket->created_at ? $ticket->created_at->copy() : now();
+            $ticket->resolution_due_at = $anchor->addHours($resolutionHours);
+        }
+    }
+
+    protected function markFirstResponseIfNeeded(Ticket $ticket, bool $isReply): void
+    {
+        if ($ticket->first_response_at) {
+            return;
+        }
+
+        $isInternalUser = $this->currentUser()?->hasAnyPermission(['admin', 'supervisore', 'operatore']) ?? false;
+        if ($isReply && $isInternalUser) {
+            $ticket->first_response_at = now();
+        }
+    }
+
+    protected function syncActivityTimestamps(Ticket $ticket, bool $isCreation): void
+    {
+        $isInternalUser = $this->currentUser()?->hasAnyPermission(['admin', 'supervisore', 'operatore']) ?? false;
+        if ($isCreation && !$isInternalUser) {
+            $ticket->last_customer_message_at = now();
+            return;
+        }
+
+        if ($isInternalUser) {
+            $ticket->last_agent_message_at = now();
+        } else {
+            $ticket->last_customer_message_at = now();
+        }
+    }
+
+    protected function syncResolutionState(Ticket $ticket): void
+    {
+        if ($ticket->stato === 'risolto' && !$ticket->resolved_at) {
+            $ticket->resolved_at = now();
+            return;
+        }
+
+        if ($ticket->stato === 'chiuso' && !$ticket->resolved_at) {
+            $ticket->resolved_at = now();
+            return;
+        }
+
+        if (!in_array($ticket->stato, ['risolto', 'chiuso'], true)) {
+            $ticket->resolved_at = null;
+        }
+
+        if ($ticket->isSlaViolated() && !$ticket->escalated_at) {
+            $ticket->escalated_at = now();
+        }
+    }
+
+    protected function buildAutomationNotes(Ticket $ticket, bool $isNew): array
+    {
+        $notes = [];
+
+        if ($isNew) {
+            $notes[] = 'Ticket classificato automaticamente su team ' . ($ticket->owner_team ?: 'helpdesk') . '.';
+            $notes[] = 'Priorita impostata automaticamente a ' . ($ticket->priorita ?: 'media') . '.';
+        }
+
+        if ($ticket->isSlaViolated()) {
+            $notes[] = 'SLA superato: attivare escalation o aggiornamento immediato.';
+        } elseif ($ticket->isSlaAtRisk()) {
+            $notes[] = 'SLA in scadenza: pianificare risposta entro 2 ore.';
+        }
+
+        if ($ticket->stato === 'in_attesa_cliente') {
+            $notes[] = 'In attesa del cliente: utile programmare un reminder.';
+        }
+
+        if ($ticket->stato === 'in_attesa_fornitore') {
+            $notes[] = 'In attesa del fornitore: aggiornare il thread appena arriva riscontro.';
+        }
+
+        return $notes;
+    }
+
+    protected function logStatusChange(Ticket $ticket, ?string $fromState, string $toState, ?string $note = null): void
+    {
+        TicketStatusLog::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => Auth::id(),
+            'from_state' => $fromState,
+            'to_state' => $toState,
+            'note' => $note,
+        ]);
+    }
+
+    protected function currentUser(): ?User
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user;
     }
 
 }
