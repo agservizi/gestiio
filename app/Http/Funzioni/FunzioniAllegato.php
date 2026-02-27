@@ -2,6 +2,8 @@
 
 namespace App\Http\Funzioni;
 
+use Illuminate\Support\Facades\Storage;
+
 trait FunzioniAllegato
 {
     public function urlFile()
@@ -11,7 +13,15 @@ trait FunzioniAllegato
 
     public function urlThumbnail(): string|null
     {
-        return $this->thumbnail ? '/storage' . $this->thumbnail : null;
+        if ($this->thumbnail && Storage::disk('public')->exists(ltrim($this->thumbnail, '/'))) {
+            return '/storage' . $this->thumbnail;
+        }
+
+        if ($this->tipo_file === 'immagine' && $this->path_filename && Storage::disk('public')->exists(ltrim($this->path_filename, '/'))) {
+            return '/storage' . $this->path_filename;
+        }
+
+        return null;
     }
 
 

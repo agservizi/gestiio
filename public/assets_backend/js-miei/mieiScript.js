@@ -242,8 +242,6 @@ function modalAjax() {
         var url = $(this).attr('href');
         var targetName = $(this).data('target') || $(this).attr('data-targetZ');
         var target = '#' + targetName;
-
-        console.log($(target).length);
         // AJAX request
         $.ajax({
             url: url,
