@@ -822,23 +822,36 @@ class ContrattoEnergiaController extends Controller
     }
 
 
-    public function downloadAllegato($ContrattoEnergiaId, $allegatoId)
+    public function downloadAllegato($ContrattoEnergiaId, $allegatoId, Request $request)
     {
         $record = AllegatoContrattoEnergia::find($allegatoId);
         abort_if(!$record, 404, 'Questo allegato non esiste');
         abort_if($record->contratto_energia_id != $ContrattoEnergiaId, 404, 'Questo allegato non esiste');
+        $inlinePreview = $request->boolean('anteprima');
+        $contentDisposition = $inlinePreview ? 'inline' : 'attachment';
 
         if ($record->file_contenuto_base64) {
             $contenuto = base64_decode($record->file_contenuto_base64, true);
             if ($contenuto !== false) {
                 return response($contenuto, 200, [
                     'Content-Type' => $record->mime_type ?: 'application/octet-stream',
-                    'Content-Disposition' => 'attachment; filename="' . addslashes($record->filename_originale) . '"',
+                    'Content-Disposition' => $contentDisposition . '; filename="' . addslashes($record->filename_originale) . '"',
                 ]);
             }
         }
 
-        return response()->download(Storage::path($record->path_filename), $record->filename_originale);
+        abort_unless(Storage::exists($record->path_filename), 404, 'File allegato non trovato');
+        $path = Storage::path($record->path_filename);
+        $mimeType = $record->mime_type ?: Storage::mimeType($record->path_filename) ?: 'application/octet-stream';
+
+        if ($inlinePreview) {
+            return response()->file($path, [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . addslashes($record->filename_originale) . '"',
+            ]);
+        }
+
+        return response()->download($path, $record->filename_originale);
     }
 
     protected function normalizzaCodiciEnergia(Request $request): void

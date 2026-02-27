@@ -20,6 +20,7 @@
                 </thead>
                 <tbody class="fw-semibold text-gray-600">
                 @foreach($record->allegati as $allegato)
+                    @php($previewUrl = action([$downloadController, 'downloadAllegato'], [$idPadre, $allegato->id]) . '?anteprima=1')
                     <tr>
                         <td class="text-break">{{$allegato->filename_originale}}</td>
                         <td class="text-end">{{\App\humanFileSize($allegato->dimensione_file)}}</td>
@@ -28,7 +29,7 @@
                             <button
                                 type="button"
                                 class="btn btn-sm btn-light-primary me-2 js-open-attachment-preview"
-                                data-file-url="{{$allegato->urlFile()}}"
+                                data-file-url="{{$previewUrl}}"
                                 data-file-name="{{$allegato->filename_originale}}"
                                 data-file-type="{{$allegato->tipo_file}}"
                             >
