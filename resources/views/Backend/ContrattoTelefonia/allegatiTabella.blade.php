@@ -1,7 +1,6 @@
 @php
     $idPadre = $idPadre ?? $record->id;
     $downloadController = $downloadController ?? \App\Http\Controllers\Backend\ContrattoTelefoniaController::class;
-    $previewModalId = $previewModalId ?? ('modal_preview_allegati_telefonia_' . $idPadre);
 @endphp
 
 <div>
@@ -27,9 +26,7 @@
                         <td class="text-end">
                             <button
                                 type="button"
-                                class="btn btn-sm btn-light-primary me-2"
-                                data-bs-toggle="modal"
-                                data-bs-target="#{{$previewModalId}}"
+                                class="btn btn-sm btn-light-primary me-2 js-open-attachment-preview"
                                 data-file-url="{{$allegato->urlFile()}}"
                                 data-file-name="{{$allegato->filename_originale}}"
                                 data-file-type="{{$allegato->tipo_file}}"
@@ -47,42 +44,63 @@
             </table>
         </div>
     @endif
-
-    <div class="modal fade" id="{{$previewModalId}}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Anteprima allegato</h5>
-                    <button type="button" class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3 fw-semibold text-break js-preview-filename"></div>
-
-                    <img src="" alt="Anteprima immagine" class="img-fluid w-100 d-none js-preview-image">
-                    <iframe src="" class="w-100 d-none js-preview-pdf" style="min-height: 75vh;" title="Anteprima PDF"></iframe>
-
-                    <div class="alert alert-info d-none mb-0 js-preview-fallback">
-                        Anteprima non disponibile per questo file.
-                        <a href="#" target="_blank" class="js-preview-open-file">Apri file</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 @push('customScript')
     <script>
         (function () {
-            var modalEl = document.getElementById('{{$previewModalId}}');
-            if (!modalEl) {
+            if (window.__attachmentPreviewInit) {
                 return;
             }
+            window.__attachmentPreviewInit = true;
 
-            modalEl.addEventListener('show.bs.modal', function (event) {
-                var trigger = event.relatedTarget;
+            var modalId = 'global_attachment_preview_modal';
+            var modalEl = document.getElementById(modalId);
+            if (!modalEl) {
+                document.body.insertAdjacentHTML('beforeend', '' +
+                    '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-hidden="true">' +
+                    '  <div class="modal-dialog modal-xl modal-dialog-centered">' +
+                    '    <div class="modal-content">' +
+                    '      <div class="modal-header">' +
+                    '        <h5 class="modal-title">Anteprima allegato</h5>' +
+                    '        <button type="button" class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>' +
+                    '      </div>' +
+                    '      <div class="modal-body">' +
+                    '        <div class="mb-3 fw-semibold text-break js-preview-filename"></div>' +
+                    '        <img src="" alt="Anteprima immagine" class="img-fluid w-100 d-none js-preview-image">' +
+                    '        <iframe src="" class="w-100 d-none js-preview-pdf" style="min-height: 75vh;" title="Anteprima PDF"></iframe>' +
+                    '        <div class="alert alert-info d-none mb-0 js-preview-fallback">Anteprima non disponibile per questo file. <a href="#" target="_blank" class="js-preview-open-file">Apri file</a></div>' +
+                    '      </div>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '</div>'
+                );
+                modalEl = document.getElementById(modalId);
+            }
+
+            var inferType = function (fileType, fileName) {
+                var normalizedType = (fileType || '').toLowerCase();
+                if (normalizedType === 'pdf' || normalizedType === 'immagine') {
+                    return normalizedType;
+                }
+
+                var ext = '';
+                if (fileName && fileName.indexOf('.') !== -1) {
+                    ext = fileName.split('.').pop().toLowerCase();
+                }
+
+                if (ext === 'pdf') {
+                    return 'pdf';
+                }
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].indexOf(ext) !== -1) {
+                    return 'immagine';
+                }
+
+                return normalizedType;
+            };
+
+            document.addEventListener('click', function (event) {
+                var trigger = event.target.closest('.js-open-attachment-preview');
                 if (!trigger) {
                     return;
                 }
@@ -90,6 +108,7 @@
                 var fileUrl = trigger.getAttribute('data-file-url') || '';
                 var fileName = trigger.getAttribute('data-file-name') || '';
                 var fileType = trigger.getAttribute('data-file-type') || '';
+                var tipoPreview = inferType(fileType, fileName);
 
                 var fileNameEl = modalEl.querySelector('.js-preview-filename');
                 var imageEl = modalEl.querySelector('.js-preview-image');
@@ -104,20 +123,18 @@
                 imageEl.removeAttribute('src');
                 pdfEl.removeAttribute('src');
 
-                if (fileType === 'immagine') {
+                if (tipoPreview === 'immagine') {
                     imageEl.setAttribute('src', fileUrl);
                     imageEl.classList.remove('d-none');
-                    return;
-                }
-
-                if (fileType === 'pdf') {
+                } else if (tipoPreview === 'pdf') {
                     pdfEl.setAttribute('src', fileUrl);
                     pdfEl.classList.remove('d-none');
-                    return;
+                } else {
+                    fallbackEl.classList.remove('d-none');
+                    openLinkEl.setAttribute('href', fileUrl);
                 }
 
-                fallbackEl.classList.remove('d-none');
-                openLinkEl.setAttribute('href', fileUrl);
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
             });
 
             modalEl.addEventListener('hidden.bs.modal', function () {
