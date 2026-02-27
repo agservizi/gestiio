@@ -262,7 +262,11 @@
             <h3 class="card-title">Allegati</h3>
         </div>
         <div class="card-body pt-0">
-            @include('Backend.ContrattoTelefonia.allegati',['downloadController' => \App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'idPadre'=>$record->id])
+            @include('Backend.ContrattoTelefonia.allegatiTabella', [
+                'downloadController' => \App\Http\Controllers\Backend\ContrattoTelefoniaController::class,
+                'idPadre' => $record->id,
+                'previewModalId' => 'modal_preview_allegati_telefonia_show_' . $record->id,
+            ])
         </div>
     </div>
 @endsection
