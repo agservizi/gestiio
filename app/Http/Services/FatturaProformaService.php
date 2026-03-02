@@ -71,8 +71,10 @@ class FatturaProformaService
         }
 
         DB::beginTransaction();
+        $dataFattura = today();
         $fattura = new FatturaProforma();
-        $fattura->numero = $this->trovaNumero(now());
+        $fattura->data = $dataFattura;
+        $fattura->numero = $this->trovaNumero($dataFattura);
         $fattura->intestazione_id = $intestazione->id;
         $fattura->aliquota_iva = 0;
         $fattura->save();
