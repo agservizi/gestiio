@@ -23,6 +23,7 @@ use Illuminate\Contracts\View\View;
 class RichiestaAssistenzaController extends Controller
 {
     protected $conFiltro = false;
+    protected ?string $lastMailError = null;
 
 
     public function index(Request $request): View|JsonResponse
@@ -200,7 +201,7 @@ class RichiestaAssistenzaController extends Controller
         $inviata = $this->inviaCredenzialiConPdfAlCliente($record);
         if (!$inviata) {
             return redirect()->back()->withErrors([
-                'mail' => 'Impossibile inviare la mail al cliente. Verifica email e dati richiesta.',
+                'mail' => 'Impossibile inviare la mail al cliente. ' . ($this->lastMailError ?: 'Verifica email e dati richiesta.'),
             ]);
         }
 
@@ -391,9 +392,11 @@ class RichiestaAssistenzaController extends Controller
 
     protected function inviaCredenzialiConPdfAlCliente(RichiestaAssistenza $richiesta): bool
     {
+        $this->lastMailError = null;
         $richiesta->loadMissing('cliente', 'prodotto');
         $email = trim((string) optional($richiesta->cliente)->email);
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->lastMailError = 'Email cliente assente o non valida.';
             Log::warning('Richiesta assistenza: email cliente non valida per invio credenziali', [
                 'richiesta_id' => (int) $richiesta->id,
                 'cliente_id' => (int) $richiesta->cliente_id,
@@ -409,6 +412,7 @@ class RichiestaAssistenzaController extends Controller
 
             return true;
         } catch (\Throwable $e) {
+            $this->lastMailError = $this->friendlyMailError($e);
             Log::error('Richiesta assistenza: invio credenziali cliente fallito', [
                 'richiesta_id' => (int) $richiesta->id,
                 'cliente_id' => (int) $richiesta->cliente_id,
@@ -416,6 +420,22 @@ class RichiestaAssistenzaController extends Controller
             ]);
             return false;
         }
+    }
+
+    protected function friendlyMailError(\Throwable $e): string
+    {
+        $message = trim((string) $e->getMessage());
+        $lower = strtolower($message);
+
+        if (str_contains($lower, 'you can only send testing emails') || str_contains($lower, 'verify a domain at resend.com/domains')) {
+            return 'Resend è in modalità test: puoi inviare solo verso indirizzi autorizzati finché il dominio non è verificato.';
+        }
+
+        if (str_contains($lower, 'pdf non disponibile')) {
+            return 'PDF non disponibile per il prodotto assistenza selezionato.';
+        }
+
+        return $message !== '' ? $message : 'Errore sconosciuto durante invio email.';
     }
 
     protected function backToIndex(?string $status = null): RedirectResponse
