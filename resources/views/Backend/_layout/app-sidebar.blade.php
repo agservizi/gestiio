@@ -5,8 +5,8 @@
     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
         <!--begin::Logo image-->
         <a href="/">
-            <img alt="Logo" src="/loghi/logo.png" class="h-20px h-lg-30px app-sidebar-logo-default theme-light-show"/>
-            <img alt="Logo" src="/loghi/logo.png" class="h-20px h-lg-30px app-sidebar-logo-default theme-dark-show"/>
+            <img alt="Logo" src="/loghi/logo_white.png" class="h-20px h-lg-30px app-sidebar-logo-default theme-light-show"/>
+            <img alt="Logo" src="/loghi/logo_white.png" class="h-20px h-lg-30px app-sidebar-logo-default theme-dark-show"/>
             <img alt="Logo" src="/loghi/g.png" class="h-20px h-lg-30px app-sidebar-logo-minimize theme-light-show">
             <img alt="Logo" src="/loghi/g.png" class="h-20px h-lg-30px app-sidebar-logo-minimize theme-dark-show">
         </a>
