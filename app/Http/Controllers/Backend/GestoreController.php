@@ -236,7 +236,7 @@ class GestoreController extends Controller
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
-            'url' => 'strtolower',
+            'url' => 'trim',
             'attivo' => 'app\getInputCheckbox',
             'includi_dati_contratto' => 'app\getInputCheckbox',
             'email_notifica_a_gestore' => 'strtolower',
