@@ -197,6 +197,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::resource('prodotto-assistenza', \App\Http\Controllers\Backend\ProdottoAssistenzaController::class)->except(['show']);
     Route::resource('richiesta-assistenza', \App\Http\Controllers\Backend\RichiestaAssistenzaController::class);
     Route::get('richiesta-assistenza/{id}/pdf', [\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'pdf']);
+    Route::post('richiesta-assistenza/{id}/reinvio-credenziali', [\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'reinviaCredenziali']);
     //Registri
     Route::get('registro/{cosa}', [\App\Http\Controllers\Backend\RegistriController::class, 'index']);
 

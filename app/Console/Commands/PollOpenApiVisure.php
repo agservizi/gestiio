@@ -8,6 +8,7 @@ use App\Models\AllegatoServizio;
 use App\Models\TipoVisura;
 use App\Models\User;
 use App\Models\Visura;
+use App\Support\VisuraAttachmentMailer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -196,6 +197,7 @@ class PollOpenApiVisure extends Command
         $allegato->allegato_id = $record->id;
         $allegato->allegato_type = Visura::class;
         $allegato->save();
+        VisuraAttachmentMailer::notifyCliente($record, $allegato);
 
         if (Schema::hasColumn('visure', 'openapi_documento_nome')) {
             $record->openapi_documento_nome = $fileName;

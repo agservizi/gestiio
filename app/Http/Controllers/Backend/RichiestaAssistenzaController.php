@@ -12,7 +12,10 @@ use App\Models\ClienteAssistenza;
 use App\Models\RichiestaAssistenza;
 use App\Models\User;
 use DB;
+use App\Notifications\NotificaRichiestaAssistenzaCredenziali;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use setasign\Fpdi\Fpdi;
 use Illuminate\Contracts\View\View;
 
@@ -136,7 +139,11 @@ class RichiestaAssistenzaController extends Controller
         $request->validate($this->rules(null));
         $record = new RichiestaAssistenza();
         $this->salvaDati($record, $request);
-        return $this->backToIndex('Richiesta assistenza creata correttamente');
+        $inviata = $this->inviaCredenzialiConPdfAlCliente($record);
+        $status = $inviata
+            ? 'Richiesta assistenza creata correttamente e credenziali inviate al cliente'
+            : 'Richiesta assistenza creata correttamente (invio mail non riuscito: verifica email cliente)';
+        return $this->backToIndex($status);
     }
 
     public function show($id): View
@@ -178,7 +185,26 @@ class RichiestaAssistenzaController extends Controller
         abort_if(!$record, 404, 'Questa ' . RichiestaAssistenza::NOME_SINGOLARE . ' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
-        return $this->backToIndex('Richiesta assistenza aggiornata correttamente');
+        $inviata = $this->inviaCredenzialiConPdfAlCliente($record);
+        $status = $inviata
+            ? 'Richiesta assistenza aggiornata correttamente e credenziali inviate al cliente'
+            : 'Richiesta assistenza aggiornata correttamente (invio mail non riuscito: verifica email cliente)';
+        return $this->backToIndex($status);
+    }
+
+    public function reinviaCredenziali(int $id): RedirectResponse
+    {
+        $record = RichiestaAssistenza::find($id);
+        abort_if(!$record, 404, 'Questa richiesta assistenza non esiste');
+
+        $inviata = $this->inviaCredenzialiConPdfAlCliente($record);
+        if (!$inviata) {
+            return redirect()->back()->withErrors([
+                'mail' => 'Impossibile inviare la mail al cliente. Verifica email e dati richiesta.',
+            ]);
+        }
+
+        return redirect()->back()->with('status', 'Credenziali reinviate correttamente al cliente');
     }
 
     public function destroy($id): JsonResponse
@@ -199,24 +225,33 @@ class RichiestaAssistenzaController extends Controller
     {
         $richiesta = RichiestaAssistenza::with('cliente')->with('prodotto')->find($id);
         abort_if(!$richiesta, 404, 'Questa richiesta assistenza non esiste');
+        $pdf = $this->buildPdfPayload($richiesta);
 
+        return response($pdf['content'], 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . addslashes($pdf['filename']) . '"',
+        ]);
+
+    }
+
+    protected function buildPdfPayload(RichiestaAssistenza $richiesta): array
+    {
         $nomeProdotto = Str::lower((string) optional($richiesta->prodotto)->nome);
         $isNamirial = (int) $richiesta->prodotto_assistenza_id === 1 || Str::contains($nomeProdotto, 'namirial');
         $isInfocert = (int) $richiesta->prodotto_assistenza_id === 2 || Str::contains($nomeProdotto, 'infocert');
 
         if ($isNamirial) {
-            return $this->pdfNamirial($richiesta);
+            return $this->buildPdfNamirialPayload($richiesta);
         }
 
         if ($isInfocert) {
-            return $this->pdfInfocert($richiesta);
+            return $this->buildPdfInfocertPayload($richiesta);
         }
 
         abort(422, 'PDF non disponibile per il prodotto assistenza selezionato');
-
     }
 
-    protected function pdfNamirial($richiesta)
+    protected function buildPdfNamirialPayload(RichiestaAssistenza $richiesta): array
     {
         $fpdf = new Fpdi();
 
@@ -237,10 +272,13 @@ class RichiestaAssistenzaController extends Controller
         $fpdf->SetXY(9, 45);
         $fpdf->Cell(50, 8, $richiesta->pin, 0, 0,);
 
-        return $fpdf->Output('D', 'spid_' . Str::slug($richiesta->cliente->codice_fiscale) . '.pdf');
+        return [
+            'content' => $fpdf->Output('S'),
+            'filename' => 'spid_' . Str::slug((string) optional($richiesta->cliente)->codice_fiscale) . '.pdf',
+        ];
     }
 
-    protected function pdfInfocert($richiesta)
+    protected function buildPdfInfocertPayload(RichiestaAssistenza $richiesta): array
     {
         $fpdf = new Fpdi();
 
@@ -261,9 +299,10 @@ class RichiestaAssistenzaController extends Controller
         $fpdf->SetXY(60, 73.5);
         $fpdf->Cell(50, 8, $richiesta->password, 0, 0,);
 
-
-
-        return $fpdf->Output('D', 'spid_' . Str::slug($richiesta->cliente->codice_fiscale) . '.pdf');
+        return [
+            'content' => $fpdf->Output('S'),
+            'filename' => 'spid_' . Str::slug((string) optional($richiesta->cliente)->codice_fiscale) . '.pdf',
+        ];
     }
 
     protected function salvaDati(RichiestaAssistenza $model, Request $request): RichiestaAssistenza
@@ -348,6 +387,35 @@ class RichiestaAssistenzaController extends Controller
         }
 
         return (int)$cliente->id;
+    }
+
+    protected function inviaCredenzialiConPdfAlCliente(RichiestaAssistenza $richiesta): bool
+    {
+        $richiesta->loadMissing('cliente', 'prodotto');
+        $email = trim((string) optional($richiesta->cliente)->email);
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Log::warning('Richiesta assistenza: email cliente non valida per invio credenziali', [
+                'richiesta_id' => (int) $richiesta->id,
+                'cliente_id' => (int) $richiesta->cliente_id,
+            ]);
+            return false;
+        }
+
+        try {
+            $pdf = $this->buildPdfPayload($richiesta);
+            Notification::route('mail', $email)->notify(
+                new NotificaRichiestaAssistenzaCredenziali($richiesta, $pdf['content'], $pdf['filename'])
+            );
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Richiesta assistenza: invio credenziali cliente fallito', [
+                'richiesta_id' => (int) $richiesta->id,
+                'cliente_id' => (int) $richiesta->cliente_id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     protected function backToIndex(?string $status = null): RedirectResponse

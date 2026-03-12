@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\AllegatoServizio;
+use App\Models\Visura;
+use App\Support\VisuraAttachmentMailer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -62,6 +64,16 @@ class AllegatoServizioController extends Controller
             $file->allegato_type = str_replace('_', '\\', $request->input('allegato_type'));
             $file->per_cliente = $request->input('per_cliente', 0);
             $file->save();
+            if (
+                (string) $file->allegato_type === Visura::class
+                && (int) $file->allegato_id > 0
+                && (int) $file->per_cliente === 1
+            ) {
+                $visura = Visura::find((int) $file->allegato_id);
+                if ($visura) {
+                    VisuraAttachmentMailer::notifyCliente($visura, $file);
+                }
+            }
 
             return response()->json(['success' => true, 'id' => $file->id, 'filename' => $fileName, 'thumbnail' => $file->urlThumbnail()]);
 

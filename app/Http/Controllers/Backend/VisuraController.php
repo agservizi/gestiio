@@ -19,6 +19,7 @@ use App\Models\TabMotivoKo;
 use App\Models\TipoVisura;
 use App\Models\User;
 use App\Notifications\NotificaVisuraCambioEsitoAdAgente;
+use App\Support\VisuraAttachmentMailer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -1287,6 +1288,7 @@ class VisuraController extends Controller
         $allegato->allegato_id = $record->id;
         $allegato->allegato_type = Visura::class;
         $allegato->save();
+        VisuraAttachmentMailer::notifyCliente($record, $allegato);
 
         if (Schema::hasColumn('visure', 'openapi_documento_nome')) {
             $record->openapi_documento_nome = $fileName;

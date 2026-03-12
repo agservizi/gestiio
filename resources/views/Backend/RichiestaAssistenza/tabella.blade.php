@@ -23,6 +23,13 @@
                 <td class="">{{$record->password}}</td>
                 <td class="">{{$record->pin}}</td>
                 <td class="text-end text-nowrap">
+                    <form method="POST" action="{{action([$controller,'reinviaCredenziali'],$record->id)}}" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-icon btn-sm btn-light btn-active-light-primary"
+                                data-bs-toggle="tooltip" data-bs-placement="top" title="Reinvia credenziali">
+                            <i class="bi bi-envelope fs-5"></i>
+                        </button>
+                    </form>
                     <a href="{{action([$controller,'pdf'],$record->id)}}"
                        class="btn btn-icon btn-sm btn-light btn-active-light-primary"
 
