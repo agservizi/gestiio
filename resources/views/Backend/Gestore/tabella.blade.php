@@ -36,8 +36,7 @@
                 </td>
 
                 <td class="text-end text-nowrap">
-                    <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-                       class="btn btn-sm btn-light btn-active-light-primary"
+                    <a class="btn btn-sm btn-light btn-active-light-primary"
                        href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
                 </td>
             </tr>
