@@ -11,6 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Throwable;
 
 class InpostService
 {
@@ -31,6 +32,9 @@ class InpostService
     protected string $returnsItemEndpointTemplate;
     protected string $pickupsCollectionEndpoint;
     protected string $pickupsItemEndpointTemplate;
+    protected string $defaultCountry;
+    protected int $pointSearchLimit;
+    protected string $itPointsBaseUrl;
     protected string $senderType;
     protected string $senderPointId;
     protected array $senderAddress;
@@ -53,6 +57,9 @@ class InpostService
         $this->returnsItemEndpointTemplate = (string) config('services.inpost.returns_item_endpoint_template', '/returns/v1/organizations/{organizationId}/returns/{returnId}');
         $this->pickupsCollectionEndpoint = (string) config('services.inpost.pickups_collection_endpoint', '/pickups/v1/organizations/{organizationId}/one-time-pickups');
         $this->pickupsItemEndpointTemplate = (string) config('services.inpost.pickups_item_endpoint_template', '/pickups/v1/organizations/{organizationId}/one-time-pickups/{pickupId}');
+        $this->defaultCountry = strtoupper((string) config('services.inpost.default_country', 'IT'));
+        $this->pointSearchLimit = max(1, (int) config('services.inpost.point_search_limit', 20));
+        $this->itPointsBaseUrl = rtrim((string) config('services.inpost.it_points_base_url', 'https://api-shipx-it.easypack24.net'), '/');
         $this->senderType = (string) config('services.inpost.sender_type', 'address');
         $this->senderPointId = (string) config('services.inpost.sender_point_id', '');
         $this->senderAddress = [
@@ -103,18 +110,65 @@ class InpostService
 
     public function points(string $countryCode, string $city = '', string $postCode = ''): array
     {
+        $countryCode = strtoupper(trim($countryCode ?: $this->defaultCountry));
         $query = array_filter([
-            'countryCode' => strtoupper($countryCode),
+            'countryCode' => $countryCode,
             'city' => $city,
             'postCode' => $postCode,
         ], fn ($value) => filled($value));
 
-        $response = $this->requestJson('get', $this->baseUrl . $this->locationEndpoint, $query);
+        try {
+            $response = $this->requestJson('get', $this->baseUrl . $this->locationEndpoint, $query);
 
-        return [
-            'raw' => $response,
-            'points' => $this->normalizePoints($response, $countryCode, $city, $postCode),
-        ];
+            return [
+                'raw' => $response,
+                'points' => $this->normalizePoints($response, $countryCode, $city, $postCode),
+                'source' => 'global',
+                'error' => null,
+            ];
+        } catch (Throwable $e) {
+            if ($countryCode === 'IT' && $this->itPointsBaseUrl !== '') {
+                $fallback = $this->italyPoints($countryCode, $city, $postCode);
+                $fallback['error'] = $fallback['points'] ? null : $e->getMessage();
+
+                return $fallback;
+            }
+
+            return [
+                'raw' => [],
+                'points' => [],
+                'source' => 'global',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    protected function italyPoints(string $countryCode, string $city = '', string $postCode = ''): array
+    {
+        $queryText = trim(implode(' ', array_filter([$city, $postCode])));
+        $query = array_filter([
+            'country_code' => $countryCode,
+            'limit' => $this->pointSearchLimit,
+            'query' => $queryText !== '' ? $queryText : null,
+        ], fn ($value) => filled($value));
+
+        try {
+            $response = Http::acceptJson()->get($this->itPointsBaseUrl . '/v1/points', $query)->json();
+
+            return [
+                'raw' => is_array($response) ? $response : [],
+                'points' => $this->normalizeItalyPoints(is_array($response) ? $response : [], $countryCode, $city, $postCode),
+                'source' => 'it_shipx',
+                'error' => null,
+            ];
+        } catch (Throwable $e) {
+            return [
+                'raw' => [],
+                'points' => [],
+                'source' => 'it_shipx',
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 
     public function label(SpedizioneInpost $record): ?array
@@ -455,6 +509,61 @@ class InpostService
                 }
 
                 if ($postCode !== '' && !str_contains((string)$item['post_code'], $postCode)) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->values()
+            ->all();
+    }
+
+    protected function normalizeItalyPoints(array $response, string $countryCode = '', string $city = '', string $postCode = ''): array
+    {
+        $items = Arr::wrap($response['items'] ?? $response);
+        $countryCode = strtoupper(trim($countryCode));
+        $city = mb_strtolower(trim($city));
+        $postCode = trim($postCode);
+
+        return collect($items)
+            ->map(function ($point) {
+                $id = (string) (data_get($point, 'name') ?: data_get($point, 'id'));
+                $name = (string) (data_get($point, 'name') ?: $id);
+                $pointCity = (string) (data_get($point, 'address_details.city') ?: data_get($point, 'address.city'));
+                $pointPostCode = (string) (data_get($point, 'address_details.post_code') ?: data_get($point, 'address.postCode'));
+                $street = (string) (data_get($point, 'address_details.street') ?: data_get($point, 'address.street'));
+                $buildingNumber = (string) (data_get($point, 'address_details.building_number') ?: data_get($point, 'address.buildingNumber'));
+                $description = (string) (data_get($point, 'location_description') ?: data_get($point, 'description'));
+                $address = implode(', ', array_filter([
+                    trim($street . ' ' . $buildingNumber),
+                    $pointPostCode,
+                    $pointCity,
+                    $description,
+                ]));
+
+                return [
+                    'id' => $id,
+                    'name' => $name,
+                    'address' => $address,
+                    'country' => strtoupper((string) (data_get($point, 'address_details.country') ?: data_get($point, 'address.country') ?: 'IT')),
+                    'city' => $pointCity,
+                    'post_code' => $pointPostCode,
+                ];
+            })
+            ->filter(function ($item) use ($countryCode, $city, $postCode) {
+                if (!filled($item['id'])) {
+                    return false;
+                }
+
+                if ($countryCode !== '' && strtoupper((string) $item['country']) !== $countryCode) {
+                    return false;
+                }
+
+                if ($city !== '' && !str_contains(mb_strtolower((string) $item['city']), $city)) {
+                    return false;
+                }
+
+                if ($postCode !== '' && !str_contains((string) $item['post_code'], $postCode)) {
                     return false;
                 }
 

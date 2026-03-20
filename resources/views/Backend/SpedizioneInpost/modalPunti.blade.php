@@ -2,6 +2,17 @@
 @section('content')
     <div class="card">
         <div class="card-body">
+            @if(!empty($errorMessage))
+                <div class="alert alert-warning mb-5">
+                    Ricerca punti non disponibile al momento.
+                    <div class="small text-muted mt-2">{{$errorMessage}}</div>
+                </div>
+            @endif
+
+            @if(!empty($source))
+                <div class="text-muted fs-7 mb-3">Fonte risultati: {{$source}}</div>
+            @endif
+
             <table class="table table-row-bordered">
                 <thead>
                 <tr class="fw-bolder fs-6 text-gray-800">

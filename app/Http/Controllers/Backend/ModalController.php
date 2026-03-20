@@ -59,6 +59,8 @@ class ModalController extends Controller
                 $result = $service->points((string) $request->input('nazione', 'IT'), (string) $request->input('citta', ''), (string) $request->input('cap', ''));
                 return view('Backend.SpedizioneInpost.modalPunti', [
                     'points' => $result['points'],
+                    'errorMessage' => $result['error'] ?? null,
+                    'source' => $result['source'] ?? null,
                     'titoloPagina' => 'Seleziona punto InPost',
                 ]);
 
