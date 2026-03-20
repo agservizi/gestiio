@@ -76,6 +76,11 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('spedizione-inpost/{id}/tracking-refresh', [\App\Http\Controllers\Backend\SpedizioneInpostController::class, 'trackingRefresh']);
     Route::post('spedizione-inpost/tracking/refresh-bulk', [\App\Http\Controllers\Backend\SpedizioneInpostController::class, 'trackingRefreshBulk']);
     Route::get('spedizione-inpost/{id}/etichetta', [\App\Http\Controllers\Backend\SpedizioneInpostController::class, 'etichetta']);
+    Route::get('spedizione-inpost/{id}/sync', [\App\Http\Controllers\Backend\SpedizioneInpostController::class, 'sync']);
+    Route::resource('inpost-return', \App\Http\Controllers\Backend\InpostReturnController::class)->only(['index','create','store','show']);
+    Route::get('inpost-return/{id}/sync', [\App\Http\Controllers\Backend\InpostReturnController::class, 'sync']);
+    Route::resource('inpost-pickup', \App\Http\Controllers\Backend\InpostPickupController::class)->only(['index','create','store','show']);
+    Route::get('inpost-pickup/{id}/sync', [\App\Http\Controllers\Backend\InpostPickupController::class, 'sync']);
     Route::post('brt-orm', [\App\Http\Controllers\Backend\BrtOrmController::class, 'store']);
     Route::delete('brt-orm/{reservationId}', [\App\Http\Controllers\Backend\BrtOrmController::class, 'destroy']);
 

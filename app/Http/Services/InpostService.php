@@ -3,7 +3,10 @@
 namespace App\Http\Services;
 
 use App\Models\ChiamataApi;
+use App\Models\InpostPickup;
+use App\Models\InpostReturn;
 use App\Models\SpedizioneInpost;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +26,11 @@ class InpostService
     protected string $locationEndpoint;
     protected string $trackingEndpointTemplate;
     protected string $labelEndpointTemplate;
+    protected string $shipmentReadEndpointTemplate;
+    protected string $returnsCollectionEndpoint;
+    protected string $returnsItemEndpointTemplate;
+    protected string $pickupsCollectionEndpoint;
+    protected string $pickupsItemEndpointTemplate;
     protected string $senderType;
     protected string $senderPointId;
     protected array $senderAddress;
@@ -40,6 +48,11 @@ class InpostService
         $this->locationEndpoint = (string) config('services.inpost.location_endpoint', '/location/v1/points');
         $this->trackingEndpointTemplate = (string) config('services.inpost.tracking_endpoint_template', '/tracking/v1/shipments/{trackingNumber}');
         $this->labelEndpointTemplate = (string) config('services.inpost.label_endpoint_template', '/shipping/v2/organizations/{organizationId}/shipments/{shipmentId}/label');
+        $this->shipmentReadEndpointTemplate = (string) config('services.inpost.shipment_read_endpoint_template', '/shipping/v2/organizations/{organizationId}/shipments/{shipmentId}');
+        $this->returnsCollectionEndpoint = (string) config('services.inpost.returns_collection_endpoint', '/returns/v1/organizations/{organizationId}/returns');
+        $this->returnsItemEndpointTemplate = (string) config('services.inpost.returns_item_endpoint_template', '/returns/v1/organizations/{organizationId}/returns/{returnId}');
+        $this->pickupsCollectionEndpoint = (string) config('services.inpost.pickups_collection_endpoint', '/pickups/v1/organizations/{organizationId}/one-time-pickups');
+        $this->pickupsItemEndpointTemplate = (string) config('services.inpost.pickups_item_endpoint_template', '/pickups/v1/organizations/{organizationId}/one-time-pickups/{pickupId}');
         $this->senderType = (string) config('services.inpost.sender_type', 'address');
         $this->senderPointId = (string) config('services.inpost.sender_point_id', '');
         $this->senderAddress = [
@@ -77,6 +90,17 @@ class InpostService
         return $this->requestJson('get', $this->baseUrl . $path);
     }
 
+    public function getShipment(string $shipmentId, ?SpedizioneInpost $record = null): array
+    {
+        $path = str_replace(
+            ['{organizationId}', '{shipmentId}'],
+            [$this->organizationId, urlencode($shipmentId)],
+            $this->shipmentReadEndpointTemplate
+        );
+
+        return $this->requestJson('get', $this->baseUrl . $path, [], $record);
+    }
+
     public function points(string $countryCode, string $city = '', string $postCode = ''): array
     {
         $query = array_filter([
@@ -89,7 +113,7 @@ class InpostService
 
         return [
             'raw' => $response,
-            'points' => $this->normalizePoints($response),
+            'points' => $this->normalizePoints($response, $countryCode, $city, $postCode),
         ];
     }
 
@@ -121,9 +145,13 @@ class InpostService
                 [$this->organizationId, urlencode($record->shipment_uuid)],
                 $this->labelEndpointTemplate
             );
-            $raw = $this->requestRaw('get', $this->baseUrl . $path, [
-                'format' => strtoupper((string) config('services.inpost.label_format', 'PDF')),
-            ], $record);
+            $raw = $this->requestRaw(
+                'get',
+                $this->baseUrl . $path,
+                [],
+                $record,
+                ['Accept' => $this->labelAcceptHeader()]
+            );
 
             return [
                 'content' => $raw['body'],
@@ -140,6 +168,48 @@ class InpostService
         return $this->trackingPortalBaseUrl . '?number=' . urlencode($trackingNumber);
     }
 
+    public function createReturn(array $payload, ?InpostReturn $record = null): array
+    {
+        return $this->requestJson('post', $this->baseUrl . $this->returnsCollectionPath(), $payload, $record);
+    }
+
+    public function listReturns(array $query = [], ?InpostReturn $record = null): array
+    {
+        return $this->requestJson('get', $this->baseUrl . $this->returnsCollectionPath(), $query, $record);
+    }
+
+    public function getReturn(string $returnId, ?InpostReturn $record = null): array
+    {
+        $path = str_replace(
+            ['{organizationId}', '{returnId}'],
+            [$this->organizationId, urlencode($returnId)],
+            $this->returnsItemEndpointTemplate
+        );
+
+        return $this->requestJson('get', $this->baseUrl . $path, [], $record);
+    }
+
+    public function createPickup(array $payload, ?InpostPickup $record = null): array
+    {
+        return $this->requestJson('post', $this->baseUrl . $this->pickupsCollectionPath(), $payload, $record);
+    }
+
+    public function listPickups(array $query = [], ?InpostPickup $record = null): array
+    {
+        return $this->requestJson('get', $this->baseUrl . $this->pickupsCollectionPath(), $query, $record);
+    }
+
+    public function getPickup(string $pickupId, ?InpostPickup $record = null): array
+    {
+        $path = str_replace(
+            ['{organizationId}', '{pickupId}'],
+            [$this->organizationId, urlencode($pickupId)],
+            $this->pickupsItemEndpointTemplate
+        );
+
+        return $this->requestJson('get', $this->baseUrl . $path, [], $record);
+    }
+
     protected function shipmentEndpoint(SpedizioneInpost $record): string
     {
         $type = $record->delivery_type === 'address' ? 'address-to-address' : 'address-to-point';
@@ -154,7 +224,6 @@ class InpostService
             'sender' => $this->senderPayload($record),
             'receiver' => $this->receiverPayload($record),
             'parcels' => $this->parcelPayload($record),
-            'outputFormat' => strtoupper((string) config('services.inpost.label_format', 'PDF')),
         ];
 
         $annotation = trim((string) data_get($record->altri_dati, 'annotation', ''));
@@ -254,9 +323,9 @@ class InpostService
         return $parcels;
     }
 
-    protected function requestJson(string $method, string $url, array $payload = [], ?SpedizioneInpost $record = null): array
+    protected function requestJson(string $method, string $url, array $payload = [], ?Model $record = null, array $headers = []): array
     {
-        $request = $this->authorizedRequest();
+        $request = $this->authorizedRequest($headers);
         $log = $this->makeLog($method, $url, $payload, $record);
 
         $response = $method === 'get'
@@ -271,9 +340,9 @@ class InpostService
         return is_array($json) ? $json : ['raw' => $response->body()];
     }
 
-    protected function requestRaw(string $method, string $url, array $payload = [], ?SpedizioneInpost $record = null): array
+    protected function requestRaw(string $method, string $url, array $payload = [], ?Model $record = null, array $headers = []): array
     {
-        $request = $this->authorizedRequest();
+        $request = $this->authorizedRequest($headers);
         $log = $this->makeLog($method, $url, $payload, $record);
 
         $response = $method === 'get'
@@ -294,13 +363,13 @@ class InpostService
         ];
     }
 
-    protected function authorizedRequest()
+    protected function authorizedRequest(array $headers = [])
     {
         $token = $this->accessToken();
 
         return Http::withToken($token)
             ->acceptJson()
-            ->withHeaders($this->defaultHeaders);
+            ->withHeaders(array_merge($this->defaultHeaders, $headers));
     }
 
     protected function accessToken(): string
@@ -322,7 +391,7 @@ class InpostService
         });
     }
 
-    protected function makeLog(string $method, string $url, array $payload = [], ?SpedizioneInpost $record = null): ChiamataApi
+    protected function makeLog(string $method, string $url, array $payload = [], ?Model $record = null): ChiamataApi
     {
         $log = new ChiamataApi();
         $log->servizio = 'inpost';
@@ -340,26 +409,69 @@ class InpostService
         return $log;
     }
 
-    protected function normalizePoints(array $response): array
+    protected function normalizePoints(array $response, string $countryCode = '', string $city = '', string $postCode = ''): array
     {
         $items = Arr::wrap($response['items'] ?? $response['points'] ?? $response['data'] ?? $response);
+        $countryCode = strtoupper(trim($countryCode));
+        $city = mb_strtolower(trim($city));
+        $postCode = trim($postCode);
 
-        return collect($items)->map(function ($point) {
-            $id = data_get($point, 'id') ?: data_get($point, 'name');
-            $name = data_get($point, 'name') ?: data_get($point, 'location.name') ?: $id;
-            $address = implode(', ', array_filter([
-                data_get($point, 'address.line1'),
-                data_get($point, 'address.street'),
-                data_get($point, 'address.postCode') ?: data_get($point, 'address.postalCode'),
-                data_get($point, 'address.city'),
-            ]));
+        return collect($items)
+            ->map(function ($point) {
+                $id = data_get($point, 'id') ?: data_get($point, 'name');
+                $name = data_get($point, 'name') ?: $id;
+                $pointCountry = strtoupper((string)(data_get($point, 'country') ?: data_get($point, 'address.country')));
+                $pointCity = (string) data_get($point, 'address.city');
+                $pointPostCode = (string) (data_get($point, 'address.postCode') ?: data_get($point, 'address.postalCode'));
+                $description = (string) (data_get($point, 'description.content') ?: data_get($point, 'description'));
+                $address = implode(', ', array_filter([
+                    data_get($point, 'address.street'),
+                    data_get($point, 'address.buildingNumber'),
+                    $pointPostCode,
+                    $pointCity,
+                    $description,
+                ]));
 
-            return [
-                'id' => $id,
-                'name' => $name,
-                'address' => $address,
-            ];
-        })->filter(fn ($item) => filled($item['id']))->values()->all();
+                return [
+                    'id' => $id,
+                    'name' => $name,
+                    'address' => $address,
+                    'country' => $pointCountry,
+                    'city' => $pointCity,
+                    'post_code' => $pointPostCode,
+                ];
+            })
+            ->filter(function ($item) use ($countryCode, $city, $postCode) {
+                if (!filled($item['id'])) {
+                    return false;
+                }
+
+                if ($countryCode !== '' && strtoupper((string)$item['country']) !== $countryCode) {
+                    return false;
+                }
+
+                if ($city !== '' && !str_contains(mb_strtolower((string)$item['city']), $city)) {
+                    return false;
+                }
+
+                if ($postCode !== '' && !str_contains((string)$item['post_code'], $postCode)) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->values()
+            ->all();
+    }
+
+    protected function returnsCollectionPath(): string
+    {
+        return str_replace('{organizationId}', $this->organizationId, $this->returnsCollectionEndpoint);
+    }
+
+    protected function pickupsCollectionPath(): string
+    {
+        return str_replace('{organizationId}', $this->organizationId, $this->pickupsCollectionEndpoint);
     }
 
     protected function extractBase64Label(array $response): ?string
@@ -400,6 +512,22 @@ class InpostService
         }
 
         return null;
+    }
+
+    protected function labelAcceptHeader(): string
+    {
+        $format = strtoupper(trim((string) config('services.inpost.label_format', 'A6')));
+
+        return match ($format) {
+            'A4' => 'application/pdf;format=A4',
+            'A6', 'PDF', 'PDF_A6' => 'application/pdf;format=A6',
+            'PDF_A4' => 'application/pdf;format=A4',
+            'A4_BASE64', 'BASE64_A4', 'JSON_A4' => 'application/pdf+json;format=A4',
+            'A6_BASE64', 'BASE64_A6', 'JSON_A6' => 'application/pdf+json;format=A6',
+            default => str_contains($format, '/')
+                ? (string) config('services.inpost.label_format')
+                : 'application/pdf;format=A6',
+        };
     }
 
     protected function parseJsonArrayConfig($value): array

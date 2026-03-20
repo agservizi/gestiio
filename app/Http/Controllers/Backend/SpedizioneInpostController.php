@@ -102,7 +102,9 @@ class SpedizioneInpostController extends Controller
 
         $request->validate($this->rules());
         $this->salvaDati($record, $request);
-        $this->creaSpedizioneRemota($record);
+        if (!$record->shipment_uuid) {
+            $this->creaSpedizioneRemota($record);
+        }
 
         return $this->backToIndex();
     }
@@ -179,6 +181,22 @@ class SpedizioneInpostController extends Controller
             'Content-Type' => $label['content_type'],
             'Content-Disposition' => 'inline; filename="' . $label['filename'] . '"',
         ]);
+    }
+
+    public function sync($id)
+    {
+        $record = SpedizioneInpost::find($id);
+        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(!$record->shipment_uuid, 404, 'Shipment UUID non disponibile');
+
+        $service = new InpostService();
+        $response = $service->getShipment($record->shipment_uuid, $record);
+        $record->response = array_merge($record->response ?? [], ['shipmentRead' => $response]);
+        $record->tracking_number = data_get($response, 'trackingNumber') ?: data_get($response, 'tracking.number') ?: $record->tracking_number;
+        $record->esito = data_get($response, 'status') ?: $record->esito;
+        $record->save();
+
+        return redirect()->back();
     }
 
     protected function applicaFiltri(Request $request)
@@ -312,9 +330,9 @@ class SpedizioneInpostController extends Controller
             'agente_id' => ['required'],
             'delivery_type' => ['required', 'in:point,address'],
             'ragione_sociale_destinatario' => ['required', 'max:120'],
-            'indirizzo_destinatario' => ['required', 'max:120'],
-            'cap_destinatario' => ['required', 'max:20'],
-            'localita_destinazione' => ['required', 'max:120'],
+            'indirizzo_destinatario' => ['nullable', 'max:120', 'required_if:delivery_type,address'],
+            'cap_destinatario' => ['nullable', 'max:20', 'required_if:delivery_type,address'],
+            'localita_destinazione' => ['nullable', 'max:120', 'required_if:delivery_type,address'],
             'nazione_destinazione' => ['required', 'size:2'],
             'email_destinatario' => ['nullable', 'email', 'max:255'],
             'mobile_referente_consegna' => ['required', 'max:32'],

@@ -1,4 +1,7 @@
 @extends('Backend._layout._main')
+@section('toolbar')
+    <a class="btn btn-sm btn-primary" href="{{action([\App\Http\Controllers\Backend\SpedizioneInpostController::class,'sync'],$record->id)}}">Sincronizza spedizione</a>
+@endsection
 
 @section('content')
     <div class="card">

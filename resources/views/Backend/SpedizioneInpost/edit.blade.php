@@ -42,18 +42,21 @@
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                @include('Backend._inputs.inputText',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario','required'=>true])
-                            </div>
-                            <div class="col-md-6">
-                                @include('Backend._inputs.inputText',['campo'=>'localita_destinazione','testo'=>'Localita destinazione','required'=>true])
-                            </div>
-                            <div class="col-md-3">
-                                @include('Backend._inputs.inputText',['campo'=>'cap_destinatario','testo'=>'CAP','required'=>true])
+                        <div class="row" id="address-destination-row">
+                            <div class="col-md-9">
+                                @include('Backend._inputs.inputText',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario'])
                             </div>
                             <div class="col-md-3">
                                 @include('Backend._inputs.inputText',['campo'=>'provincia_destinatario','testo'=>'Provincia'])
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                @include('Backend._inputs.inputText',['campo'=>'cap_destinatario','testo'=>'CAP / ZIP'])
+                            </div>
+                            <div class="col-md-3">
+                                @include('Backend._inputs.inputText',['campo'=>'localita_destinazione','testo'=>'Localita / City'])
                             </div>
                             <div class="col-md-3">
                                 @include('Backend._inputs.inputSelect2',['campo'=>'nazione_destinazione','testo'=>'Nazione','required'=>true,'selected'=>\App\Models\Nazione::selected(old('nazione_destinazione',$record->nazione_destinazione ?: 'IT'))])
@@ -226,7 +229,19 @@
             });
 
             function togglePointFields() {
-                $('#point-search-row').toggle($('#delivery_type').val() === 'point');
+                var isPoint = $('#delivery_type').val() === 'point';
+                $('#point-search-row').toggle(isPoint);
+                $('#address-destination-row').toggle(!isPoint);
+
+                $('#indirizzo_destinatario').prop('required', !isPoint);
+                $('#cap_destinatario').prop('required', !isPoint);
+                $('#localita_destinazione').prop('required', !isPoint);
+                $('#punto_inpost_id').prop('required', isPoint);
+
+                $('#label_indirizzo_destinatario').toggleClass('required', !isPoint);
+                $('#label_cap_destinatario').toggleClass('required', !isPoint);
+                $('#label_localita_destinazione').toggleClass('required', !isPoint);
+                $('#label_punto_inpost_id').toggleClass('required', isPoint);
             }
 
             function handlePackageChoice() {
