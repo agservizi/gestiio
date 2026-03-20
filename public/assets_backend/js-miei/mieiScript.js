@@ -266,6 +266,50 @@ function modalAjax() {
     refreshUi(document);
 }
 
+function apriModal(url, targetName) {
+    var target = '#' + (targetName || 'kt_modal');
+
+    var refreshUi = function (container) {
+        if (typeof KTApp !== 'undefined' && typeof KTApp.createInstances === 'function') {
+            KTApp.createInstances();
+        }
+
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Tooltip === 'function') {
+            $(container || document).find('[data-bs-toggle="tooltip"]').each(function () {
+                if (!bootstrap.Tooltip.getInstance(this)) {
+                    bootstrap.Tooltip.getOrCreateInstance(this);
+                }
+            });
+        }
+    };
+
+    $.ajax({
+        url: url,
+        success: function (response) {
+            $(target).html(response);
+            $(target).modal('show');
+            refreshUi(target);
+        },
+        error: function (xhr) {
+            var message = 'Errore nel caricamento del modal';
+
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                message = xhr.responseJSON.message;
+            } else if (xhr.responseText) {
+                try {
+                    var err = JSON.parse(xhr.responseText);
+                    if (err.message) {
+                        message = err.message;
+                    }
+                } catch (e) {
+                }
+            }
+
+            alert(message);
+        }
+    });
+}
+
 
 function ajaxAzione(url) {
     $.ajax(url,
