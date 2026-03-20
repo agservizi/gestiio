@@ -277,10 +277,10 @@
                 var conteggioColli = 1;
                 var volumeTotale = 0;
                 var pesoTotale = 0;
-                var larghezza = numeral($('#dati_colli_0_larghezza').val()).value() || 0;
-                var altezza = numeral($('#dati_colli_0_altezza').val()).value() || 0;
-                var profondita = numeral($('#dati_colli_0_profondita').val()).value() || 0;
-                var pesoReale = numeral($('#dati_colli_0_peso_reale').val()).value() || 0;
+                var larghezza = parseNumero($('#dati_colli_0_larghezza').val());
+                var altezza = parseNumero($('#dati_colli_0_altezza').val());
+                var profondita = parseNumero($('#dati_colli_0_profondita').val());
+                var pesoReale = parseNumero($('#dati_colli_0_peso_reale').val());
                 var volume = larghezza / 100 * altezza / 100 * profondita / 100;
                 var pesoVolumetrico = larghezza * altezza * profondita / 4000;
 
@@ -294,6 +294,20 @@
                 $('#peso_totale_dx').text(new Intl.NumberFormat('it-IT', {minimumFractionDigits: 1, maximumFractionDigits: 1}).format(pesoTotale));
                 $('#volume_totale').val(new Intl.NumberFormat('it-IT', {minimumFractionDigits: 3, maximumFractionDigits: 3}).format(volumeTotale));
                 $('#volume_totale_span').text(new Intl.NumberFormat('it-IT', {minimumFractionDigits: 3, maximumFractionDigits: 3}).format(volumeTotale));
+            }
+
+            function parseNumero(value) {
+                if (typeof value === 'number') {
+                    return isNaN(value) ? 0 : value;
+                }
+
+                var normalized = String(value || '')
+                    .replace(/\./g, '')
+                    .replace(',', '.')
+                    .replace(/[^0-9.\-]/g, '');
+                var parsed = parseFloat(normalized);
+
+                return isNaN(parsed) ? 0 : parsed;
             }
         });
     </script>
