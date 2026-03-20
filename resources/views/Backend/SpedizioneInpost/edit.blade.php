@@ -47,16 +47,37 @@
 
                         <div class="inpost-section-card mb-8">
                             <div class="inpost-section-head">
-                                <h3 class="inpost-section-title">Note e tag</h3>
-                                <p class="inpost-section-text">Lascia una nota interna e usa i tag per identificare la spedizione.</p>
+                                <h3 class="inpost-section-title">Invia da</h3>
+                                <p class="inpost-section-text">Inserisci i dati del mittente usati per la spedizione.</p>
                             </div>
-                            <div class="mb-6">
-                                <textarea name="altri_dati[internal_note]" class="form-control form-control-solid form-control-lg" rows="3" placeholder="Lascia una nota">{{old('altri_dati.internal_note', $record->altri_dati['internal_note'] ?? '')}}</textarea>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    @include('Backend._inputs.inputText',['campo'=>'nome_mittente','testo'=>'Mittente','required'=>true])
+                                </div>
+                                <div class="col-md-4">
+                                    @include('Backend._inputs.inputText',['campo'=>'email_mittente','testo'=>'Email mittente'])
+                                </div>
+                                <div class="col-md-4">
+                                    @include('Backend._inputs.inputText',['campo'=>'mobile_mittente','testo'=>'Telefono mittente'])
+                                </div>
                             </div>
-                            <div class="mb-2">
-                                <input type="text" name="altri_dati[tags]" class="form-control form-control-solid form-control-lg" value="{{old('altri_dati.tags', $record->altri_dati['tags'] ?? '')}}" placeholder="Aggiungi tag (separati da virgole)">
+                        </div>
+
+                        <div class="inpost-section-card mb-8">
+                            <div class="inpost-section-head">
+                                <h3 class="inpost-section-title">Destinatario</h3>
                             </div>
-                            <div class="text-muted fs-7">Nessun tag. Aggiungi tag per identificare facilmente le spedizioni.</div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    @include('Backend._inputs.inputText',['campo'=>'ragione_sociale_destinatario','testo'=>'Destinatario','required'=>true])
+                                </div>
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputText',['campo'=>'email_destinatario','testo'=>'Email destinatario'])
+                                </div>
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputText',['campo'=>'mobile_referente_consegna','testo'=>'Numero di telefono','required'=>true])
+                                </div>
+                            </div>
                         </div>
 
                         <div class="inpost-section-card mb-8">
@@ -113,42 +134,21 @@
                             </div>
                         </div>
 
-                        <div class="inpost-section-card mb-8">
-                            <div class="inpost-section-head">
-                                <h3 class="inpost-section-title">Invia da</h3>
-                                <p class="inpost-section-text">Inserisci i dati del mittente usati per la spedizione.</p>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    @include('Backend._inputs.inputText',['campo'=>'nome_mittente','testo'=>'Mittente','required'=>true])
-                                </div>
-                                <div class="col-md-4">
-                                    @include('Backend._inputs.inputText',['campo'=>'email_mittente','testo'=>'Email mittente'])
-                                </div>
-                                <div class="col-md-4">
-                                    @include('Backend._inputs.inputText',['campo'=>'mobile_mittente','testo'=>'Telefono mittente'])
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="inpost-section-card mb-8">
-                            <div class="inpost-section-head">
-                                <h3 class="inpost-section-title">Destinatario</h3>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    @include('Backend._inputs.inputText',['campo'=>'ragione_sociale_destinatario','testo'=>'Destinatario','required'=>true])
-                                </div>
-                                <div class="col-md-6">
-                                    @include('Backend._inputs.inputText',['campo'=>'email_destinatario','testo'=>'Email destinatario'])
-                                </div>
-                                <div class="col-md-6">
-                                    @include('Backend._inputs.inputText',['campo'=>'mobile_referente_consegna','testo'=>'Numero di telefono','required'=>true])
-                                </div>
-                            </div>
-                        </div>
-
                         @include('Backend.SpedizioneInpost.repeaterColli')
+
+                        <div class="inpost-section-card mb-8">
+                            <div class="inpost-section-head">
+                                <h3 class="inpost-section-title">Note e tag</h3>
+                                <p class="inpost-section-text">Lascia una nota interna e usa i tag per identificare la spedizione.</p>
+                            </div>
+                            <div class="mb-6">
+                                <textarea name="altri_dati[internal_note]" class="form-control form-control-solid form-control-lg" rows="3" placeholder="Lascia una nota">{{old('altri_dati.internal_note', $record->altri_dati['internal_note'] ?? '')}}</textarea>
+                            </div>
+                            <div class="mb-2">
+                                <input type="text" name="altri_dati[tags]" class="form-control form-control-solid form-control-lg" value="{{old('altri_dati.tags', $record->altri_dati['tags'] ?? '')}}" placeholder="Aggiungi tag (separati da virgole)">
+                            </div>
+                            <div class="text-muted fs-7">Nessun tag. Aggiungi tag per identificare facilmente le spedizioni.</div>
+                        </div>
 
                         <input type="hidden" name="numero_pacchi" id="numero_pacchi" value="{{old('numero_pacchi',$record->numero_pacchi)}}">
                         <input type="hidden" name="peso_totale" id="peso_totale" value="{{old('peso_totale',$record->peso_totale)}}">
