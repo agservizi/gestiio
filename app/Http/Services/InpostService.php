@@ -111,6 +111,13 @@ class InpostService
     public function points(string $countryCode, string $city = '', string $postCode = ''): array
     {
         $countryCode = strtoupper(trim($countryCode ?: $this->defaultCountry));
+        if ($countryCode === 'IT' && $this->itPointsBaseUrl !== '') {
+            $italyResult = $this->italyPoints($countryCode, $city, $postCode);
+            if (!empty($italyResult['points'])) {
+                return $italyResult;
+            }
+        }
+
         $query = array_filter([
             'countryCode' => $countryCode,
             'city' => $city,
@@ -119,10 +126,18 @@ class InpostService
 
         try {
             $response = $this->requestJson('get', $this->baseUrl . $this->locationEndpoint, $query);
+            $normalized = $this->normalizePoints($response, $countryCode, $city, $postCode);
+
+            if ($countryCode === 'IT' && $this->itPointsBaseUrl !== '' && empty($normalized)) {
+                $italyResult = $this->italyPoints($countryCode, $city, $postCode);
+                if (!empty($italyResult['points'])) {
+                    return $italyResult;
+                }
+            }
 
             return [
                 'raw' => $response,
-                'points' => $this->normalizePoints($response, $countryCode, $city, $postCode),
+                'points' => $normalized,
                 'source' => 'global',
                 'error' => null,
             ];
