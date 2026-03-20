@@ -344,6 +344,10 @@
             $(document).on('keyup change', '.ricalcola', aggiornaRiepilogo);
             $(document).on('change', '.package-choice', handlePackageChoice);
             $(document).on('change', '.delivery-choice', handleDeliveryChoice);
+            $(document).on('click', '[data-delivery-card]', function () {
+                var value = $(this).data('delivery-card');
+                $('.delivery-choice[value="' + value + '"]').prop('checked', true).trigger('change');
+            });
             togglePointFields();
             syncPackageFields();
             aggiornaRiepilogo();
