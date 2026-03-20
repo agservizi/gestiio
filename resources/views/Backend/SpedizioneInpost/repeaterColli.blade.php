@@ -1,6 +1,6 @@
 @php
     $collo = old('dati_colli.0', $record->dati_colli[0] ?? []);
-    $packageType = old('altri_dati.package_type', $record->altri_dati['package_type'] ?? null);
+    $packageType = old('altri_dati.package_type', $record->altri_dati['package_type'] ?? 'small');
     $referenceValue = old('altri_dati.package_reference', $record->altri_dati['package_reference'] ?? '');
     $annotationValue = old('altri_dati.annotation', $record->altri_dati['annotation'] ?? '');
 
