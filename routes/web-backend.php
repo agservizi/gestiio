@@ -72,6 +72,10 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('spedizione-brt/tracking/refresh-bulk', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'trackingRefreshBulk']);
     Route::get('spedizione-brt/{id}/etichetta/{index}', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'etichetta']);
     Route::get('spedizione-brt/{id}/pdf/{tipopdf}', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'pdf']);
+    Route::resource('spedizione-inpost', \App\Http\Controllers\Backend\SpedizioneInpostController::class);
+    Route::post('spedizione-inpost/{id}/tracking-refresh', [\App\Http\Controllers\Backend\SpedizioneInpostController::class, 'trackingRefresh']);
+    Route::post('spedizione-inpost/tracking/refresh-bulk', [\App\Http\Controllers\Backend\SpedizioneInpostController::class, 'trackingRefreshBulk']);
+    Route::get('spedizione-inpost/{id}/etichetta', [\App\Http\Controllers\Backend\SpedizioneInpostController::class, 'etichetta']);
     Route::post('brt-orm', [\App\Http\Controllers\Backend\BrtOrmController::class, 'store']);
     Route::delete('brt-orm/{reservationId}', [\App\Http\Controllers\Backend\BrtOrmController::class, 'destroy']);
 

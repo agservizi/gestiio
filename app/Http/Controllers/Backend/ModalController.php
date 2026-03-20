@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Services\BrtService;
+use App\Http\Services\InpostService;
 use App\Models\AllegatoAttivazioneSim;
 use App\Models\AllegatoCafPatronato;
 use App\Models\AllegatoContratto;
@@ -52,6 +53,13 @@ class ModalController extends Controller
                 return view('Backend.SpedizioneBrt.modalVolumi', [
                     'colli' => $request->input('colli', 1),
                     'titoloPagina' => 'Calcolo volumi '
+                ]);
+            case 'inpost_points':
+                $service = new InpostService();
+                $result = $service->points((string) $request->input('nazione', 'IT'), (string) $request->input('citta', ''), (string) $request->input('cap', ''));
+                return view('Backend.SpedizioneInpost.modalPunti', [
+                    'points' => $result['points'],
+                    'titoloPagina' => 'Seleziona punto InPost',
                 ]);
 
             case 'sostituzione-sim':
