@@ -245,6 +245,14 @@
             box-shadow: inset 0 0 0 2px #f7c600;
         }
 
+        .inpost-choice-card.is-active .inpost-package-radio::after {
+            content: "";
+            position: absolute;
+            inset: 5px;
+            border-radius: 50%;
+            background: #2f2f2f;
+        }
+
         .inpost-choice-title {
             font-size: 1.15rem;
             font-weight: 700;
