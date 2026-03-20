@@ -3,8 +3,6 @@
 namespace App\Http\Services;
 
 use App\Models\ChiamataApi;
-use App\Models\InpostPickup;
-use App\Models\InpostReturn;
 use App\Models\SpedizioneInpost;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -28,10 +26,6 @@ class InpostService
     protected string $trackingEndpointTemplate;
     protected string $labelEndpointTemplate;
     protected string $shipmentReadEndpointTemplate;
-    protected string $returnsCollectionEndpoint;
-    protected string $returnsItemEndpointTemplate;
-    protected string $pickupsCollectionEndpoint;
-    protected string $pickupsItemEndpointTemplate;
     protected string $defaultCountry;
     protected int $pointSearchLimit;
     protected string $itPointsBaseUrl;
@@ -53,10 +47,6 @@ class InpostService
         $this->trackingEndpointTemplate = (string) config('services.inpost.tracking_endpoint_template', '/tracking/v1/shipments/{trackingNumber}');
         $this->labelEndpointTemplate = (string) config('services.inpost.label_endpoint_template', '/shipping/v2/organizations/{organizationId}/shipments/{shipmentId}/label');
         $this->shipmentReadEndpointTemplate = (string) config('services.inpost.shipment_read_endpoint_template', '/shipping/v2/organizations/{organizationId}/shipments/{shipmentId}');
-        $this->returnsCollectionEndpoint = (string) config('services.inpost.returns_collection_endpoint', '/returns/v1/organizations/{organizationId}/returns');
-        $this->returnsItemEndpointTemplate = (string) config('services.inpost.returns_item_endpoint_template', '/returns/v1/organizations/{organizationId}/returns/{returnId}');
-        $this->pickupsCollectionEndpoint = (string) config('services.inpost.pickups_collection_endpoint', '/pickups/v1/organizations/{organizationId}/one-time-pickups');
-        $this->pickupsItemEndpointTemplate = (string) config('services.inpost.pickups_item_endpoint_template', '/pickups/v1/organizations/{organizationId}/one-time-pickups/{pickupId}');
         $this->defaultCountry = strtoupper((string) config('services.inpost.default_country', 'IT'));
         $this->pointSearchLimit = max(1, (int) config('services.inpost.point_search_limit', 20));
         $this->itPointsBaseUrl = rtrim((string) config('services.inpost.it_points_base_url', 'https://api-shipx-it.easypack24.net'), '/');
@@ -235,48 +225,6 @@ class InpostService
     public function trackingUrl(string $trackingNumber): string
     {
         return $this->trackingPortalBaseUrl . '?number=' . urlencode($trackingNumber);
-    }
-
-    public function createReturn(array $payload, ?InpostReturn $record = null): array
-    {
-        return $this->requestJson('post', $this->baseUrl . $this->returnsCollectionPath(), $payload, $record);
-    }
-
-    public function listReturns(array $query = [], ?InpostReturn $record = null): array
-    {
-        return $this->requestJson('get', $this->baseUrl . $this->returnsCollectionPath(), $query, $record);
-    }
-
-    public function getReturn(string $returnId, ?InpostReturn $record = null): array
-    {
-        $path = str_replace(
-            ['{organizationId}', '{returnId}'],
-            [$this->organizationId, urlencode($returnId)],
-            $this->returnsItemEndpointTemplate
-        );
-
-        return $this->requestJson('get', $this->baseUrl . $path, [], $record);
-    }
-
-    public function createPickup(array $payload, ?InpostPickup $record = null): array
-    {
-        return $this->requestJson('post', $this->baseUrl . $this->pickupsCollectionPath(), $payload, $record);
-    }
-
-    public function listPickups(array $query = [], ?InpostPickup $record = null): array
-    {
-        return $this->requestJson('get', $this->baseUrl . $this->pickupsCollectionPath(), $query, $record);
-    }
-
-    public function getPickup(string $pickupId, ?InpostPickup $record = null): array
-    {
-        $path = str_replace(
-            ['{organizationId}', '{pickupId}'],
-            [$this->organizationId, urlencode($pickupId)],
-            $this->pickupsItemEndpointTemplate
-        );
-
-        return $this->requestJson('get', $this->baseUrl . $path, [], $record);
     }
 
     protected function shipmentEndpoint(SpedizioneInpost $record): string
@@ -586,16 +534,6 @@ class InpostService
             })
             ->values()
             ->all();
-    }
-
-    protected function returnsCollectionPath(): string
-    {
-        return str_replace('{organizationId}', $this->organizationId, $this->returnsCollectionEndpoint);
-    }
-
-    protected function pickupsCollectionPath(): string
-    {
-        return str_replace('{organizationId}', $this->organizationId, $this->pickupsCollectionEndpoint);
     }
 
     protected function extractBase64Label(array $response): ?string

@@ -135,22 +135,6 @@
                             <span class="menu-title">Spedizione InPost</span>
                         </a>
                     </div>
-                    <div class="menu-item">
-                        <a class="menu-link" href="{{ url('/backend/inpost-return') }}">
-                        <span class="menu-icon"><span class="svg-icon svg-icon-2">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.3" d="M12 4C7.6 4 4 7.6 4 12s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8z" fill="currentColor"/><path d="M8 11h6.2l-1.6-1.6L14 8l4 4-4 4-1.4-1.4 1.6-1.6H8v-2z" fill="currentColor"/></svg>
-                        </span></span>
-                            <span class="menu-title">Resi InPost</span>
-                        </a>
-                    </div>
-                    <div class="menu-item">
-                        <a class="menu-link" href="{{ url('/backend/inpost-pickup') }}">
-                        <span class="menu-icon"><span class="svg-icon svg-icon-2">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.3" d="M5 4h14v14H5z" fill="currentColor"/><path d="M9 8h6v2H9V8zm-1 4h8v2H8v-2zm2 4h4v2h-4v-2z" fill="currentColor"/></svg>
-                        </span></span>
-                            <span class="menu-title">Ritiri InPost</span>
-                        </a>
-                    </div>
                 @endif
                 @can('admin')
                     <div class="menu-item">
@@ -958,22 +942,6 @@
                             </span>
                         </span>
                             <span class="menu-title">Spedizione InPost</span>
-                        </a>
-                    </div>
-                    <div class="menu-item">
-                        <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\InpostReturnController::class,'index'])}}">
-                        <span class="menu-icon"><span class="svg-icon svg-icon-2">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.3" d="M12 4C7.6 4 4 7.6 4 12s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8z" fill="currentColor"/><path d="M8 11h6.2l-1.6-1.6L14 8l4 4-4 4-1.4-1.4 1.6-1.6H8v-2z" fill="currentColor"/></svg>
-                        </span></span>
-                            <span class="menu-title">Resi InPost</span>
-                        </a>
-                    </div>
-                    <div class="menu-item">
-                        <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\InpostPickupController::class,'index'])}}">
-                        <span class="menu-icon"><span class="svg-icon svg-icon-2">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.3" d="M5 4h14v14H5z" fill="currentColor"/><path d="M9 8h6v2H9V8zm-1 4h8v2H8v-2zm2 4h4v2h-4v-2z" fill="currentColor"/></svg>
-                        </span></span>
-                            <span class="menu-title">Ritiri InPost</span>
                         </a>
                     </div>
                 @endcan
