@@ -6,6 +6,10 @@
             <div class="card">
                 <div class="card-body">
                     @include('Backend._components.alertErrori')
+                    @php
+                        $originCountry = \App\Models\Nazione::find(config('services.inpost.default_country', 'IT'));
+                        $destinationCountry = \App\Models\Nazione::find(old('nazione_destinazione', $record->nazione_destinazione ?: 'IT'));
+                    @endphp
                     <form method="POST" action="{{$record->id ? action([\App\Http\Controllers\Backend\SpedizioneInpostController::class,'update'],$record->id) : action([\App\Http\Controllers\Backend\SpedizioneInpostController::class,'store'])}}" id="form-inpost">
                         @csrf
                         @method($record->id ? 'PATCH' : 'POST')
@@ -20,73 +24,127 @@
                             <input type="hidden" name="agente_id" id="agente_id" value="{{old('agente_id',$record->agente_id)}}">
                         @endif
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="row mb-6">
-                                    <div class="col-lg-4 col-form-label text-lg-end">
-                                        <label class="fw-bold fs-6 required" for="delivery_type">Tipo consegna</label>
+                        <input type="hidden" id="delivery_type" name="delivery_type" value="{{old('delivery_type',$record->delivery_type ?: 'point')}}">
+
+                        <div class="inpost-section-card mb-8">
+                            <div class="inpost-section-head">
+                                <h3 class="inpost-section-title">Direzione</h3>
+                                <p class="inpost-section-text">Seleziona i paesi di origine e destinazione per iniziare la spedizione.</p>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="inpost-field-label required">Da</label>
+                                    <div class="inpost-country-display">
+                                        <span class="inpost-flag" aria-hidden="true">🇮🇹</span>
+                                        <span>{{$originCountry?->langIT ?? 'Italia'}}</span>
                                     </div>
-                                    <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                        <select id="delivery_type" name="delivery_type" class="form-select form-select-solid" required>
-                                            <option value="point" {{old('delivery_type',$record->delivery_type) === 'point' ? 'selected' : ''}}>Address to Point</option>
-                                            <option value="address" {{old('delivery_type',$record->delivery_type) === 'address' ? 'selected' : ''}}>Address to Address</option>
-                                        </select>
-                                        <div class="fv-plugins-message-container invalid-feedback">
-                                            @error('delivery_type'){{$message}}@enderror
-                                        </div>
+                                </div>
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputSelect2',['campo'=>'nazione_destinazione','testo'=>'A','required'=>true,'selected'=>\App\Models\Nazione::selected(old('nazione_destinazione',$record->nazione_destinazione ?: 'IT'))])
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="inpost-section-card mb-8">
+                            <div class="inpost-section-head">
+                                <h3 class="inpost-section-title">Note e tag</h3>
+                                <p class="inpost-section-text">Lascia una nota interna e usa i tag per identificare la spedizione.</p>
+                            </div>
+                            <div class="mb-6">
+                                <textarea name="altri_dati[internal_note]" class="form-control form-control-solid form-control-lg" rows="3" placeholder="Lascia una nota">{{old('altri_dati.internal_note', $record->altri_dati['internal_note'] ?? '')}}</textarea>
+                            </div>
+                            <div class="mb-2">
+                                <input type="text" name="altri_dati[tags]" class="form-control form-control-solid form-control-lg" value="{{old('altri_dati.tags', $record->altri_dati['tags'] ?? '')}}" placeholder="Aggiungi tag (separati da virgole)">
+                            </div>
+                            <div class="text-muted fs-7">Nessun tag. Aggiungi tag per identificare facilmente le spedizioni.</div>
+                        </div>
+
+                        <div class="inpost-section-card mb-8">
+                            <div class="inpost-section-head">
+                                <h3 class="inpost-section-title">Consegna a</h3>
+                                <p class="inpost-section-text">
+                                    Paese di destinazione selezionato:
+                                    <span class="fw-semibold">{{$destinationCountry?->langIT ?? 'Italia'}}</span>
+                                </p>
+                            </div>
+                            <div class="row g-4 mb-5">
+                                <div class="col-md-6">
+                                    <label class="inpost-choice-card {{old('delivery_type',$record->delivery_type) !== 'address' ? 'is-active' : ''}}" data-delivery-card="point">
+                                        <input type="radio" class="d-none delivery-choice" name="delivery_type_choice" value="point" {{old('delivery_type',$record->delivery_type) !== 'address' ? 'checked' : ''}}>
+                                        <span class="inpost-package-radio"></span>
+                                        <span class="inpost-choice-title">Locker o punto di ritiro</span>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="inpost-choice-card {{old('delivery_type',$record->delivery_type) === 'address' ? 'is-active' : ''}}" data-delivery-card="address">
+                                        <input type="radio" class="d-none delivery-choice" name="delivery_type_choice" value="address" {{old('delivery_type',$record->delivery_type) === 'address' ? 'checked' : ''}}>
+                                        <span class="inpost-package-radio"></span>
+                                        <span class="inpost-choice-title">Indirizzo del destinatario</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="row" id="point-search-row">
+                                <div class="col-md-9">
+                                    @include('Backend._inputs.inputTextButton',['campo'=>'punto_inpost_id','testo'=>'Locker o punto di ritiro','testoButton'=>'Mappa','classe'=>'cerca'])
+                                </div>
+                                <div class="col-md-3">
+                                    @include('Backend._inputs.inputText',['campo'=>'punto_inpost_label','testo'=>'Dettaglio punto'])
+                                </div>
+                            </div>
+
+                            <div id="address-destination-row">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        @include('Backend._inputs.inputText',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario'])
+                                    </div>
+                                    <div class="col-md-4">
+                                        @include('Backend._inputs.inputText',['campo'=>'provincia_destinatario','testo'=>'Provincia'])
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        @include('Backend._inputs.inputText',['campo'=>'cap_destinatario','testo'=>'CAP / ZIP'])
+                                    </div>
+                                    <div class="col-md-4">
+                                        @include('Backend._inputs.inputText',['campo'=>'localita_destinazione','testo'=>'Localita / City'])
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                @include('Backend._inputs.inputText',['campo'=>'ragione_sociale_destinatario','testo'=>'Ragione sociale destinatario','required'=>true])
+                        </div>
+
+                        <div class="inpost-section-card mb-8">
+                            <div class="inpost-section-head">
+                                <h3 class="inpost-section-title">Invia da</h3>
+                                <p class="inpost-section-text">Inserisci i dati del mittente usati per la spedizione.</p>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    @include('Backend._inputs.inputText',['campo'=>'nome_mittente','testo'=>'Mittente','required'=>true])
+                                </div>
+                                <div class="col-md-4">
+                                    @include('Backend._inputs.inputText',['campo'=>'email_mittente','testo'=>'Email mittente'])
+                                </div>
+                                <div class="col-md-4">
+                                    @include('Backend._inputs.inputText',['campo'=>'mobile_mittente','testo'=>'Telefono mittente'])
+                                </div>
                             </div>
                         </div>
 
-                        <div class="row" id="address-destination-row">
-                            <div class="col-md-9">
-                                @include('Backend._inputs.inputText',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario'])
+                        <div class="inpost-section-card mb-8">
+                            <div class="inpost-section-head">
+                                <h3 class="inpost-section-title">Destinatario</h3>
                             </div>
-                            <div class="col-md-3">
-                                @include('Backend._inputs.inputText',['campo'=>'provincia_destinatario','testo'=>'Provincia'])
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-3">
-                                @include('Backend._inputs.inputText',['campo'=>'cap_destinatario','testo'=>'CAP / ZIP'])
-                            </div>
-                            <div class="col-md-3">
-                                @include('Backend._inputs.inputText',['campo'=>'localita_destinazione','testo'=>'Localita / City'])
-                            </div>
-                            <div class="col-md-3">
-                                @include('Backend._inputs.inputSelect2',['campo'=>'nazione_destinazione','testo'=>'Nazione','required'=>true,'selected'=>\App\Models\Nazione::selected(old('nazione_destinazione',$record->nazione_destinazione ?: 'IT'))])
-                            </div>
-                            <div class="col-md-3">
-                                @include('Backend._inputs.inputText',['campo'=>'email_destinatario','testo'=>'Email destinatario'])
-                            </div>
-                            <div class="col-md-6">
-                                @include('Backend._inputs.inputText',['campo'=>'mobile_referente_consegna','testo'=>'Mobile destinatario','required'=>true])
-                            </div>
-                        </div>
-
-                        <div class="row" id="point-search-row">
-                            <div class="col-md-6">
-                                @include('Backend._inputs.inputTextButton',['campo'=>'punto_inpost_id','testo'=>'Punto InPost','testoButton'=>'Cerca','classe'=>'cerca'])
-                            </div>
-                            <div class="col-md-6">
-                                @include('Backend._inputs.inputText',['campo'=>'punto_inpost_label','testo'=>'Descrizione punto'])
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                @include('Backend._inputs.inputText',['campo'=>'nome_mittente','testo'=>'Nome mittente','required'=>true])
-                            </div>
-                            <div class="col-md-4">
-                                @include('Backend._inputs.inputText',['campo'=>'email_mittente','testo'=>'Email mittente'])
-                            </div>
-                            <div class="col-md-4">
-                                @include('Backend._inputs.inputText',['campo'=>'mobile_mittente','testo'=>'Telefono mittente'])
+                            <div class="row">
+                                <div class="col-md-12">
+                                    @include('Backend._inputs.inputText',['campo'=>'ragione_sociale_destinatario','testo'=>'Destinatario','required'=>true])
+                                </div>
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputText',['campo'=>'email_destinatario','testo'=>'Email destinatario'])
+                                </div>
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputText',['campo'=>'mobile_referente_consegna','testo'=>'Numero di telefono','required'=>true])
+                                </div>
                             </div>
                         </div>
 
@@ -129,6 +187,77 @@
 
 @push('customCss')
     <style>
+        .inpost-section-card {
+            background: #fff;
+            border: 1px solid #e1e3ea;
+            border-radius: 14px;
+            padding: 1.75rem;
+        }
+
+        .inpost-section-head {
+            margin-bottom: 1.25rem;
+        }
+
+        .inpost-section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #20242c;
+            margin-bottom: .45rem;
+        }
+
+        .inpost-section-text {
+            color: #5f6672;
+            margin-bottom: 0;
+        }
+
+        .inpost-country-display {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            min-height: 54px;
+            padding: .95rem 1rem;
+            border: 1px solid #cfd3da;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 1.05rem;
+        }
+
+        .inpost-flag {
+            font-size: 1.45rem;
+            line-height: 1;
+        }
+
+        .inpost-choice-card {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-height: 88px;
+            padding: 1rem 1.25rem;
+            border: 1px solid #cfd3da;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+
+        .inpost-choice-card.is-active {
+            border-color: #f7c600;
+            box-shadow: inset 0 0 0 2px #f7c600;
+        }
+
+        .inpost-choice-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #20242c;
+        }
+
+        .inpost-field-label {
+            display: block;
+            margin-bottom: .5rem;
+            font-weight: 600;
+            color: #4a5160;
+        }
+
         .inpost-package-card {
             position: relative;
             display: flex;
@@ -214,7 +343,7 @@
 
             $(document).on('keyup change', '.ricalcola', aggiornaRiepilogo);
             $(document).on('change', '.package-choice', handlePackageChoice);
-            $('#delivery_type').change(togglePointFields);
+            $(document).on('change', '.delivery-choice', handleDeliveryChoice);
             togglePointFields();
             syncPackageFields();
             aggiornaRiepilogo();
@@ -242,6 +371,13 @@
                 $('#label_cap_destinatario').toggleClass('required', !isPoint);
                 $('#label_localita_destinazione').toggleClass('required', !isPoint);
                 $('#label_punto_inpost_id').toggleClass('required', isPoint);
+            }
+
+            function handleDeliveryChoice() {
+                $('[data-delivery-card]').removeClass('is-active');
+                $('[data-delivery-card="' + $(this).val() + '"]').addClass('is-active');
+                $('#delivery_type').val($(this).val());
+                togglePointFields();
             }
 
             function handlePackageChoice() {

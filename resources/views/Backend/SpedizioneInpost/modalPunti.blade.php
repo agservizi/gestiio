@@ -9,10 +9,6 @@
                 </div>
             @endif
 
-            @if(!empty($source))
-                <div class="text-muted fs-7 mb-3">Fonte risultati: {{$source}}</div>
-            @endif
-
             <table class="table table-row-bordered">
                 <thead>
                 <tr class="fw-bolder fs-6 text-gray-800">
