@@ -201,6 +201,10 @@ class SpedizioneInpostController extends Controller
             $record->caricato_da_user_id = Auth::id();
         }
 
+        $altriDati = is_array($request->input('altri_dati')) ? $request->input('altri_dati') : [];
+        $packageType = (string)($altriDati['package_type'] ?? 'small');
+        $datiColli = $this->normalizeDatiColli($request->input('dati_colli', []), $packageType);
+
         $campi = [
             'agente_id' => '',
             'delivery_type' => '',
@@ -220,7 +224,6 @@ class SpedizioneInpostController extends Controller
             'nome_mittente' => '',
             'email_mittente' => '',
             'mobile_mittente' => '',
-            'dati_colli' => '',
         ];
 
         foreach ($campi as $campo => $funzione) {
@@ -230,6 +233,16 @@ class SpedizioneInpostController extends Controller
             }
             $record->{$campo} = $valore;
         }
+
+        $record->numero_pacchi = 1;
+        $record->dati_colli = $datiColli;
+        $record->peso_totale = getInputNumero($this->computePesoTotale($datiColli));
+        $record->volume_totale = getInputNumero($this->computeVolumeTotale($datiColli));
+        $record->altri_dati = array_merge($altriDati, [
+            'package_type' => $packageType,
+            'package_reference' => trim((string)($altriDati['package_reference'] ?? '')),
+            'annotation' => trim((string)($altriDati['annotation'] ?? '')),
+        ]);
 
         $record->save();
     }
@@ -313,11 +326,65 @@ class SpedizioneInpostController extends Controller
             'nome_mittente' => ['required', 'max:120'],
             'email_mittente' => ['nullable', 'email', 'max:255'],
             'mobile_mittente' => ['nullable', 'max:32'],
-            'dati_colli.*.larghezza' => ['required'],
-            'dati_colli.*.altezza' => ['required'],
-            'dati_colli.*.profondita' => ['required'],
-            'dati_colli.*.peso_reale' => ['required'],
+            'altri_dati.package_type' => ['required', 'in:small,medium,large,custom'],
+            'altri_dati.package_reference' => ['nullable', 'max:255'],
+            'altri_dati.annotation' => ['nullable', 'max:255'],
+            'dati_colli.0.larghezza' => ['required_if:altri_dati.package_type,custom'],
+            'dati_colli.0.altezza' => ['required_if:altri_dati.package_type,custom'],
+            'dati_colli.0.profondita' => ['required_if:altri_dati.package_type,custom'],
+            'dati_colli.0.peso_reale' => ['required_if:altri_dati.package_type,custom'],
         ];
+    }
+
+    protected function normalizeDatiColli($raw, string $packageType): array
+    {
+        $presets = [
+            'small' => ['altezza' => 8, 'larghezza' => 38, 'profondita' => 64, 'peso_reale' => 25],
+            'medium' => ['altezza' => 19, 'larghezza' => 38, 'profondita' => 64, 'peso_reale' => 25],
+            'large' => ['altezza' => 41, 'larghezza' => 38, 'profondita' => 64, 'peso_reale' => 25],
+        ];
+
+        if (isset($presets[$packageType])) {
+            $collo = $presets[$packageType];
+        } else {
+            $first = is_array($raw) ? ($raw[0] ?? []) : [];
+            $collo = [
+                'altezza' => (float)getInputNumero($first['altezza'] ?? 0),
+                'larghezza' => (float)getInputNumero($first['larghezza'] ?? 0),
+                'profondita' => (float)getInputNumero($first['profondita'] ?? 0),
+                'peso_reale' => (float)getInputNumero($first['peso_reale'] ?? 0),
+            ];
+        }
+
+        $pesoVolumetrico = (($collo['larghezza'] ?? 0) * ($collo['altezza'] ?? 0) * ($collo['profondita'] ?? 0)) / 4000;
+        $collo['peso_volumetrico'] = round((float)$pesoVolumetrico, 1);
+
+        return [$collo];
+    }
+
+    protected function computePesoTotale(array $datiColli): string
+    {
+        $pesoTotale = 0;
+        foreach ($datiColli as $collo) {
+            $pesoReale = (float)($collo['peso_reale'] ?? 0);
+            $pesoVolumetrico = (float)($collo['peso_volumetrico'] ?? 0);
+            $pesoTotale += max($pesoReale, $pesoVolumetrico);
+        }
+
+        return number_format($pesoTotale, 1, ',', '');
+    }
+
+    protected function computeVolumeTotale(array $datiColli): string
+    {
+        $volumeTotale = 0;
+        foreach ($datiColli as $collo) {
+            $larghezza = (float)($collo['larghezza'] ?? 0);
+            $altezza = (float)($collo['altezza'] ?? 0);
+            $profondita = (float)($collo['profondita'] ?? 0);
+            $volumeTotale += ($larghezza / 100) * ($altezza / 100) * ($profondita / 100);
+        }
+
+        return number_format($volumeTotale, 3, ',', '');
     }
 
     protected function backToIndex()

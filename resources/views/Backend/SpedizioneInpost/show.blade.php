@@ -31,6 +31,14 @@
             </div>
             <div class="row">
                 <div class="col-md-6">
+                    @include('Backend._inputs.inputTextReadonly',['campo'=>'package_type','testo'=>'Package','valore'=>$record->packageTypeLabel()])
+                </div>
+                <div class="col-md-6">
+                    @include('Backend._inputs.inputTextReadonly',['campo'=>'package_reference','testo'=>'Numero di riferimento','valore'=>$record->packageReference()])
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
                     @include('Backend._inputs.inputTextReadonly',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario'])
                 </div>
                 <div class="col-md-6">
@@ -53,6 +61,13 @@
                     @include('Backend._inputs.inputTextReadonly',['campo'=>'mobile_mittente','testo'=>'Telefono mittente'])
                 </div>
             </div>
+            @if($record->annotation())
+                <div class="row">
+                    <div class="col-md-12">
+                        @include('Backend._inputs.inputTextReadonly',['campo'=>'annotation','testo'=>'Annotazione','valore'=>$record->annotation()])
+                    </div>
+                </div>
+            @endif
             <div class="row mt-3">
                 <div class="col-md-12">
                     <a class="btn btn-sm btn-primary" href="{{action([\App\Http\Controllers\Backend\SpedizioneInpostController::class,'etichetta'],$record->id)}}">Etichetta</a>

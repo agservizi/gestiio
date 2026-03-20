@@ -124,6 +124,75 @@
     </div>
 @endsection
 
+@push('customCss')
+    <style>
+        .inpost-package-card {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            min-height: 110px;
+            padding: 1rem 1.25rem;
+            border: 1px solid #d7d7d7;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+        }
+
+        .inpost-package-card.is-active {
+            border-color: #f7c600;
+            box-shadow: inset 0 0 0 2px #f7c600;
+        }
+
+        .inpost-package-card.is-custom .inpost-package-title,
+        .inpost-package-card.is-custom .inpost-package-subtitle {
+            color: #b5b5c3;
+        }
+
+        .inpost-package-radio {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid #8a8d93;
+            flex: 0 0 26px;
+            position: relative;
+            background: #fff;
+        }
+
+        .inpost-package-card.is-active .inpost-package-radio::after {
+            content: "";
+            position: absolute;
+            inset: 5px;
+            border-radius: 50%;
+            background: #2f2f2f;
+        }
+
+        .inpost-package-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+        }
+
+        .inpost-package-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #222;
+        }
+
+        .inpost-package-subtitle {
+            color: #6c6f75;
+            line-height: 1.45;
+        }
+
+        .inpost-package-icon {
+            flex: 0 0 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+@endpush
+
 @push('customScript')
     <script>
         $(function () {
@@ -134,21 +203,17 @@
                 select2UniversaleBackend('nazione_destinazione', 'una nazione', 1);
             }
 
-            $('#dati_colli').repeater({
-                initEmpty: false,
-                show: function () {
-                    $(this).slideDown();
-                    aggiornaRiepilogo();
-                },
-                hide: function (deleteElement) {
-                    $(this).slideUp(deleteElement);
-                    setTimeout(aggiornaRiepilogo, 250);
-                }
-            });
+            var packagePresets = {
+                small: {altezza: 8, larghezza: 38, profondita: 64, peso_reale: 25},
+                medium: {altezza: 19, larghezza: 38, profondita: 64, peso_reale: 25},
+                large: {altezza: 41, larghezza: 38, profondita: 64, peso_reale: 25}
+            };
 
             $(document).on('keyup change', '.ricalcola', aggiornaRiepilogo);
+            $(document).on('change', '.package-choice', handlePackageChoice);
             $('#delivery_type').change(togglePointFields);
             togglePointFields();
+            syncPackageFields();
             aggiornaRiepilogo();
 
             $(document).on('click', '#button-punto_inpost_id', function (e) {
@@ -164,25 +229,49 @@
                 $('#point-search-row').toggle($('#delivery_type').val() === 'point');
             }
 
+            function handlePackageChoice() {
+                $('[data-package-card]').removeClass('is-active');
+                $('[data-package-card="' + $(this).val() + '"]').addClass('is-active');
+                syncPackageFields();
+                aggiornaRiepilogo();
+            }
+
+            function syncPackageFields() {
+                var selected = $('.package-choice:checked').val() || 'small';
+                var preset = packagePresets[selected] || null;
+                var isCustom = selected === 'custom';
+
+                $('#custom-package-fields').toggle(isCustom);
+
+                if (!isCustom && preset) {
+                    $('#dati_colli_0_altezza').val(preset.altezza);
+                    $('#dati_colli_0_larghezza').val(preset.larghezza);
+                    $('#dati_colli_0_profondita').val(preset.profondita);
+                    $('#dati_colli_0_peso_reale').val(preset.peso_reale);
+                } else {
+                    $('#dati_colli_0_altezza').val($('#custom_altezza').val());
+                    $('#dati_colli_0_larghezza').val($('#custom_larghezza').val());
+                    $('#dati_colli_0_profondita').val($('#custom_profondita').val());
+                    $('#dati_colli_0_peso_reale').val($('#custom_peso_reale').val());
+                }
+            }
+
             function aggiornaRiepilogo() {
-                var conteggioColli = $('.item-collo').length;
+                syncPackageFields();
+
+                var conteggioColli = 1;
                 var volumeTotale = 0;
                 var pesoTotale = 0;
+                var larghezza = numeral($('#dati_colli_0_larghezza').val()).value() || 0;
+                var altezza = numeral($('#dati_colli_0_altezza').val()).value() || 0;
+                var profondita = numeral($('#dati_colli_0_profondita').val()).value() || 0;
+                var pesoReale = numeral($('#dati_colli_0_peso_reale').val()).value() || 0;
+                var volume = larghezza / 100 * altezza / 100 * profondita / 100;
+                var pesoVolumetrico = larghezza * altezza * profondita / 4000;
 
-                $('.item-collo').each(function () {
-                    var larghezza = numeral($(this).find('.larghezza').val()).value() || 0;
-                    var altezza = numeral($(this).find('.altezza').val()).value() || 0;
-                    var profondita = numeral($(this).find('.profondita').val()).value() || 0;
-                    var pesoReale = numeral($(this).find('.peso_reale').val()).value() || 0;
-                    var volume = larghezza / 100 * altezza / 100 * profondita / 100;
-                    var pesoVolumetrico = larghezza * altezza * profondita / 4000;
-
-                    volumeTotale += volume;
-                    pesoTotale += (pesoReale > pesoVolumetrico ? pesoReale : pesoVolumetrico);
-
-                    $(this).find('.peso-vol').text(new Intl.NumberFormat('it-IT', {minimumFractionDigits: 1, maximumFractionDigits: 1}).format(pesoVolumetrico));
-                    $(this).find('.peso_volumetrico').val(pesoVolumetrico);
-                });
+                volumeTotale += volume;
+                pesoTotale += (pesoReale > pesoVolumetrico ? pesoReale : pesoVolumetrico);
+                $('#dati_colli_0_peso_volumetrico').val(pesoVolumetrico.toFixed(1).replace('.', ','));
 
                 $('#numero_pacchi').val(conteggioColli);
                 $('#numero_pacchi_dx').text(conteggioColli);

@@ -145,4 +145,29 @@ class SpedizioneInpost extends Model
 
         return count($items) ? "<ul class='list-group'>" . implode('', $items) . '</ul>' : null;
     }
+
+    public function packageTypeLabel(): ?string
+    {
+        return match (data_get($this->altri_dati, 'package_type')) {
+            'small' => 'Piccolo (S)',
+            'medium' => 'Medio (M)',
+            'large' => 'Grande (L)',
+            'custom' => 'Personalizzato',
+            default => null,
+        };
+    }
+
+    public function packageReference(): ?string
+    {
+        $value = trim((string) data_get($this->altri_dati, 'package_reference', ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    public function annotation(): ?string
+    {
+        $value = trim((string) data_get($this->altri_dati, 'annotation', ''));
+
+        return $value !== '' ? $value : null;
+    }
 }

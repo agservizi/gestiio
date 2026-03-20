@@ -157,6 +157,11 @@ class InpostService
             'outputFormat' => strtoupper((string) config('services.inpost.label_format', 'PDF')),
         ];
 
+        $annotation = trim((string) data_get($record->altri_dati, 'annotation', ''));
+        if ($annotation !== '') {
+            $payload['annotation'] = $annotation;
+        }
+
         if ($record->delivery_type === 'point') {
             $payload['destinationPoint'] = [
                 'id' => $record->punto_inpost_id,
@@ -229,9 +234,10 @@ class InpostService
             $width = (float) ($collo['larghezza'] ?? 0);
             $height = (float) ($collo['altezza'] ?? 0);
             $weightKg = (float) ($collo['peso_reale'] ?? 0);
+            $reference = trim((string) data_get($record->altri_dati, 'package_reference', ''));
 
             $parcels[] = [
-                'reference' => (string) ($index + 1),
+                'reference' => $reference !== '' ? $reference : (string) ($index + 1),
                 'dimensions' => [
                     'length' => (int) round($length),
                     'width' => (int) round($width),
