@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    <table class="table align-middle" id="tabella-elenco">
+    <table class="table align-middle inpost-listino-table" id="tabella-elenco">
         <thead>
         <tr class="fw-bolder fs-7 text-uppercase text-gray-500">
             <th>Package</th>
@@ -22,10 +22,10 @@
                     @endphp
                     <span class="fw-bold text-dark">{{$label}}</span>
                 </td>
-                <td class="text-end"><span class="badge badge-light-warning fs-7">{{\App\importo($record->locker_point)}}</span></td>
-                <td class="text-end"><span class="badge badge-light-primary fs-7">{{\App\importo($record->home_delivery)}}</span></td>
+                <td class="text-end"><span class="badge badge-light-warning fs-7 inpost-listino-badge">{{\App\importo($record->locker_point)}}</span></td>
+                <td class="text-end"><span class="badge badge-light-primary fs-7 inpost-listino-badge">{{\App\importo($record->home_delivery)}}</span></td>
                 <td class="text-end text-nowrap">
-                    <a data-targetZ="kt_modal" data-toggleZ="modal-ajax" class="btn btn-sm btn-light btn-active-light-primary" href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
+                    <a data-targetZ="kt_modal" data-toggleZ="modal-ajax" class="btn btn-sm btn-light btn-active-light-primary inpost-listino-action" href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
                 </td>
             </tr>
         @endforeach

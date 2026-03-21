@@ -44,7 +44,7 @@
                     <p class="inpost-listino-shell-text">Modifica rapidamente i tre package standard e i relativi prezzi di spedizione.</p>
                 </div>
             </div>
-            <div class="card-body pt-0 pb-5 fs-6" id="tabella">
+            <div class="card-body pt-0 pb-5 fs-6 inpost-listino-shell-body" id="tabella">
                 @include('Backend.ListinoInpost.tabella')
             </div>
         </div>
@@ -168,6 +168,58 @@
             padding: 1.5rem 1.75rem .75rem;
         }
 
+        .inpost-listino-shell-body {
+            padding-left: 1.75rem;
+            padding-right: 1.75rem;
+        }
+
+        .inpost-listino-table {
+            margin-bottom: 0;
+        }
+
+        .inpost-listino-table thead th {
+            padding: 1rem 0 1.1rem;
+            border-bottom: 1px solid #e8ebf1;
+            color: #98a1b3 !important;
+            font-size: .78rem;
+            letter-spacing: .04em;
+        }
+
+        .inpost-listino-table tbody td {
+            padding: 1.15rem 0;
+            border-bottom: 1px solid #eef1f5;
+            vertical-align: middle;
+        }
+
+        .inpost-listino-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .inpost-listino-table tbody td:first-child,
+        .inpost-listino-table thead th:first-child {
+            padding-right: 1.5rem;
+        }
+
+        .inpost-listino-table tbody td:not(:first-child),
+        .inpost-listino-table thead th:not(:first-child) {
+            padding-left: 1.25rem;
+        }
+
+        .inpost-listino-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 92px;
+            padding: .55rem .8rem;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .inpost-listino-action {
+            min-width: 92px;
+            border-radius: 12px;
+        }
+
         .inpost-listino-shell-title {
             margin: 0 0 .25rem;
             font-size: 1.6rem;
@@ -183,6 +235,30 @@
         @media (max-width: 991px) {
             .inpost-listino-hero {
                 grid-template-columns: 1fr;
+            }
+
+            .inpost-listino-shell-head {
+                padding-left: 1.25rem;
+                padding-right: 1.25rem;
+            }
+
+            .inpost-listino-shell-body {
+                padding-left: 1.25rem;
+                padding-right: 1.25rem;
+            }
+
+            .inpost-listino-table thead th,
+            .inpost-listino-table tbody td {
+                padding-top: .95rem;
+                padding-bottom: .95rem;
+            }
+
+            .inpost-listino-table tbody td:first-child,
+            .inpost-listino-table thead th:first-child,
+            .inpost-listino-table tbody td:not(:first-child),
+            .inpost-listino-table thead th:not(:first-child) {
+                padding-left: 0;
+                padding-right: 0;
             }
         }
     </style>
