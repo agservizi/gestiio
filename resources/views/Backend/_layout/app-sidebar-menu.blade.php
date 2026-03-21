@@ -733,6 +733,15 @@
                                             <span class="menu-title">Listino Europa</span>
                                         </a>
                                     </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{action([\App\Http\Controllers\Backend\ListinoInpostController::class,'index'])}}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                            <span class="menu-title">Listino InPost</span>
+                                        </a>
+                                    </div>
                                 </div>
                                 <!--end:Menu sub-->
                             </div>

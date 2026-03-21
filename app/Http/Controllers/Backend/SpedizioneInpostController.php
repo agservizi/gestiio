@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Enums\TipiPortafoglioEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Services\InpostService;
+use App\Http\Services\InpostTariffaService;
+use App\Models\MovimentoPortafoglio;
 use App\Models\SpedizioneInpost;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Validation\ValidationException;
 use function App\getInputNumero;
 
 class SpedizioneInpostController extends Controller
@@ -215,54 +219,86 @@ class SpedizioneInpostController extends Controller
 
     protected function salvaDati(SpedizioneInpost $record, Request $request): void
     {
-        if (!$record->exists) {
-            $record->caricato_da_user_id = Auth::id();
-        }
-
-        $altriDati = is_array($request->input('altri_dati')) ? $request->input('altri_dati') : [];
-        $packageType = (string)($altriDati['package_type'] ?? 'small');
-        $datiColli = $this->normalizeDatiColli($request->input('dati_colli', []), $packageType);
-
-        $campi = [
-            'agente_id' => '',
-            'delivery_type' => '',
-            'ragione_sociale_destinatario' => '',
-            'indirizzo_destinatario' => '',
-            'cap_destinatario' => '',
-            'localita_destinazione' => '',
-            'provincia_destinatario' => '',
-            'nazione_destinazione' => '',
-            'email_destinatario' => '',
-            'mobile_referente_consegna' => '',
-            'numero_pacchi' => '',
-            'peso_totale' => 'app\getInputNumero',
-            'volume_totale' => 'app\getInputNumero',
-            'punto_inpost_id' => '',
-            'punto_inpost_label' => '',
-            'nome_mittente' => '',
-            'email_mittente' => '',
-            'mobile_mittente' => '',
-        ];
-
-        foreach ($campi as $campo => $funzione) {
-            $valore = $request->input($campo);
-            if ($funzione) {
-                $valore = $funzione($valore);
+        DB::transaction(function () use ($record, $request) {
+            if (!$record->exists) {
+                $record->caricato_da_user_id = Auth::id();
             }
-            $record->{$campo} = $valore;
-        }
 
-        $record->numero_pacchi = 1;
-        $record->dati_colli = $datiColli;
-        $record->peso_totale = getInputNumero($this->computePesoTotale($datiColli));
-        $record->volume_totale = getInputNumero($this->computeVolumeTotale($datiColli));
-        $record->altri_dati = array_merge($altriDati, [
-            'package_type' => $packageType,
-            'package_reference' => trim((string)($altriDati['package_reference'] ?? '')),
-            'annotation' => trim((string)($altriDati['annotation'] ?? '')),
-        ]);
+            $altriDati = is_array($request->input('altri_dati')) ? $request->input('altri_dati') : [];
+            $packageType = (string)($altriDati['package_type'] ?? 'small');
+            $datiColli = $this->normalizeDatiColli($request->input('dati_colli', []), $packageType);
 
-        $record->save();
+            $campi = [
+                'agente_id' => '',
+                'delivery_type' => '',
+                'ragione_sociale_destinatario' => '',
+                'indirizzo_destinatario' => '',
+                'cap_destinatario' => '',
+                'localita_destinazione' => '',
+                'provincia_destinatario' => '',
+                'nazione_destinazione' => '',
+                'email_destinatario' => '',
+                'mobile_referente_consegna' => '',
+                'numero_pacchi' => '',
+                'peso_totale' => 'app\getInputNumero',
+                'volume_totale' => 'app\getInputNumero',
+                'punto_inpost_id' => '',
+                'punto_inpost_label' => '',
+                'nome_mittente' => '',
+                'email_mittente' => '',
+                'mobile_mittente' => '',
+            ];
+
+            foreach ($campi as $campo => $funzione) {
+                $valore = $request->input($campo);
+                if ($funzione) {
+                    $valore = $funzione($valore);
+                }
+                $record->{$campo} = $valore;
+            }
+
+            $record->numero_pacchi = 1;
+            $record->dati_colli = $datiColli;
+            $record->peso_totale = getInputNumero($this->computePesoTotale($datiColli));
+            $record->volume_totale = getInputNumero($this->computeVolumeTotale($datiColli));
+            $record->altri_dati = array_merge($altriDati, [
+                'package_type' => $packageType,
+                'package_reference' => trim((string)($altriDati['package_reference'] ?? '')),
+                'annotation' => trim((string)($altriDati['annotation'] ?? '')),
+            ]);
+
+            $service = new InpostTariffaService($packageType, (string) $record->delivery_type);
+            $service->calcola();
+            if ($service->isError()) {
+                throw ValidationException::withMessages(['tariffa' => (string) $service->isError()]);
+            }
+            $record->prezzo_spedizione = $service->getPrezzo();
+            $record->tariffa = $service->getTestotariffa();
+
+            $agente = User::find($record->agente_id);
+            if (!$record->scalato_portafoglio) {
+                $saldo = (float) ($agente?->portafoglio_spedizioni ?? 0);
+                if ($saldo < (float) $record->prezzo_spedizione) {
+                    throw ValidationException::withMessages(['portafoglio' => 'Credito portafoglio spedizioni insufficiente']);
+                }
+            }
+
+            $record->save();
+
+            if (!$record->scalato_portafoglio) {
+                $movimento = new MovimentoPortafoglio();
+                $movimento->agente_id = $record->agente_id;
+                $movimento->importo = -$record->prezzo_spedizione;
+                $movimento->descrizione = 'Spedizione InPost ' . $record->id;
+                $movimento->prodotto_id = $record->id;
+                $movimento->prodotto_type = get_class($record);
+                $movimento->portafoglio = TipiPortafoglioEnum::SPEDIZIONI->value;
+                $movimento->save();
+
+                $record->scalato_portafoglio = 1;
+                $record->saveQuietly();
+            }
+        });
     }
 
     protected function creaSpedizioneRemota(SpedizioneInpost $record): void

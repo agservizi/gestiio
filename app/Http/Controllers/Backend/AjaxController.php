@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Http\Funzioni\IbanGenerator;
 use App\Http\Services\BrtTariffaService;
+use App\Http\Services\InpostTariffaService;
 use App\Models\AbiCab;
 use App\Models\Cliente;
 use App\Models\Comune;
@@ -16,6 +17,7 @@ use App\Models\NazioneEuropaBrt;
 use App\Models\TipoContratto;
 use App\Rules\CodiceFiscaleRule;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use robertogallea\LaravelCodiceFiscale\CodiceFiscale;
 use function App\getInputNumero;
@@ -44,6 +46,22 @@ class AjaxController extends Controller
                 }
 
                 return ['success' => true, 'prezzo' => importo($service->getPrezzo(), true), 'contrassegno' => importo($contrassegno, true), 'tariffa' => $service->getTestotariffa(), 'colli' => $colli];
+
+            case 'aggiorna-prezzo-inpost':
+                $deliveryType = (string) $request->input('delivery_type', 'point');
+                $packageType = (string) $request->input('altri_dati.package_type', 'small');
+                $service = new InpostTariffaService($packageType, $deliveryType);
+                $service->calcola();
+
+                if ($service->isError()) {
+                    return ['success' => false, 'message' => (string) $service->isError()];
+                }
+
+                return [
+                    'success' => true,
+                    'prezzo' => importo($service->getPrezzo(), true),
+                    'tariffa' => $service->getTestotariffa(),
+                ];
 
 
             case 'genera-iban':
@@ -75,7 +93,7 @@ class AjaxController extends Controller
 
             case 'cliente-cf':
                 $codiceFiscale = strtoupper($request->input('codice_fiscale'));
-                $validator = \Validator::make(['codice_fiscale' => $codiceFiscale], ['codice_fiscale' => new CodiceFiscaleRule()]);
+                $validator = Validator::make(['codice_fiscale' => $codiceFiscale], ['codice_fiscale' => new CodiceFiscaleRule()]);
                 if ($validator->fails()) {
                     return ['success' => false, 'message' => $validator->messages()->first('codice_fiscale')];
                 }

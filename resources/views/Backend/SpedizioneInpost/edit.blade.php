@@ -193,6 +193,14 @@
                 </div>
                 <div class="card-body pt-2">
                     <div class="inpost-summary-card">
+                        <span class="inpost-summary-label">Tariffa</span>
+                        <div id="tariffa_dx" class="inpost-summary-value inpost-summary-value-sm">{{$record->tariffa ?: '-'}}</div>
+                    </div>
+                    <div class="inpost-summary-card">
+                        <span class="inpost-summary-label">Prezzo spedizione</span>
+                        <div id="prezzo_dx" class="inpost-summary-value">{{$record->prezzoSpedizioneFormattato() ?: '-'}}</div>
+                    </div>
+                    <div class="inpost-summary-card">
                         <span class="inpost-summary-label">Pacchi</span>
                         <div id="numero_pacchi_dx" class="inpost-summary-value">{{\App\intero($record->numero_pacchi,true)}}</div>
                     </div>
@@ -502,6 +510,11 @@
             line-height: 1;
         }
 
+        .inpost-summary-value-sm {
+            font-size: 1.05rem;
+            line-height: 1.35;
+        }
+
         @media (max-width: 991px) {
             .inpost-create-hero,
             .inpost-submit-bar {
@@ -540,6 +553,7 @@
             togglePointFields();
             syncPackageFields();
             aggiornaRiepilogo();
+            aggiornaPrezzoInpost();
 
             $(document).on('click', '#button-punto_inpost_id', function (e) {
                 e.preventDefault();
@@ -571,6 +585,7 @@
                 $('[data-delivery-card="' + $(this).val() + '"]').addClass('is-active');
                 $('#delivery_type').val($(this).val());
                 togglePointFields();
+                aggiornaPrezzoInpost();
             }
 
             function handlePackageChoice() {
@@ -578,6 +593,7 @@
                 $('[data-package-card="' + $(this).val() + '"]').addClass('is-active');
                 syncPackageFields();
                 aggiornaRiepilogo();
+                aggiornaPrezzoInpost();
             }
 
             function syncPackageFields() {
@@ -614,6 +630,30 @@
                 $('#peso_totale_dx').text(new Intl.NumberFormat('it-IT', {minimumFractionDigits: 1, maximumFractionDigits: 1}).format(pesoTotale));
                 $('#volume_totale').val(new Intl.NumberFormat('it-IT', {minimumFractionDigits: 3, maximumFractionDigits: 3}).format(volumeTotale));
                 $('#volume_totale_span').text(new Intl.NumberFormat('it-IT', {minimumFractionDigits: 3, maximumFractionDigits: 3}).format(volumeTotale));
+            }
+
+            function aggiornaPrezzoInpost() {
+                var form = $('#form-inpost');
+                $.ajax({
+                    url: '{{action([\App\Http\Controllers\Backend\AjaxController::class,'post'],'aggiorna-prezzo-inpost')}}',
+                    type: 'post',
+                    dataType: 'json',
+                    method: 'POST',
+                    data: form.find(':not(input[name=_method])').serialize(),
+                    success: function (resp) {
+                        if (resp && resp.success) {
+                            $('#prezzo_dx').text(resp.prezzo || '-');
+                            $('#tariffa_dx').text(resp.tariffa || '-');
+                        } else {
+                            $('#prezzo_dx').text('-');
+                            $('#tariffa_dx').text('Non configurata');
+                        }
+                    },
+                    error: function () {
+                        $('#prezzo_dx').text('-');
+                        $('#tariffa_dx').text('Non configurata');
+                    }
+                });
             }
 
             function parseNumero(value) {

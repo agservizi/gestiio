@@ -169,4 +169,13 @@ class SpedizioneInpost extends Model
 
         return $value !== '' ? $value : null;
     }
+
+    public function prezzoSpedizioneFormattato(): ?string
+    {
+        if ($this->prezzo_spedizione === null) {
+            return null;
+        }
+
+        return \App\importo($this->prezzo_spedizione, true);
+    }
 }

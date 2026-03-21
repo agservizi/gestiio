@@ -42,6 +42,14 @@
             </div>
             <div class="row">
                 <div class="col-md-6">
+                    @include('Backend._inputs.inputTextReadonly',['campo'=>'tariffa','testo'=>'Tariffa','valore'=>$record->tariffa])
+                </div>
+                <div class="col-md-6">
+                    @include('Backend._inputs.inputTextReadonly',['campo'=>'prezzo_spedizione','testo'=>'Prezzo spedizione','valore'=>$record->prezzoSpedizioneFormattato()])
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
                     @include('Backend._inputs.inputTextReadonly',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario'])
                 </div>
                 <div class="col-md-6">

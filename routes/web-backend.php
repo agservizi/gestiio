@@ -247,6 +247,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::resource('listino', \App\Http\Controllers\Backend\ListinoController::class);
     Route::resource('brt-listino', \App\Http\Controllers\Backend\ListinoBrtController::class);
     Route::resource('brt-listino-europa', \App\Http\Controllers\Backend\ListinoBrtEuropaController::class);
+    Route::resource('inpost-listino', \App\Http\Controllers\Backend\ListinoInpostController::class);
 
     //Chiamate api
     Route::get('chiamata-api', [\App\Http\Controllers\Backend\ChiamataApiController::class, 'index']);
