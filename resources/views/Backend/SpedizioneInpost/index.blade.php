@@ -30,13 +30,13 @@
     <div class="inpost-index-page">
         <section class="inpost-hero-card mb-8">
             <div class="inpost-hero-copy">
-                <div class="inpost-hero-kicker">InPost Shipping Workspace</div>
-                <h1 class="inpost-hero-title">Spedizioni, punti di ritiro e tracking in un unico flusso operativo.</h1>
-                <p class="inpost-hero-text">Interfaccia pensata per gestire punti di ritiro, creazione spedizioni e monitoraggio tracking in un unico flusso operativo.</p>
+                <div class="inpost-hero-kicker">Spedizioni InPost</div>
+                <h1 class="inpost-hero-title">Gestisci spedizioni e punti di ritiro da un'unica schermata.</h1>
+                <p class="inpost-hero-text">Consulta l'elenco spedizioni, controlla il tracking e crea nuove spedizioni in modo semplice e veloce.</p>
                 <div class="inpost-hero-badges">
-                    <span class="inpost-doc-badge">Punti InPost</span>
-                    <span class="inpost-doc-badge">Creazione spedizioni</span>
-                    <span class="inpost-doc-badge">Tracking spedizioni</span>
+                    <span class="inpost-doc-badge">Punti di ritiro</span>
+                    <span class="inpost-doc-badge">Nuove spedizioni</span>
+                    <span class="inpost-doc-badge">Tracking</span>
                 </div>
             </div>
             <div class="inpost-kpi-grid">
