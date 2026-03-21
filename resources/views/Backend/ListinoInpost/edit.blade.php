@@ -61,6 +61,10 @@
 @endsection
 @push('customCss')
     <style>
+        #kt_app_toolbar {
+            display: none !important;
+        }
+
         .inpost-listino-edit-page {
             display: flex;
             flex-direction: column;
