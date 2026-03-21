@@ -77,12 +77,11 @@
     </div>
 @endsection
 @section('content')
-    @php
-        $collection = collect($records->items());
-        $withTracking = $collection->filter(fn($record) => filled($record->tracking_number))->count();
-        $withBordero = $collection->filter(fn($record) => filled($record->bordero_id))->count();
-        $errorCount = $collection->filter(fn($record) => strtoupper((string) $record->esito) === 'ERROR')->count();
-    @endphp
+    @php($recordItems = $records instanceof \Illuminate\Contracts\Pagination\Paginator ? collect($records->items()) : collect($records))
+    @php($recordCount = $recordItems->count())
+    @php($withTracking = $recordItems->filter(fn($record) => filled($record->tracking_number))->count())
+    @php($withBordero = $recordItems->filter(fn($record) => filled($record->bordero_id))->count())
+    @php($errorCount = $recordItems->filter(fn($record) => strtoupper((string) $record->esito) === 'ERROR')->count())
     <div class="brt-index-page">
         <section class="brt-hero-card mb-8">
             <div class="brt-hero-copy">
@@ -98,7 +97,7 @@
             <div class="brt-kpi-grid">
                 <div class="brt-kpi-card">
                     <span class="brt-kpi-label">Spedizioni pagina</span>
-                    <span class="brt-kpi-value">{{$collection->count()}}</span>
+                    <span class="brt-kpi-value">{{$recordCount}}</span>
                 </div>
                 <div class="brt-kpi-card">
                     <span class="brt-kpi-label">Con tracking</span>
