@@ -68,10 +68,10 @@
                                     @include('Backend._inputs.inputText',['campo'=>'nome_mittente','testo'=>'Mittente','required'=>true])
                                 </div>
                                 <div class="col-md-4">
-                                    @include('Backend._inputs.inputText',['campo'=>'email_mittente','testo'=>'Email mittente'])
+                                    @include('Backend._inputs.inputText',['campo'=>'email_mittente','testo'=>'Email mittente','required'=>true])
                                 </div>
                                 <div class="col-md-4">
-                                    @include('Backend._inputs.inputText',['campo'=>'mobile_mittente','testo'=>'Telefono mittente'])
+                                    @include('Backend._inputs.inputText',['campo'=>'mobile_mittente','testo'=>'Telefono mittente','required'=>true])
                                 </div>
                             </div>
                         </div>
@@ -138,10 +138,10 @@
                                 </div>
                                 <div class="row">
                                     <div class="col-md-4">
-                                        @include('Backend._inputs.inputText',['campo'=>'cap_destinatario','testo'=>'CAP / ZIP'])
+                                        @include('Backend._inputs.inputText',['campo'=>'cap_destinatario','testo'=>'CAP'])
                                     </div>
                                     <div class="col-md-4">
-                                        @include('Backend._inputs.inputText',['campo'=>'localita_destinazione','testo'=>'Localita / City'])
+                                        @include('Backend._inputs.inputText',['campo'=>'localita_destinazione','testo'=>'Citta'])
                                     </div>
                                 </div>
                             </div>
