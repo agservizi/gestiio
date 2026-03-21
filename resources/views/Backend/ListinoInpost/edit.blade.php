@@ -117,6 +117,20 @@
             border-radius: 16px;
             padding: 1.5rem;
             box-shadow: 0 10px 24px rgba(18, 24, 39, 0.04);
+            overflow: hidden;
+        }
+
+        .inpost-listino-form-card .row {
+            --bs-gutter-x: 1.25rem;
+            --bs-gutter-y: 1rem;
+            margin-right: 0;
+            margin-left: 0;
+        }
+
+        .inpost-listino-form-card .row > [class*="col-"],
+        .inpost-listino-form-card .row > [class^="col-"] {
+            padding-right: calc(var(--bs-gutter-x) * .5);
+            padding-left: calc(var(--bs-gutter-x) * .5);
         }
 
         .inpost-listino-submit-bar {
