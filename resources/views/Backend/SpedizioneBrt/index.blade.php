@@ -174,10 +174,16 @@
 
         .brt-btn-primary,
         .brt-btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             min-height: 44px;
             padding: .72rem 1rem;
             border-radius: 999px;
             font-weight: 700;
+            line-height: 1.2;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .brt-btn-primary {
