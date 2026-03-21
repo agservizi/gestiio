@@ -700,7 +700,7 @@
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
-                                    <span class="menu-title">Spedizioni BRT</span>
+                                    <span class="menu-title">Gestione spedizioni</span>
                                     <span class="menu-arrow"></span>
                                 </span>
                                 <!--end:Menu link-->
