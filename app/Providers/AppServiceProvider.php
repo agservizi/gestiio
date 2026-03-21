@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         Paginator::defaultView('vendor.pagination.metronic');
-        if ($this->app->isLocal()) {
+        if ($this->app->environment('local')) {
             Model::shouldBeStrict();
         }
     }
@@ -29,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         if (PHP_SAPI !== 'cli-server' && !$this->app->runningInConsole()) {
-            \URL::forceScheme('https');
+            URL::forceScheme('https');
         }
     }
 }
