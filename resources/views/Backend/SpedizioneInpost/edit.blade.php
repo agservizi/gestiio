@@ -38,11 +38,12 @@
                         @endif
 
                         <input type="hidden" id="delivery_type" name="delivery_type" value="{{old('delivery_type',$record->delivery_type ?: 'point')}}">
+                        <input type="hidden" id="nazione_destinazione" name="nazione_destinazione" value="{{old('nazione_destinazione',$record->nazione_destinazione ?: 'IT')}}">
 
                         <div class="inpost-section-card mb-8">
                             <div class="inpost-section-head">
                                 <h3 class="inpost-section-title">Direzione</h3>
-                                <p class="inpost-section-text">Seleziona i paesi di origine e destinazione per iniziare la spedizione.</p>
+                                <p class="inpost-section-text">Origine e destinazione sono impostate sulla stessa nazione.</p>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
@@ -53,7 +54,11 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    @include('Backend._inputs.inputSelect2',['campo'=>'nazione_destinazione','testo'=>'A','required'=>true,'selected'=>\App\Models\Nazione::selected(old('nazione_destinazione',$record->nazione_destinazione ?: 'IT'))])
+                                    <label class="inpost-field-label required">A</label>
+                                    <div class="inpost-country-display">
+                                        <span class="inpost-flag" aria-hidden="true">🇮🇹</span>
+                                        <span>{{$destinationCountry?->langIT ?? 'Italia'}}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -517,9 +522,6 @@
         $(function () {
             if ($('#agente_id').length && $('#agente_id').is('select')) {
                 select2UniversaleBackend('agente_id', 'un agente', 1);
-            }
-            if ($('#nazione_destinazione').length) {
-                select2UniversaleBackend('nazione_destinazione', 'una nazione', 1);
             }
 
             var packagePresets = {
