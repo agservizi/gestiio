@@ -57,12 +57,11 @@ class ListinoInpostController extends Controller
     {
         $record = new ListinoInpost();
 
-        return view('Backend.ListinoInpost.edit', [
+        return view('Backend.ListinoInpost.edit-page', [
             'record' => $record,
             'titoloPagina' => 'Nuovo ' . ListinoInpost::NOME_SINGOLARE,
             'controller' => get_class($this),
             'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
-            'nascondiToolbar' => true,
         ]);
     }
 
@@ -95,13 +94,12 @@ class ListinoInpostController extends Controller
         abort_if(!$record, 404, 'Questo listino InPost non esiste');
         $eliminabile = true;
 
-        return view('Backend.ListinoInpost.edit', [
+        return view('Backend.ListinoInpost.edit-page', [
             'record' => $record,
             'controller' => self::class,
             'titoloPagina' => 'Modifica ' . ListinoInpost::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
             'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
-            'nascondiToolbar' => true,
         ]);
     }
 

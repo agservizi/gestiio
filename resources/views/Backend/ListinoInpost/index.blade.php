@@ -2,7 +2,7 @@
 @section('toolbar')
     <div class="inpost-listino-toolbar">
         @isset($testoNuovo)
-            <a class="btn btn-sm inpost-listino-btn" data-targetZ="kt_modal" data-toggleZ="modal-ajax" href="{{action([$controller,'create'])}}">
+            <a class="btn btn-sm inpost-listino-btn" href="{{action([$controller,'create'])}}">
                 <span class="d-none d-md-block">{{$testoNuovo}}</span>
             </a>
         @endisset
