@@ -334,7 +334,7 @@ class SpedizioneInpostController extends Controller
             'cap_destinatario' => ['nullable', 'max:20', 'required_if:delivery_type,address'],
             'localita_destinazione' => ['nullable', 'max:120', 'required_if:delivery_type,address'],
             'nazione_destinazione' => ['required', 'size:2'],
-            'email_destinatario' => ['nullable', 'email', 'max:255'],
+            'email_destinatario' => ['required', 'email', 'max:255'],
             'mobile_referente_consegna' => ['required', 'max:32'],
             'numero_pacchi' => ['required'],
             'peso_totale' => ['required'],
@@ -344,13 +344,9 @@ class SpedizioneInpostController extends Controller
             'nome_mittente' => ['required', 'max:120'],
             'email_mittente' => ['nullable', 'email', 'max:255'],
             'mobile_mittente' => ['nullable', 'max:32'],
-            'altri_dati.package_type' => ['required', 'in:small,medium,large,custom'],
+            'altri_dati.package_type' => ['required', 'in:small,medium,large'],
             'altri_dati.package_reference' => ['nullable', 'max:255'],
             'altri_dati.annotation' => ['nullable', 'max:255'],
-            'dati_colli.0.larghezza' => ['required_if:altri_dati.package_type,custom'],
-            'dati_colli.0.altezza' => ['required_if:altri_dati.package_type,custom'],
-            'dati_colli.0.profondita' => ['required_if:altri_dati.package_type,custom'],
-            'dati_colli.0.peso_reale' => ['required_if:altri_dati.package_type,custom'],
         ];
     }
 
@@ -362,17 +358,7 @@ class SpedizioneInpostController extends Controller
             'large' => ['altezza' => 41, 'larghezza' => 38, 'profondita' => 64, 'peso_reale' => 25],
         ];
 
-        if (isset($presets[$packageType])) {
-            $collo = $presets[$packageType];
-        } else {
-            $first = is_array($raw) ? ($raw[0] ?? []) : [];
-            $collo = [
-                'altezza' => (float)getInputNumero($first['altezza'] ?? 0),
-                'larghezza' => (float)getInputNumero($first['larghezza'] ?? 0),
-                'profondita' => (float)getInputNumero($first['profondita'] ?? 0),
-                'peso_reale' => (float)getInputNumero($first['peso_reale'] ?? 0),
-            ];
-        }
+        $collo = $presets[$packageType] ?? $presets['small'];
 
         $pesoVolumetrico = (($collo['larghezza'] ?? 0) * ($collo['altezza'] ?? 0) * ($collo['profondita'] ?? 0)) / 4000;
         $collo['peso_volumetrico'] = round((float)$pesoVolumetrico, 1);

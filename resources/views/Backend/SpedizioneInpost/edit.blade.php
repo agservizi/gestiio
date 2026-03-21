@@ -4,14 +4,14 @@
     <div class="inpost-create-page">
         <section class="inpost-create-hero mb-8">
             <div>
-                <div class="inpost-create-kicker">InPost Create Flow</div>
-                <h1 class="inpost-create-title">{{$record->id ? 'Aggiorna la spedizione InPost' : 'Crea una spedizione con un flusso chiaro, visivo e guidato.'}}</h1>
-                <p class="inpost-create-text">Restyling ispirato ai pattern del portale InPost e collegato ai concetti ufficiali `Location`, `Shipments` e `Tracking`, mantenendo intatta la logica backend già implementata.</p>
+                <div class="inpost-create-kicker">Spedizione InPost</div>
+                <h1 class="inpost-create-title">{{$record->id ? 'Modifica spedizione' : 'Nuova spedizione'}}</h1>
+                <p class="inpost-create-text">Compila mittente, destinatario, modalita di consegna e package in un unico flusso operativo.</p>
             </div>
             <div class="inpost-create-docs">
-                <span class="inpost-create-doc-pill">Location API</span>
-                <span class="inpost-create-doc-pill">Shipments API</span>
-                <span class="inpost-create-doc-pill">Tracking API</span>
+                <span class="inpost-create-doc-pill">Punti InPost</span>
+                <span class="inpost-create-doc-pill">Spedizione guidata</span>
+                <span class="inpost-create-doc-pill">Tracking pronto</span>
             </div>
         </section>
     <div class="row">
@@ -85,7 +85,7 @@
                                     @include('Backend._inputs.inputText',['campo'=>'ragione_sociale_destinatario','testo'=>'Destinatario','required'=>true])
                                 </div>
                                 <div class="col-md-6">
-                                    @include('Backend._inputs.inputText',['campo'=>'email_destinatario','testo'=>'Email destinatario'])
+                                    @include('Backend._inputs.inputText',['campo'=>'email_destinatario','testo'=>'Email destinatario','required'=>true])
                                 </div>
                                 <div class="col-md-6">
                                     @include('Backend._inputs.inputText',['campo'=>'mobile_referente_consegna','testo'=>'Numero di telefono','required'=>true])
@@ -169,8 +169,8 @@
 
                         <div class="inpost-submit-bar">
                             <div class="inpost-submit-copy">
-                                <div class="inpost-submit-title">Pronto per inviare il payload shipment.</div>
-                                <div class="inpost-submit-text">Controlla direzione, destinatario, metodo di consegna e package prima di creare la spedizione.</div>
+                                <div class="inpost-submit-title">La spedizione e pronta per essere creata.</div>
+                                <div class="inpost-submit-text">Controlla i dati inseriti e conferma per continuare.</div>
                             </div>
                             <button class="btn inpost-submit-button" type="submit">{{$record->id ? 'Salva modifiche' : 'Crea spedizione InPost'}}</button>
                         </div>
@@ -382,11 +382,6 @@
             box-shadow: inset 0 0 0 2px #f7c600;
         }
 
-        .inpost-package-card.is-custom .inpost-package-title,
-        .inpost-package-card.is-custom .inpost-package-subtitle {
-            color: #b5b5c3;
-        }
-
         .inpost-package-radio {
             width: 26px;
             height: 26px;
@@ -586,20 +581,11 @@
             function syncPackageFields() {
                 var selected = $('.package-choice:checked').val() || 'small';
                 var preset = packagePresets[selected] || null;
-                var isCustom = selected === 'custom';
-
-                $('#custom-package-fields').toggle(isCustom);
-
-                if (!isCustom && preset) {
+                if (preset) {
                     $('#dati_colli_0_altezza').val(preset.altezza);
                     $('#dati_colli_0_larghezza').val(preset.larghezza);
                     $('#dati_colli_0_profondita').val(preset.profondita);
                     $('#dati_colli_0_peso_reale').val(preset.peso_reale);
-                } else {
-                    $('#dati_colli_0_altezza').val($('#custom_altezza').val());
-                    $('#dati_colli_0_larghezza').val($('#custom_larghezza').val());
-                    $('#dati_colli_0_profondita').val($('#custom_profondita').val());
-                    $('#dati_colli_0_peso_reale').val($('#custom_peso_reale').val());
                 }
             }
 

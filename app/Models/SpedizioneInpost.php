@@ -152,7 +152,6 @@ class SpedizioneInpost extends Model
             'small' => 'Piccolo (S)',
             'medium' => 'Medio (M)',
             'large' => 'Grande (L)',
-            'custom' => 'Personalizzato',
             default => null,
         };
     }

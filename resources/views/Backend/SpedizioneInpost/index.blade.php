@@ -32,11 +32,11 @@
             <div class="inpost-hero-copy">
                 <div class="inpost-hero-kicker">InPost Shipping Workspace</div>
                 <h1 class="inpost-hero-title">Spedizioni, punti di ritiro e tracking in un unico flusso operativo.</h1>
-                <p class="inpost-hero-text">Interfaccia allineata ai concetti InPost `Location`, `Shipments` e `Tracking`, mantenendo la logica backend del progetto già operativa.</p>
+                <p class="inpost-hero-text">Interfaccia pensata per gestire punti di ritiro, creazione spedizioni e monitoraggio tracking in un unico flusso operativo.</p>
                 <div class="inpost-hero-badges">
-                    <span class="inpost-doc-badge">Location API</span>
-                    <span class="inpost-doc-badge">Shipments API</span>
-                    <span class="inpost-doc-badge">Tracking API</span>
+                    <span class="inpost-doc-badge">Punti InPost</span>
+                    <span class="inpost-doc-badge">Creazione spedizioni</span>
+                    <span class="inpost-doc-badge">Tracking spedizioni</span>
                 </div>
             </div>
             <div class="inpost-kpi-grid">
