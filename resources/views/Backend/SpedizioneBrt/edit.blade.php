@@ -3,10 +3,23 @@
 @endsection
 
 @section('content')
+    <div class="brt-create-page">
+        <section class="brt-create-hero mb-8">
+            <div>
+                <div class="brt-create-kicker">Spedizione BRT</div>
+                <h1 class="brt-create-title">{{$record->id ? 'Modifica spedizione' : 'Nuova spedizione'}}</h1>
+                <p class="brt-create-text">Compila destinatario, colli, mittente e servizi accessori in un unico flusso operativo, mantenendo intatta la logica BRT gia presente.</p>
+            </div>
+            <div class="brt-create-docs">
+                <span class="brt-create-doc-pill">{{$zona === 'ITALIA' ? 'Italia' : 'Europa'}}</span>
+                <span class="brt-create-doc-pill">Colli</span>
+                <span class="brt-create-doc-pill">Tracking</span>
+            </div>
+        </section>
     <div class="row">
         <div class="col-md-9">
-            <div class="card">
-                <div class="card-body">
+            <div class="card brt-form-shell">
+                <div class="card-body p-8 p-lg-10">
                     @include('Backend._components.alertErrori')
                     <form method="POST"
                           action="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'update'],$record->id??'')}}"
@@ -24,6 +37,7 @@
                             <input type="hidden" id="agente_id" name="agente_id"
                                    value="{{old('agente_id',$record->agente_id)}}">
                         @endif
+                        <div class="brt-section-card mb-8">
                         <div class="row">
                             <div class="col-md-6">
                                 @include('Backend._inputs.inputText',['campo'=>'ragione_sociale_destinatario','testo'=>'Ragione sociale destinatario','required'=>true,'autocomplete'=>'off','include' => 'Backend.SpedizioneBrt.ricerca'])
@@ -40,7 +54,9 @@
                                 </div>
                             @endif
                         </div>
+                        </div>
 
+                        <div class="brt-section-card mb-8">
                         <div class="row">
                             <div class="col-md-6">
                                 @if($zona=='ITALIA')
@@ -64,6 +80,7 @@
                             <div class="col-md-6">
                                 @include('Backend._inputs.inputText',['campo'=>'cap_destinatario','testo'=>'Cap destinazione','required'=>true,'autocomplete'=>'off'])
                             </div>
+                        </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -173,6 +190,7 @@
                             </div>
                         </div>
                         @include('Backend.SpedizioneBrt.repeaterColli')
+                        <div class="brt-section-card mb-8">
                         <div class="row">
                             <div class="col-md-6">
                                 @include('Backend._inputs.inputTextButton',['campo'=>'pudo_id','testo'=>'Pudo','autocomplete'=>'off','testoButton'=>'Cerca','classe'=>'cerca'])
@@ -196,90 +214,99 @@
                                 @include('Backend._inputs.inputText',['campo'=>'mobile_mittente','testo'=>'Mobile mittente','autocomplete'=>'off'])
                             </div>
                         </div>
+                        </div>
                         @if($zona=='ITALIA')
-                            <h4>Particolarità</h4>
+                            <div class="brt-section-card mb-8">
+                            <h4 class="brt-section-title-sm">Particolarita</h4>
                             <div class="row">
                                 <div class="col-md-6">
                                     @include('Backend._inputs.inputText',['campo'=>'contrassegno','testo'=>'Contrassegno','autocomplete'=>'off','classe' => 'importo'])
                                 </div>
                             </div>
-                        @endif
-                        <div class="row">
-                            <div class="col-md-4 offset-md-4 text-center">
-                                <button class="btn btn-primary mt-3" type="submit"
-                                        id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\SpedizioneBrt::NOME_SINGOLARE}}</button>
                             </div>
+                        @endif
+                        <div class="brt-submit-bar">
+                            <div class="brt-submit-copy">
+                                <div class="brt-submit-title">La spedizione e pronta per essere salvata.</div>
+                                <div class="brt-submit-text">Controlla i dati inseriti e conferma per continuare.</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <button class="btn brt-submit-button" type="submit"
+                                        id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\SpedizioneBrt::NOME_SINGOLARE}}</button>
                             @if($vecchio)
-                                <div class="col-md-4 text-end">
                                     @if($eliminabile===true)
-                                        <a class="btn btn-danger mt-3" id="elimina"
+                                        <a class="btn btn-danger" id="elimina"
                                            href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
                                     @elseif(is_string($eliminabile))
                                         <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
-                                    <a class="btn btn-danger mt-3 disabled" href="javascript:void(0)">Elimina</a>
+                                    <a class="btn btn-danger disabled" href="javascript:void(0)">Elimina</a>
                                 </span>
                                     @endif
-                                </div>
                             @endif
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card card-flush" data-kt-sticky="true" data-kt-sticky-name="docs-sticky-summary"
+            <div class="card card-flush brt-summary-shell" data-kt-sticky="true" data-kt-sticky-name="docs-sticky-summary"
                  data-kt-sticky-offset="{default: false, xl: '50px'}" data-kt-sticky-width="{lg: '250px', xl: '300px'}"
                  data-kt-sticky-left="auto" data-kt-sticky-top="50px" data-kt-sticky-animation="false"
                  data-kt-sticky-zindex="95" style="">
-                <div class="card-header">
-                    <h3 class="card-title">Spedizione</h3>
+                <div class="card-header border-0 pt-7">
+                    <div>
+                        <div class="brt-summary-kicker">Summary</div>
+                        <h3 class="card-title fs-2 fw-bolder mb-0">Riepilogo spedizione</h3>
+                    </div>
                     <div class="card-toolbar">
 
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Tariffa
-                        <div id="tariffa_dx" class="fw-bolder min-h-15px fs-4">
+                    <div class="brt-summary-card">
+                        <span class="brt-summary-label">Tariffa</span>
+                        <div id="tariffa_dx" class="brt-summary-value brt-summary-value-sm">
 
                         </div>
                     </div>
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Indirizzo destinatario
-                        <div id="indirizzo_destinatario_dx" class="fw-bolder min-h-15px fs-4">
+                    <div class="brt-summary-card">
+                        <span class="brt-summary-label">Indirizzo destinatario</span>
+                        <div id="indirizzo_destinatario_dx" class="brt-summary-value brt-summary-value-sm">
 
                         </div>
-                        <div id="localita_destinazione_dx" class="fw-bolder min-h-15px fs-4">
+                        <div id="localita_destinazione_dx" class="brt-summary-value brt-summary-value-sm">
 
                         </div>
                     </div>
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Pacchi
-                        <div id="numero_pacchi_dx" class="fw-bolder min-h-15px fs-4">
+                    <div class="brt-summary-card">
+                        <span class="brt-summary-label">Pacchi</span>
+                        <div id="numero_pacchi_dx" class="brt-summary-value">
                             {{\App\intero($record->numero_pacchi,true)}}
                         </div>
                     </div>
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Peso totale
-                        <div id="peso_totale_dx" class="fw-bolder min-h-15px fs-4">
+                    <div class="brt-summary-card">
+                        <span class="brt-summary-label">Peso totale</span>
+                        <div id="peso_totale_dx" class="brt-summary-value">
                             {{number_format($record->peso_totale,1,',','.')}}
                         </div>
                     </div>
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Contrassegno
-                        <div id="contrassegno_dx" class="fw-bolder min-h-15px fs-4">
+                    <div class="brt-summary-card">
+                        <span class="brt-summary-label">Contrassegno</span>
+                        <div id="contrassegno_dx" class="brt-summary-value">
                             {{\App\importo($record->contrassegno,true)}}
                         </div>
                     </div>
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Prezzo spedizione
-                        <div id="prezzo_dx" class="fw-bolder min-h-15px fs-3">
+                    <div class="brt-summary-card mb-0">
+                        <span class="brt-summary-label">Prezzo spedizione</span>
+                        <div id="prezzo_dx" class="brt-summary-value">
                             {{\App\importo($record->prezzo_spedizione,true)}}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
 @endsection
@@ -292,6 +319,179 @@
             padding: 10px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 10000;
+        }
+
+        .brt-create-page {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .brt-create-hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 1.5rem;
+            padding: 2rem;
+            border-radius: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(99, 129, 255, 0.28), transparent 28%),
+                linear-gradient(135deg, #0f1b3d 0%, #162654 58%, #1b2f67 100%);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .brt-create-kicker,
+        .brt-summary-kicker {
+            display: inline-flex;
+            margin-bottom: .85rem;
+            padding: .35rem .65rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            color: #b9cbff;
+            font-size: .82rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .brt-create-title {
+            max-width: 14ch;
+            margin-bottom: .65rem;
+            font-size: clamp(2rem, 3vw, 3.15rem);
+            line-height: 1.03;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .brt-create-text {
+            max-width: 70ch;
+            margin-bottom: 0;
+            color: rgba(255,255,255,0.8);
+            font-size: 1rem;
+        }
+
+        .brt-create-docs {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: .65rem;
+        }
+
+        .brt-create-doc-pill {
+            padding: .55rem .8rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        .brt-form-shell {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+            border-radius: 22px;
+            border: 1px solid #e3e6ec;
+            box-shadow: 0 20px 60px rgba(22, 28, 45, 0.06);
+        }
+
+        .brt-section-card {
+            background: #fff;
+            border: 1px solid #e1e6f0;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 24px rgba(18, 24, 39, 0.04);
+        }
+
+        .brt-section-title-sm {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #20242c;
+        }
+
+        .brt-submit-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem;
+            border-radius: 18px;
+            border: 1px solid #dbe3ff;
+            background: linear-gradient(135deg, #f6f8ff 0%, #edf2ff 100%);
+        }
+
+        .brt-submit-title {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: #1f2750;
+        }
+
+        .brt-submit-text {
+            color: #5b678a;
+            font-size: .92rem;
+        }
+
+        .brt-submit-button {
+            min-height: 48px;
+            padding: .8rem 1.25rem;
+            border-radius: 999px;
+            background: #0f1b3d;
+            color: #fff;
+            border: 1px solid #0f1b3d;
+            font-weight: 800;
+        }
+
+        .brt-submit-button:hover {
+            color: #fff;
+            background: #1d2d61;
+            border-color: #1d2d61;
+        }
+
+        .brt-summary-shell {
+            border-radius: 22px;
+            border: 1px solid #e3e6ec;
+            box-shadow: 0 20px 60px rgba(22, 28, 45, 0.06);
+            overflow: hidden;
+        }
+
+        .brt-summary-card {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+            margin-bottom: 1rem;
+            padding: 1rem 1.1rem;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #f7f9fc 0%, #f3f5f9 100%);
+            border: 1px solid #e8edf4;
+        }
+
+        .brt-summary-label {
+            color: #6b7383;
+            font-size: .88rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .brt-summary-value {
+            color: #1f2631;
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .brt-summary-value-sm {
+            font-size: 1.1rem;
+            line-height: 1.35;
+        }
+
+        @media (max-width: 991px) {
+            .brt-create-hero,
+            .brt-submit-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 @endpush

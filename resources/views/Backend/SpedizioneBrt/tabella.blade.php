@@ -1,7 +1,7 @@
-<div class="table-responsive">
-    <table class="table table-row-bordered" id="tabella-elenco">
+<div class="table-responsive brt-table-responsive">
+    <table class="table align-middle" id="tabella-elenco">
         <thead>
-        <tr class="fw-bolder fs-6 text-gray-800">
+        <tr class="fw-bolder fs-7 text-uppercase text-gray-500">
             <th>
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox"
@@ -29,6 +29,7 @@
         </thead>
         <tbody>
         @foreach($records as $record)
+            @php($agentAlias = $record->agente?->aliasAgente())
             <tr class="" data-id="{{$record->id}}">
                 <td>
                     @if(!$record->bordero_id)
@@ -41,27 +42,37 @@
                     @endif
                 </td>
                 <td class="">{{$record->created_at->format('d/m/Y')}}</td>
-                <td class="">{{$record->ragione_sociale_destinatario}}</td>
-                <td class="">{{$record->localita_destinazione}}</td>
-                <td class="">{{$record->nazione_destinazione}}</td>
-                <td class="">{{$record->tariffa}}</td>
-                <td class="">{{$record->numero_pacchi}}</td>
+                <td class="">
+                    <div class="brt-cell-stack">
+                        <div class="brt-cell-title">{{$record->ragione_sociale_destinatario}}</div>
+                        <div class="brt-cell-subtitle">{{$record->indirizzo_destinatario}}</div>
+                    </div>
+                </td>
+                <td class="">
+                    <div class="brt-cell-stack">
+                        <div class="brt-cell-title">{{$record->localita_destinazione}}</div>
+                        <div class="brt-cell-subtitle">{{$record->provincia_destinatario ?: '-'}}</div>
+                    </div>
+                </td>
+                <td class=""><span class="brt-pill">{{$record->nazione_destinazione}}</span></td>
+                <td class=""><span class="brt-pill">{{$record->tariffa ?: '-'}}</span></td>
+                <td class=""><span class="brt-pill">{{$record->numero_pacchi}}</span></td>
                 <td class="text-end">{{$record->peso_totale}}</td>
-                <td class="">{{\App\importo($record->prezzo_spedizione)}}</td>
+                <td class=""><span class="brt-price-value">{{\App\importo($record->prezzo_spedizione)}}</span></td>
                 <td>{!! $record->esitoBall() !!}</td>
-                <td class="tracking-cell">{!! $record->tracking() ?: '-' !!}</td>
+                <td class="tracking-cell"><div class="brt-tracking-stack"><span class="brt-tracking-code">{!! $record->tracking() ?: '-' !!}</span></div></td>
                 <td class="tracking-status-cell">{!! $record->trackingStatusBadge() !!}</td>
-                <td class="tracking-updated-cell">{{$record->trackingUpdatedAtLabel() ?: '-'}}</td>
+                <td class="tracking-updated-cell"><span class="brt-updated-label">{{$record->trackingUpdatedAtLabel() ?: '-'}}</span></td>
                 <td>
                     @if($record->bordero_id)
-                        <a href="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'bordero'],$record->bordero_id)}}"
+                        <a class="brt-pill" href="{{action([\App\Http\Controllers\Backend\SpedizioneBrtController::class,'bordero'],$record->bordero_id)}}"
                            target="_blank">{{$record->bordero_id}}</a>
 
                     @endif
                 </td>
-                <td>  {{$record->agente->aliasAgente()}}</td>
+                <td><span class="brt-pill brt-agent-pill">{{$agentAlias ?: '-'}}</span></td>
                 <td class="text-end text-nowrap">
-
+                    <div class="brt-action-group">
                     <a class="btn btn-icon btn-sm btn-light btn-active-light-primary"
                        href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_type'=>'spedizione-brt','servizio_id'=>$record->id])}}"
                        data-bs-toggle="tooltip" data-bs-placement="top" title="Apri ticket"
@@ -109,6 +120,7 @@
                             </svg>
                         </a>
                     @endif
+                    </div>
                 </td>
             </tr>
         @endforeach

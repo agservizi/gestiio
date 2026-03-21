@@ -66,8 +66,8 @@
         <div class="inpost-table-shell">
             <div class="inpost-table-shell-head">
                 <div>
-                    <h2 class="inpost-table-title">Queue spedizioni</h2>
-                    <p class="inpost-table-text">Monitora esito API, tracking e tipologia di consegna con aggiornamenti massivi.</p>
+                    <h2 class="inpost-table-title">Elenco spedizioni</h2>
+                    <p class="inpost-table-text">Controlla stato, tracking e tipo di consegna di ogni spedizione in un unico elenco.</p>
                 </div>
             </div>
             <div class="card-body pt-0 pb-5 fs-6" id="tabella">

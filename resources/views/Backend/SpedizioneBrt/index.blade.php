@@ -1,14 +1,15 @@
 @extends('Backend._layout._main')
 @section('toolbar')
     @php($trackingRefreshBulkAvailable = method_exists($controller, 'trackingRefreshBulk'))
-    <div class="d-flex align-items-center py-1">
-        <a class="btn btn-sm btn-primary fw-bold me-2"
+    <div class="brt-toolbar">
+        <div class="brt-toolbar-left">
+        <a class="btn btn-sm brt-btn-secondary"
            href="{{action([\App\Http\Controllers\Backend\ContattoBrtController::class,'index'])}}">Preferiti</a>
         @isset($testoCerca)
-            <div class="d-flex align-items-center position-relative me-4" data-bs-toggle="tooltip"
+            <div class="brt-toolbar-search" data-bs-toggle="tooltip"
                  data-bs-placement="bottom"
                  title="{{$testoCerca}}">
-            <span class="svg-icon svg-icon-3 position-absolute ms-3 mt-n1">
+            <span class="brt-toolbar-search-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px"
                      height="24px" viewBox="0 0 24 24"
                      version="1.1">
@@ -24,13 +25,15 @@
                 </svg>
             </span>
                 <input type="text" id="filter_search"
-                       class="form-control form-control-sm form-control-solid  fw-bold fs-7 w-200px ps-9 bg-body btn-color-gray-700"
+                       class="form-control form-control-sm form-control-solid brt-toolbar-input"
                        placeholder="Ricerca"/>
             </div>
         @endisset
+        </div>
+        <div class="brt-toolbar-actions">
         @isset($ordinamenti)
-            <div class="me-4 d-none d-md-block">
-                <button class="btn btn-sm btn-icon bg-body btn-color-gray-700 btn-active-primary"
+            <div class="d-none d-md-block">
+                <button class="btn btn-sm btn-icon bg-body btn-color-gray-700 btn-active-primary brt-sort-button"
                         data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end"
                         data-kt-menu-flip="top-end">
                     <i class="bi bi-sort-down fs-3"></i>
@@ -55,30 +58,351 @@
                 </div>
             </div>
         @endisset
-        <a class="btn btn-sm btn-primary fw-bold me-2 disabled" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
+        <a class="btn btn-sm brt-btn-secondary disabled" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
            href="{{action([$controller,'bordero'])}}" id="bordero">Crea borderò</a>
         @if($trackingRefreshBulkAvailable)
-            <button class="btn btn-sm btn-primary fw-bold me-2 disabled" id="tracking-refresh-bulk"
+            <button class="btn btn-sm brt-btn-secondary disabled" id="tracking-refresh-bulk"
                 data-url="{{action([$controller,'trackingRefreshBulk'])}}" type="button">Aggiorna tracking selezionati
             </button>
         @endif
         @can('agente')
-            <a class="btn btn-sm btn-primary fw-bold me-2"
+            <a class="btn btn-sm brt-btn-secondary"
                href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_type'=>'spedizione-brt'])}}">Apri
                 ticket</a>
         @endif
-        <a class="btn btn-sm btn-primary fw-bold" data-target="kt_modal" data-toggle="modal-ajax"
+        <a class="btn btn-sm brt-btn-primary" data-target="kt_modal" data-toggle="modal-ajax"
            href="{{action([$controller,'create'])}}"><span class="d-md-none">+</span><span
                     class="d-none d-md-block">{{$testoNuovo}}</span></a>
-    </div>
-@endsection
-@section('content')
-    <div class="card pt-4">
-        <div class="card-body pt-0 pb-5 fs-6" id="tabella">
-            @include('Backend.SpedizioneBrt.tabella')
         </div>
     </div>
 @endsection
+@section('content')
+    @php
+        $collection = collect($records->items());
+        $withTracking = $collection->filter(fn($record) => filled($record->tracking_number))->count();
+        $withBordero = $collection->filter(fn($record) => filled($record->bordero_id))->count();
+        $errorCount = $collection->filter(fn($record) => strtoupper((string) $record->esito) === 'ERROR')->count();
+    @endphp
+    <div class="brt-index-page">
+        <section class="brt-hero-card mb-8">
+            <div class="brt-hero-copy">
+                <div class="brt-hero-kicker">Spedizioni BRT</div>
+                <h1 class="brt-hero-title">Gestisci spedizioni, bordero e tracking da un'unica schermata.</h1>
+                <p class="brt-hero-text">Consulta l'elenco delle spedizioni, aggiorna il tracking e prepara nuove spedizioni mantenendo il flusso operativo gia presente.</p>
+                <div class="brt-hero-badges">
+                    <span class="brt-doc-badge">Preferiti</span>
+                    <span class="brt-doc-badge">Bordero</span>
+                    <span class="brt-doc-badge">Tracking</span>
+                </div>
+            </div>
+            <div class="brt-kpi-grid">
+                <div class="brt-kpi-card">
+                    <span class="brt-kpi-label">Spedizioni pagina</span>
+                    <span class="brt-kpi-value">{{$collection->count()}}</span>
+                </div>
+                <div class="brt-kpi-card">
+                    <span class="brt-kpi-label">Con tracking</span>
+                    <span class="brt-kpi-value">{{$withTracking}}</span>
+                </div>
+                <div class="brt-kpi-card">
+                    <span class="brt-kpi-label">Con bordero</span>
+                    <span class="brt-kpi-value">{{$withBordero}}</span>
+                </div>
+                <div class="brt-kpi-card">
+                    <span class="brt-kpi-label">Con errore</span>
+                    <span class="brt-kpi-value">{{$errorCount}}</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="brt-table-shell">
+            <div class="brt-table-shell-head">
+                <div>
+                    <h2 class="brt-table-title">Elenco spedizioni</h2>
+                    <p class="brt-table-text">Controlla destinatari, prezzi, bordero e stato tracking in un unico elenco.</p>
+                </div>
+            </div>
+            <div class="card-body pt-0 pb-5 fs-6" id="tabella">
+                @include('Backend.SpedizioneBrt.tabella')
+            </div>
+        </div>
+    </div>
+@endsection
+@push('customCss')
+    <style>
+        .brt-index-page {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .brt-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .brt-toolbar-left,
+        .brt-toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+        }
+
+        .brt-toolbar-search {
+            position: relative;
+            min-width: 240px;
+        }
+
+        .brt-toolbar-search-icon {
+            position: absolute;
+            top: 50%;
+            left: 1rem;
+            transform: translateY(-50%);
+            z-index: 2;
+        }
+
+        .brt-toolbar-input {
+            min-height: 46px;
+            padding-left: 3rem !important;
+            border-radius: 999px;
+            border: 1px solid #d8dce6;
+            background: #fff !important;
+            font-weight: 700;
+        }
+
+        .brt-btn-primary,
+        .brt-btn-secondary {
+            min-height: 44px;
+            padding: .72rem 1rem;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .brt-btn-primary {
+            color: #fff;
+            background: #0f1b3d;
+            border: 1px solid #0f1b3d;
+        }
+
+        .brt-btn-primary:hover {
+            color: #fff;
+            background: #1d2d61;
+            border-color: #1d2d61;
+        }
+
+        .brt-btn-secondary {
+            color: #0f1b3d;
+            background: #edf2ff;
+            border: 1px solid #cad7ff;
+        }
+
+        .brt-hero-card {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+            gap: 1.5rem;
+            padding: 2rem;
+            border-radius: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(99, 129, 255, 0.28), transparent 28%),
+                linear-gradient(135deg, #0f1b3d 0%, #162654 58%, #1b2f67 100%);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .brt-hero-kicker {
+            display: inline-flex;
+            margin-bottom: .85rem;
+            padding: .35rem .65rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            color: #b9cbff;
+            font-size: .82rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .brt-hero-title {
+            max-width: 14ch;
+            margin-bottom: .85rem;
+            font-size: clamp(2rem, 3vw, 3.1rem);
+            line-height: 1.05;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .brt-hero-text {
+            max-width: 60ch;
+            margin-bottom: 1.15rem;
+            color: rgba(255,255,255,0.8);
+            font-size: 1rem;
+        }
+
+        .brt-hero-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .65rem;
+        }
+
+        .brt-doc-badge {
+            padding: .55rem .8rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        .brt-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .9rem;
+            align-content: start;
+        }
+
+        .brt-kpi-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 118px;
+            padding: 1rem 1.1rem;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .brt-kpi-label {
+            color: rgba(255,255,255,0.72);
+            font-size: .88rem;
+            font-weight: 600;
+        }
+
+        .brt-kpi-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            color: #fff;
+        }
+
+        .brt-table-shell {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+            border-radius: 22px;
+            border: 1px solid #e3e6ec;
+            box-shadow: 0 20px 60px rgba(22, 28, 45, 0.06);
+            overflow: hidden;
+        }
+
+        .brt-table-shell-head {
+            padding: 1.5rem 1.75rem .75rem;
+        }
+
+        .brt-table-title {
+            margin: 0 0 .25rem;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #1f2430;
+        }
+
+        .brt-table-text {
+            margin: 0;
+            color: #697181;
+        }
+
+        .brt-table-responsive {
+            padding: 0 1.75rem 1.5rem;
+        }
+
+        #tabella-elenco thead th {
+            padding: .95rem .85rem 1rem;
+            border-bottom: 1px solid #e9edf3;
+            letter-spacing: .04em;
+            white-space: nowrap;
+        }
+
+        #tabella-elenco tbody td {
+            padding: 1rem .85rem;
+            border-bottom: 1px solid #edf1f6;
+            vertical-align: middle;
+        }
+
+        #tabella-elenco tbody tr:hover {
+            background: #f8faff;
+        }
+
+        .brt-cell-title,
+        .brt-price-value,
+        .brt-tracking-code {
+            font-weight: 700;
+            color: #1d2430;
+        }
+
+        .brt-cell-subtitle,
+        .brt-updated-label {
+            color: #6d7585;
+            font-size: .88rem;
+        }
+
+        .brt-cell-stack,
+        .brt-tracking-stack {
+            display: flex;
+            flex-direction: column;
+            gap: .18rem;
+        }
+
+        .brt-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
+            padding: .35rem .75rem;
+            border-radius: 999px;
+            font-size: .84rem;
+            font-weight: 700;
+            background: #eef2ff;
+            color: #28408b;
+        }
+
+        .brt-agent-pill {
+            background: #f2f4f8;
+            color: #475164;
+        }
+
+        .brt-action-group {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .2rem;
+            border-radius: 999px;
+            background: #f6f8fb;
+            border: 1px solid #e7ebf1;
+        }
+
+        @media (max-width: 991px) {
+            .brt-toolbar,
+            .brt-toolbar-left,
+            .brt-toolbar-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .brt-hero-card {
+                grid-template-columns: 1fr;
+            }
+
+            .brt-toolbar-search {
+                width: 100%;
+            }
+
+            .brt-table-responsive {
+                padding: 0 1rem 1rem;
+            }
+        }
+    </style>
+@endpush
 @push('customScript')
     <script>
         var indexUrl = '{{action([$controller,'index'])}}';
