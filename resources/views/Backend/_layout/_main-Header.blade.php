@@ -34,7 +34,9 @@
         <div class="app-wrapper flex-column flex-row-fluid" id="kt_app_wrapper">
             <div class="app-main flex-column flex-row-fluid" id="kt_app_main">
                 <div class="d-flex flex-column flex-column-fluid">
-                    @include('Backend._layout.app-toolbar')
+                    @unless($nascondiToolbar ?? false)
+                        @include('Backend._layout.app-toolbar')
+                    @endunless
                     <div id="kt_app_content" class="app-content flex-column-fluid">
                         <div id="kt_app_content_container" class="app-container {{$container??\App\Http\HelperForMetronic::ktHeaderHeader()}}">
                             @yield('content')

@@ -62,6 +62,7 @@ class ListinoInpostController extends Controller
             'titoloPagina' => 'Nuovo ' . ListinoInpost::NOME_SINGOLARE,
             'controller' => get_class($this),
             'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
+            'nascondiToolbar' => true,
         ]);
     }
 
@@ -84,6 +85,7 @@ class ListinoInpostController extends Controller
             'controller' => self::class,
             'titoloPagina' => ListinoInpost::NOME_SINGOLARE,
             'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
+            'nascondiToolbar' => true,
         ]);
     }
 
@@ -99,6 +101,7 @@ class ListinoInpostController extends Controller
             'titoloPagina' => 'Modifica ' . ListinoInpost::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
             'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
+            'nascondiToolbar' => true,
         ]);
     }
 
