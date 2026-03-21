@@ -1,10 +1,23 @@
 @extends('Backend._layout._main')
 
 @section('content')
+    <div class="inpost-create-page">
+        <section class="inpost-create-hero mb-8">
+            <div>
+                <div class="inpost-create-kicker">InPost Create Flow</div>
+                <h1 class="inpost-create-title">{{$record->id ? 'Aggiorna la spedizione InPost' : 'Crea una spedizione con un flusso chiaro, visivo e guidato.'}}</h1>
+                <p class="inpost-create-text">Restyling ispirato ai pattern del portale InPost e collegato ai concetti ufficiali `Location`, `Shipments` e `Tracking`, mantenendo intatta la logica backend già implementata.</p>
+            </div>
+            <div class="inpost-create-docs">
+                <span class="inpost-create-doc-pill">Location API</span>
+                <span class="inpost-create-doc-pill">Shipments API</span>
+                <span class="inpost-create-doc-pill">Tracking API</span>
+            </div>
+        </section>
     <div class="row">
         <div class="col-md-9">
-            <div class="card">
-                <div class="card-body">
+            <div class="card inpost-form-shell">
+                <div class="card-body p-8 p-lg-10">
                     @include('Backend._components.alertErrori')
                     @php
                         $originCountry = \App\Models\Nazione::find(config('services.inpost.default_country', 'IT'));
@@ -154,44 +167,127 @@
                         <input type="hidden" name="peso_totale" id="peso_totale" value="{{old('peso_totale',$record->peso_totale)}}">
                         <input type="hidden" name="volume_totale" id="volume_totale" value="{{old('volume_totale',$record->volume_totale)}}">
 
-                        <div class="row">
-                            <div class="col-md-4 offset-md-4 text-center">
-                                <button class="btn btn-primary mt-3" type="submit">{{$record->id ? 'Salva modifiche' : 'Crea spedizione InPost'}}</button>
+                        <div class="inpost-submit-bar">
+                            <div class="inpost-submit-copy">
+                                <div class="inpost-submit-title">Pronto per inviare il payload shipment.</div>
+                                <div class="inpost-submit-text">Controlla direzione, destinatario, metodo di consegna e package prima di creare la spedizione.</div>
                             </div>
+                            <button class="btn inpost-submit-button" type="submit">{{$record->id ? 'Salva modifiche' : 'Crea spedizione InPost'}}</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card card-flush">
-                <div class="card-header"><h3 class="card-title">Riepilogo</h3></div>
-                <div class="card-body">
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Pacchi
-                        <div id="numero_pacchi_dx" class="fw-bolder min-h-15px fs-4">{{\App\intero($record->numero_pacchi,true)}}</div>
+            <div class="card card-flush inpost-summary-shell">
+                <div class="card-header border-0 pt-7">
+                    <div>
+                        <div class="inpost-summary-kicker">Summary</div>
+                        <h3 class="card-title fs-2 fw-bolder mb-0">Riepilogo spedizione</h3>
                     </div>
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Peso totale
-                        <div id="peso_totale_dx" class="fw-bolder min-h-15px fs-4">{{$record->peso_totale}}</div>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="inpost-summary-card">
+                        <span class="inpost-summary-label">Pacchi</span>
+                        <div id="numero_pacchi_dx" class="inpost-summary-value">{{\App\intero($record->numero_pacchi,true)}}</div>
                     </div>
-                    <div class="bg-gray-100 mb-6 fw-bold">
-                        Volume totale
-                        <div id="volume_totale_span" class="fw-bolder min-h-15px fs-4">{{$record->volume_totale}}</div>
+                    <div class="inpost-summary-card">
+                        <span class="inpost-summary-label">Peso totale</span>
+                        <div id="peso_totale_dx" class="inpost-summary-value">{{$record->peso_totale}}</div>
+                    </div>
+                    <div class="inpost-summary-card mb-0">
+                        <span class="inpost-summary-label">Volume totale</span>
+                        <div id="volume_totale_span" class="inpost-summary-value">{{$record->volume_totale}}</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    </div>
 @endsection
 
 @push('customCss')
     <style>
+        .inpost-create-page {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .inpost-create-hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 1.5rem;
+            padding: 2rem;
+            border-radius: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(255, 199, 0, 0.28), transparent 28%),
+                linear-gradient(135deg, #191d24 0%, #232933 58%, #2d3541 100%);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .inpost-create-kicker,
+        .inpost-summary-kicker {
+            display: inline-flex;
+            margin-bottom: .85rem;
+            padding: .35rem .65rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            color: #ffd84d;
+            font-size: .82rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .inpost-create-title {
+            max-width: 14ch;
+            margin-bottom: .65rem;
+            font-size: clamp(2rem, 3vw, 3.15rem);
+            line-height: 1.03;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .inpost-create-text {
+            max-width: 70ch;
+            margin-bottom: 0;
+            color: rgba(255,255,255,0.76);
+            font-size: 1rem;
+        }
+
+        .inpost-create-docs {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: .65rem;
+        }
+
+        .inpost-create-doc-pill {
+            padding: .55rem .8rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        .inpost-form-shell {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+            border-radius: 22px;
+            border: 1px solid #e3e6ec;
+            box-shadow: 0 20px 60px rgba(22, 28, 45, 0.06);
+        }
+
         .inpost-section-card {
             background: #fff;
             border: 1px solid #e1e3ea;
             border-radius: 14px;
             padding: 1.75rem;
+            box-shadow: 0 10px 24px rgba(18, 24, 39, 0.04);
         }
 
         .inpost-section-head {
@@ -235,6 +331,7 @@
             min-height: 88px;
             padding: 1rem 1.25rem;
             border: 1px solid #cfd3da;
+            border-radius: 12px;
             background: #fff;
             cursor: pointer;
             transition: border-color .15s ease, box-shadow .15s ease;
@@ -274,6 +371,7 @@
             min-height: 110px;
             padding: 1rem 1.25rem;
             border: 1px solid #d7d7d7;
+            border-radius: 12px;
             background: #fff;
             cursor: pointer;
             transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
@@ -329,6 +427,92 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .inpost-submit-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem;
+            border-radius: 18px;
+            border: 1px solid #ece2ad;
+            background: linear-gradient(135deg, #fffdf1 0%, #fff8d8 100%);
+        }
+
+        .inpost-submit-title {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: #28230d;
+        }
+
+        .inpost-submit-text {
+            color: #685f35;
+            font-size: .92rem;
+        }
+
+        .inpost-submit-button {
+            min-height: 48px;
+            padding: .8rem 1.25rem;
+            border-radius: 999px;
+            background: #11151c;
+            color: #fff;
+            border: 1px solid #11151c;
+            font-weight: 800;
+        }
+
+        .inpost-submit-button:hover {
+            color: #fff;
+            background: #1d232c;
+            border-color: #1d232c;
+        }
+
+        .inpost-summary-shell {
+            position: sticky;
+            top: 110px;
+            border-radius: 22px;
+            border: 1px solid #e3e6ec;
+            box-shadow: 0 20px 60px rgba(22, 28, 45, 0.06);
+            overflow: hidden;
+        }
+
+        .inpost-summary-card {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+            margin-bottom: 1rem;
+            padding: 1rem 1.1rem;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #f7f9fc 0%, #f3f5f9 100%);
+            border: 1px solid #e8edf4;
+        }
+
+        .inpost-summary-label {
+            color: #6b7383;
+            font-size: .88rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .inpost-summary-value {
+            color: #1f2631;
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        @media (max-width: 991px) {
+            .inpost-create-hero,
+            .inpost-submit-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .inpost-summary-shell {
+                position: static;
+                top: auto;
+            }
         }
     </style>
 @endpush

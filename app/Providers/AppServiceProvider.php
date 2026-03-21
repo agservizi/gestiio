@@ -28,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        \URL::forceScheme('https');
+        if (PHP_SAPI !== 'cli-server' && !$this->app->runningInConsole()) {
+            \URL::forceScheme('https');
+        }
     }
 }
