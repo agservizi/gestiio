@@ -1,70 +1,9 @@
-@extends('Backend._layout._main')
-@section('toolbar')
-@endsection
+@php($minW='mw-1000px')
+@extends('Backend._components.modal')
 
 @section('content')
     @php($vecchio=$record->id)
-    <div class="inpost-listino-edit-page">
-        <section class="inpost-listino-edit-hero mb-8">
-            <div>
-                <div class="inpost-listino-edit-kicker">Listino InPost</div>
-                <h1 class="inpost-listino-edit-title">{{$vecchio ? 'Modifica tariffa package' : 'Nuova tariffa package'}}</h1>
-                <p class="inpost-listino-edit-text">Configura i prezzi del package selezionato per punto di ritiro e consegna a indirizzo.</p>
-            </div>
-        </section>
-        <div class="card inpost-listino-edit-shell">
-        <div class="card-body p-8 p-lg-10">
-            @include('Backend._components.alertErrori')
-            <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
-                @csrf
-                @method($record->id?'PATCH':'POST')
-                <div class="inpost-listino-form-card mb-8">
-                <div class="row">
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputRadioH',['campo'=>'package_type','testo'=>'Package','required'=>true,'array'=>['small'=>'Piccolo (S)','medium'=>'Medio (M)','large'=>'Grande (L)']])
-                    </div>
-                </div>
-                </div>
-                <div class="inpost-listino-form-card mb-8">
-                <div class="row">
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'locker_point','testo'=>'Locker o punto di ritiro','classe'=>'autonumericImporto'])
-                    </div>
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'home_delivery','testo'=>'Indirizzo del destinatario','classe'=>'autonumericImporto'])
-                    </div>
-                </div>
-                </div>
-
-                <div class="inpost-listino-submit-bar">
-                    <div class="inpost-listino-submit-copy">
-                        <div class="inpost-listino-submit-title">Tariffa pronta per essere salvata.</div>
-                        <div class="inpost-listino-submit-text">Controlla i prezzi inseriti prima di confermare.</div>
-                    </div>
-                    <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <button class="btn inpost-listino-submit-button" type="submit" id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\ListinoInpost::NOME_SINGOLARE}}</button>
-                    @if($vecchio)
-                        @if($eliminabile===true)
-                            <a class="btn btn-danger" id="elimina" href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
-                        @elseif(is_string($eliminabile))
-                            <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
-                                <a class="btn btn-danger disabled" href="javascript:void(0)">Elimina</a>
-                            </span>
-                        @endif
-                    @endif
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-    </div>
-@endsection
-@push('customCss')
     <style>
-        #kt_app_toolbar {
-            display: none !important;
-        }
-
         .inpost-listino-edit-page {
             display: flex;
             flex-direction: column;
@@ -182,7 +121,61 @@
             }
         }
     </style>
-@endpush
+    <div class="inpost-listino-edit-page">
+        <section class="inpost-listino-edit-hero mb-8">
+            <div>
+                <div class="inpost-listino-edit-kicker">Listino InPost</div>
+                <h1 class="inpost-listino-edit-title">{{$vecchio ? 'Modifica tariffa package' : 'Nuova tariffa package'}}</h1>
+                <p class="inpost-listino-edit-text">Configura i prezzi del package selezionato per punto di ritiro e consegna a indirizzo.</p>
+            </div>
+        </section>
+        <div class="card inpost-listino-edit-shell">
+        <div class="card-body p-8 p-lg-10">
+            @include('Backend._components.alertErrori')
+            <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
+                @csrf
+                @method($record->id?'PATCH':'POST')
+                <div class="inpost-listino-form-card mb-8">
+                <div class="row">
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputRadioH',['campo'=>'package_type','testo'=>'Package','required'=>true,'array'=>['small'=>'Piccolo (S)','medium'=>'Medio (M)','large'=>'Grande (L)']])
+                    </div>
+                </div>
+                </div>
+                <div class="inpost-listino-form-card mb-8">
+                <div class="row">
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputText',['campo'=>'locker_point','testo'=>'Locker o punto di ritiro','classe'=>'autonumericImporto'])
+                    </div>
+                    <div class="col-md-6">
+                        @include('Backend._inputs.inputText',['campo'=>'home_delivery','testo'=>'Indirizzo del destinatario','classe'=>'autonumericImporto'])
+                    </div>
+                </div>
+                </div>
+
+                <div class="inpost-listino-submit-bar">
+                    <div class="inpost-listino-submit-copy">
+                        <div class="inpost-listino-submit-title">Tariffa pronta per essere salvata.</div>
+                        <div class="inpost-listino-submit-text">Controlla i prezzi inseriti prima di confermare.</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <button class="btn inpost-listino-submit-button" type="submit" id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\ListinoInpost::NOME_SINGOLARE}}</button>
+                    @if($vecchio)
+                        @if($eliminabile===true)
+                            <a class="btn btn-danger" id="elimina" href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
+                        @elseif(is_string($eliminabile))
+                            <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
+                                <a class="btn btn-danger disabled" href="javascript:void(0)">Elimina</a>
+                            </span>
+                        @endif
+                    @endif
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    </div>
+@endsection
 @push('customScript')
     <script src="/assets_backend/js-miei/autoNumeric.min.js"></script>
     <script>
