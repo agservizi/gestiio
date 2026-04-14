@@ -34,7 +34,23 @@
                         @include('Backend._inputs.inputText',['campo'=>'email','testo'=>'Email','autocomplete'=>'off'])
                     </div>
                     <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'carta','testo'=>'Carta prepagata (tipo / numero)','autocomplete'=>'off'])
+                        <div class="row mb-6">
+                            <div class="col-lg-4 col-form-label text-lg-end">
+                                <label class="fw-bold fs-6" for="carta">Tipo carta prepagata</label>
+                            </div>
+                            <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                @php($selectedCarta = old('carta', $record->carta))
+                                <select id="carta" name="carta" class="form-select form-select-solid">
+                                    <option value="">— Seleziona —</option>
+                                    @foreach(['Postepay','SuperFlash','Hype'] as $tipoCarta)
+                                        <option value="{{$tipoCarta}}" {{$selectedCarta==$tipoCarta?'selected':''}}>{{$tipoCarta}}</option>
+                                    @endforeach
+                                </select>
+                                <div class="fv-plugins-message-container invalid-feedback">
+                                    @error('carta') {{$message}} @enderror
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
