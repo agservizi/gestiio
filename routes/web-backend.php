@@ -259,5 +259,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::get('prezzi-spedizioni', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'showPrezziAgenti']);
     Route::post('prezzi-spedizioni', [\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'updateRicaricoAgenti']);
 
+    //Ricariche carte prepagate - IBAN clienti
+    Route::resource('ricarica-carta-iban', \App\Http\Controllers\Backend\RicaricaCartaIbanController::class)->except(['show']);
 
 });

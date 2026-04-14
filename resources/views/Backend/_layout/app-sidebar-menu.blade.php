@@ -244,6 +244,24 @@
 
                 </div>
 
+                <div class="menu-item">
+                    <a class="menu-link"
+                       href="{{action([\App\Http\Controllers\Backend\RicaricaCartaIbanController::class,'index'])}}">
+                        <span class="menu-icon">
+                            <span class="svg-icon svg-icon-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M22 7H2V11H22V7Z" fill="currentColor"/>
+                                    <path opacity="0.3"
+                                          d="M21 19H3C2.4 19 2 18.6 2 18V6C2 5.4 2.4 5 3 5H21C21.6 5 22 5.4 22 6V18C22 18.6 21.6 19 21 19ZM14 14C14 13.4 13.6 13 13 13H5C4.4 13 4 13.4 4 14C4 14.6 4.4 15 5 15H13C13.6 15 14 14.6 14 14ZM16 14C16 14.6 16.4 15 17 15H19C19.6 15 20 14.6 20 14C20 13.4 19.6 13 19 13H17C16.4 13 16 13.4 16 14Z"
+                                          fill="currentColor"/>
+                                </svg>
+                            </span>
+                        </span>
+                        <span class="menu-title">IBAN Ricariche Carte</span>
+                    </a>
+                </div>
+
                 @if(false)
                     <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
                     <span class="menu-link">
