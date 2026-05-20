@@ -126,11 +126,6 @@ class BrtService
             "labelParameters" => $this->labelParametersFromConfig(),
         ];
 
-        $parcelInfos = $this->mapParcelInfos($record);
-        if ($parcelInfos) {
-            $payload['createData']['parcelInfos'] = $parcelInfos;
-        }
-
         return $this->requestJson('post', $url, $payload, $record);
     }
 
@@ -258,42 +253,6 @@ class BrtService
         $log->save();
 
         return is_array($json) ? $json : ['raw' => $res->body()];
-    }
-
-    protected function mapParcelInfos(SpedizioneBrt $record): array
-    {
-        $colli = $record->dati_colli;
-        if (!is_array($colli) || !count($colli)) {
-            return [];
-        }
-
-        $parcelInfos = [];
-        foreach ($colli as $collo) {
-            $length = (float)($collo['profondita'] ?? 0);
-            $width = (float)($collo['larghezza'] ?? 0);
-            $height = (float)($collo['altezza'] ?? 0);
-            $weightGrams = (float)($collo['peso_reale'] ?? 0) * 1000;
-
-            if (!$length || !$width || !$height || !$weightGrams) {
-                continue;
-            }
-
-            $parcelInfos[] = [
-                'declaredWeight' => [
-                    'value' => (int)round($weightGrams),
-                    'unit' => 'g',
-                ],
-                'dimensions' => [
-                    'length' => $length / 100,
-                    'width' => $width / 100,
-                    'height' => $height / 100,
-                    'unit' => 'm',
-                ],
-            ];
-        }
-
-        return $parcelInfos;
-
     }
 
     protected function normalizePudoUrl(string $url): string
