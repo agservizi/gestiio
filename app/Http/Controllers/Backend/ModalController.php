@@ -64,6 +64,15 @@ class ModalController extends Controller
                     'titoloPagina' => 'Seleziona punto InPost',
                 ]);
 
+            case 'inpost_return_points':
+                $service = new InpostService();
+                $result = $service->points('IT', (string) $request->input('citta', ''), (string) $request->input('cap', ''));
+                return view('Backend.InpostReturn.modalPunti', [
+                    'points' => $result['points'],
+                    'errorMessage' => $result['error'] ?? null,
+                    'titoloPagina' => 'Seleziona punto InPost per reso',
+                ]);
+
             case 'sostituzione-sim':
                 $attivazione = AttivazioneSim::find($id);
                 abort_if(!$attivazione, 404);

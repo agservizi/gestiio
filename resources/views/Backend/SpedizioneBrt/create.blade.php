@@ -1,4 +1,5 @@
-@extends('Backend._components.modal')
+@extends('Backend._layout._main')
+@section('toolbar') @endsection
 @section('content')
     <style>
         .brt-zone-picker {

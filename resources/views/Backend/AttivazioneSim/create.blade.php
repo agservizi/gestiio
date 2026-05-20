@@ -1,4 +1,5 @@
-@extends('Backend._components.modal')
+@extends('Backend._layout._main')
+@section('toolbar') @endsection
 @section('content')
     @php($selected=old('tipo_servizio'))
     <div class="table-responsive">

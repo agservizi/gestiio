@@ -3,6 +3,8 @@
 namespace App\Http\Services;
 
 use App\Models\ChiamataApi;
+use App\Models\InpostPickup;
+use App\Models\InpostReturn;
 use App\Models\SpedizioneInpost;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -225,6 +227,86 @@ class InpostService
     public function trackingUrl(string $trackingNumber): string
     {
         return $this->trackingPortalBaseUrl . '?number=' . urlencode($trackingNumber);
+    }
+
+    public function createReturn(InpostReturn $record): array
+    {
+        $endpoint = '/returns/v2/organizations/' . $this->organizationId . '/returns';
+        $payload = $this->returnPayload($record);
+
+        return $this->requestJson('post', $this->baseUrl . $endpoint, $payload, $record);
+    }
+
+    public function buildReturnPayload(InpostReturn $record): array
+    {
+        return $this->returnPayload($record);
+    }
+
+    public function requestRawPublic(string $method, string $url, array $payload = [], ?Model $record = null, array $headers = []): array
+    {
+        return $this->requestRaw($method, $url, $payload, $record, $headers);
+    }
+
+    public function buildPickupPayload(InpostPickup $record): array
+    {
+        return $this->pickupPayload($record);
+    }
+
+    public function createPickup(InpostPickup $record): array
+    {
+        $endpoint = '/pickups/v2/organizations/' . $this->organizationId . '/pickups';
+        $payload = $this->pickupPayload($record);
+
+        return $this->requestJson('post', $this->baseUrl . $endpoint, $payload, $record);
+    }
+
+    public function pickupCutoffTime(): array
+    {
+        $endpoint = '/pickups/v2/organizations/' . $this->organizationId . '/pickups/cutoff-time';
+
+        return $this->requestJson('get', $this->baseUrl . $endpoint);
+    }
+
+    protected function returnPayload(InpostReturn $record): array
+    {
+        return [
+            'receiver' => [
+                'name' => $record->receiver_name,
+                'email' => $record->receiver_email ?: null,
+                'phone' => $record->receiver_phone ?: null,
+            ],
+            'custom_attributes' => [
+                'target_point' => $record->point_id,
+            ],
+            'reference' => $record->customer_reference ?: (string) $record->id,
+        ];
+    }
+
+    protected function pickupPayload(InpostPickup $record): array
+    {
+        $payload = [
+            'pickup_from' => $record->pickup_date->format('Y-m-d') . 'T09:00:00',
+            'pickup_to' => $record->pickup_date->format('Y-m-d') . 'T18:00:00',
+            'address' => [
+                'street' => $record->street,
+                'building_number' => $record->building_number ?: '',
+                'post_code' => $record->post_code,
+                'city' => $record->city,
+                'country_code' => $record->country_code ?: 'IT',
+            ],
+            'contact_details' => [
+                'name' => $record->contact_name,
+                'email' => $record->contact_email ?: null,
+                'phone' => $record->contact_phone,
+            ],
+            'parcel_count' => (int) ($record->parcel_count ?: 1),
+        ];
+
+        if ($record->note) {
+            $payload['location_description'] = $record->note;
+        }
+
+        return $payload;
     }
 
     protected function shipmentEndpoint(SpedizioneInpost $record): string

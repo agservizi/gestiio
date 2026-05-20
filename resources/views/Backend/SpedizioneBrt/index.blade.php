@@ -59,7 +59,7 @@
             </div>
         @endisset
         <span data-bs-toggle="tooltip" data-bs-placement="bottom" title="Seleziona almeno una spedizione" id="bordero-wrap">
-            <a class="btn btn-sm brt-btn-secondary disabled" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
+            <a class="btn btn-sm brt-btn-secondary disabled"
                href="{{action([$controller,'bordero'])}}" id="bordero" style="pointer-events:none;">Crea borderò</a>
         </span>
         @if($trackingRefreshBulkAvailable)
@@ -74,7 +74,7 @@
                href="{{action([\App\Http\Controllers\Backend\TicketsController::class,'create'],['servizio_type'=>'spedizione-brt'])}}">Apri
                 ticket</a>
         @endif
-        <a class="btn btn-sm brt-btn-primary" data-target="kt_modal" data-toggle="modal-ajax"
+        <a class="btn btn-sm brt-btn-primary"
            href="{{action([$controller,'create'])}}"><span class="d-md-none">+</span><span
                     class="d-none d-md-block">{{$testoNuovo}}</span></a>
         </div>

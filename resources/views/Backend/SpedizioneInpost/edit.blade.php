@@ -1,5 +1,13 @@
 @extends('Backend._layout._main')
 
+@section('toolbar')
+    @if($record->id)
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-light-primary" href="{{action([\App\Http\Controllers\Backend\SpedizioneInpostController::class,'etichetta'],$record->id)}}" target="_blank">Etichetta</a>
+        </div>
+    @endif
+@endsection
+
 @section('content')
     <div class="inpost-create-page">
         <section class="inpost-create-hero mb-8">
@@ -85,6 +93,7 @@
                             <div class="inpost-section-head">
                                 <h3 class="inpost-section-title">Destinatario</h3>
                             </div>
+                            @include('Backend.SpedizioneInpost.ricerca')
                             <div class="row">
                                 <div class="col-md-12">
                                     @include('Backend._inputs.inputText',['campo'=>'ragione_sociale_destinatario','testo'=>'Destinatario','required'=>true])
@@ -669,6 +678,37 @@
 
                 return isNaN(parsed) ? 0 : parsed;
             }
+
+            // Ricerca contatti precedenti
+            window.imposta = function (ragione, indirizzo, cap, localita, mobile, provincia) {
+                $('[name="ragione_sociale_destinatario"]').val(ragione);
+                $('[name="indirizzo_destinatario"]').val(indirizzo);
+                $('[name="cap_destinatario"]').val(cap);
+                $('[name="localita_destinazione"]').val(localita);
+                $('[name="mobile_referente_consegna"]').val(mobile);
+                $('[name="provincia_destinatario"]').val(provincia);
+                $('#infoAggiuntive').empty();
+                $('#cerca-contatto-input').val('');
+            };
+
+            $('#cerca-contatto-btn').on('click', function () {
+                var term = $('#cerca-contatto-input').val();
+                $.post('{{action([\App\Http\Controllers\Backend\AjaxController::class,'post'],'ricerca-contatti-inpost')}}',
+                    {_token: '{{csrf_token()}}', term: term},
+                    function (res) {
+                        if (res && res.html) {
+                            $('#infoAggiuntive').html(atob(res.html));
+                        }
+                    }
+                );
+            });
+
+            $('#cerca-contatto-input').on('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    $('#cerca-contatto-btn').trigger('click');
+                }
+            });
         });
     </script>
 @endpush

@@ -26,7 +26,7 @@
             </div>
         @endisset
         @isset($testoNuovo)
-            <a class="btn btn-sm btn-primary fw-bold" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
+            <a class="btn btn-sm btn-primary fw-bold"
                href="{{action([$controller,'create'])}}"><span
                         class="d-md-none">+</span><span
                         class="d-none d-md-block">{{$testoNuovo}}</span></a>

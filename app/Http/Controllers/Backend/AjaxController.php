@@ -91,6 +91,18 @@ class AjaxController extends Controller
                     return ['success' => false];
                 }
 
+            case 'ricerca-contatti-inpost':
+                $term = trim((string) $request->input('term', ''));
+                $contatti = \App\Models\SpedizioneInpost::query()
+                    ->select('ragione_sociale_destinatario', 'indirizzo_destinatario', 'cap_destinatario',
+                        'localita_destinazione', 'mobile_referente_consegna', 'provincia_destinatario')
+                    ->when($term !== '', fn ($q) => $q->where('ragione_sociale_destinatario', 'like', "%{$term}%"))
+                    ->distinct()
+                    ->orderBy('ragione_sociale_destinatario')
+                    ->limit(8)
+                    ->get();
+                return ['success' => true, 'html' => base64_encode(view('Backend.SpedizioneInpost.ricercaLista', ['contatti' => $contatti])->render())];
+
             case 'cliente-cf':
                 $codiceFiscale = strtoupper($request->input('codice_fiscale'));
                 $validator = Validator::make(['codice_fiscale' => $codiceFiscale], ['codice_fiscale' => new CodiceFiscaleRule()]);
