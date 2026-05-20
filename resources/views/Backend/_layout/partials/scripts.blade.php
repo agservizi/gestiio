@@ -49,7 +49,6 @@
                 success: function () {
                 },
                 error: function (e) {
-                    console.log(e);
                 }
             });
         });

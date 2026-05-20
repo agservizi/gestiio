@@ -111,9 +111,7 @@
             $('#form-aggiorna-stato').off().submit(function (e) {
                 e.preventDefault();
                 var url = $(this).attr('action');
-                console.log(url);
                 var data = $(this).serialize();
-                console.log(data);
                 $.ajax({
                     url: url,
                     type: 'POST',
@@ -198,7 +196,6 @@
                 removedfile: function (file) {
                     console.dir(file);
                     var name = file.filename;
-                    console.log(name);
                     $.ajax({
                         headers: {
                             'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
@@ -209,10 +206,8 @@
                             id: file.id
                         },
                         success: function (data) {
-                            console.log("File has been successfully removed!!");
                         },
                         error: function (e) {
-                            console.log(e);
                         }
                     });
                     var fileRef;

@@ -65,9 +65,7 @@
             $('#form-aggiorna-stato').off().submit(function (e) {
                 e.preventDefault();
                 var url = $(this).attr('action');
-                console.log(url);
                 var data = $(this).serialize();
-                console.log(data);
                 $.ajax({
                     url: url,
                     type: 'POST',

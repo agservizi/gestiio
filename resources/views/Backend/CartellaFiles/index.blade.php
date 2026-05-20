@@ -55,7 +55,6 @@
             const $searchSpinner = $('#search-spinner');
             const $serachClear = $('#search-clear');
             $filterSearch.keyup(function () {
-                console.log(indexUrl);
                 var term = $(this).val();
                 $searchSpinner.removeClass('d-none');
                 cerca(term);

@@ -215,7 +215,6 @@
                     removedfile: function (file) {
                         console.dir(file);
                         var name = file.filename;
-                        console.log(name);
                         $.ajax({
                             headers: {
                                 'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
@@ -226,10 +225,8 @@
                                 id: file.id
                             },
                             success: function (data) {
-                                console.log("File has been successfully removed!!");
                             },
                             error: function (e) {
-                                console.log(e);
                             }
                         });
                         var fileRef;

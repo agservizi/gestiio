@@ -136,43 +136,22 @@
                     </div>
                 </div>
                 @foreach($record->dati_colli as $sede)
-                    <div data-repeater-item="" class="item-collo">
+                    <div class="item-collo">
                         <div class="form-group row mb-5">
                             <div class="col-md-2">
-                                @php($selected=old('dati_colli.larghezza',$sede['larghezza']))
-                                <span type="text"
-                                      class="form-control  form-control-sm larghezza ricalcola intero"
-                                      name="larghezza" value="">{{$selected}}</span>
+                                <div class="form-control form-control-sm">{{$sede['larghezza']}}</div>
                             </div>
                             <div class="col-md-2">
-                                @php($selected=old('dati_colli.altezza',$sede['altezza']))
-                                <span type="text"
-                                      class="form-control  form-control-sm altezza intero ricalcola"
-                                      name="altezza" value="{{$selected}}">{{$selected}}</span>
+                                <div class="form-control form-control-sm">{{$sede['altezza']}}</div>
                             </div>
                             <div class="col-md-2">
-                                @php($selected=old('dati_colli.profondita',$sede['profondita']))
-                                <span type="text"
-                                      class="form-control  form-control-sm profondita intero ricalcola"
-                                      name="profondita" value="{{$selected}}">{{$selected}}</span>
+                                <div class="form-control form-control-sm">{{$sede['profondita']}}</div>
                             </div>
                             <div class="col-md-2">
-                                @php($selected=old('dati_colli.peso_reale',$sede['peso_reale']))
-                                <span type="text"
-                                      class="form-control  form-control-sm peso_reale ricalcola"
-                                      name="peso_reale" value="{{$selected}}">{{$selected}}</span>
-                            </div>
-                            @php($selected=$sede['peso_volumetrico'])
-                            <div class="col-md-2">
-                                   <span type="text"
-                                         class="form-control  form-control-sm peso_reale ricalcola"
-                                         name="peso_reale" value="{{$selected}}">{{$selected}}</span>
+                                <div class="form-control form-control-sm">{{$sede['peso_reale']}}</div>
                             </div>
                             <div class="col-md-2">
-                                <a href="javascript:;" data-repeater-delete=""
-                                   class="btn btn-sm btn-icon btn-light-danger">
-                                    <i class="la la-trash-o fs-3"></i>
-                                </a>
+                                <div class="form-control form-control-sm">{{$sede['peso_volumetrico'] ?? ''}}</div>
                             </div>
                         </div>
                     </div>

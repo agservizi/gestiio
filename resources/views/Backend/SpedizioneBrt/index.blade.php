@@ -58,12 +58,16 @@
                 </div>
             </div>
         @endisset
-        <a class="btn btn-sm brt-btn-secondary disabled" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-           href="{{action([$controller,'bordero'])}}" id="bordero">Crea borderò</a>
+        <span data-bs-toggle="tooltip" data-bs-placement="bottom" title="Seleziona almeno una spedizione" id="bordero-wrap">
+            <a class="btn btn-sm brt-btn-secondary disabled" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
+               href="{{action([$controller,'bordero'])}}" id="bordero" style="pointer-events:none;">Crea borderò</a>
+        </span>
         @if($trackingRefreshBulkAvailable)
-            <button class="btn btn-sm brt-btn-secondary disabled" id="tracking-refresh-bulk"
-                data-url="{{action([$controller,'trackingRefreshBulk'])}}" type="button">Aggiorna tracking selezionati
-            </button>
+            <span data-bs-toggle="tooltip" data-bs-placement="bottom" title="Seleziona almeno una spedizione" id="tracking-refresh-bulk-wrap">
+                <button class="btn btn-sm brt-btn-secondary disabled" id="tracking-refresh-bulk"
+                    data-url="{{action([$controller,'trackingRefreshBulk'])}}" type="button" disabled style="pointer-events:none;">Aggiorna tracking selezionati
+                </button>
+            </span>
         @endif
         @can('agente')
             <a class="btn btn-sm brt-btn-secondary"
@@ -432,11 +436,7 @@
                     return;
                 }
 
-                if (text) {
-                    console.log(title + ': ' + text);
-                } else {
-                    console.log(title);
-                }
+                // silently ignore if Swal is unavailable
             }
 
             $(document).on('change', '.sel', function () {
@@ -535,17 +535,19 @@
                 var quantio = array.length;
 
                 if (quantio) {
-                    $('#bordero').removeClass('disabled');
+                    $('#bordero').removeClass('disabled').css('pointer-events', '');
                     if ($('#tracking-refresh-bulk').length) {
-                        $('#tracking-refresh-bulk').removeClass('disabled').prop('disabled', false);
+                        $('#tracking-refresh-bulk').removeClass('disabled').prop('disabled', false).css('pointer-events', '');
                     }
                 } else {
-                    $('#bordero').addClass('disabled');
+                    $('#bordero').addClass('disabled').css('pointer-events', 'none');
                     if ($('#tracking-refresh-bulk').length) {
-                        $('#tracking-refresh-bulk').addClass('disabled').prop('disabled', true);
+                        $('#tracking-refresh-bulk').addClass('disabled').prop('disabled', true).css('pointer-events', 'none');
                     }
                 }
             }
+
+            $('[data-bs-toggle="tooltip"]').tooltip();
         });
     </script>
 @endpush

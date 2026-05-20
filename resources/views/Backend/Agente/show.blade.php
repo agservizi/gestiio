@@ -185,8 +185,6 @@
                 e.preventDefault();
                 var url = $(this).attr('href');
                 const container = $(this).closest('.tab-pane').attr('id');
-                console.log(container);
-                console.log(url);
                 ajaxPagination(url, '#' + container);
             });
 
@@ -203,7 +201,6 @@
                     }
                 }).done(function (data) {
                     $(content).html(data);
-                    console.log('scrollo su');
                     var scrollElement = document.querySelector(content);
                     new KTScrolltop(scrollElement, {speed: 200, easing: 'easeInOutCubic'}).go();
                 });

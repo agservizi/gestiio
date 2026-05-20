@@ -39,7 +39,6 @@
         var stato = $(this).is(':checked') ? 1 : 0;
         var mandato = $(this).val();
         var url = '{{action([$controller,'azioni'],['id'=>$id,'azione'=>'imposta_mandato'])}}';
-        console.log(url);
         $.ajax({
             url: url,
             type: 'POST',

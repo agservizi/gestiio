@@ -9,7 +9,7 @@ use App\Models\ContrattoTelefonia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\VisuraCamerale;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class VisuraCameraleController extends Controller
 {
@@ -37,7 +37,9 @@ class VisuraCameraleController extends Controller
 
         ];
 
-        $orderByUser = Auth::user()->getExtra($nomeClasse);
+        /** @var \App\Models\User $authUser */
+        $authUser = Auth::user();
+        $orderByUser = $authUser->getExtra($nomeClasse);
         $orderByString = $request->input('orderBy');
 
         if ($orderByString) {
@@ -49,7 +51,7 @@ class VisuraCameraleController extends Controller
         }
 
         if ($orderByUser != $orderByString) {
-            Auth::user()->setExtra([$nomeClasse => $orderBy]);
+            $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
         //Applico ordinamento
@@ -63,7 +65,7 @@ class VisuraCameraleController extends Controller
                 'html' => base64_encode(view('Backend.VisuraCamerale.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])->render())
             ];
 
         }
@@ -74,10 +76,10 @@ class VisuraCameraleController extends Controller
         return view('Backend.VisuraCamerale.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\VisuraCamerale::NOME_PLURALE,
+            'titoloPagina' => 'Elenco ' . VisuraCamerale::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => null,// $ordinamenti,
-            'filtro' => $filtro ?? 'tutti',
+            'filtro' => 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => null,// 'Nuova ' . \App\Models\VisuraCamerale::NOME_SINGOLARE,
             'testoCerca' => null,
@@ -95,7 +97,7 @@ class VisuraCameraleController extends Controller
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\VisuraCamerale::query()
+        $queryBuilder = VisuraCamerale::query()
             ->with('contratto')
             ->with(['agente' => function ($q) {
                 $q->select('id', 'name', 'cognome','ragione_sociale');
@@ -129,20 +131,12 @@ class VisuraCameraleController extends Controller
 
         if ($res) {
 
-            $response = response($res->data->file, 200, [
-                'Content-Type' => 'application/zip',
-                'Content-Disposition' => 'attachment; filename="' . $res->data->nome . '"',
-            ]);
-
             return response()->streamDownload(function () use ($res) {
                 echo $res->data->file;
             }, $res->data->nome);
-            return response()->download($res->data->file, $res->data->nome);
 
         } else {
-            dd($visuraService->message);
             return ['success' => false, 'message' => $visuraService->message];
-
         }
 
 
@@ -173,10 +167,12 @@ class VisuraCameraleController extends Controller
             $record->response = $res;
             $record->save();
 
+            /** @var \App\Models\User $authUser */
+            $authUser = Auth::user();
             $datiRitorno = new DatiRitorno();
             $datiRitorno->oggettoReload($record->id, view('Backend.VisuraCamerale.tabella', [
                 'records' => [$record],
-                'visualizzaAgente' => Auth::user()->hasPermissionTo('admin'),
+                'visualizzaAgente' => $authUser->hasPermissionTo('admin'),
                 'controller' => VisuraCameraleController::class
             ]));
             return $datiRitorno->getArray();

@@ -405,7 +405,6 @@
                     Swal.fire({toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, timerProgressBar: true, icon: icon, title: title, text: text || ''});
                     return;
                 }
-                console.log(title + (text ? ': ' + text : ''));
             }
 
             $(document).on('change', '.sel', aggiornaSelezione);

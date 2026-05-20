@@ -21,7 +21,7 @@
             <th class="">Esito</th>
             <th class="">Tracking</th>
             <th class="">Stato tracking</th>
-            <th class="">Agg. tracking</th>
+            <th class="">Ult. aggiornamento</th>
             <th class="">Borderò</th>
             <th class="">Agente</th>
             <th></th>

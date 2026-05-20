@@ -60,7 +60,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 @if($zona=='ITALIA')
-                                    @include('Backend._inputs.inputTextReadonly',['campo'=>'aaa','testo'=>'Nazione','valore'=>'Italia'])
+                                    @include('Backend._inputs.inputTextReadonly',['campo'=>'nazione_destinazione_display','testo'=>'Nazione','valore'=>'Italia'])
                                     @include('Backend._inputs.inputHidden',['campo'=>'nazione_destinazione'])
                                 @else
                                     @include('Backend._inputs.inputSelect2',['campo'=>'nazione_destinazione','testo'=>'Nazione destinazione','required'=>true,'selected'=>\App\Models\Nazione::selected(old('nazione_destinazione',$record->nazione_destinazione))])
@@ -72,7 +72,7 @@
                                 @endif
                             </div>
                             <div class="col-md-6">
-                                @include('Backend._inputs.inputText',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario','required'=>true,'autocomplete'=>'off','altro' => 'wire:model="pippo"'])
+                                @include('Backend._inputs.inputText',['campo'=>'indirizzo_destinatario','testo'=>'Indirizzo destinatario','required'=>true,'autocomplete'=>'off'])
                             </div>
                             <div class="col-md-6">
                                 @include('Backend._inputs.inputText',['campo'=>'localita_destinazione','testo'=>'Località destinazione','required'=>true,'autocomplete'=>'off'])
@@ -92,7 +92,7 @@
                                 @include('Backend._inputs.inputHidden',['campo'=>'numero_pacchi','testo'=>'Numero pacchi','required'=>true,'autocomplete'=>'off'])
                             </div>
                             <div class="col-md-6">
-                                @include('Backend._inputs.inputHidden',['campo'=>'peso_totale','testo'=>'Peso totale','required'=>true,'classe'=>'peso','altro' => 'wire:model="peso"'])
+                                @include('Backend._inputs.inputHidden',['campo'=>'peso_totale','testo'=>'Peso totale','required'=>true,'classe'=>'peso'])
                             </div>
                         </div>
                         <div class="row">
@@ -591,6 +591,8 @@
 
             aggiornaConteggioColli();
             aggiornaPeso();
+            $('#indirizzo_destinatario_dx').text($('[name="indirizzo_destinatario"]').val());
+            $('#localita_destinazione_dx').text($('[name="localita_destinazione"]').val());
 
             $('#dati_colli').repeater({
                 initEmpty: false,
@@ -649,7 +651,6 @@
 
             function aggiornaPeso() {
 
-                console.log('ricalcola');
                 var volume_totale = 0;
                 var peso_totale = 0;
 
@@ -809,7 +810,6 @@
 
             function modalAjax(url) {
                 var target = '#kt_modal';
-                console.log($(target).length);
                 // AJAX request
                 $.ajax({
                     url: url,

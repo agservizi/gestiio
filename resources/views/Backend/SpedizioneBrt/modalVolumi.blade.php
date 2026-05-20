@@ -116,7 +116,6 @@
 
 
                     volumecollo = larghezza / 100 * altezza / 100 * profondita / 100;
-                    //console.log('volumecollo' + n + ': ' + volumecollo);
                     volumeTotale += volumecollo;
 
 

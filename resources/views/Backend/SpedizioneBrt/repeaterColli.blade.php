@@ -27,7 +27,7 @@
                             <label class="form-label">Peso volumetrico</label>
                         </div>
                     </div>
-                    @foreach(old('dati_colli',$record->dati_colli??[['larghezza'=>'','larghezza'=>'','profondita'=>'','altezza'=>'','peso_reale'=>'']]) as $sede)
+                    @foreach(old('dati_colli',$record->dati_colli??[['larghezza'=>'','profondita'=>'','altezza'=>'','peso_reale'=>'']]) as $sede)
                         <div data-repeater-item="" class="item-collo">
                             <div class="form-group row mb-5">
                                 <div class="col-md-2">
@@ -55,8 +55,7 @@
                                            name="peso_reale" value="{{$selected}}">
                                 </div>
                                 <div class="col-md-2">
-                                    <span type="text" class="form-control form-control-sm peso-vol"
-                                    ></span>
+                                    <div class="form-control form-control-sm peso-vol"></div>
                                     <input type="hidden" name="peso_volumetrico" class="peso_volumetrico">
                                 </div>
                                 <div class="col-md-2">

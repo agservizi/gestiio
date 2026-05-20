@@ -429,7 +429,6 @@
                     this.on("sending", function (file, xhr, formData) {
                         formData.append("uid", $('#uid').val());
                         formData.append("contratto_energia_id", config.contrattoId);
-                        console.log(formData)
                     });
                     const esistenti = config.allegatiEsistenti || [];
                     if (esistenti) {
@@ -471,7 +470,6 @@
                 removedfile: function (file) {
                     console.dir(file);
                     var name = file.filename;
-                    console.log(name);
                     $.ajax({
                         headers: {
                             'X-CSRF-TOKEN': csrfToken
@@ -482,10 +480,8 @@
                             id: file.id
                         },
                         success: function (data) {
-                            console.log("File has been successfully removed!!");
                         },
                         error: function (e) {
-                            console.log(e);
                         }
                     });
                     var fileRef;

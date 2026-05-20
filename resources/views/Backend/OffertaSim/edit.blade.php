@@ -70,7 +70,6 @@
             ClassicEditor
                 .create(document.querySelector('#descrizione'))
                 .then(editor => {
-                    console.log(editor);
                 })
                 .catch(error => {
                     console.error(error);

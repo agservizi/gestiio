@@ -170,7 +170,6 @@
                     thisDropzone = this;
                     this.on("sending", function (file, xhr, formData) {
                         formData.append("uid", $('#uid').val());
-                        console.log(formData)
                     });
                     const esistenti =@json(\App\Models\AllegatoCafPatronato::perBlade($uid,$record->id));
                     if (esistenti) {
@@ -208,7 +207,6 @@
                 removedfile: function (file) {
                     console.dir(file);
                     var name = file.filename;
-                    console.log(name);
                     $.ajax({
                         headers: {
                             'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
@@ -219,10 +217,8 @@
                             id: file.id
                         },
                         success: function (data) {
-                            console.log("File has been successfully removed!!");
                         },
                         error: function (e) {
-                            console.log(e);
                         }
                     });
                     var fileRef;

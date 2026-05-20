@@ -48,7 +48,9 @@
                 var pudoId = $(this).attr('name');
 
                 $('#pudo_id').val(pudoId);
-                window.aggiornaPrezzoBrt();
+                if (typeof window.aggiornaPrezzoBrt === 'function') {
+                    window.aggiornaPrezzoBrt();
+                }
                 $('#kt_modal').modal('hide');
 
             });

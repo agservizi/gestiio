@@ -50,7 +50,6 @@
                     formData.append("categoria_documentale", $('#categoria_documentale').val());
                     formData.append("tags_documentali", $('#tags_documentali').val());
                     formData.append("expires_at", $('#expires_at').val());
-                    console.log(formData)
                 });
 
             },
@@ -77,7 +76,6 @@
                 }
                 console.dir(file);
                 var name = file.filename;
-                console.log(name);
                 $.ajax({
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
@@ -92,7 +90,6 @@
 
                     },
                     error: function (e) {
-                        console.log(e);
                     }
                 });
                 var fileRef;
