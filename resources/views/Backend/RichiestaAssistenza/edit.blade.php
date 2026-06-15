@@ -8,11 +8,11 @@
     <div class="card">
         <div class="card-body">
             @include('Backend._components.alertErrori')
+            <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
+                @csrf
+                @method($record->id?'PATCH':'POST')
             <div class="row g-6">
                 <div class="col-xl-8">
-                    <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
-                        @csrf
-                        @method($record->id?'PATCH':'POST')
                         @php($clienteInline=$clienteInline??new \App\Models\ClienteAssistenza())
                         @php($showClienteInline = !$vecchio && (old('cliente_codice_fiscale') || old('cliente_nome') || old('cliente_cognome') || old('cliente_email') || old('cliente_telefono')))
                         <div class="row" id="cliente-esistente-section">
@@ -112,7 +112,6 @@
                             @endif
                         </div>
 
-                    </form>
                 </div>
 
                 @if($vecchio)
@@ -148,6 +147,7 @@
                     </div>
                 @endif
             </div>
+            </form>
         </div>
     </div>
 @endsection
