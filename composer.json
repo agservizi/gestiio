@@ -27,6 +27,7 @@
     "minishlink/web-push": "^9.0",
     "psr/simple-cache": "^2.0",
     "robertogallea/laravel-codicefiscale": "^1.12",
+    "sentry/sentry-laravel": "*",
     "setasign/fpdf": "^1.8",
     "setasign/fpdi": "^2.3",
     "spatie/laravel-backup": "^8.1",
