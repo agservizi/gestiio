@@ -1,7 +1,5 @@
 <?php
 
-namespace App;
-
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
