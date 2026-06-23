@@ -29,8 +29,6 @@ return [
         'http_client_requests' => true,
     ],
 
-    // Performance monitoring
-    'metrics' => [
-        'enabled' => true,
-    ],
+    // Enable metrics (use enable_metrics instead of metrics option)
+    'enable_metrics' => true,
 ];
