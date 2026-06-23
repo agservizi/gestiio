@@ -81,17 +81,17 @@
                 <div class="card-body pt-0">
                     <div class="bg-light-primary rounded p-4 mb-4">
                         <div class="text-muted fw-semibold fs-8 mb-1">Utile stimato</div>
-                        <div class="fs-2 fw-bolder text-primary">{{ \App\importo($guadagno->utile,true) }}</div>
+                        <div class="fs-2 fw-bolder text-primary">{{ importo($guadagno->utile,true) }}</div>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="text-muted fw-semibold">Entrate</span>
-                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ \App\importo($guadagno->entrate,true) }}</span>
+                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ importo($guadagno->entrate,true) }}</span>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <span class="text-muted fw-semibold">Uscite</span>
-                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ \App\importo($guadagno->uscite,true) }}</span>
+                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ importo($guadagno->uscite,true) }}</span>
                     </div>
 
                     <div class="d-flex justify-content-between fw-semibold mb-2">
