@@ -1,0 +1,71 @@
+{
+  "project": {
+    "name": "Gestiio - Laravel Business Management",
+    "description": "Sistema di gestione aziendale basato su Laravel 9 con Livewire, gestione pagamenti (Stripe/Cashier), permessi avanzati e push notifications"
+  },
+  "search": {
+    "excludePaths": [
+      "vendor",
+      "node_modules",
+      "storage",
+      ".git",
+      "bootstrap/cache",
+      "public/vendor",
+      ".env",
+      "*.log"
+    ],
+    "includePaths": [
+      "app",
+      "resources",
+      "routes",
+      "config",
+      "database",
+      "tests",
+      "public"
+    ]
+  },
+  "codeContext": {
+    "fileExtensions": [
+      "php",
+      "js",
+      "vue",
+      "blade.php",
+      "json",
+      "env"
+    ],
+    "minContextWindow": 50
+  },
+  "laravel": {
+    "framework": "Laravel 9.x",
+    "phpVersion": "8.1+",
+    "key_packages": [
+      "livewire/livewire",
+      "laravel/cashier",
+      "laravel/fortify",
+      "spatie/laravel-permission",
+      "maatwebsite/excel",
+      "barryvdh/laravel-dompdf"
+    ]
+  },
+  "commands": {
+    "dev": "npm run dev",
+    "watch": "npm run watch",
+    "test": "php artisan test",
+    "migrate": "php artisan migrate",
+    "seed": "php artisan db:seed",
+    "queue": "php artisan queue:work"
+  },
+  "paths": {
+    "models": "app/Models",
+    "controllers": "app/Http/Controllers",
+    "requests": "app/Http/Requests",
+    "middleware": "app/Http/Middleware",
+    "services": "app/Services",
+    "migrations": "database/migrations",
+    "seeders": "database/seeders",
+    "views": "resources/views",
+    "routes": "routes",
+    "tests": "tests",
+    "config": "config"
+  }
+}
