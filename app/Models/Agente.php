@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Agente extends Model
 {
-    protected $table="agenti";
+    protected $table = 'agenti';
 
-    public const NOME_SINGOLARE = "agente";
-    public const NOME_PLURALE = "agenti";
+    public const NOME_SINGOLARE = 'agente';
 
-    protected $fillable=['user_id'];
+    public const NOME_PLURALE = 'agenti';
+
+    protected $fillable = ['user_id'];
 
     protected $casts = [
         'openapi_visure_token' => 'encrypted',
@@ -37,8 +37,6 @@ class Agente extends Model
     |--------------------------------------------------------------------------
     */
 
-
-
     /*
     |--------------------------------------------------------------------------
     | ALTRO
@@ -47,6 +45,6 @@ class Agente extends Model
 
     public function urlVisuraCamerale()
     {
-        return $this->visura_camerale ? ('/storage' . $this->visura_camerale) : null;
+        return $this->visura_camerale ? ('/storage'.$this->visura_camerale) : null;
     }
 }

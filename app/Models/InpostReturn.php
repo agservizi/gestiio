@@ -15,6 +15,7 @@ class InpostReturn extends Model
     protected $table = 'inpost_returns';
 
     public const NOME_SINGOLARE = 'reso InPost';
+
     public const NOME_PLURALE = 'resi InPost';
 
     protected $casts = [
@@ -27,7 +28,7 @@ class InpostReturn extends Model
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
             /** @var User|null $authUser */
             $authUser = Auth::user();
-            if (!$authUser) {
+            if (! $authUser) {
                 return;
             }
 
@@ -60,7 +61,7 @@ class InpostReturn extends Model
 
         $label = $this->status ?: '-';
 
-        return "<span class='badge {$class}'>" . e($label) . '</span>';
+        return "<span class='badge {$class}'>".e($label).'</span>';
     }
 
     public function esitoBall(): string

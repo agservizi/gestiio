@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProdottoSkyTvWifi extends Model
 {
-    protected $table = "prodotto_skytv_wifi";
+    protected $table = 'prodotto_skytv_wifi';
 
     protected $primaryKey = 'contratto_id';
 
-    public const NOME_SINGOLARE = "prodottoskytv";
-    public const NOME_PLURALE = "";
+    public const NOME_SINGOLARE = 'prodottoskytv';
+
+    public const NOME_PLURALE = '';
 
     protected $casts = [
         'pacchetti_sky' => 'array',
@@ -25,8 +25,9 @@ class ProdottoSkyTvWifi extends Model
 
     public const PROFILO = [
         'sky_open',
-        'sky_smart'
+        'sky_smart',
     ];
+
     public const TIPOLOGIA_CLIENTE = [
         'persona_fisica' => 'Persona fisica',
         'societa' => 'Società',
@@ -44,22 +45,26 @@ class ProdottoSkyTvWifi extends Model
     public const SERVIZI_OPZIONALI = [
         'sky_ultra_hd',
         'sky_go',
-        'sky_multiscreen'
+        'sky_multiscreen',
     ];
+
     public const OFFERTE_SKY = [
         'base' => 'Netflix base',
         'standard' => 'Netflix Standard',
         'premium' => 'Netflix premium',
     ];
+
     public const TECNOLOGIA = [
         'sky_q' => 'Sky Q internet',
         'sky_q_black' => 'Sky Q Black satellite',
         'sky_q_platinum' => 'Sky Q Platinum satellite',
     ];
+
     public const METODO_PAGAMENTO_TV = [
         'carta_credito' => 'Carta di credito',
         'sdd' => 'SEPA',
     ];
+
     public const FREQUENZA_PAGAMENTO_TV = [
         'unica_soluzione',
         'rate_mensili',
@@ -96,7 +101,6 @@ al cliente che non sarà necessario mandare disdetta al
 vecchio operatore"></i>',
     ];
 
-
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI
@@ -123,19 +127,20 @@ vecchio operatore"></i>',
 
     public function pacchettiSky()
     {
-        if (!$this->pacchetti_sky) {
+        if (! $this->pacchetti_sky) {
             return null;
         }
         $arr = [];
         foreach ($this->pacchetti_sky as $value) {
             $arr[] = self::PACCHETTI_SKY_TV[$value];
         }
+
         return implode(', ', $arr);
     }
 
     public function serviziOpzionali()
     {
-        if (!$this->servizi_opzionali) {
+        if (! $this->servizi_opzionali) {
             return null;
         }
 

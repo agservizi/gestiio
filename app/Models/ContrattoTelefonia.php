@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -12,12 +11,11 @@ use Illuminate\Support\Facades\Schema;
 
 class ContrattoTelefonia extends Model
 {
+    protected $table = 'contratti';
 
-    protected $table = "contratti";
+    public const NOME_SINGOLARE = 'contratto telefonia';
 
-    public const NOME_SINGOLARE = "contratto telefonia";
-    public const NOME_PLURALE = "contratti telefonia";
-
+    public const NOME_PLURALE = 'contratti telefonia';
 
     protected $casts = [
         'data' => 'datetime',
@@ -32,7 +30,7 @@ class ContrattoTelefonia extends Model
     public const ESITI = [
         'ko' => '#eb3662',
         'ok' => '#4dc682',
-        'in-lavorazione' => '#009EF7'
+        'in-lavorazione' => '#009EF7',
     ];
 
     public const TIPI_DOCUMENTO = [
@@ -41,7 +39,6 @@ class ContrattoTelefonia extends Model
         'passaporto' => 'Passaporto',
         'permesso_soggiorno' => 'Permesso di soggiorno',
     ];
-
 
     /**
      * The "booted" method of the model.
@@ -61,16 +58,15 @@ class ContrattoTelefonia extends Model
             }
         });
 
-
         static::saving(function (ContrattoTelefonia $model) {
-            if (self::hasInternalCodeColumn() && !$model->codice_contratto_interno && $model->id) {
+            if (self::hasInternalCodeColumn() && ! $model->codice_contratto_interno && $model->id) {
                 $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
             }
 
             $esito = EsitoTelefonia::find($model->esito_id);
             $model->esito_finale = $esito->esito_finale;
 
-            if (!$model->mese_pagamento && $model->esito_finale == 'ok') {
+            if (! $model->mese_pagamento && $model->esito_finale == 'ok') {
                 $model->mese_pagamento = now()->format('m_Y');
             }
 
@@ -80,20 +76,19 @@ class ContrattoTelefonia extends Model
         });
 
         self::saved(function ($model) {
-            Log::debug(__CLASS__ . '->' . __FUNCTION__ . ' contratto: ' . $model->id . ' mese_pagamento ' . $model->mese_pagamento);
+            Log::debug(__CLASS__.'->'.__FUNCTION__.' contratto: '.$model->id.' mese_pagamento '.$model->mese_pagamento);
             ProduzioneOperatore::calcolaTotaliOrdiniMese($model->agente_id, $model->created_at->year, $model->created_at->month);
 
             if ($model->isDirty('mese_pagamento')) {
                 if ($model->mese_pagamento) {
-                    list($mese, $anno) = explode('_', $model->mese_pagamento);
+                    [$mese, $anno] = explode('_', $model->mese_pagamento);
                     ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->agente_id, $anno, $mese);
                 }
                 if ($model->getOriginal('mese_pagamento')) {
-                    list($mese, $anno) = explode('_', $model->getOriginal('mese_pagamento'));
+                    [$mese, $anno] = explode('_', $model->getOriginal('mese_pagamento'));
                     ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->agente_id, $anno, $mese);
                 }
             }
-
 
         });
 
@@ -102,15 +97,13 @@ class ContrattoTelefonia extends Model
         });
 
         self::created(function (ContrattoTelefonia $model) {
-            if (!$model->codice_contratto_interno && self::hasInternalCodeColumn()) {
+            if (! $model->codice_contratto_interno && self::hasInternalCodeColumn()) {
                 $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
                 $model->saveQuietly();
             }
         });
 
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -153,7 +146,6 @@ class ContrattoTelefonia extends Model
         return $this->hasManyThrough(Mandato::class, TipoContratto::class, 'id', 'gestore_id', 'tipo_contratto_id', 'gestore_id');
     }
 
-
     public function prodotto()
     {
         return $this->morphTo();
@@ -163,7 +155,6 @@ class ContrattoTelefonia extends Model
     {
         return $this->hasOne(TipoContratto::class, 'id', 'tipo_contratto_id');
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -190,28 +181,28 @@ class ContrattoTelefonia extends Model
 
     public function nominativo()
     {
-        return trim($this->ragione_sociale ?: ($this->cognome . ' ' . $this->nome));
+        return trim($this->ragione_sociale ?: ($this->cognome.' '.$this->nome));
     }
 
     public function denominazione()
     {
-        return $this->ragione_sociale ?: ($this->cognome . ' ' . $this->nome);
+        return $this->ragione_sociale ?: ($this->cognome.' '.$this->nome);
     }
-
 
     public function bulletEsitoFinale()
     {
         if ($this->esito_finale) {
 
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:' . self::ESITI[$this->esito_finale] . ';"></span>';
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.self::ESITI[$this->esito_finale].';"></span>';
         }
 
     }
 
-
     public function labelPagato()
     {
-        if ($this->pagato) return "<span class='badge badge-success' >Pagato</span>";
+        if ($this->pagato) {
+            return "<span class='badge badge-success' >Pagato</span>";
+        }
     }
 
     public static function selected($id)
@@ -219,18 +210,16 @@ class ContrattoTelefonia extends Model
         if ($id) {
             $record = ContrattoTelefonia::find($id);
             if ($record) {
-                return '<option value="' . $record->id . '">' . $record->nominativo() . ' - ' . $record->tipoContratto->nome . '</option>';
+                return '<option value="'.$record->id.'">'.$record->nominativo().' - '.$record->tipoContratto->nome.'</option>';
             }
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
     | ALTRO
     |--------------------------------------------------------------------------
     */
-
 
     public function puoModificare($puoModificare)
     {
@@ -244,7 +233,6 @@ class ContrattoTelefonia extends Model
             return false;
         }
     }
-
 
     protected static function determinaMesePagamento($model)
     {
@@ -260,20 +248,20 @@ class ContrattoTelefonia extends Model
             $model->mese_pagamento = $mesePagamento;
         }
 
-
     }
 
     protected static function buildInternalContractCode(int $id): string
     {
-        return 'TEL' . str_pad((string) $id, 11, '0', STR_PAD_LEFT);
+        return 'TEL'.str_pad((string) $id, 11, '0', STR_PAD_LEFT);
     }
 
     protected static function hasInternalCodeColumn(): bool
     {
         static $hasColumn = null;
         if ($hasColumn === null) {
-            $hasColumn = Schema::hasColumn((new static())->getTable(), 'codice_contratto_interno');
+            $hasColumn = Schema::hasColumn((new static)->getTable(), 'codice_contratto_interno');
         }
+
         return $hasColumn;
     }
 
@@ -281,8 +269,6 @@ class ContrattoTelefonia extends Model
     {
         return $this->created_at->format('m_Y') == now()->format('m_Y');
     }
-
-
 
     public static function determinaPuoModificare()
     {
@@ -305,7 +291,7 @@ class ContrattoTelefonia extends Model
     protected static function authUserHasPermissionTo(string $permission): bool
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
@@ -321,7 +307,7 @@ class ContrattoTelefonia extends Model
     protected static function authUserHasAnyPermission(array $permissions): bool
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
@@ -339,6 +325,4 @@ class ContrattoTelefonia extends Model
 
         return false;
     }
-
-
 }

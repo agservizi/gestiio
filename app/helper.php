@@ -4,13 +4,12 @@ namespace App;
 
 use App\Models\Setting;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
  * Ritorna Carbon altrimenti null
  *
- * @param mixed $value
+ * @param  mixed  $value
  * @return string
  */
 function getInputData($value)
@@ -22,7 +21,6 @@ function getInputDataCorta($value)
 {
     return $value ? Carbon::createFromFormat('d/m/y', $value)->toDateString() : null;
 }
-
 
 function getInputDataOra($value)
 {
@@ -54,9 +52,10 @@ function getInputTelefono($value)
 {
     if ($value) {
         $value = str_replace(' ', '', $value);
-        if (!Str::of($value)->startsWith(['+', '00'])) {
-            $value = '+39' . $value;
+        if (! Str::of($value)->startsWith(['+', '00'])) {
+            $value = '+39'.$value;
         }
+
         return $value;
     } else {
         return null;
@@ -67,7 +66,8 @@ function getInputNumero($value)
 {
     if ($value) {
         $value = str_replace('.', '', $value);
-        return (float)str_replace(',', '.', $value);
+
+        return (float) str_replace(',', '.', $value);
     } else {
         return null;
     }
@@ -77,12 +77,12 @@ function getInputNumeroZero($value)
 {
     if ($value) {
         $value = str_replace('.', '', $value);
-        return (float)str_replace(',', '.', $value);
+
+        return (float) str_replace(',', '.', $value);
     } else {
         return 0;
     }
 }
-
 
 function getInputCheckbox($value = 0)
 {
@@ -96,14 +96,14 @@ function getInputNullSeVuoto($value)
 
 function getInputAggiungi39($value)
 {
-    if (!Str::of($value)->startsWith('+39')) {
-        $value = '+39' . $value;
+    if (! Str::of($value)->startsWith('+39')) {
+        $value = '+39'.$value;
     }
+
     return $value;
 }
 
-
-//Numeri e iva
+// Numeri e iva
 function importo($valore, $conEuro = false, $zeroSeNull = false)
 {
     if ($zeroSeNull) {
@@ -118,7 +118,7 @@ function importo($valore, $conEuro = false, $zeroSeNull = false)
         $thousandsSeparator = $numberFormat === 'en_US' ? ',' : '.';
         $currencySymbol = $numberFormat === 'en_US' ? '$' : '€';
 
-        return ($conEuro ? $currencySymbol . ' ' : '') . number_format($valore, 2, $decimalSeparator, $thousandsSeparator);
+        return ($conEuro ? $currencySymbol.' ' : '').number_format($valore, 2, $decimalSeparator, $thousandsSeparator);
     }
 }
 
@@ -133,6 +133,7 @@ function intero($valore, $zeroSeNull = false)
     if ($valore !== null) {
         $numberFormat = config('app.user_number_format', 'it_IT');
         $thousandsSeparator = $numberFormat === 'en_US' ? ',' : '.';
+
         return number_format($valore, 0, '', $thousandsSeparator);
     }
 }
@@ -161,13 +162,13 @@ function percentuale($valore, $totale)
     }
 }
 
-function applicaPercentuale($valore, $percentuale) {
+function applicaPercentuale($valore, $percentuale)
+{
     // Calcoliamo il valore aumentato della percentuale
     $risultato = $valore + ($valore * ($percentuale / 100));
 
     return $risultato;
 }
-
 
 function isNumeroCellulare($numero)
 {
@@ -177,27 +178,27 @@ function isNumeroCellulare($numero)
     if (str_starts_with($numero, '+393')) {
         return true;
     }
+
     return false;
 }
-
 
 function telefonoWhatsapp($numero)
 {
 
     if ($numero) {
-        $html = "";
+        $html = '';
         if (str_starts_with($numero, '+393')) {
-            $html .= '<a href="https://api.whatsapp.com/send?phone=' . str_replace('+', '', $numero) . '" class="text-gray-900 text-hover-primary"><i class="fab fa-whatsapp" style="color: #25D366;"></i>' . str_replace('+39', '', $numero) . '</a>';
+            $html .= '<a href="https://api.whatsapp.com/send?phone='.str_replace('+', '', $numero).'" class="text-gray-900 text-hover-primary"><i class="fab fa-whatsapp" style="color: #25D366;"></i>'.str_replace('+39', '', $numero).'</a>';
         } else {
-            $html .= '<a href = "tel:' . $numero . '" class="text-gray-900 text-hover-primary" >' . $numero . '</a >';
+            $html .= '<a href = "tel:'.$numero.'" class="text-gray-900 text-hover-primary" >'.$numero.'</a >';
         }
+
         return $html;
     }
 
 }
 
-
-//ore
+// ore
 function time_to_decimal($ore)
 {
 
@@ -216,14 +217,14 @@ function decimal_to_time($decimal)
     $minutes = $decimal - $hours;
     $minutesTime = round($minutes * 60, 0);
     if ($minutesTime < 10) {
-        $minutesTime = '0' . $minutesTime;
+        $minutesTime = '0'.$minutesTime;
     }
     if ($hours < 10) {
-        $hours = '0' . $hours;
+        $hours = '0'.$hours;
     }
-    return $hours . ":" . $minutesTime;
-}
 
+    return $hours.':'.$minutesTime;
+}
 
 function mese($m)
 {
@@ -276,7 +277,6 @@ function giorno($m)
     }
 }
 
-
 function debug_string_backtrace()
 {
     ob_start();
@@ -286,7 +286,7 @@ function debug_string_backtrace()
 
     // Remove first item from backtrace as it's this function which
     // is redundant.
-    $trace = preg_replace('/^#0\s+' . __FUNCTION__ . "[^\n]*\n/", '', $trace, 1);
+    $trace = preg_replace('/^#0\s+'.__FUNCTION__."[^\n]*\n/", '', $trace, 1);
 
     // Renumber backtrace items.
     $trace = preg_replace('/^#(\d+)/me', '\'#\' . ($1 - 1)', $trace);
@@ -294,12 +294,12 @@ function debug_string_backtrace()
     return $trace;
 }
 
-if (!function_exists('setting')) {
+if (! function_exists('setting')) {
 
     function setting($key, $default = null)
     {
         if (is_null($key)) {
-            return new Setting();
+            return new Setting;
         }
 
         if (is_array($key)) {
@@ -314,7 +314,7 @@ if (!function_exists('setting')) {
 
 function singolareOplurale($conteggio, $singolare, $plurale)
 {
-    return $conteggio . ' ' . ($conteggio == 1 ? $singolare : $plurale);
+    return $conteggio.' '.($conteggio == 1 ? $singolare : $plurale);
 }
 
 function maschileFemminile($genere, $maschile, $femminile)
@@ -334,16 +334,16 @@ function siNo($valore)
 function humanFileSize($size)
 {
     $precision = 2;
-    $units = array('byte', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
+    $units = ['byte', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
     $step = 1024;
     $i = 0;
     while (($size / $step) > 0.9) {
         $size = $size / $step;
         $i++;
     }
-    return round($size, $precision) . $units[$i];
-}
 
+    return round($size, $precision).$units[$i];
+}
 
 function arrayToKeyValue($array)
 {
@@ -351,6 +351,7 @@ function arrayToKeyValue($array)
     foreach ($array as $a) {
         $arr[$a] = ucfirst($a);
     }
+
     return $arr;
 }
 
@@ -358,4 +359,3 @@ function meseStrPad($mese)
 {
     return str_pad($mese, 2, '0', STR_PAD_LEFT);
 }
-

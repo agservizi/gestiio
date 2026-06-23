@@ -13,7 +13,9 @@ class NotificaPrimoMessaggioChatInterna extends Notification
     use Queueable;
 
     protected int $threadId;
+
     protected string $mittente;
+
     protected string $estratto;
 
     public function __construct(ChatMessage $messaggio)
@@ -32,8 +34,8 @@ class NotificaPrimoMessaggioChatInterna extends Notification
     {
         return (new MailMessage)
             ->subject('Nuovo messaggio in chat interna')
-            ->line('Hai ricevuto un nuovo messaggio in chat interna da ' . $this->mittente . '.')
-            ->line('Messaggio: "' . $this->estratto . '"')
+            ->line('Hai ricevuto un nuovo messaggio in chat interna da '.$this->mittente.'.')
+            ->line('Messaggio: "'.$this->estratto.'"')
             ->action('Apri chat', action([ChatController::class, 'index'], ['thread' => $this->threadId]));
     }
 

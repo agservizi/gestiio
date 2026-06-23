@@ -3,11 +3,7 @@
 namespace App\Models;
 
 use App\Http\MieClassiCache\CacheGestoriDashboard;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class GestoreContrattoEnergia extends Model
@@ -17,11 +13,11 @@ class GestoreContrattoEnergia extends Model
         'business' => 'Business',
     ];
 
-    protected $table = "tab_gestori_contratti_energia";
+    protected $table = 'tab_gestori_contratti_energia';
 
-    public const NOME_SINGOLARE = "gestore contratti energia";
-    public const NOME_PLURALE = "gestori contratti energia";
+    public const NOME_SINGOLARE = 'gestore contratti energia';
 
+    public const NOME_PLURALE = 'gestori contratti energia';
 
     /**
      * The "booted" method of the model.
@@ -37,13 +33,11 @@ class GestoreContrattoEnergia extends Model
 
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI
     |--------------------------------------------------------------------------
     */
-
 
     /*
     |--------------------------------------------------------------------------
@@ -66,7 +60,6 @@ class GestoreContrattoEnergia extends Model
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ALTRO
@@ -75,28 +68,31 @@ class GestoreContrattoEnergia extends Model
 
     public function immagineLogo()
     {
-        if (!$this->logo) {
+        if (! $this->logo) {
             if ($this->logo_contenuto_base64) {
                 $mime = $this->logo_mime_type ?: 'image/jpeg';
-                return 'data:' . $mime . ';base64,' . $this->logo_contenuto_base64;
+
+                return 'data:'.$mime.';base64,'.$this->logo_contenuto_base64;
             }
+
             return '/images/logo-placeholder.png';
         }
 
         if ($this->logo_contenuto_base64) {
             $mime = $this->logo_mime_type ?: 'image/jpeg';
-            return 'data:' . $mime . ';base64,' . $this->logo_contenuto_base64;
+
+            return 'data:'.$mime.';base64,'.$this->logo_contenuto_base64;
         }
 
         $relativePath = ltrim((string) $this->logo, '/');
-        if (!Storage::disk('public')->exists($relativePath) && Storage::exists('/' . $relativePath)) {
-            $contenuto = Storage::get('/' . $relativePath);
+        if (! Storage::disk('public')->exists($relativePath) && Storage::exists('/'.$relativePath)) {
+            $contenuto = Storage::get('/'.$relativePath);
             if ($contenuto !== null) {
                 Storage::disk('public')->put($relativePath, $contenuto);
             }
         }
 
-        return '/storage/' . $relativePath;
+        return '/storage/'.$relativePath;
     }
 
     public function categoriaLabel(): string
@@ -120,5 +116,4 @@ class GestoreContrattoEnergia extends Model
 
         return null;
     }
-
 }

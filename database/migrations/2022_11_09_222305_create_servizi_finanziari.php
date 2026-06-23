@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -26,7 +27,6 @@ return new class extends Migration {
 
         });
 
-
         Schema::create('servizi_finanziari', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
@@ -45,14 +45,12 @@ return new class extends Migration {
             $table->string('motivo_ko')->nullable();
             $table->boolean('pagato')->default(0);
 
-            //Prodotti
+            // Prodotti
             $table->unsignedBigInteger('prodotto_id')->nullable();
             $table->string('prodotto_type')->nullable();
             $table->index(['prodotto_id', 'prodotto_type']);
 
-
         });
-
 
         Schema::create('servizio_prestiti', function (Blueprint $table) {
             $table->id('servizio_id');
@@ -79,10 +77,9 @@ return new class extends Migration {
 
             $table->foreign('servizio_id')->on('servizi_finanziari')->references('id')->onDelete('cascade');
 
-
         });
 
-        //TARGA - DATA DI NASCITA - EMAIL - CELLULARE
+        // TARGA - DATA DI NASCITA - EMAIL - CELLULARE
 
         Schema::create('servizio_polizze', function (Blueprint $table) {
             $table->id('servizio_id');
@@ -91,7 +88,6 @@ return new class extends Migration {
             $table->date('data_di_nascita');
 
             $table->foreign('servizio_id')->on('servizi_finanziari')->references('id')->onDelete('cascade');
-
 
         });
 

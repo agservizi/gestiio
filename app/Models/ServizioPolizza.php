@@ -9,15 +9,16 @@ class ServizioPolizza extends Model
 {
     use HasFactory;
 
-    protected $table = "servizio_polizze";
+    protected $table = 'servizio_polizze';
+
     protected $primaryKey = 'servizio_id';
 
+    public const NOME_SINGOLARE = 'serviziopolizza';
 
-    public const NOME_SINGOLARE = "serviziopolizza";
-    public const NOME_PLURALE = "serviziopolizze";
+    public const NOME_PLURALE = 'serviziopolizze';
 
     protected $casts = [
-        'data_di_nascita' => 'datetime'
+        'data_di_nascita' => 'datetime',
     ];
 
     /*

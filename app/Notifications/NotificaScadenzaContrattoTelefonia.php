@@ -27,7 +27,7 @@ class NotificaScadenzaContrattoTelefonia extends Notification implements ShouldQ
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -38,20 +38,20 @@ class NotificaScadenzaContrattoTelefonia extends Notification implements ShouldQ
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject('Promemoria di scadenza offerta ' . $this->contratto->tipoContratto->nome)
-            ->line('Ti informiamo che tra 20gg scade la tua offerta ' . $this->contratto->tipoContratto->nome);
+            ->subject('Promemoria di scadenza offerta '.$this->contratto->tipoContratto->nome)
+            ->line('Ti informiamo che tra 20gg scade la tua offerta '.$this->contratto->tipoContratto->nome);
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -13,7 +14,7 @@ return new class extends Migration {
     public function up()
     {
         Schema::table('contratti', function (Blueprint $table) {
-            //Documento
+            // Documento
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento')->nullable();
             $table->string('rilasciato_da')->nullable();

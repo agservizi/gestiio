@@ -3,19 +3,12 @@
 namespace App\Actions\Fortify;
 
 use App\Models\User;
-use App\Rules\CodiceDestinatarioRule;
 use App\Rules\CodiceFiscaleRule;
-use App\Rules\PartitaIvaRule;
 use App\Rules\PasswordRules;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
-use Illuminate\Testing\Fluent\Concerns\Has;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use Laravel\Fortify\Rules\Password;
-use function App\getInputTelefono;
-use function App\getInputUcfirst;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -24,8 +17,7 @@ class CreateNewUser implements CreatesNewUsers
     /**
      * Validate and create a newly registered user.
      *
-     * @param array $input
-     * @return \App\Models\User
+     * @return User
      */
     public function create(array $input)
     {
@@ -35,7 +27,6 @@ class CreateNewUser implements CreatesNewUsers
             'nazione' => ['required'],
             'cookies-privacy-policy' => ['required'],
 
-
             'email' => [
                 'required',
                 'string',
@@ -44,11 +35,10 @@ class CreateNewUser implements CreatesNewUsers
                 'confirmed',
                 Rule::unique(User::class),
             ],
-            'password' => ['required', 'string', new PasswordRules(), 'confirmed'],
+            'password' => ['required', 'string', new PasswordRules, 'confirmed'],
         ])->validate();
 
-
-        return $this->salvaDati(new User(), $input);
+        return $this->salvaDati(new User, $input);
         /*
          *             'nome' => ['required', 'string', 'max:255'],
             'cognome' => ['required', 'string', 'max:255'],
@@ -63,17 +53,16 @@ class CreateNewUser implements CreatesNewUsers
          */
     }
 
-
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'cognome' => 'App\getInputUcfirst',
             'nazione' => '',
@@ -91,7 +80,7 @@ class CreateNewUser implements CreatesNewUsers
         $model->password = Hash::make($request['password']);
 
         $model->save();
+
         return $model;
     }
-
 }

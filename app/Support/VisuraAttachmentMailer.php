@@ -13,7 +13,7 @@ class VisuraAttachmentMailer
 {
     public static function notifyCliente(Visura $visura, AllegatoServizio $allegato): void
     {
-        if (!self::shouldNotify($visura, $allegato)) {
+        if (! self::shouldNotify($visura, $allegato)) {
             return;
         }
 
@@ -36,7 +36,7 @@ class VisuraAttachmentMailer
     protected static function shouldNotify(Visura $visura, AllegatoServizio $allegato): bool
     {
         $email = trim((string) $visura->email);
-        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return false;
         }
 

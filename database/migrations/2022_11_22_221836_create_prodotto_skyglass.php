@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -15,7 +16,6 @@ return new class extends Migration {
         Schema::create('prodotto_skyglass', function (Blueprint $table) {
             $table->id('contratto_id');
             $table->timestamps();
-
 
             $table->string('dimensione');
             $table->string('colore_sky_glass');
@@ -32,7 +32,6 @@ return new class extends Migration {
             $table->string('metodo_pagamento_tv')->nullable();
 
             $table->foreign('contratto_id')->on('contratti')->references('id')->onDelete('cascade');
-
 
         });
 

@@ -5,9 +5,9 @@ namespace App\Notifications;
 use App\Models\MovimentoPortafoglio;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+
 use function App\importo;
 
 class NotificaAdminMovimentoPortafoglio extends Notification
@@ -17,7 +17,7 @@ class NotificaAdminMovimentoPortafoglio extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param MovimentoPortafoglio $movimento
+     * @param  MovimentoPortafoglio  $movimento
      */
     public function __construct(protected $movimento)
     {
@@ -27,7 +27,7 @@ class NotificaAdminMovimentoPortafoglio extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -38,23 +38,23 @@ class NotificaAdminMovimentoPortafoglio extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         $utenteMovimento = User::find($this->movimento->agente_id);
 
         return (new MailMessage)
-            ->subject('Movimento portafoglio di ' . $utenteMovimento->nominativo())
-            ->line('Descrizione movimento: ' . $this->movimento->descrizione)
-            ->line('Importo:' . importo($this->movimento->importo));
+            ->subject('Movimento portafoglio di '.$utenteMovimento->nominativo())
+            ->line('Descrizione movimento: '.$this->movimento->descrizione)
+            ->line('Importo:'.importo($this->movimento->importo));
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

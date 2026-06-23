@@ -29,20 +29,21 @@ class BackfillAllegatiDbContent extends Command
             'tickets_allegati',
         ];
 
-        $selectedTables = collect((array)$this->option('table'))
+        $selectedTables = collect((array) $this->option('table'))
             ->flatMap(function ($value) {
-                return array_map('trim', explode(',', (string)$value));
+                return array_map('trim', explode(',', (string) $value));
             })
             ->filter()
             ->unique()
             ->values()
             ->all();
 
-        if (!empty($selectedTables)) {
+        if (! empty($selectedTables)) {
             $invalidTables = array_values(array_diff($selectedTables, $tables));
-            if (!empty($invalidTables)) {
-                $this->error('Tabelle non valide: ' . implode(', ', $invalidTables));
-                $this->line('Tabelle supportate: ' . implode(', ', $tables));
+            if (! empty($invalidTables)) {
+                $this->error('Tabelle non valide: '.implode(', ', $invalidTables));
+                $this->line('Tabelle supportate: '.implode(', ', $tables));
+
                 return self::FAILURE;
             }
 
@@ -50,12 +51,12 @@ class BackfillAllegatiDbContent extends Command
         }
 
         $diskName = $this->option('disk') ?: config('filesystems.default');
-        $force = (bool)$this->option('force');
-        $chunkSize = max(1, (int)$this->option('chunk'));
+        $force = (bool) $this->option('force');
+        $chunkSize = max(1, (int) $this->option('chunk'));
 
         $this->info("Disk: {$diskName}");
-        $this->info('Tabelle: ' . implode(', ', $tables));
-        $this->info('Modalità: ' . ($force ? 'FORCE (aggiorna tutto)' : 'solo record mancanti'));
+        $this->info('Tabelle: '.implode(', ', $tables));
+        $this->info('Modalità: '.($force ? 'FORCE (aggiorna tutto)' : 'solo record mancanti'));
 
         $totali = [
             'rows' => 0,
@@ -69,26 +70,29 @@ class BackfillAllegatiDbContent extends Command
             DB::connection()->getPdo();
         } catch (\Throwable $e) {
             $this->error('Connessione DB non disponibile. Verifica credenziali/host nel file .env (DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD).');
-            $this->line('Dettaglio: ' . $e->getMessage());
+            $this->line('Dettaglio: '.$e->getMessage());
 
             return self::FAILURE;
         }
 
         foreach ($tables as $tableName) {
             try {
-                if (!Schema::hasTable($tableName)) {
+                if (! Schema::hasTable($tableName)) {
                     $this->warn("[{$tableName}] tabella non trovata, salto");
+
                     continue;
                 }
 
-                if (!Schema::hasColumn($tableName, 'path_filename') ||
-                    !Schema::hasColumn($tableName, 'file_contenuto_base64') ||
-                    !Schema::hasColumn($tableName, 'mime_type')) {
+                if (! Schema::hasColumn($tableName, 'path_filename') ||
+                    ! Schema::hasColumn($tableName, 'file_contenuto_base64') ||
+                    ! Schema::hasColumn($tableName, 'mime_type')) {
                     $this->warn("[{$tableName}] colonne mancanti, salto");
+
                     continue;
                 }
             } catch (QueryException $e) {
-                $this->error("[{$tableName}] errore accesso schema: " . $e->getMessage());
+                $this->error("[{$tableName}] errore accesso schema: ".$e->getMessage());
+
                 return self::FAILURE;
             }
 
@@ -96,12 +100,12 @@ class BackfillAllegatiDbContent extends Command
 
             $query = DB::table($tableName)->select('id', 'path_filename', 'filename_originale', 'mime_type', 'file_contenuto_base64');
 
-            if (!$force) {
+            if (! $force) {
                 $query->where(function ($q) {
                     $q->whereNull('file_contenuto_base64')
-                        ->orWhere('file_contenuto_base64', '=','')
+                        ->orWhere('file_contenuto_base64', '=', '')
                         ->orWhereNull('mime_type')
-                        ->orWhere('mime_type', '=','');
+                        ->orWhere('mime_type', '=', '');
                 });
             }
 
@@ -118,10 +122,11 @@ class BackfillAllegatiDbContent extends Command
                     $tableCounters['rows']++;
                     $totali['rows']++;
 
-                    $path = ltrim((string)$row->path_filename, '/');
-                    if ($path === '' || !Storage::disk($diskName)->exists($path)) {
+                    $path = ltrim((string) $row->path_filename, '/');
+                    if ($path === '' || ! Storage::disk($diskName)->exists($path)) {
                         $tableCounters['missing_file']++;
                         $totali['missing_file']++;
+
                         continue;
                     }
 
@@ -131,25 +136,28 @@ class BackfillAllegatiDbContent extends Command
                         report($e);
                         $tableCounters['read_error']++;
                         $totali['read_error']++;
+
                         continue;
                     }
 
                     if ($content === '' || $content === null) {
                         $tableCounters['read_error']++;
                         $totali['read_error']++;
+
                         continue;
                     }
 
                     $mimeType = $row->mime_type;
-                    if (!$mimeType) {
+                    if (! $mimeType) {
                         $mimeType = $this->guessMimeTypeFromPath($path);
                     }
 
                     $base64 = base64_encode($content);
 
-                    if (!$this->shouldUpdateRow($row, $base64, $mimeType)) {
+                    if (! $this->shouldUpdateRow($row, $base64, $mimeType)) {
                         $tableCounters['skipped']++;
                         $totali['skipped']++;
+
                         continue;
                     }
 
@@ -184,7 +192,7 @@ class BackfillAllegatiDbContent extends Command
         $hasBase64 = isset($row->file_contenuto_base64) && $row->file_contenuto_base64 !== '';
         $hasMime = isset($row->mime_type) && $row->mime_type !== '';
 
-        if (!$hasBase64 || !$hasMime) {
+        if (! $hasBase64 || ! $hasMime) {
             return true;
         }
 

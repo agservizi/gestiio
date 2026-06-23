@@ -6,7 +6,6 @@ use Illuminate\Contracts\Validation\Rule;
 
 class IbanRule implements Rule
 {
-
     protected $message;
 
     /**
@@ -135,8 +134,8 @@ class IbanRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
@@ -151,6 +150,7 @@ class IbanRule implements Rule
 
         } else {
             $this->message = 'Il codice IBAN non è valido';
+
             return false;
 
         }
@@ -170,12 +170,12 @@ class IbanRule implements Rule
     /**
      * Calculate checksum of iban
      *
-     * @param string $iban
+     * @param  string  $iban
      * @return int
      */
     private function getChecksum($iban)
     {
-        $iban = substr($iban, 4) . substr($iban, 0, 4);
+        $iban = substr($iban, 4).substr($iban, 0, 4);
         $iban = str_replace(
             $this->getReplacementsChars(),
             $this->getReplacementsValues(),
@@ -196,8 +196,8 @@ class IbanRule implements Rule
     /**
      * Returns the designated length of IBAN for given IBAN
      *
-     * @param string $iban
-     * @return integer
+     * @param  string  $iban
+     * @return int
      */
     private function getDesignatedIbanLength($iban)
     {
@@ -209,8 +209,8 @@ class IbanRule implements Rule
     /**
      * Determine if given iban has the proper length
      *
-     * @param string $iban
-     * @return boolean
+     * @param  string  $iban
+     * @return bool
      */
     private function hasValidLength($iban)
     {

@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\TipoCafPatronato;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class TipoCafPatronatoController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -30,7 +31,7 @@ class TipoCafPatronatoController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -39,7 +40,7 @@ class TipoCafPatronatoController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -49,7 +50,7 @@ class TipoCafPatronatoController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(50)->withQueryString();
@@ -59,34 +60,33 @@ class TipoCafPatronatoController extends Controller
                 'html' => base64_encode(view('Backend.TipoCafPatronato.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
         }
 
         return view('Backend.TipoCafPatronato.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\TipoCafPatronato::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.TipoCafPatronato::NOME_PLURALE,
             'orderBy' => $orderBy,
-            'ordinamenti' => null,//$ordinamenti,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\TipoCafPatronato::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.TipoCafPatronato::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\TipoCafPatronato::query();
+        $queryBuilder = TipoCafPatronato::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -95,25 +95,25 @@ class TipoCafPatronatoController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new TipoCafPatronato();
+        $record = new TipoCafPatronato;
         $record->tipo = 'caf';
+
         return view('Backend.TipoCafPatronato.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . TipoCafPatronato::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.TipoCafPatronato::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([TipoCafPatronatoController::class, 'index']) => 'Torna a elenco ' . TipoCafPatronato::NOME_PLURALE]
+            'breadcrumbs' => [action([TipoCafPatronatoController::class, 'index']) => 'Torna a elenco '.TipoCafPatronato::NOME_PLURALE],
 
         ]);
     }
@@ -121,32 +121,33 @@ class TipoCafPatronatoController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new TipoCafPatronato();
+        $record = new TipoCafPatronato;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = TipoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo tipocafpatronato non esiste');
+        abort_if(! $record, 404, 'Questo tipocafpatronato non esiste');
+
         return view('Backend.TipoCafPatronato.show', [
             'record' => $record,
             'controller' => TipoCafPatronatoController::class,
             'titoloPagina' => TipoCafPatronato::NOME_SINGOLARE,
-            'breadcrumbs' => [action([TipoCafPatronatoController::class, 'index']) => 'Torna a elenco ' . TipoCafPatronato::NOME_PLURALE]
+            'breadcrumbs' => [action([TipoCafPatronatoController::class, 'index']) => 'Torna a elenco '.TipoCafPatronato::NOME_PLURALE],
 
         ]);
     }
@@ -154,24 +155,25 @@ class TipoCafPatronatoController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = TipoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo tipocafpatronato non esiste');
+        abort_if(! $record, 404, 'Questo tipocafpatronato non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.TipoCafPatronato.edit', [
             'record' => $record,
             'controller' => TipoCafPatronatoController::class,
-            'titoloPagina' => 'Modifica ' . TipoCafPatronato::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.TipoCafPatronato::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([TipoCafPatronatoController::class, 'index']) => 'Torna a elenco ' . TipoCafPatronato::NOME_PLURALE]
+            'breadcrumbs' => [action([TipoCafPatronatoController::class, 'index']) => 'Torna a elenco '.TipoCafPatronato::NOME_PLURALE],
 
         ]);
     }
@@ -179,32 +181,31 @@ class TipoCafPatronatoController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = TipoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo ' . TipoCafPatronato::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.TipoCafPatronato::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = TipoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo tipocafpatronato non esiste');
+        abort_if(! $record, 404, 'Questo tipocafpatronato non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -213,20 +214,20 @@ class TipoCafPatronatoController extends Controller
     }
 
     /**
-     * @param TipoCafPatronato $model
-     * @param Request $request
+     * @param  TipoCafPatronato  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'prezzo_cliente' => 'app\getInputNumero',
@@ -244,6 +245,7 @@ class TipoCafPatronatoController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -257,9 +259,8 @@ class TipoCafPatronatoController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\TipoCafPatronato::get();
+        return TipoCafPatronato::get();
     }
-
 
     protected function rules($id = null)
     {
@@ -275,5 +276,4 @@ class TipoCafPatronatoController extends Controller
 
         return $rules;
     }
-
 }

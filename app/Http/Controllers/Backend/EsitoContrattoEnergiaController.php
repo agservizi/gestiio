@@ -4,19 +4,20 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\EsitoContrattoEnergia;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class EsitoContrattoEnergiaController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -30,7 +31,7 @@ class EsitoContrattoEnergiaController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -39,7 +40,7 @@ class EsitoContrattoEnergiaController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -49,7 +50,7 @@ class EsitoContrattoEnergiaController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -60,36 +61,34 @@ class EsitoContrattoEnergiaController extends Controller
                 'html' => base64_encode(view('Backend.EsitoContrattoEnergia.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.EsitoContrattoEnergia.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoContrattoEnergia::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.EsitoContrattoEnergia::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\EsitoContrattoEnergia::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.EsitoContrattoEnergia::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\EsitoContrattoEnergia::query();
+        $queryBuilder = EsitoContrattoEnergia::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -98,24 +97,24 @@ class EsitoContrattoEnergiaController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new EsitoContrattoEnergia();
+        $record = new EsitoContrattoEnergia;
+
         return view('Backend.EsitoContrattoEnergia.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . EsitoContrattoEnergia::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.EsitoContrattoEnergia::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([EsitoContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . EsitoContrattoEnergia::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.EsitoContrattoEnergia::NOME_PLURALE],
 
         ]);
     }
@@ -123,32 +122,33 @@ class EsitoContrattoEnergiaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new EsitoContrattoEnergia();
+        $record = new EsitoContrattoEnergia;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = EsitoContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo EsitoContrattoEnergia non esiste');
+        abort_if(! $record, 404, 'Questo EsitoContrattoEnergia non esiste');
+
         return view('Backend.EsitoContrattoEnergia.show', [
             'record' => $record,
             'controller' => EsitoContrattoEnergiaController::class,
             'titoloPagina' => EsitoContrattoEnergia::NOME_SINGOLARE,
-            'breadcrumbs' => [action([EsitoContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . EsitoContrattoEnergia::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.EsitoContrattoEnergia::NOME_PLURALE],
 
         ]);
     }
@@ -156,24 +156,25 @@ class EsitoContrattoEnergiaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = EsitoContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo EsitoContrattoEnergia non esiste');
+        abort_if(! $record, 404, 'Questo EsitoContrattoEnergia non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.EsitoContrattoEnergia.edit', [
             'record' => $record,
             'controller' => EsitoContrattoEnergiaController::class,
-            'titoloPagina' => 'Modifica ' . EsitoContrattoEnergia::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.EsitoContrattoEnergia::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([EsitoContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . EsitoContrattoEnergia::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.EsitoContrattoEnergia::NOME_PLURALE],
 
         ]);
     }
@@ -181,32 +182,31 @@ class EsitoContrattoEnergiaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = EsitoContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo ' . EsitoContrattoEnergia::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.EsitoContrattoEnergia::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = EsitoContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo EsitoContrattoEnergia non esiste');
+        abort_if(! $record, 404, 'Questo EsitoContrattoEnergia non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -215,20 +215,20 @@ class EsitoContrattoEnergiaController extends Controller
     }
 
     /**
-     * @param EsitoContrattoEnergia $model
-     * @param Request $request
+     * @param  EsitoContrattoEnergia  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
@@ -246,6 +246,7 @@ class EsitoContrattoEnergiaController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -259,13 +260,11 @@ class EsitoContrattoEnergiaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\EsitoContrattoEnergia::get();
+        return EsitoContrattoEnergia::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -278,5 +277,4 @@ class EsitoContrattoEnergiaController extends Controller
 
         return $rules;
     }
-
 }

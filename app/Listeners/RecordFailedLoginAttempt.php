@@ -3,8 +3,6 @@
 namespace App\Listeners;
 
 use App\Models\RegistroLogin;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
 class RecordFailedLoginAttempt
 {
@@ -26,7 +24,7 @@ class RecordFailedLoginAttempt
      */
     public function handle($event)
     {
-        $registro = new RegistroLogin();
+        $registro = new RegistroLogin;
         $registro->email = $event->credentials['email'];
         $registro->user_id = $event->user ? $event->user->id : null;
         $registro->save();

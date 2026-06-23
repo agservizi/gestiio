@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-$targetFile = __DIR__ . '/../vendor/arcanedev/support/helpers.php';
+$targetFile = __DIR__.'/../vendor/arcanedev/support/helpers.php';
 
 if (! file_exists($targetFile)) {
     fwrite(STDOUT, "[fix-arcanedev] File non trovato, skip.\n");

@@ -9,15 +9,15 @@ class ProdottoEnergiaEnelBusiness extends Model
 {
     use HasFactory;
 
-    protected $table = "prodotto_energia_enelbusiness";
+    protected $table = 'prodotto_energia_enelbusiness';
 
     protected $primaryKey = 'contratto_energia_id';
 
+    public const NOME_SINGOLARE = 'prodottoenergiaenelbusiness';
 
-    public const NOME_SINGOLARE = "prodottoenergiaenelbusiness";
-    public const NOME_PLURALE = "";
+    public const NOME_PLURALE = '';
 
-    protected $casts=[
+    protected $casts = [
         'data_fine_validita' => 'date',
         'data_inizio_validita' => 'date',
         'data_scadenza' => 'date',
@@ -29,6 +29,7 @@ class ProdottoEnergiaEnelBusiness extends Model
         'addebito_cc' => 'Addebito su C/C SDD',
         'addebito_sepa' => 'Addebito su banca estera SEPA',
     ];
+
     public const INVIO_FATTURA = [
         'doppio' => 'Doppio',
         'singolo' => 'Singolo',
@@ -38,7 +39,7 @@ class ProdottoEnergiaEnelBusiness extends Model
         'riscaldamento' => 'riscaldamento',
         'produzione_riscaldamento' => 'Produzione e riscaldamento',
         'produzione' => 'Produzione',
-        'cottura_acqua' => 'Cottura e/o acqua calda'
+        'cottura_acqua' => 'Cottura e/o acqua calda',
     ];
 
     /*

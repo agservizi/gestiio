@@ -1,10 +1,10 @@
 <?php
 
+use App\Models\NazioneEuropaBrt;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -12,7 +12,7 @@ return new class extends Migration {
      */
     public function up()
     {
-        \App\Models\NazioneEuropaBrt::create(['id' => 'ITA', 'nome_nazione' => 'Italia', 'gruppo' => ' ']);
+        NazioneEuropaBrt::create(['id' => 'ITA', 'nome_nazione' => 'Italia', 'gruppo' => ' ']);
 
     }
 

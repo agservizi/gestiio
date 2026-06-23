@@ -12,6 +12,6 @@ class Pagamento extends Model
     protected $table = 'pagamenti';
 
     protected $casts = [
-        'response' => 'array'
+        'response' => 'array',
     ];
 }

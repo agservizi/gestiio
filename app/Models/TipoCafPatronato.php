@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TipoCafPatronato extends Model
 {
-    protected $table="tipi_caf_patronato";
+    protected $table = 'tipi_caf_patronato';
 
-    public const NOME_SINGOLARE = "tipo caf-patronato";
-    public const NOME_PLURALE = "tipo caf-patronati";
+    public const NOME_SINGOLARE = 'tipo caf-patronato';
+
+    public const NOME_PLURALE = 'tipo caf-patronati';
 
     /*
     |--------------------------------------------------------------------------

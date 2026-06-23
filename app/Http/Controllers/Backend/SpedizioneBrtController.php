@@ -8,41 +8,35 @@ use App\Http\MieClassi\PdfProformaCh;
 use App\Http\Services\BrtService;
 use App\Http\Services\BrtTariffaService;
 use App\Http\Services\PortafoglioService;
-use App\Models\Agente;
 use App\Models\BorderoBrt;
 use App\Models\ContattoBrt;
-use App\Models\ListinoBrt;
-use App\Models\ListinoBrtEuropa;
 use App\Models\MovimentoPortafoglio;
-use App\Models\NazioneEuropaBrt;
+use App\Models\SpedizioneBrt;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\SpedizioneBrt;
 use Illuminate\Support\Facades\Response;
-use Faker\Generator;
-use Illuminate\Container\Container;
-use function App\getInputNumero;
 
+use function App\getInputNumero;
 
 class SpedizioneBrtController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'));
         $records->appends($request->query());
@@ -54,36 +48,34 @@ class SpedizioneBrtController extends Controller
                 'html' => base64_encode(view('Backend.SpedizioneBrt.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
             ];
 
         }
 
-
         return view('Backend.SpedizioneBrt.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\SpedizioneBrt::NOME_PLURALE,
-            'orderBy' => null,//$orderBy,
-            'ordinamenti' => null,// $ordinamenti,
+            'titoloPagina' => 'Elenco '.SpedizioneBrt::NOME_PLURALE,
+            'orderBy' => null, // $orderBy,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuova ' . \App\Models\SpedizioneBrt::NOME_SINGOLARE,
-            'testoCerca' => 'Cerca in destinatario, mittente'
+            'testoNuovo' => 'Nuova '.SpedizioneBrt::NOME_SINGOLARE,
+            'testoCerca' => 'Cerca in destinatario, mittente',
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\SpedizioneBrt::query()
+        $queryBuilder = SpedizioneBrt::query()
             ->latest()
             ->with('agente:id,alias');
         $term = $request->input('cerca');
@@ -94,26 +86,25 @@ class SpedizioneBrtController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function create($zona = null)
     {
 
-        if (!$zona) {
+        if (! $zona) {
             return view('Backend.SpedizioneBrt.create', [
                 'titoloPagina' => 'Nuova spedizione',
                 'controller' => get_class($this),
             ]);
         }
-        $record = new SpedizioneBrt();
+        $record = new SpedizioneBrt;
         if ($zona === 'ITALIA') {
             $record->nazione_destinazione = 'IT';
         }
@@ -122,12 +113,13 @@ class SpedizioneBrtController extends Controller
         if ($authUser->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         }
+
         return view('Backend.SpedizioneBrt.edit', [
             'zona' => $zona,
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . SpedizioneBrt::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.SpedizioneBrt::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([SpedizioneBrtController::class, 'index']) => 'Torna a elenco ' . SpedizioneBrt::NOME_PLURALE]
+            'breadcrumbs' => [action([SpedizioneBrtController::class, 'index']) => 'Torna a elenco '.SpedizioneBrt::NOME_PLURALE],
 
         ]);
     }
@@ -135,18 +127,16 @@ class SpedizioneBrtController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new SpedizioneBrt();
+        $record = new SpedizioneBrt;
         $this->salvaDati($record, $request);
 
-
         if ($request->input('salva_anagrafica')) {
-            $contatto = new ContattoBrt();
+            $contatto = new ContattoBrt;
             $contatto->agente_id = $record->agente_id;
             $contatto->ragione_sociale_destinatario = $record->ragione_sociale_destinatario;
             $contatto->indirizzo_destinatario = $record->indirizzo_destinatario;
@@ -157,7 +147,7 @@ class SpedizioneBrtController extends Controller
             $contatto->save();
         }
 
-        $brtService = new BrtService();
+        $brtService = new BrtService;
         $res = $brtService->shipment($record);
 
         $record->response = $res;
@@ -170,12 +160,11 @@ class SpedizioneBrtController extends Controller
                 $record->esito = Arr::get($esito, 'severity');
                 $message = Arr::get($esito, 'message');
                 if ($message) {
-                    $record->esito_testo = Arr::get($esito, 'code') . ' ' . $message;
+                    $record->esito_testo = Arr::get($esito, 'code').' '.$message;
                 }
             }
             $record->save();
         }
-
 
         return $this->backToIndex();
     }
@@ -183,20 +172,21 @@ class SpedizioneBrtController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
         $record = SpedizioneBrt::with(['chiamate' => function ($q) {
             $q->latest();
         }])->find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
+
         return view('Backend.SpedizioneBrt.show', [
             'record' => $record,
             'controller' => SpedizioneBrtController::class,
             'titoloPagina' => SpedizioneBrt::NOME_SINGOLARE,
-            'breadcrumbs' => [action([SpedizioneBrtController::class, 'index']) => 'Torna a elenco ' . SpedizioneBrt::NOME_PLURALE]
+            'breadcrumbs' => [action([SpedizioneBrtController::class, 'index']) => 'Torna a elenco '.SpedizioneBrt::NOME_PLURALE],
 
         ]);
     }
@@ -204,13 +194,13 @@ class SpedizioneBrtController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -222,13 +212,14 @@ class SpedizioneBrtController extends Controller
         } else {
             $zona = 'EUROPA';
         }
+
         return view('Backend.SpedizioneBrt.edit', [
             'zona' => $zona,
             'record' => $record,
             'controller' => SpedizioneBrtController::class,
-            'titoloPagina' => 'Modifica ' . SpedizioneBrt::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.SpedizioneBrt::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([SpedizioneBrtController::class, 'index']) => 'Torna a elenco ' . SpedizioneBrt::NOME_PLURALE]
+            'breadcrumbs' => [action([SpedizioneBrtController::class, 'index']) => 'Torna a elenco '.SpedizioneBrt::NOME_PLURALE],
 
         ]);
     }
@@ -236,18 +227,17 @@ class SpedizioneBrtController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa ' . SpedizioneBrt::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.SpedizioneBrt::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
 
-        $brtService = new BrtService();
+        $brtService = new BrtService;
         $res = $brtService->shipment($record);
 
         $record->response = $res;
@@ -260,27 +250,27 @@ class SpedizioneBrtController extends Controller
                 $record->esito = Arr::get($esito, 'severity');
                 $message = Arr::get($esito, 'message');
                 if ($message) {
-                    $record->esito_testo = Arr::get($esito, 'code') . ' ' . $message;
+                    $record->esito_testo = Arr::get($esito, 'code').' '.$message;
                 }
             }
             $record->save();
         }
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function destroy($id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -288,23 +278,19 @@ class SpedizioneBrtController extends Controller
         ];
     }
 
-
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function annulla($id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
 
-
-
-        $service = new BrtService();
+        $service = new BrtService;
         $res = $service->delete($record);
-
 
         if ($res['deleteResponse'] ?? false) {
             $esito = Arr::get($res['deleteResponse'], 'executionMessage');
@@ -313,13 +299,12 @@ class SpedizioneBrtController extends Controller
                     $record->esito = 'ANNULLATA';
                     $record->save();
 
-                    $portafoglioService = new PortafoglioService();
+                    $portafoglioService = new PortafoglioService;
                     $portafoglioService->annullaMovimento($record->id, SpedizioneBrt::class);
 
                 }
             }
         }
-
 
         return [
             'success' => true,
@@ -330,9 +315,9 @@ class SpedizioneBrtController extends Controller
     public function conferma($id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
 
-        $service = new BrtService();
+        $service = new BrtService;
         $res = $service->confirm($record);
 
         $record->response = array_merge($record->response ?? [], $res);
@@ -345,9 +330,9 @@ class SpedizioneBrtController extends Controller
     public function routing($id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
 
-        $service = new BrtService();
+        $service = new BrtService;
         $res = $service->routing($record);
 
         $record->response = array_merge($record->response ?? [], $res);
@@ -360,7 +345,7 @@ class SpedizioneBrtController extends Controller
     public function tracking($id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
 
         $result = $this->aggiornaTrackingRecord($record, true);
 
@@ -375,7 +360,7 @@ class SpedizioneBrtController extends Controller
     public function trackingRefresh($id)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
 
         $result = $this->aggiornaTrackingRecord($record, true);
 
@@ -392,7 +377,7 @@ class SpedizioneBrtController extends Controller
     public function trackingRefreshBulk(Request $request)
     {
         $ids = $request->input('ids', []);
-        if (!is_array($ids) || !count($ids)) {
+        if (! is_array($ids) || ! count($ids)) {
             return [
                 'success' => false,
                 'message' => 'Nessuna spedizione selezionata',
@@ -412,7 +397,7 @@ class SpedizioneBrtController extends Controller
                 'trackingHtml' => $record->tracking() ?: '-',
                 'trackingStatusHtml' => $record->trackingStatusBadge(),
                 'trackingUpdatedAt' => $record->trackingUpdatedAtLabel() ?: '-',
-                'success' => (bool)$result['success'],
+                'success' => (bool) $result['success'],
                 'message' => $result['message'] ?? null,
             ];
         }
@@ -428,30 +413,29 @@ class SpedizioneBrtController extends Controller
     public function etichetta($id, $index)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
         $datiEtichetta = $record->response['createResponse']['labels']['label'][$index]['stream'];
 
         return Response::make(base64_decode($datiEtichetta), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . 'filename.pdf' . '"',
+            'Content-Disposition' => 'inline; filename="'.'filename.pdf'.'"',
         ]);
 
         return response(base64_decode($datiEtichetta))->header('Content-Disposition', 'attachment; filename="Etichetta.pdf"');
     }
 
-
     public function pdf($id, $tipopdf)
     {
         $record = SpedizioneBrt::find($id);
-        abort_if(!$record, 404, 'Questa spedizione brt non esiste');
+        abort_if(! $record, 404, 'Questa spedizione brt non esiste');
         switch ($tipopdf) {
             case 'proforma_ch':
-                $pdf = new PdfProformaCh();
+                $pdf = new PdfProformaCh;
                 $pdf->generaPdf($record);
+
                 return $pdf->render();
         }
     }
-
 
     public function bordero(Request $request, $id = null)
     {
@@ -463,9 +447,8 @@ class SpedizioneBrtController extends Controller
 
             $pdf = Pdf::loadView('Backend.SpedizioneBrt.borderoPdf', [
                 'records' => $recordsQb->get(),
-                'bordero' => $bordero
+                'bordero' => $bordero,
             ]);
-
 
             $pdf->setPaper('A4', 'landscape');
 
@@ -476,7 +459,7 @@ class SpedizioneBrtController extends Controller
 
             $records = $recordsQb->get();
             if ($records->count()) {
-                $bordero = new BorderoBrt();
+                $bordero = new BorderoBrt;
                 $bordero->save();
                 foreach ($records as $record) {
                     $record->bordero_id = $bordero->id;
@@ -484,9 +467,8 @@ class SpedizioneBrtController extends Controller
                 }
                 $pdf = Pdf::loadView('Backend.SpedizioneBrt.borderoPdf', [
                     'records' => $records,
-                    'bordero' => $bordero
+                    'bordero' => $bordero,
                 ]);
-
 
                 $pdf->setPaper('A4', 'landscape');
 
@@ -494,11 +476,9 @@ class SpedizioneBrtController extends Controller
             }
         }
 
-
         abort(404);
 
     }
-
 
     public function showPrezziAgenti()
     {
@@ -513,11 +493,11 @@ class SpedizioneBrtController extends Controller
             'records' => $queryBuilder->get(),
             'controller' => SpedizioneBrtController::class,
             'titoloPagina' => 'Elenco agenti abilitati spedizioni',
-            'orderBy' => null,//$orderBy,
-            'ordinamenti' => null,// $ordinamenti,
+            'orderBy' => null, // $orderBy,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoCerca' => 'Cerca in destinatario, mittente'
+            'testoCerca' => 'Cerca in destinatario, mittente',
         ]);
     }
 
@@ -531,7 +511,7 @@ class SpedizioneBrtController extends Controller
 
         foreach ($users as $user) {
             $agente = $user->agente;
-            $agente->variazione_prezzi_spedizioni = getInputNumero($request->input('prezzo' . $user->id));
+            $agente->variazione_prezzi_spedizioni = getInputNumero($request->input('prezzo'.$user->id));
             $agente->save();
         }
 
@@ -539,22 +519,22 @@ class SpedizioneBrtController extends Controller
     }
 
     /**
-     * @param SpedizioneBrt $record
-     * @param Request $request
+     * @param  SpedizioneBrt  $record
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($record, $request)
     {
 
         DB::beginTransaction();
-        $nuovo = !$record->id;
+        $nuovo = ! $record->id;
 
         if ($nuovo) {
             $record->tipo_porto = 'DAP';
             $record->caricato_da_user_id = Auth::id();
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'agente_id' => '',
             'ragione_sociale_destinatario' => '',
@@ -594,24 +574,22 @@ class SpedizioneBrtController extends Controller
 
         $service = new BrtTariffaService($nazione, $pesoTotale, $colli, $pudo, $contrassegno);
         $service->calcola();
-        if (!$service->isError()) {
+        if (! $service->isError()) {
             $record->prezzo_spedizione = $service->getPrezzo();
             $record->tariffa = $service->getTestotariffa();
         }
 
-
-        if (!$record->scalato_portafoglio && Auth::user()->agente->portafoglio_spedizioni < $record->prezzo_spedizione) {
+        if (! $record->scalato_portafoglio && Auth::user()->agente->portafoglio_spedizioni < $record->prezzo_spedizione) {
             return redirect()->back()->withErrors(['portafoglio' => 'Credito portafoglio insufficiente']);
         }
         $record->save();
 
-        if (!$service->isError() && !$record->scalato_portafoglio) {
+        if (! $service->isError() && ! $record->scalato_portafoglio) {
 
-
-            $movimento = new MovimentoPortafoglio();
+            $movimento = new MovimentoPortafoglio;
             $movimento->agente_id = Auth::id();
             $movimento->importo = -$record->prezzo_spedizione;
-            $movimento->descrizione = 'Spedizione Brt ' . $record->id;
+            $movimento->descrizione = 'Spedizione Brt '.$record->id;
             $movimento->prodotto_id = $record->id;
             $movimento->prodotto_type = get_class($record);
             $movimento->portafoglio = TipiPortafoglioEnum::SPEDIZIONI->value;
@@ -633,17 +611,17 @@ class SpedizioneBrtController extends Controller
 
     protected function aggiornaTrackingTabella($records): void
     {
-        if (!config('services.brt.tracking_enabled', true)) {
+        if (! config('services.brt.tracking_enabled', true)) {
             return;
         }
 
-        $batchSize = (int)config('services.brt.tracking_batch_size', 10);
+        $batchSize = (int) config('services.brt.tracking_batch_size', 10);
         if ($batchSize <= 0) {
             return;
         }
 
-        $staleMinutes = (int)config('services.brt.tracking_stale_minutes', 180);
-        $maxAgeDays = (int)config('services.brt.tracking_max_age_days', 15);
+        $staleMinutes = (int) config('services.brt.tracking_stale_minutes', 180);
+        $maxAgeDays = (int) config('services.brt.tracking_max_age_days', 15);
         $maxCreatedAt = now()->subDays($maxAgeDays);
 
         $items = collect($records->items())
@@ -661,22 +639,22 @@ class SpedizioneBrtController extends Controller
             return ['success' => false, 'message' => 'Spedizione annullata', 'tracking' => []];
         }
 
-        if (!$force && $maxCreatedAt && $record->created_at && $record->created_at->lt($maxCreatedAt)) {
+        if (! $force && $maxCreatedAt && $record->created_at && $record->created_at->lt($maxCreatedAt)) {
             return ['success' => false, 'message' => 'Spedizione troppo vecchia', 'tracking' => []];
         }
 
         $response = $record->response ?? [];
         $labels = data_get($response, 'createResponse.labels.label', []);
-        if (!is_array($labels) || !count($labels)) {
+        if (! is_array($labels) || ! count($labels)) {
             return ['success' => false, 'message' => 'Nessuna label disponibile', 'tracking' => []];
         }
 
-        if (!$force) {
-            $staleMinutes = $staleMinutes ?? (int)config('services.brt.tracking_stale_minutes', 180);
+        if (! $force) {
+            $staleMinutes = $staleMinutes ?? (int) config('services.brt.tracking_stale_minutes', 180);
             $updatedAt = data_get($response, 'trackingUpdatedAt');
             if ($updatedAt) {
                 try {
-                    if (now()->diffInMinutes(\Carbon\Carbon::parse($updatedAt)) < $staleMinutes) {
+                    if (now()->diffInMinutes(Carbon::parse($updatedAt)) < $staleMinutes) {
                         return ['success' => true, 'message' => 'Tracking recente', 'tracking' => data_get($response, 'trackingResponse', [])];
                     }
                 } catch (\Throwable $e) {
@@ -684,18 +662,18 @@ class SpedizioneBrtController extends Controller
             }
         }
 
-        $service = new BrtService();
+        $service = new BrtService;
         $trackingResponse = [];
         foreach ($labels as $label) {
             $parcelId = data_get($label, 'parcelID');
-            if (!$parcelId) {
+            if (! $parcelId) {
                 continue;
             }
 
             $trackingResponse[$parcelId] = $service->parcelId($parcelId);
         }
 
-        if (!count($trackingResponse)) {
+        if (! count($trackingResponse)) {
             return ['success' => false, 'message' => 'Nessuna risposta tracking', 'tracking' => []];
         }
 
@@ -709,15 +687,15 @@ class SpedizioneBrtController extends Controller
 
     protected function aggiornaEsitoDaResponse(SpedizioneBrt $record, array $response, string $root)
     {
-        $esito = data_get($response, $root . '.executionMessage');
-        if (!$esito) {
+        $esito = data_get($response, $root.'.executionMessage');
+        if (! $esito) {
             return;
         }
 
         $record->esito = data_get($esito, 'severity');
         $message = data_get($esito, 'message');
         if ($message) {
-            $record->esito_testo = data_get($esito, 'code') . ' ' . $message;
+            $record->esito_testo = data_get($esito, 'code').' '.$message;
         }
     }
 
@@ -726,9 +704,8 @@ class SpedizioneBrtController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\SpedizioneBrt::get();
+        return SpedizioneBrt::get();
     }
-
 
     protected function rules($id = null)
     {
@@ -747,12 +724,11 @@ class SpedizioneBrtController extends Controller
             'nome_mittente' => ['required', 'max:25'],
             'email_mittente' => ['nullable', 'max:255'],
             'mobile_mittente' => ['nullable', 'max:255'],
-            'dati_colli.*.larghezza'=>['required'],
-            'dati_colli.*.altezza'=>['required'],
-            'dati_colli.*.profondita'=>['required'],
+            'dati_colli.*.larghezza' => ['required'],
+            'dati_colli.*.altezza' => ['required'],
+            'dati_colli.*.profondita' => ['required'],
         ];
 
         return $rules;
     }
-
 }

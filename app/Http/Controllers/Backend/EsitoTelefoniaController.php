@@ -4,26 +4,24 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContrattoTelefonia;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\EsitoTelefonia;
-use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class EsitoTelefoniaController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
@@ -33,54 +31,52 @@ class EsitoTelefoniaController extends Controller
                 'html' => base64_encode(view('Backend.Esito.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.Esito.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoTelefonia::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.EsitoTelefonia::NOME_PLURALE,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\EsitoTelefonia::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.EsitoTelefonia::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\EsitoTelefonia::orderBy('nome')->where('id', '<>', 'bozza');
+        $queryBuilder = EsitoTelefonia::orderBy('nome')->where('id', '<>', 'bozza');
 
         return $queryBuilder;
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new EsitoTelefonia();
+        $record = new EsitoTelefonia;
         $record->attivo = 1;
         $record->esito_finale = 'in-lavorazione';
+
         return view('Backend.Esito.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . EsitoTelefonia::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.EsitoTelefonia::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([EsitoTelefoniaController::class, 'index']) => 'Torna a elenco ' . EsitoTelefonia::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoTelefoniaController::class, 'index']) => 'Torna a elenco '.EsitoTelefonia::NOME_PLURALE],
 
         ]);
     }
@@ -88,22 +84,22 @@ class EsitoTelefoniaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new EsitoTelefonia();
+        $record = new EsitoTelefonia;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
@@ -113,25 +109,26 @@ class EsitoTelefoniaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = EsitoTelefonia::find($id);
-        abort_if(!$record, 404, 'Questo esito non esiste');
+        abort_if(! $record, 404, 'Questo esito non esiste');
 
         if (ContrattoTelefonia::where('esito_id', $id)->exists()) {
             $eliminabile = 'Non è possibile eliminare questo esito';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.Esito.edit', [
             'record' => $record,
             'controller' => EsitoTelefoniaController::class,
-            'titoloPagina' => 'Modifica ' . EsitoTelefonia::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.EsitoTelefonia::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([EsitoTelefoniaController::class, 'index']) => 'Torna a elenco ' . EsitoTelefonia::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoTelefoniaController::class, 'index']) => 'Torna a elenco '.EsitoTelefonia::NOME_PLURALE],
 
         ]);
     }
@@ -139,32 +136,31 @@ class EsitoTelefoniaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = EsitoTelefonia::find($id);
-        abort_if(!$record, 404, 'Questo ' . EsitoTelefonia::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.EsitoTelefonia::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = EsitoTelefonia::find($id);
-        abort_if(!$record, 404, 'Questo esito non esiste');
+        abort_if(! $record, 404, 'Questo esito non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -173,20 +169,20 @@ class EsitoTelefoniaController extends Controller
     }
 
     /**
-     * @param EsitoTelefonia $model
-     * @param Request $request
+     * @param  EsitoTelefonia  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
@@ -204,6 +200,7 @@ class EsitoTelefoniaController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -217,13 +214,11 @@ class EsitoTelefoniaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\EsitoTelefonia::get();
+        return EsitoTelefonia::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -233,5 +228,4 @@ class EsitoTelefoniaController extends Controller
 
         return $rules;
     }
-
 }

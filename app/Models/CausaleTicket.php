@@ -9,10 +9,11 @@ class CausaleTicket extends Model
 {
     use HasFactory;
 
-    protected $table = "tab_causali_tickets";
+    protected $table = 'tab_causali_tickets';
 
-    public const NOME_SINGOLARE = "causale ticket";
-    public const NOME_PLURALE = "causali ticket";
+    public const NOME_SINGOLARE = 'causale ticket';
+
+    public const NOME_PLURALE = 'causali ticket';
 
     public const SERVIZI = [
         'App\Models\ContrattoTelefonia' => 'Contratto telefonia',
@@ -21,7 +22,7 @@ class CausaleTicket extends Model
     ];
 
     protected $fillable = [
-        'servizio_type', 'descrizione_causale'
+        'servizio_type', 'descrizione_causale',
     ];
 
     /*
@@ -45,9 +46,7 @@ class CausaleTicket extends Model
     public function labelCausaleTicket()
     {
 
-
-            return '<span class="badge badge-light-primary fw-bolder me-2">' .$this->descrizione_causale . '</span>';
-
+        return '<span class="badge badge-light-primary fw-bolder me-2">'.$this->descrizione_causale.'</span>';
 
     }
 

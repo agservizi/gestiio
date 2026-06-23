@@ -3,24 +3,27 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Auth;
 use App\Models\ClienteAssistenza;
 use App\Models\User;
+use App\Rules\CodiceFiscaleRule;
+use App\Rules\TelefonoRule;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ClienteAssistenzaController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request): View|JsonResponse
     {
@@ -34,7 +37,7 @@ class ClienteAssistenzaController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -45,7 +48,7 @@ class ClienteAssistenzaController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -55,7 +58,7 @@ class ClienteAssistenzaController extends Controller
             $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -65,35 +68,34 @@ class ClienteAssistenzaController extends Controller
                 'html' => base64_encode(view('Backend.ClienteAssistenza.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
             ]);
 
         }
 
-
         return view('Backend.ClienteAssistenza.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\ClienteAssistenza::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.ClienteAssistenza::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\ClienteAssistenza::NOME_SINGOLARE,
-            'testoCerca' => 'Cerca in nominativo, codice fiscale'
+            'testoNuovo' => 'Nuovo '.ClienteAssistenza::NOME_SINGOLARE,
+            'testoCerca' => 'Cerca in nominativo, codice fiscale',
 
         ]);
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\ClienteAssistenza::query();
+        $queryBuilder = ClienteAssistenza::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -102,24 +104,24 @@ class ClienteAssistenzaController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create(): View
     {
-        $record = new ClienteAssistenza();
+        $record = new ClienteAssistenza;
+
         return view('Backend.ClienteAssistenza.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . ClienteAssistenza::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.ClienteAssistenza::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([ClienteAssistenzaController::class, 'index']) => 'Torna a elenco ' . ClienteAssistenza::NOME_PLURALE]
+            'breadcrumbs' => [action([ClienteAssistenzaController::class, 'index']) => 'Torna a elenco '.ClienteAssistenza::NOME_PLURALE],
 
         ]);
     }
@@ -127,32 +129,33 @@ class ClienteAssistenzaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request): RedirectResponse
     {
         $request->validate($this->rules(null));
-        $record = new ClienteAssistenza();
+        $record = new ClienteAssistenza;
         $this->salvaDati($record, $request);
+
         return redirect()->action([RichiestaAssistenzaController::class, 'create'], ['cliente_id' => $record->id]);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id): View
     {
         $record = ClienteAssistenza::find($id);
-        abort_if(!$record, 404, 'Questo clienteassistenza non esiste');
+        abort_if(! $record, 404, 'Questo clienteassistenza non esiste');
+
         return view('Backend.ClienteAssistenza.show', [
             'record' => $record,
             'controller' => ClienteAssistenzaController::class,
             'titoloPagina' => ClienteAssistenza::NOME_SINGOLARE,
-            'breadcrumbs' => [action([ClienteAssistenzaController::class, 'index']) => 'Torna a elenco ' . ClienteAssistenza::NOME_PLURALE]
+            'breadcrumbs' => [action([ClienteAssistenzaController::class, 'index']) => 'Torna a elenco '.ClienteAssistenza::NOME_PLURALE],
 
         ]);
     }
@@ -160,24 +163,25 @@ class ClienteAssistenzaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id): View
     {
         $record = ClienteAssistenza::find($id);
-        abort_if(!$record, 404, 'Questo clienteassistenza non esiste');
+        abort_if(! $record, 404, 'Questo clienteassistenza non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.ClienteAssistenza.edit', [
             'record' => $record,
             'controller' => ClienteAssistenzaController::class,
-            'titoloPagina' => 'Modifica ' . ClienteAssistenza::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.ClienteAssistenza::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ClienteAssistenzaController::class, 'index']) => 'Torna a elenco ' . ClienteAssistenza::NOME_PLURALE]
+            'breadcrumbs' => [action([ClienteAssistenzaController::class, 'index']) => 'Torna a elenco '.ClienteAssistenza::NOME_PLURALE],
 
         ]);
     }
@@ -185,32 +189,31 @@ class ClienteAssistenzaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id): RedirectResponse
     {
         $record = ClienteAssistenza::find($id);
-        abort_if(!$record, 404, 'Questo ' . ClienteAssistenza::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.ClienteAssistenza::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id): JsonResponse
     {
         $record = ClienteAssistenza::find($id);
-        abort_if(!$record, 404, 'Questo clienteassistenza non esiste');
+        abort_if(! $record, 404, 'Questo clienteassistenza non esiste');
 
         $record->delete();
-
 
         return response()->json([
             'success' => true,
@@ -219,20 +222,20 @@ class ClienteAssistenzaController extends Controller
     }
 
     /**
-     * @param ClienteAssistenza $model
-     * @param Request $request
+     * @param  ClienteAssistenza  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'cognome' => 'app\getInputUcwords',
@@ -249,6 +252,7 @@ class ClienteAssistenzaController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -262,23 +266,20 @@ class ClienteAssistenzaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\ClienteAssistenza::get();
+        return ClienteAssistenza::get();
     }
-
 
     protected function rules($id = null)
     {
 
-
         $rules = [
             'nome' => ['required', 'max:255'],
             'cognome' => ['required', 'max:255'],
-            'codice_fiscale' => ['required', new \App\Rules\CodiceFiscaleRule()],
+            'codice_fiscale' => ['required', new CodiceFiscaleRule],
             'email' => ['nullable', 'max:255'],
-            'telefono' => ['nullable', new \App\Rules\TelefonoRule()],
+            'telefono' => ['nullable', new TelefonoRule],
         ];
 
         return $rules;
     }
-
 }

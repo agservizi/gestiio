@@ -2,22 +2,19 @@
 
 namespace App\Http\Controllers\Backend\SottoClassiEnergia;
 
-use App\Http\Controllers\Controller;
-
 use App\Models\Comune;
-use App\Models\GestoreContrattoEnergia;
 use App\Models\ProdottoEnergiaGenerico;
-use App\Models\ProdottoEnergiaIllumia;
+use App\Rules\IbanRule;
+use App\Rules\PartitaIvaRule;
+use App\Rules\PdrRule;
+use App\Rules\PodRule;
 use Illuminate\Http\Request;
-
 
 class Generico extends ProdottoEnergiaAbstract
 {
-
-
     /**
-     * @param EnelBusiness $model
-     * @param Request $request
+     * @param  EnelBusiness  $model
+     * @param  Request  $request
      * @return mixed
      */
     public function salvaDatiProdotto($contrattoEnergia, $request)
@@ -25,12 +22,12 @@ class Generico extends ProdottoEnergiaAbstract
 
         $model = $contrattoEnergia->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoEnergiaGenerico();
+            $model = new ProdottoEnergiaGenerico;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
 
             'nome' => 'app\getInputUcwords',
@@ -122,18 +119,17 @@ class Generico extends ProdottoEnergiaAbstract
         }
         $isBusiness = $request->input('categoria_pratica') === 'business';
         $denominazione = trim((string) $request->input('denominazione'));
-        if (!$isBusiness || $denominazione === '') {
-            $denominazione = trim((string) ($model->cognome . ' ' . $model->nome));
+        if (! $isBusiness || $denominazione === '') {
+            $denominazione = trim((string) ($model->cognome.' '.$model->nome));
         }
         $contrattoEnergia->denominazione = $denominazione;
-        $contrattoEnergia->indirizzo_completo = $model->indirizzo . ' ' . Comune::find($model->citta)?->comuneConTarga();
-        $contrattoEnergia->testo_ricerca = $contrattoEnergia->denominazione . '|' . $contrattoEnergia->codice_contratto;
+        $contrattoEnergia->indirizzo_completo = $model->indirizzo.' '.Comune::find($model->citta)?->comuneConTarga();
+        $contrattoEnergia->testo_ricerca = $contrattoEnergia->denominazione.'|'.$contrattoEnergia->codice_contratto;
 
         $contrattoEnergia->save();
 
         return $model;
     }
-
 
     public function rulesProdotto($id = null)
     {
@@ -141,7 +137,7 @@ class Generico extends ProdottoEnergiaAbstract
         $isBusiness = request()->input('categoria_pratica') === 'business';
 
         $rules = [
-            'partita_iva' => $isBusiness ? ['required', new \App\Rules\PartitaIvaRule()] : ['nullable', new \App\Rules\PartitaIvaRule()],
+            'partita_iva' => $isBusiness ? ['required', new PartitaIvaRule] : ['nullable', new PartitaIvaRule],
             'forma_giuridica' => $isBusiness ? ['required', 'max:255'] : ['nullable', 'max:255'],
             'cellulare' => ['nullable', 'max:255'],
             'fax' => ['nullable', 'max:255'],
@@ -151,7 +147,7 @@ class Generico extends ProdottoEnergiaAbstract
             'fornitura_richiesta' => ['nullable'],
             'fasce_reperibilita' => ['nullable'],
             'attuale_fornitore_luce' => ['nullable', 'max:255'],
-            'pod' => ['nullable', new \App\Rules\PodRule()],
+            'pod' => ['nullable', new PodRule],
             'provenienza_mercato_libero' => ['nullable'],
             'uso_non_professionale_luce' => ['nullable'],
             'consumo_annuo_luce' => ['nullable', 'max:255'],
@@ -163,7 +159,7 @@ class Generico extends ProdottoEnergiaAbstract
             'comune_fornitura_luce' => ['nullable', 'max:255'],
             'cap_fornitura_luce' => ['nullable'],
             'attuale_fornitore_gas' => ['nullable', 'max:255'],
-            'pdr' => ['nullable', new \App\Rules\PdrRule()],
+            'pdr' => ['nullable', new PdrRule],
             'uso_non_professionale_gas' => ['nullable'],
             'consumo_annuo_gas' => ['nullable', 'max:255'],
             'attuale_societa_gas' => ['nullable', 'max:255'],
@@ -182,7 +178,7 @@ class Generico extends ProdottoEnergiaAbstract
             'modalita_pagamento_fattura' => ['nullable', 'max:255'],
             'intestatario_conto_corrente' => ['nullable', 'max:255'],
             'codice_fiscale_intestatario' => ['nullable', 'max:255'],
-            'iban' => ['nullable', new \App\Rules\IbanRule()],
+            'iban' => ['nullable', new IbanRule],
             'modalita_spedizione_fattura' => ['nullable', 'max:255'],
             'indirizzo_spedizione_fattura' => ['nullable', 'max:255'],
             'civico_spedizione_fattura' => ['nullable', 'max:255'],
@@ -195,11 +191,8 @@ class Generico extends ProdottoEnergiaAbstract
         return $rules;
     }
 
-
     public function determinaProvvigione(Request $request)
     {
         return $this->calcolaProvvigioneDaGestore($request, 1, false);
     }
-
-
 }

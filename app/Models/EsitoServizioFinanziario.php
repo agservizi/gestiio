@@ -3,35 +3,31 @@
 namespace App\Models;
 
 use Cviebrock\EloquentSluggable\Sluggable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EsitoServizioFinanziario extends Model
 {
-
     use Sluggable;
 
-    protected $table = "tab_esiti_servizi";
+    protected $table = 'tab_esiti_servizi';
+
     public $incrementing = false;
 
+    public const NOME_SINGOLARE = 'esito servizio finanziario';
 
-    public const NOME_SINGOLARE = "esito servizio finanziario";
-    public const NOME_PLURALE = "esiti servizi finanziari";
+    public const NOME_PLURALE = 'esiti servizi finanziari';
 
     /**
      * Return the sluggable configuration array for this model.
-     *
-     * @return array
      */
     public function sluggable(): array
     {
         return [
             'id' => [
-                'source' => 'nome'
-            ]
+                'source' => 'nome',
+            ],
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -59,7 +55,7 @@ class EsitoServizioFinanziario extends Model
     {
         if ($this->esito_finale) {
 
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:' . ContrattoTelefonia::ESITI[$this->esito_finale] . ';"></span>';
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.ContrattoTelefonia::ESITI[$this->esito_finale].';"></span>';
         }
     }
 

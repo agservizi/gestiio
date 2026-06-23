@@ -10,14 +10,14 @@ class ChatWebPushService
 {
     public function isConfigured(): bool
     {
-        return !empty(config('services.webpush.vapid.public_key'))
-            && !empty(config('services.webpush.vapid.private_key'))
-            && !empty(config('services.webpush.vapid.subject'));
+        return ! empty(config('services.webpush.vapid.public_key'))
+            && ! empty(config('services.webpush.vapid.private_key'))
+            && ! empty(config('services.webpush.vapid.subject'));
     }
 
     public function sendToUser(int $userId, array $payload): void
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             return;
         }
 
@@ -57,7 +57,7 @@ class ChatWebPushService
 
         foreach ($webPush->flush() as $report) {
             $endpoint = $report->getRequest()?->getUri()?->__toString();
-            if (!$endpoint) {
+            if (! $endpoint) {
                 continue;
             }
 
@@ -66,6 +66,7 @@ class ChatWebPushService
                     ->where('user_id', $userId)
                     ->where('endpoint', $endpoint)
                     ->update(['last_used_at' => now()]);
+
                 continue;
             }
 

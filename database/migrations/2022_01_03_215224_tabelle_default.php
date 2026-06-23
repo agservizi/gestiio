@@ -95,7 +95,6 @@ class TabelleDefault extends Migration
     {
         //
 
-
         Schema::create('elenco_comuni', function (Blueprint $table) {
 
             $table->id();
@@ -111,9 +110,7 @@ class TabelleDefault extends Migration
             $table->double('longitude')->nullable();
             $table->double('latitude')->nullable();
 
-
         });
-
 
         Schema::create('elenco_province', function (Blueprint $table) {
             $table->id();
@@ -122,7 +119,6 @@ class TabelleDefault extends Migration
             $table->unsignedBigInteger('id_regione')->default(null);
             $table->string('regione')->default(null);
             $table->point('location')->nullable();
-
 
         });
 
@@ -135,10 +131,7 @@ class TabelleDefault extends Migration
             $table->string('nazionalitaEN', 45)->nullable();
             $table->string('nazionalitaIT', 50)->nullable()->index();
 
-
         });
 
-
     }
-
 }

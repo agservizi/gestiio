@@ -23,8 +23,8 @@ class DataOraItalianaRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
@@ -33,6 +33,7 @@ class DataOraItalianaRule implements Rule
             $data = Carbon::createFromFormat('d/m/Y H:i', $value);
         } catch (InvalidFormatException $e) {
             $this->errorMessage = 'Il formato della data non è corretto';
+
             return false;
         }
 
@@ -42,6 +43,7 @@ class DataOraItalianaRule implements Rule
             return true;
         } else {
             $this->errorMessage = 'La data deve essere nel passato.';
+
             return false;
 
         }

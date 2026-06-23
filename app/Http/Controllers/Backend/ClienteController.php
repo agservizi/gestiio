@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cliente;
 use App\Models\ContrattoTelefonia;
 use App\Models\Notifica;
 use App\Models\User;
 use App\Notifications\NotificaDatiAccessoCliente;
-use App\Notifications\NotificaDatiAccessoClienteContratto;
+use App\Rules\CodiceFiscaleRule;
 use App\Rules\PartitaIvaRule;
+use App\Rules\TelefonoRule;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Cliente;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
@@ -19,7 +23,6 @@ use Illuminate\Support\Facades\Session;
 class ClienteController extends Controller
 {
     protected $conFiltro = false;
-
 
     /**
      * Display a listing of the resource.
@@ -38,7 +41,7 @@ class ClienteController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -49,7 +52,7 @@ class ClienteController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -59,7 +62,7 @@ class ClienteController extends Controller
             $currentUser->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -70,36 +73,34 @@ class ClienteController extends Controller
                 'html' => base64_encode(view('Backend.Cliente.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
             ];
 
         }
 
-
         return view('Backend.Cliente.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Cliente::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Cliente::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\Cliente::NOME_SINGOLARE,
-            'testoCerca' => 'Cerca in nome, cognome, ragione sociale, codice fiscale'
+            'testoNuovo' => 'Nuovo '.Cliente::NOME_SINGOLARE,
+            'testoCerca' => 'Cerca in nome, cognome, ragione sociale, codice fiscale',
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Cliente::query()
+        $queryBuilder = Cliente::query()
             ->with('utente');
         $term = $request->input('cerca');
         if ($term) {
@@ -109,24 +110,24 @@ class ClienteController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new Cliente();
+        $record = new Cliente;
+
         return view('Backend.Cliente.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Cliente::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Cliente::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco ' . Cliente::NOME_PLURALE]
+            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco '.Cliente::NOME_PLURALE],
 
         ]);
     }
@@ -134,34 +135,34 @@ class ClienteController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new Cliente();
+        $record = new Cliente;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = Cliente::with('utente')->find($id);
-        abort_if(!$record, 404, 'Questo cliente non esiste');
+        abort_if(! $record, 404, 'Questo cliente non esiste');
 
         return view('Backend.Cliente.show', [
             'record' => $record,
             'records' => $this->tabContrattiTelefoniaRecords($id, 'tab_contratti_telefonia'),
             'controller' => ClienteController::class,
-            'titoloPagina' => ucfirst(Cliente::NOME_SINGOLARE) . ' ' . $record->nominativo(),
-            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco ' . Cliente::NOME_PLURALE],
+            'titoloPagina' => ucfirst(Cliente::NOME_SINGOLARE).' '.$record->nominativo(),
+            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco '.Cliente::NOME_PLURALE],
             'puoModificare' => ContrattoTelefonia::determinaPuoModificare(),
             'puoCambiareStato' => ContrattoTelefonia::determinaPuoCambiareStato(),
             'puoCreare' => ContrattoTelefonia::determinaPuoCreare(),
@@ -173,24 +174,25 @@ class ClienteController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = Cliente::find($id);
-        abort_if(!$record, 404, 'Questo cliente non esiste');
+        abort_if(! $record, 404, 'Questo cliente non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.Cliente.edit', [
             'record' => $record,
             'controller' => ClienteController::class,
-            'titoloPagina' => 'Modifica ' . Cliente::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Cliente::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco ' . Cliente::NOME_PLURALE]
+            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco '.Cliente::NOME_PLURALE],
 
         ]);
     }
@@ -198,32 +200,31 @@ class ClienteController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = Cliente::find($id);
-        abort_if(!$record, 404, 'Questo ' . Cliente::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.Cliente::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = Cliente::find($id);
-        abort_if(!$record, 404, 'Questo cliente non esiste');
+        abort_if(! $record, 404, 'Questo cliente non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -241,7 +242,7 @@ class ClienteController extends Controller
                     'puoModificare' => ContrattoTelefonia::determinaPuoModificare(),
                     'puoCambiareStato' => ContrattoTelefonia::determinaPuoCambiareStato(),
                     'puoCreare' => ContrattoTelefonia::determinaPuoCreare(),
-                    'controller' => ContrattoTelefoniaController::class
+                    'controller' => ContrattoTelefoniaController::class,
 
                 ]);
         }
@@ -250,14 +251,14 @@ class ClienteController extends Controller
     public function azioni(Request $request, $id, $azione)
     {
         $cliente = Cliente::find($id);
-        if (!$cliente) {
+        if (! $cliente) {
             return ['success' => false, 'message' => 'Questo utente non esiste'];
         }
         switch ($azione) {
 
             case 'crea-utente':
-                if (!$cliente->user_id) {
-                    $user = new User();
+                if (! $cliente->user_id) {
+                    $user = new User;
                     $user->name = $cliente->nome;
                     $user->cognome = $cliente->cognome;
                     $user->email = $cliente->email;
@@ -274,16 +275,14 @@ class ClienteController extends Controller
                         $user->save();
 
                     } catch (\Exception $exception) {
-                        Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a ' . $user->nominativo() . ': ' . $exception->getMessage(), 'error');
+                        Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a '.$user->nominativo().': '.$exception->getMessage(), 'error');
 
                     }
-
 
                     return ['success' => true, 'message' => 'Utente creato ed email inviata'];
                 } else {
                     return ['success' => false, 'message' => 'Questo cliente ha già un utente'];
                 }
-
 
             case 'invia-dati-accesso':
 
@@ -299,10 +298,9 @@ class ClienteController extends Controller
 
                 } catch (\Exception $exception) {
 
-                    return ['success' => false, 'message' => 'Errore nell\'invio della mail:' . $exception->getMessage()];
+                    return ['success' => false, 'message' => 'Errore nell\'invio della mail:'.$exception->getMessage()];
 
                 }
-
 
                 return ['success' => true, 'message' => 'mail inviata'];
 
@@ -316,29 +314,28 @@ class ClienteController extends Controller
                 $user = User::find($id);
                 $user->password = bcrypt('123456');
                 $user->save();
-                return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
 
+                return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
 
         }
 
     }
 
-
     /**
-     * @param Cliente $model
-     * @param Request $request
+     * @param  Cliente  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_fiscale' => 'strtoupper',
             'ragione_sociale' => 'app\getInputUcwords',
@@ -360,6 +357,7 @@ class ClienteController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -373,25 +371,23 @@ class ClienteController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Cliente::get();
+        return Cliente::get();
     }
-
 
     protected function rules($id = null)
     {
 
-
         $rules = [
-            'codice_fiscale' => ['required', new \App\Rules\CodiceFiscaleRule()],
+            'codice_fiscale' => ['required', new CodiceFiscaleRule],
             'ragione_sociale' => ['nullable', 'max:255'],
             'nome' => ['required', 'max:255'],
             'cognome' => ['required', 'max:255'],
             'email' => ['nullable', 'max:255'],
-            'telefono' => ['required', new \App\Rules\TelefonoRule()],
+            'telefono' => ['required', new TelefonoRule],
             'indirizzo' => ['nullable', 'max:255'],
             'citta' => ['nullable', 'max:255'],
             'cap' => ['nullable'],
-            'partita_iva' => ['nullable', new PartitaIvaRule()],
+            'partita_iva' => ['nullable', new PartitaIvaRule],
         ];
 
         return $rules;
@@ -401,7 +397,7 @@ class ClienteController extends Controller
     {
 
         $user = User::find($cliente->user_id);
-        if (!$user) {
+        if (! $user) {
             return ['success' => false, 'message' => 'Questo cliente non ha una utente'];
         }
         if ($user->hasPermissionTo('admin') && Auth::id() != 1) {
@@ -410,12 +406,13 @@ class ClienteController extends Controller
 
         Session::put('impersona', Auth::id());
         Auth::loginUsingId($user->id, false);
+
         return ['success' => true, 'redirect' => '/'];
     }
 
     protected function tabContrattiTelefoniaRecords($id, $tab)
     {
-        $qb = \App\Models\ContrattoTelefonia::query()
+        $qb = ContrattoTelefonia::query()
             ->whereRelation('cliente', 'id', $id)
             ->with(['comune' => function ($q) {
                 $q->select('id', 'comune', 'targa');
@@ -435,9 +432,10 @@ class ClienteController extends Controller
             ->withCount('allegati')
             ->latest('id');
 
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $paginator */
+        /** @var LengthAwarePaginator $paginator */
         $paginator = $qb->paginate();
         $paginator->withPath(action([ClienteController::class, 'tab'], ['id' => $id, 'tab' => $tab]));
+
         return $paginator;
     }
 
@@ -445,6 +443,7 @@ class ClienteController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+
         return $user->hasAnyPermission(['admin', 'supervisore']);
 
     }
@@ -453,6 +452,7 @@ class ClienteController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+
         return $this->determinaPuoModificare() || $user->hasPermissionTo('supervisore');
 
     }
@@ -461,9 +461,8 @@ class ClienteController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+
         return $user->hasAnyPermission(['admin', 'agente']);
 
     }
-
-
 }

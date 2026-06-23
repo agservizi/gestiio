@@ -139,7 +139,6 @@ class PasswordRules implements Rule
     /**
      * Set the minimum length of the password.
      *
-     * @param  int  $length
      * @return $this
      */
     public function length(int $length)
@@ -188,7 +187,6 @@ class PasswordRules implements Rule
     /**
      * Set the message that should be used when the rule fails.
      *
-     * @param  string  $message
      * @return $this
      */
     public function withMessage(string $message)

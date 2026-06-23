@@ -43,4 +43,3 @@ return [
     'VIVI energia' => 'VIVI energia',
     'Wekiwi' => 'Wekiwi',
 ];
-

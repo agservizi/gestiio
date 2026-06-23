@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 return [
 
     /*
@@ -62,7 +64,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model' => User::class,
         ],
 
         // 'users' => [
@@ -96,7 +98,7 @@ return [
         'new_users' => [
             'provider' => 'users',
             'table' => 'password_resets',
-            'expire' => 60*24,
+            'expire' => 60 * 24,
             'throttle' => 60,
         ],
     ],

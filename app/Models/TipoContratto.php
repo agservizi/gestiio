@@ -3,16 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TipoContratto extends Model
 {
+    protected $table = 'tipi_contratto';
 
-    protected $table = "tipi_contratto";
+    public const NOME_SINGOLARE = 'tipo contratto';
 
-    public const NOME_SINGOLARE = "tipo contratto";
-    public const NOME_PLURALE = "tipi contratto";
+    public const NOME_PLURALE = 'tipi contratto';
 
     /*
     |--------------------------------------------------------------------------
@@ -43,7 +42,7 @@ class TipoContratto extends Model
 
     public function scopeSoloAttivi(Builder $query): Builder
     {
-        return $query->where('attivo',1);
+        return $query->where('attivo', 1);
     }
 
     /*
@@ -60,7 +59,6 @@ class TipoContratto extends Model
             }
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------

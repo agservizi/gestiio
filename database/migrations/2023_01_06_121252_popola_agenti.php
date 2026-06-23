@@ -1,10 +1,11 @@
 <?php
 
+use App\Models\Agente;
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -13,14 +14,14 @@ return new class extends Migration {
     public function up()
     {
 
-        foreach (\App\Models\User::get() as $user) {
+        foreach (User::get() as $user) {
             $user->nome = $user->name;
             $user->save();
         }
 
-        \App\Models\Agente::truncate();
-        foreach (\App\Models\User::whereHas('permissions')->get() as $user) {
-            $agente = new \App\Models\Agente();
+        Agente::truncate();
+        foreach (User::whereHas('permissions')->get() as $user) {
+            $agente = new Agente;
             $agente->user_id = $user->id;
             $agente->codice_fiscale = $user->codice_fiscale;
             $agente->ragione_sociale = $user->ragione_sociale;

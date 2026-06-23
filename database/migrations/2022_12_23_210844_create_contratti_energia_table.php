@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -16,7 +17,6 @@ return new class extends Migration {
         Schema::table('tab_gestori_contratti_energia', function (Blueprint $table) {
             $table->string('model_prodotto')->nullable();
         });
-
 
         Schema::create('contratti_energia', function (Blueprint $table) {
             $table->id();
@@ -38,7 +38,6 @@ return new class extends Migration {
             $table->string('scala', 10)->nullable();
             $table->string('interno', 10)->nullable();
 
-
             $table->text('note')->nullable();
             $table->string('uid')->index();
 
@@ -47,18 +46,16 @@ return new class extends Migration {
             $table->string('motivo_ko')->nullable();
             $table->boolean('pagato')->default(0);
 
-            //Documento
+            // Documento
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento')->nullable();
             $table->string('rilasciato_da')->nullable();
             $table->date('data_rilascio')->nullable();
             $table->date('data_scadenza')->nullable();
 
-
             $table->unsignedBigInteger('prodotto_id')->nullable();
             $table->string('prodotto_type')->nullable();
             $table->index(['prodotto_id', 'prodotto_type']);
-
 
         });
 

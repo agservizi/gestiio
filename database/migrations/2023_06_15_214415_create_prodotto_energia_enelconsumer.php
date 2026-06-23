@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -17,8 +18,7 @@ return new class extends Migration {
             $table->timestamps();
             $table->boolean('residente_fornitura');
 
-
-            //Indirizzo di fornitura
+            // Indirizzo di fornitura
             $table->string('indirizzo_fornitura')->nullable();
             $table->string('nr_fornitura')->nullable();
             $table->string('scala_fornitura')->nullable();
@@ -26,7 +26,7 @@ return new class extends Migration {
             $table->string('cap_fornitura', 5)->nullable();
             $table->string('comune_fornitura')->nullable();
 
-            //Indirizzo fatturazione
+            // Indirizzo fatturazione
             $table->string('indirizzo_fatturazione')->nullable();
             $table->string('presso_fatturazione')->nullable();
             $table->string('nr_fatturazione')->nullable();
@@ -35,14 +35,14 @@ return new class extends Migration {
             $table->string('cap_fatturazione', 5)->nullable();
             $table->string('comune_fatturazione')->nullable();
 
-            //Dati del punto di fornitura di energia elettrica
+            // Dati del punto di fornitura di energia elettrica
             $table->string('pod')->nullable();
             $table->boolean('provenienza_mercato_libero');
             $table->string('consumo_annuo_luce')->nullable();
             $table->string('potenza_contrattuale')->nullable();
             $table->string('attuale_societa_luce')->nullable();
 
-            //Dati del punto fornitura di gas metano
+            // Dati del punto fornitura di gas metano
             $table->string('pdr')->nullable();
             $table->string('consumo_annuo_gas')->nullable();
             $table->string('attuale_societa_gas')->nullable();
@@ -61,7 +61,6 @@ return new class extends Migration {
 
             $table->string('iban')->nullable();
             $table->string('bic_swift')->nullable();
-
 
         });
     }

@@ -28,7 +28,8 @@ class CreateDemoAgente extends Command
             DB::connection()->getPdo();
         } catch (\Throwable $e) {
             $this->error('Connessione DB non disponibile. Verifica .env/host DB.');
-            $this->line('Dettaglio: ' . $e->getMessage());
+            $this->line('Dettaglio: '.$e->getMessage());
+
             return self::FAILURE;
         }
 
@@ -40,6 +41,7 @@ class CreateDemoAgente extends Command
 
         if ($email === '' || $nome === '' || $cognome === '' || $telefono === '') {
             $this->error('Email, nome, cognome e telefono sono obbligatori.');
+
             return self::FAILURE;
         }
 
@@ -49,8 +51,8 @@ class CreateDemoAgente extends Command
             $user = User::query()->where('email', $email)->first();
             $isNewUser = false;
 
-            if (!$user) {
-                $user = new User();
+            if (! $user) {
+                $user = new User;
                 $isNewUser = true;
                 $user->email = $email;
             }
@@ -58,7 +60,7 @@ class CreateDemoAgente extends Command
             $user->nome = $nome;
             $user->cognome = $cognome;
             $user->telefono = $telefono;
-            $user->alias = $cognome . ' ' . $nome;
+            $user->alias = $cognome.' '.$nome;
 
             if ($isNewUser || (bool) $this->option('force-password')) {
                 $user->password = Hash::make($password);
@@ -71,7 +73,7 @@ class CreateDemoAgente extends Command
             $user->save();
 
             $agente = Agente::query()->firstOrNew(['user_id' => $user->id]);
-            $agente->ragione_sociale = $agente->ragione_sociale ?: ($cognome . ' ' . $nome);
+            $agente->ragione_sociale = $agente->ragione_sociale ?: ($cognome.' '.$nome);
             $agente->save();
 
             Permission::findOrCreate('agente');
@@ -80,15 +82,16 @@ class CreateDemoAgente extends Command
             DB::commit();
 
             $this->info($isNewUser ? 'Account demo agente creato.' : 'Account demo agente aggiornato.');
-            $this->line('ID utente: ' . $user->id);
-            $this->line('Email: ' . $email);
-            $this->line('Password: ' . ($isNewUser || (bool) $this->option('force-password') ? $password : '[invariata]'));
+            $this->line('ID utente: '.$user->id);
+            $this->line('Email: '.$email);
+            $this->line('Password: '.($isNewUser || (bool) $this->option('force-password') ? $password : '[invariata]'));
             $this->line('Permesso: agente');
 
             return self::SUCCESS;
         } catch (\Throwable $e) {
             DB::rollBack();
-            $this->error('Errore creazione account demo agente: ' . $e->getMessage());
+            $this->error('Errore creazione account demo agente: '.$e->getMessage());
+
             return self::FAILURE;
         }
     }

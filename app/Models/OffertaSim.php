@@ -10,10 +10,11 @@ class OffertaSim extends Model
 {
     use HasFactory;
 
-    protected $table = "offerte_sim";
+    protected $table = 'offerte_sim';
 
-    public const NOME_SINGOLARE = "offerta sim";
-    public const NOME_PLURALE = "offerte sim";
+    public const NOME_SINGOLARE = 'offerta sim';
+
+    public const NOME_PLURALE = 'offerte sim';
 
     /*
     |--------------------------------------------------------------------------
@@ -46,7 +47,6 @@ class OffertaSim extends Model
             }
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------

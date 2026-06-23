@@ -3,26 +3,25 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\ListinoBrt;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ListinoBrtController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
@@ -32,35 +31,34 @@ class ListinoBrtController extends Controller
                 'html' => base64_encode(view('Backend.ListinoBrt.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.ListinoBrt.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\ListinoBrt::NOME_PLURALE,
-            'orderBy' => null,//,
-            'ordinamenti' => null,// $ordinamenti,
+            'titoloPagina' => 'Elenco '.ListinoBrt::NOME_PLURALE,
+            'orderBy' => null, // ,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\ListinoBrt::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.ListinoBrt::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\ListinoBrt::query()->orderBy('da_peso');
+        $queryBuilder = ListinoBrt::query()->orderBy('da_peso');
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -69,24 +67,24 @@ class ListinoBrtController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new ListinoBrt();
+        $record = new ListinoBrt;
+
         return view('Backend.ListinoBrt.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . ListinoBrt::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.ListinoBrt::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([ListinoBrtController::class, 'index']) => 'Torna a elenco ' . ListinoBrt::NOME_PLURALE]
+            'breadcrumbs' => [action([ListinoBrtController::class, 'index']) => 'Torna a elenco '.ListinoBrt::NOME_PLURALE],
 
         ]);
     }
@@ -94,32 +92,33 @@ class ListinoBrtController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new ListinoBrt();
+        $record = new ListinoBrt;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = ListinoBrt::find($id);
-        abort_if(!$record, 404, 'Questo listinobrt non esiste');
+        abort_if(! $record, 404, 'Questo listinobrt non esiste');
+
         return view('Backend.ListinoBrt.show', [
             'record' => $record,
             'controller' => ListinoBrtController::class,
             'titoloPagina' => ListinoBrt::NOME_SINGOLARE,
-            'breadcrumbs' => [action([ListinoBrtController::class, 'index']) => 'Torna a elenco ' . ListinoBrt::NOME_PLURALE]
+            'breadcrumbs' => [action([ListinoBrtController::class, 'index']) => 'Torna a elenco '.ListinoBrt::NOME_PLURALE],
 
         ]);
     }
@@ -127,24 +126,25 @@ class ListinoBrtController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = ListinoBrt::find($id);
-        abort_if(!$record, 404, 'Questo listinobrt non esiste');
+        abort_if(! $record, 404, 'Questo listinobrt non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.ListinoBrt.edit', [
             'record' => $record,
             'controller' => ListinoBrtController::class,
-            'titoloPagina' => 'Modifica ' . ListinoBrt::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.ListinoBrt::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ListinoBrtController::class, 'index']) => 'Torna a elenco ' . ListinoBrt::NOME_PLURALE]
+            'breadcrumbs' => [action([ListinoBrtController::class, 'index']) => 'Torna a elenco '.ListinoBrt::NOME_PLURALE],
 
         ]);
     }
@@ -152,32 +152,31 @@ class ListinoBrtController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = ListinoBrt::find($id);
-        abort_if(!$record, 404, 'Questo ' . ListinoBrt::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.ListinoBrt::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = ListinoBrt::find($id);
-        abort_if(!$record, 404, 'Questo listinobrt non esiste');
+        abort_if(! $record, 404, 'Questo listinobrt non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -186,20 +185,20 @@ class ListinoBrtController extends Controller
     }
 
     /**
-     * @param ListinoBrt $model
-     * @param Request $request
+     * @param  ListinoBrt  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'da_peso' => 'app\getInputNumero',
             'a_peso' => 'app\getInputNumero',
@@ -217,6 +216,7 @@ class ListinoBrtController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -230,13 +230,11 @@ class ListinoBrtController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\ListinoBrt::get();
+        return ListinoBrt::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'da_peso' => ['required'],
@@ -248,5 +246,4 @@ class ListinoBrtController extends Controller
 
         return $rules;
     }
-
 }

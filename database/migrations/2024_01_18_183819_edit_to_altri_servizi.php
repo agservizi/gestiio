@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -30,7 +31,6 @@ return new class extends Migration {
         Schema::table('brt_spedizioni', function (Blueprint $table) {
             $table->foreignId('caricato_da_user_id')->after('agente_id')->nullable()->constrained('users');
         });
-
 
     }
 

@@ -12,6 +12,7 @@ class ListinoInpost extends Model
     protected $table = 'inpost_listino';
 
     public const NOME_SINGOLARE = 'listino InPost';
+
     public const NOME_PLURALE = 'listini InPost';
 
     public static function trovaTariffa(string $packageType): ?self
@@ -40,6 +41,6 @@ class ListinoInpost extends Model
             ? 'Indirizzo del destinatario'
             : 'Locker o punto di ritiro';
 
-        return $package . ' / ' . $delivery;
+        return $package.' / '.$delivery;
     }
 }

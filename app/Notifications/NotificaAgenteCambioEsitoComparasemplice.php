@@ -3,10 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Comparasemplice;
-use App\Models\ContrattoTelefonia;
-use App\Models\ServizioFinanziario;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
@@ -18,7 +15,7 @@ class NotificaAgenteCambioEsitoComparasemplice extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param Comparasemplice $servizioFinanziario
+     * @param  Comparasemplice  $servizioFinanziario
      */
     public function __construct(protected $servizioFinanziario)
     {
@@ -40,15 +37,15 @@ class NotificaAgenteCambioEsitoComparasemplice extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         return (new MailMessage)
             ->subject('Segnalazione ComparaSemplice aggiornata')
-                    ->line('La segnalazione di '.$this->servizioFinanziario->nominativo())
-                    ->line('è stata aggiornata a: ')
-                    ->line(new HtmlString('<strong>'.$this->servizioFinanziario->esito->nome.'</strong>'));
+            ->line('La segnalazione di '.$this->servizioFinanziario->nominativo())
+            ->line('è stata aggiornata a: ')
+            ->line(new HtmlString('<strong>'.$this->servizioFinanziario->esito->nome.'</strong>'));
     }
 
     /**

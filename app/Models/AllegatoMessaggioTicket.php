@@ -11,7 +11,6 @@ class AllegatoMessaggioTicket extends Model
 
     protected $table = 'tickets_allegati';
 
-
     /**
      * The "booted" method of the model.
      *
@@ -36,12 +35,13 @@ class AllegatoMessaggioTicket extends Model
         if ($id) {
             $qb->orWhere('messaggio_id', $id);
         }
+
         return $qb->get()->toArray();
     }
 
     public function urlFile()
     {
-        return '/storage' . $this->path_filename;
+        return '/storage'.$this->path_filename;
     }
 
     protected static function tipoFile($estensione)
@@ -61,6 +61,4 @@ class AllegatoMessaggioTicket extends Model
         }
 
     }
-
-
 }

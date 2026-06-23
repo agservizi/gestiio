@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\EsitoComparasemplice;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class EsitoComparasempliceController extends Controller
 {
@@ -15,7 +17,7 @@ class EsitoComparasempliceController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -29,7 +31,7 @@ class EsitoComparasempliceController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -38,7 +40,7 @@ class EsitoComparasempliceController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -48,7 +50,7 @@ class EsitoComparasempliceController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -59,44 +61,42 @@ class EsitoComparasempliceController extends Controller
                 'html' => base64_encode(view('Backend.EsitoComparasemplice.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.EsitoComparasemplice.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoComparasemplice::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.EsitoComparasemplice::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\EsitoComparasemplice::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.EsitoComparasemplice::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
 
         return view('Backend.EsitoComparasemplice.index', [
             'records' => $this->queryBuilderIndex(),
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoComparasemplice::NOME_PLURALE,
-            'testoNuovo' => 'Nuovo ' . \App\Models\EsitoComparasemplice::NOME_SINGOLARE,
-            'testoCerca' => null
+            'titoloPagina' => 'Elenco '.EsitoComparasemplice::NOME_PLURALE,
+            'testoNuovo' => 'Nuovo '.EsitoComparasemplice::NOME_SINGOLARE,
+            'testoCerca' => null,
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\EsitoComparasemplice::query();
+        $queryBuilder = EsitoComparasemplice::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -105,24 +105,24 @@ class EsitoComparasempliceController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new EsitoComparasemplice();
+        $record = new EsitoComparasemplice;
+
         return view('Backend.EsitoComparasemplice.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . EsitoComparasemplice::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.EsitoComparasemplice::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([EsitoComparasempliceController::class, 'index']) => 'Torna a elenco ' . EsitoComparasemplice::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoComparasempliceController::class, 'index']) => 'Torna a elenco '.EsitoComparasemplice::NOME_PLURALE],
 
         ]);
     }
@@ -130,32 +130,33 @@ class EsitoComparasempliceController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new EsitoComparasemplice();
+        $record = new EsitoComparasemplice;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = EsitoComparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo EsitoComparasemplice non esiste');
+        abort_if(! $record, 404, 'Questo EsitoComparasemplice non esiste');
+
         return view('Backend.EsitoComparasemplice.show', [
             'record' => $record,
             'controller' => EsitoComparasempliceController::class,
             'titoloPagina' => EsitoComparasemplice::NOME_SINGOLARE,
-            'breadcrumbs' => [action([EsitoComparasempliceController::class, 'index']) => 'Torna a elenco ' . EsitoComparasemplice::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoComparasempliceController::class, 'index']) => 'Torna a elenco '.EsitoComparasemplice::NOME_PLURALE],
 
         ]);
     }
@@ -163,24 +164,25 @@ class EsitoComparasempliceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = EsitoComparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo EsitoComparasemplice non esiste');
+        abort_if(! $record, 404, 'Questo EsitoComparasemplice non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.EsitoComparasemplice.edit', [
             'record' => $record,
             'controller' => EsitoComparasempliceController::class,
-            'titoloPagina' => 'Modifica ' . EsitoComparasemplice::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.EsitoComparasemplice::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([EsitoComparasempliceController::class, 'index']) => 'Torna a elenco ' . EsitoComparasemplice::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoComparasempliceController::class, 'index']) => 'Torna a elenco '.EsitoComparasemplice::NOME_PLURALE],
 
         ]);
     }
@@ -188,32 +190,31 @@ class EsitoComparasempliceController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = EsitoComparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo ' . EsitoComparasemplice::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.EsitoComparasemplice::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = EsitoComparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo EsitoComparasemplice non esiste');
+        abort_if(! $record, 404, 'Questo EsitoComparasemplice non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -222,20 +223,20 @@ class EsitoComparasempliceController extends Controller
     }
 
     /**
-     * @param EsitoComparasemplice $model
-     * @param Request $request
+     * @param  EsitoComparasemplice  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
@@ -253,6 +254,7 @@ class EsitoComparasempliceController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -266,13 +268,11 @@ class EsitoComparasempliceController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\EsitoComparasemplice::get();
+        return EsitoComparasemplice::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -285,5 +285,4 @@ class EsitoComparasempliceController extends Controller
 
         return $rules;
     }
-
 }

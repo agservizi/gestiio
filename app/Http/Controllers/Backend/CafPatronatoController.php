@@ -6,6 +6,7 @@ use App\Enums\TipiPortafoglioEnum;
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\AlertMessage;
 use App\Models\AllegatoCafPatronato;
+use App\Models\CafPatronato;
 use App\Models\Cliente;
 use App\Models\EsitoCafPatronato;
 use App\Models\MovimentoPortafoglio;
@@ -13,21 +14,25 @@ use App\Models\Notifica;
 use App\Models\TabMotivoKo;
 use App\Models\TipoCafPatronato;
 use App\Models\User;
-use App\Notifications\NotificaAgenteCambioEsitoContratto;
 use App\Notifications\NotificaCafPatronato;
 use App\Notifications\NotificaCafPatronatoACliente;
 use App\Notifications\NotificaCafPatronatoAdAdmin;
 use App\Notifications\NotificaCafPatronatoCambioEsitoAdAgente;
+use App\Rules\CodiceFiscaleRule;
 use Carbon\Carbon;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\CafPatronato;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
 use function App\importo;
@@ -45,17 +50,16 @@ class CafPatronatoController extends Controller
         return $user;
     }
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     * @return array|Application|Factory|View
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-        $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+        $giorniFermo = max(1, (int) $request->input('giorni_fermo', 7));
 
         $ordinamenti = [
             'recente' => ['testo' => 'Più recente', 'filtro' => function ($q) {
@@ -64,7 +68,7 @@ class CafPatronatoController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -73,7 +77,7 @@ class CafPatronatoController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -83,7 +87,7 @@ class CafPatronatoController extends Controller
             $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $kpiInLavorazione = (clone $recordsQB)
@@ -122,21 +126,20 @@ class CafPatronatoController extends Controller
                     'controller' => $nomeClasse,
                     'puoModificare' => $puoModificare,
                     'puoModificareEsito' => $puoModificareEsito,
-                ])->render())
+                ])->render()),
             ];
         }
 
         if ($this->currentUser()->hasAnyPermission(['admin', 'agente', 'operatore', 'supervisore'])) {
-            $testoNuovo = 'Nuova ' . \App\Models\CafPatronato::NOME_SINGOLARE;
+            $testoNuovo = 'Nuova '.CafPatronato::NOME_SINGOLARE;
         } else {
             $testoNuovo = null;
         }
 
-
         return view('Backend.CafPatronato.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\CafPatronato::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.CafPatronato::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
@@ -156,13 +159,13 @@ class CafPatronatoController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\CafPatronato::query()
+        $queryBuilder = CafPatronato::query()
             ->with('esito')
             ->with('agente')
             ->with('tipo:id,nome')
@@ -199,7 +202,6 @@ class CafPatronatoController extends Controller
             $queryBuilder->whereDate('data', '=', $dataDa)->whereDate('data', '<=', $dataA);
         }
 
-
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -230,36 +232,35 @@ class CafPatronatoController extends Controller
         }
 
         if ($request->boolean('solo_fermi')) {
-            $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+            $giorniFermo = max(1, (int) $request->input('giorni_fermo', 7));
             $queryBuilder
                 ->whereIn('esito_id', ['bozza', 'da-gestire'])
                 ->whereDate('created_at', '<=', now()->subDays($giorniFermo));
             $this->conFiltro = true;
         }
 
-
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     * @return Application|Factory|View
      */
     public function create($servizio = null)
     {
-        if (!$servizio) {
+        if (! $servizio) {
             $portafoglioServizi = $this->currentUser()->agente->portafoglio_servizi;
+
             return view('Backend.CafPatronato.create', [
-                'record' => new CafPatronato(),
+                'record' => new CafPatronato,
                 'titoloPagina' => 'Nuova pratica Caf / Patronato',
-                'portafoglioServizi'=>$portafoglioServizi,
+                'portafoglioServizi' => $portafoglioServizi,
                 'controller' => get_class($this),
-                'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco ' . CafPatronato::NOME_PLURALE]
+                'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco '.CafPatronato::NOME_PLURALE],
             ]);
         }
-        $record = new CafPatronato();
+        $record = new CafPatronato;
         $record->data = today();
         $record->uid = Str::ulid();
 
@@ -267,14 +268,13 @@ class CafPatronatoController extends Controller
             $record->agente_id = Auth::id();
         }
 
-
         $tipoCafPatronato = TipoCafPatronato::find($servizio);
 
         return view('Backend.CafPatronato.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuova pratica ' . $tipoCafPatronato->nome,
+            'titoloPagina' => 'Nuova pratica '.$tipoCafPatronato->nome,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco ' . CafPatronato::NOME_PLURALE],
+            'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco '.CafPatronato::NOME_PLURALE],
             'tipoCafPatronato' => $tipoCafPatronato,
         ]);
     }
@@ -282,8 +282,7 @@ class CafPatronatoController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
@@ -292,7 +291,7 @@ class CafPatronatoController extends Controller
         $request->validate($this->rules(null));
         DB::beginTransaction();
         $tipoCafPatronato = TipoCafPatronato::find($servizio);
-        $record = new CafPatronato();
+        $record = new CafPatronato;
         $record->esito_id = 'da-gestire';
         $record->prezzo_pratica = $tipoCafPatronato->prezzo_agente;
         $record->tipo_caf_patronato_id = $tipoCafPatronato->id;
@@ -300,14 +299,14 @@ class CafPatronatoController extends Controller
         $this->salvaDati($record, $request);
 
         if ($tipoCafPatronato->model) {
-            $func = 'salvaDati' . $tipoCafPatronato->model;
+            $func = 'salvaDati'.$tipoCafPatronato->model;
             $this->$func($record, $request);
         }
 
-        $movimento = new MovimentoPortafoglio();
+        $movimento = new MovimentoPortafoglio;
         $movimento->agente_id = Auth::id();
         $movimento->importo = -$tipoCafPatronato->prezzo_agente;
-        $movimento->descrizione = 'Pratica ' . $tipoCafPatronato->nome . ' per ' . $record->nominativo();
+        $movimento->descrizione = 'Pratica '.$tipoCafPatronato->nome.' per '.$record->nominativo();
         $movimento->prodotto_id = $record->id;
         $movimento->prodotto_type = get_class($record);
         $movimento->portafoglio = TipiPortafoglioEnum::SERVIZI->value;
@@ -318,11 +317,11 @@ class CafPatronatoController extends Controller
         $this->inviaNotifiche($record);
 
         if ($this->currentUser()->hasPermissionTo('agente')) {
-            Notifica::notificaAdAdmin('Nuova ' . CafPatronato::NOME_SINGOLARE, '<span class="fw-bold">' . $tipoCafPatronato->nome . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
+            Notifica::notificaAdAdmin('Nuova '.CafPatronato::NOME_SINGOLARE, '<span class="fw-bold">'.$tipoCafPatronato->nome.'</span> caricato da <span class="fw-bold">'.$record->agente->nominativo().'</span> per il cliente <span class="fw-bold">'.$record->nominativo().'</span>');
         }
 
-        $alertMessage = new AlertMessage();
-        $alertMessage->messaggio('Ti è stato scalato l\'importo di ' . importo($tipoCafPatronato->prezzo_agente) . ' per la pratica ' . $tipoCafPatronato->nome, 'primary')->titolo('Portafoglio aggiornato', 'primary')->flash();
+        $alertMessage = new AlertMessage;
+        $alertMessage->messaggio('Ti è stato scalato l\'importo di '.importo($tipoCafPatronato->prezzo_agente).' per la pratica '.$tipoCafPatronato->nome, 'primary')->titolo('Portafoglio aggiornato', 'primary')->flash();
 
         return $this->backToIndex();
     }
@@ -330,18 +329,19 @@ class CafPatronatoController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
         $record = CafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo cafpatronato non esiste');
+        abort_if(! $record, 404, 'Questo cafpatronato non esiste');
+
         return view('Backend.CafPatronato.show', [
             'record' => $record,
             'controller' => CafPatronatoController::class,
             'titoloPagina' => CafPatronato::NOME_SINGOLARE,
-            'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco ' . CafPatronato::NOME_PLURALE]
+            'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco '.CafPatronato::NOME_PLURALE],
 
         ]);
     }
@@ -349,24 +349,25 @@ class CafPatronatoController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         $record = CafPatronato::find($id);
-        abort_if(!$record, 404, 'Questa pratica non esiste');
+        abort_if(! $record, 404, 'Questa pratica non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.CafPatronato.edit', [
             'record' => $record,
             'controller' => CafPatronatoController::class,
-            'titoloPagina' => 'Modifica pratica ' . $record->tipo->nome,
+            'titoloPagina' => 'Modifica pratica '.$record->tipo->nome,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco ' . CafPatronato::NOME_PLURALE],
+            'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco '.CafPatronato::NOME_PLURALE],
             'tipoServizio' => $record->tipoProdotto(),
             'recordProdotto' => $record->prodotto,
             'tipoCafPatronato' => TipoCafPatronato::find($record->tipo_caf_patronato_id),
@@ -377,14 +378,13 @@ class CafPatronatoController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $record = CafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo ' . CafPatronato::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.CafPatronato::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
 
@@ -394,13 +394,13 @@ class CafPatronatoController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return array
+     * @param  int  $id
+     * @return array
      */
     public function destroy($id)
     {
         $record = CafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo cafpatronato non esiste');
+        abort_if(! $record, 404, 'Questo cafpatronato non esiste');
         $record->delete();
 
         return [
@@ -412,15 +412,13 @@ class CafPatronatoController extends Controller
     public function aggiornaStato(Request $request, $id)
     {
         $cafPatronato = CafPatronato::withCount('allegati')->withCount('allegatiPerCliente')->find($id);
-        abort_if(!$cafPatronato, 404, 'Questo servizio non esiste');
-
+        abort_if(! $cafPatronato, 404, 'Questo servizio non esiste');
 
         if ($cafPatronato->allegati_per_cliente_count == 0 && $request->input('esito_id') == 'pronto') {
             $request->validate(['allegato' => ['required']], [
-                'allegato.required' => ['Manca file cliente']
+                'allegato.required' => ['Manca file cliente'],
             ]);
         }
-
 
         $esitoPrima = $cafPatronato->esito_id;
 
@@ -447,7 +445,6 @@ class CafPatronatoController extends Controller
         }
         $records = collect([$cafPatronato]);
 
-
         if ($cafPatronato->wasChanged(['esito_id'])) {
             $esito = EsitoCafPatronato::find($cafPatronato->esito_id);
             if ($esito->notifica_mail) {
@@ -461,10 +458,10 @@ class CafPatronatoController extends Controller
 
             }
             if ($this->currentUser()->hasPermissionTo('supervisore')) {
-                Notifica::notificaAdAdmin('Cambio esito pratica', 'Esito per la pratica ' . $cafPatronato->nominativo() . ' modificato a ' . $esito->nome);
+                Notifica::notificaAdAdmin('Cambio esito pratica', 'Esito per la pratica '.$cafPatronato->nominativo().' modificato a '.$esito->nome);
             }
 
-            Log::debug('$cafPatronato->email:' . $cafPatronato->email . ' $esitoPrima !== \'pronto\':' . siNo($esitoPrima !== 'pronto') . ' $cafPatronato->esito_id == \'pronto\':' . siNo($cafPatronato->esito_id == 'pronto'));
+            Log::debug('$cafPatronato->email:'.$cafPatronato->email.' $esitoPrima !== \'pronto\':'.siNo($esitoPrima !== 'pronto').' $cafPatronato->esito_id == \'pronto\':'.siNo($cafPatronato->esito_id == 'pronto'));
             if ($cafPatronato->email && $esitoPrima !== 'pronto' && $cafPatronato->esito_id == 'pronto') {
                 Log::debug('Invio mail NotificaCafPatronatoACliente');
                 dispatch(function () use ($cafPatronato) {
@@ -473,7 +470,6 @@ class CafPatronatoController extends Controller
             }
 
         }
-
 
         if ($request->input('aggiorna') == 'dash') {
             $view = 'Backend.Dashboard.admin.servizi';
@@ -488,16 +484,15 @@ class CafPatronatoController extends Controller
                 'puoModificare' => CafPatronato::puoModificare(),
                 'puoModificareEsito' => CafPatronato::puoModificareEsito(),
 
-            ])->render())
+            ])->render()),
         ];
     }
-
 
     public function downloadAllegato($contrattoId, $allegatoId)
     {
 
         $record = AllegatoCafPatronato::find($allegatoId);
-        abort_if(!$record, 404, 'Questo allegato non esiste');
+        abort_if(! $record, 404, 'Questo allegato non esiste');
         abort_if($record->caf_patronato_id != $contrattoId, 404, 'Questo allegato non esiste');
 
         if ($record->file_contenuto_base64) {
@@ -505,7 +500,7 @@ class CafPatronatoController extends Controller
             if ($contenuto !== false) {
                 return response($contenuto, 200, [
                     'Content-Type' => $record->mime_type ?: 'application/octet-stream',
-                    'Content-Disposition' => 'attachment; filename="' . addslashes($record->filename_originale) . '"',
+                    'Content-Disposition' => 'attachment; filename="'.addslashes($record->filename_originale).'"',
                 ]);
             }
         }
@@ -513,7 +508,7 @@ class CafPatronatoController extends Controller
         $path = (string) $record->path_filename;
         abort_if($path === '', 404, 'Questo allegato non esiste');
 
-        if (!Storage::exists($path)) {
+        if (! Storage::exists($path)) {
             Log::warning('CAF allegato mancante su disco', [
                 'contratto_id' => (int) $contrattoId,
                 'allegato_id' => (int) $record->id,
@@ -542,7 +537,7 @@ class CafPatronatoController extends Controller
             ->chunkById(500, function ($rows) use (&$missingIds) {
                 foreach ($rows as $row) {
                     $path = trim((string) $row->path_filename);
-                    if ($path === '' || !Storage::exists($path)) {
+                    if ($path === '' || ! Storage::exists($path)) {
                         $missingIds[] = (int) $row->id;
                     }
                 }
@@ -578,16 +573,16 @@ class CafPatronatoController extends Controller
     {
 
         $rcaf = CafPatronato::find($contrattoId);
-        abort_if(!$rcaf, 404);
+        abort_if(! $rcaf, 404);
         $record = AllegatoCafPatronato::firstWhere(['caf_patronato_id' => $contrattoId, 'per_cliente' => 1]);
-        abort_if(!$record, 404, 'Questo allegato non esiste');
+        abort_if(! $record, 404, 'Questo allegato non esiste');
 
         if ($record->file_contenuto_base64) {
             $contenuto = base64_decode($record->file_contenuto_base64, true);
             if ($contenuto !== false) {
                 return response($contenuto, 200, [
                     'Content-Type' => $record->mime_type ?: 'application/octet-stream',
-                    'Content-Disposition' => 'attachment; filename="' . addslashes($record->filename_originale) . '"',
+                    'Content-Disposition' => 'attachment; filename="'.addslashes($record->filename_originale).'"',
                 ]);
             }
         }
@@ -595,7 +590,7 @@ class CafPatronatoController extends Controller
         $path = (string) $record->path_filename;
         abort_if($path === '', 404, 'Questo allegato non esiste');
 
-        if (!Storage::exists($path)) {
+        if (! Storage::exists($path)) {
             Log::warning('CAF allegato cliente mancante su disco', [
                 'contratto_id' => (int) $contrattoId,
                 'allegato_id' => (int) $record->id,
@@ -611,15 +606,15 @@ class CafPatronatoController extends Controller
 
     public function uploadAllegato(Request $request)
     {
-        $file = new AllegatoCafPatronato();
+        $file = new AllegatoCafPatronato;
 
         if ($request->file('file')) {
             $filePath = $request->file('file');
             $estensione = $filePath->extension();
-            $fileName = Str::ulid() . '.' . $estensione;
+            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.allegati_contratti.cartella');
             $request->file('file')->storeAs($cartella, $fileName);
-            $file->path_filename = $cartella . '/' . $fileName;
+            $file->path_filename = $cartella.'/'.$fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
             $file->mime_type = $filePath->getMimeType();
             $contenuto = file_get_contents($filePath->getRealPath());
@@ -642,30 +637,30 @@ class CafPatronatoController extends Controller
     public function deleteAllegato(Request $request)
     {
         $record = AllegatoCafPatronato::find($request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        abort_if(! $record, 404, 'File non trovato');
         Log::debug(__FUNCTION__, $record->toArray());
 
-        Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente'.$record->path_filename);
         $record->delete();
+
         return $record->path_filename;
     }
 
-
     /**
-     * @param CafPatronato $model
-     * @param Request $request
+     * @param  CafPatronato  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->caricato_da_user_id = Auth::id();
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'agente_id' => '',
@@ -688,17 +683,16 @@ class CafPatronatoController extends Controller
             $model->$campo = $valore;
         }
 
-        if (!$model->cliente_id) {
+        if (! $model->cliente_id) {
             $cliente = Cliente::where('codice_fiscale', $model->codice_fiscale)->first();
-            if (!$cliente) {
-                $cliente = new Cliente();
+            if (! $cliente) {
+                $cliente = new Cliente;
             }
         } else {
             $cliente = Cliente::find($model->cliente_id);
         }
 
         $model->cliente_id = $this->salvaDatiCliente($cliente, $model);
-
 
         $model->save();
 
@@ -707,22 +701,21 @@ class CafPatronatoController extends Controller
         return $model;
     }
 
-
     /**
-     * @param Cliente $model
-     * @param CafPatronato $request
+     * @param  Cliente  $model
+     * @param  CafPatronato  $request
      * @return mixed
      */
     protected function salvaDatiCliente($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_fiscale' => 'strtoupper',
             'nome' => 'app\getInputUcwords',
@@ -740,20 +733,18 @@ class CafPatronatoController extends Controller
 
         $model->save();
 
-
         return $model->id;
     }
 
-
     /**
-     * @param mixed $model
-     * @param Request $request
+     * @param  mixed  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiCafPatIsee($ordineModel, $request)
     {
         $model = $ordineModel->prodotto;
-        if (!$model) {
+        if (! $model) {
             return null;
         }
 
@@ -761,7 +752,6 @@ class CafPatronatoController extends Controller
 
         return $model;
     }
-
 
     protected function backToIndex()
     {
@@ -773,13 +763,11 @@ class CafPatronatoController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\CafPatronato::get();
+        return CafPatronato::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'data' => ['required'],
@@ -788,7 +776,7 @@ class CafPatronatoController extends Controller
             'cognome' => ['required', 'max:255'],
             'email' => ['nullable', 'max:255', 'email'],
             'cellulare' => ['required', 'max:255'],
-            'codice_fiscale' => ['required', new \App\Rules\CodiceFiscaleRule()],
+            'codice_fiscale' => ['required', new CodiceFiscaleRule],
             'cliente_id' => ['nullable'],
             'indirizzo' => ['nullable', 'max:255'],
             'citta' => ['nullable', 'max:255'],
@@ -805,50 +793,48 @@ class CafPatronatoController extends Controller
         return $rules;
     }
 
-
     /**
-     * @param CafPatronato $cafPatronato
+     * @param  CafPatronato  $cafPatronato
      * @return void
      */
     public function inviaNotifiche($cafPatronato)
     {
 
-
         // $this->creaUtente($cafPatronato);
 
-        //Notifica ad agente
+        // Notifica ad agente
         dispatch(function () use ($cafPatronato) {
             $user = $cafPatronato->agente;
             try {
                 $user->notify(new NotificaCafPatronatoAdAdmin($cafPatronato));
             } catch (\Exception $exception) {
                 report($exception);
-                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il servizio finanziario di ' . $cafPatronato->nominativo() . ': ' . $exception->getMessage(), 'error');
+                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il servizio finanziario di '.$cafPatronato->nominativo().': '.$exception->getMessage(), 'error');
             }
         })->afterResponse();
 
-        //Notifica vincenzo@studioschettino.com
+        // Notifica vincenzo@studioschettino.com
         dispatch(function () use ($cafPatronato) {
-            $user = new User();
+            $user = new User;
             $user->email = 'vincenzo@studioschettino.com';
             try {
                 $user->notify(new NotificaCafPatronato($cafPatronato));
             } catch (\Exception $exception) {
                 report($exception);
-                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il servizio finanziario di ' . $cafPatronato->nominativo() . ': ' . $exception->getMessage(), 'error');
+                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il servizio finanziario di '.$cafPatronato->nominativo().': '.$exception->getMessage(), 'error');
             }
         })->afterResponse();
 
-        //Notifica noreply@gestiio.it
+        // Notifica noreply@gestiio.it
         if ($this->currentUser()->hasPermissionTo('agente')) {
             dispatch(function () use ($cafPatronato) {
-                $user = new User();
+                $user = new User;
                 $user->email = 'noreply@gestiio.it';
                 try {
                     $user->notify(new NotificaCafPatronatoAdAdmin($cafPatronato));
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il servizio finanziario di ' . $cafPatronato->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il servizio finanziario di '.$cafPatronato->nominativo().': '.$exception->getMessage(), 'error');
                 }
             })->afterResponse();
         }
@@ -856,15 +842,14 @@ class CafPatronatoController extends Controller
     }
 
     /**
-     * @param CafPatronato $cafPatronato
-        * @return void
+     * @return void
      */
     protected function creaUtente(CafPatronato $cafPatronato)
     {
 
         $user = User::where('email', $cafPatronato->email)->orWhere('telefono', $cafPatronato->cellulare)->first();
-        if (!$user) {
-            $user = new User();
+        if (! $user) {
+            $user = new User;
             $user->nome = $cafPatronato->nome;
             $user->cognome = $cafPatronato->cognome;
             $user->email = $cafPatronato->email;
@@ -874,8 +859,5 @@ class CafPatronatoController extends Controller
             $user->save();
         }
 
-
     }
-
-
 }

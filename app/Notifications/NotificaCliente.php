@@ -2,11 +2,10 @@
 
 namespace App\Notifications;
 
-use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\ContrattoTelefonia;
 use App\Models\Gestore;
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
@@ -19,7 +18,7 @@ class NotificaCliente extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param ContrattoTelefonia $contratto
+     * @param  ContrattoTelefonia  $contratto
      */
     public function __construct(protected $contratto)
     {
@@ -29,7 +28,7 @@ class NotificaCliente extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -40,8 +39,8 @@ class NotificaCliente extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
@@ -49,12 +48,12 @@ class NotificaCliente extends Notification
         $gestore = Gestore::find($this->contratto->tipoContratto->gestore_id);
         $logo = $gestore->immagineLogo();
         $email = (new MailMessage)
-            ->greeting('Ciao ' . $this->contratto->nome)
+            ->greeting('Ciao '.$this->contratto->nome)
             ->line('Grazie per la fiducia che ci hai dedicato,')
-            //->action('Notification Action', url('/'))
+            // ->action('Notification Action', url('/'))
             ->line('questa è l\'offerta che hai scelto:')
-            ->line(new HtmlString('<strong>' . $this->contratto->tipoContratto->nome . '</strong>'))
-            ->line(new HtmlString('<img src="' . url()->to($logo) . '" style="max-width:150px; text-align: center;"/>'))
+            ->line(new HtmlString('<strong>'.$this->contratto->tipoContratto->nome.'</strong>'))
+            ->line(new HtmlString('<img src="'.url()->to($logo).'" style="max-width:150px; text-align: center;"/>'))
             ->salutation(new HtmlString('Saluti,<br>'.$this->contratto->agente->nominativo()));
 
         return $this->applyPersonalizedSender($email, $this->contratto->agente);
@@ -63,7 +62,7 @@ class NotificaCliente extends Notification
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

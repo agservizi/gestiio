@@ -3,26 +3,26 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agente;
 use App\Models\Gestore;
 use App\Models\Mandato;
 use App\Models\MovimentoPortafoglio;
 use App\Models\ProduzioneOperatore;
 use App\Models\RegistroLogin;
-use App\Models\TipoContratto;
 use App\Models\Ticket;
+use App\Models\TipoContratto;
 use App\Models\User;
 use App\Notifications\DatiAccessoNotification;
-use App\Notifications\NuovoUtenteInfoNotification;
 use App\Notifications\PasswordResetNotification;
 use App\Rules\CodiceFiscaleRule;
-use App\Rules\NumeroItRule;
+use App\Rules\IbanRule;
 use App\Rules\PartitaIvaRule;
 use App\Rules\PasswordRules;
-use App\Rules\TelefonoItalianoRule;
 use App\Rules\TelefonoRule;
+use Illuminate\Auth\Passwords\PasswordBroker;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Agente;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -37,11 +37,10 @@ class AgenteController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function index(Request $request)
     {
@@ -55,7 +54,7 @@ class AgenteController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('name');
-            }]
+            }],
 
         ];
 
@@ -66,7 +65,7 @@ class AgenteController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -76,7 +75,7 @@ class AgenteController extends Controller
             $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $totali = [
@@ -102,27 +101,25 @@ class AgenteController extends Controller
 
         }
 
-
         return view('Backend.Agente.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Agente::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Agente::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\Agente::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuovo '.Agente::NOME_SINGOLARE,
             'testoCerca' => 'cerca in nominativo, email, telefono',
             'totali' => $totali,
 
         ]);
 
-
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
@@ -182,24 +179,22 @@ class AgenteController extends Controller
         return $queryBuilder;
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function create()
     {
-        $record = new User();
+        $record = new User;
 
         return view('Backend.Agente.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Agente::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Agente::NOME_SINGOLARE,
             'controller' => get_class($this),
             'ruoli' => $this->ruoliApplicabili(),
             'newPassword' => rand(111111, 999999),
-            'breadcrumbs' => [action([AgenteController::class, 'index']) => 'Torna a elenco ' . Agente::NOME_PLURALE],
-
+            'breadcrumbs' => [action([AgenteController::class, 'index']) => 'Torna a elenco '.Agente::NOME_PLURALE],
 
         ]);
     }
@@ -207,15 +202,14 @@ class AgenteController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new User();
+        $record = new User;
         $this->salvaDatiUtente($record, $request);
-        $this->salvadatiAgente(new Agente(), $request, $record);
+        $this->salvadatiAgente(new Agente, $request, $record);
 
         return $this->backToIndex();
     }
@@ -223,13 +217,13 @@ class AgenteController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
         $record = User::where('id', '>', 1)->find($id);
-        abort_if(!$record, 404, 'Questo operatore non esiste');
+        abort_if(! $record, 404, 'Questo operatore non esiste');
         $controller = get_class($this);
 
         $questoMese = now();
@@ -244,7 +238,7 @@ class AgenteController extends Controller
             'record' => $record,
             'titoloPagina' => $record->nominativo(),
             'controller' => $controller,
-            'breadcrumbs' => [action([$controller, 'index']) => 'Torna a elenco ' . \App\Models\Agente::NOME_PLURALE],
+            'breadcrumbs' => [action([$controller, 'index']) => 'Torna a elenco '.Agente::NOME_PLURALE],
             'records' => $this->queryProduzione($id),
             'produzioneMese' => ProduzioneOperatore::findByIdAnnoMese($id, $questoMese->year, $questoMese->month),
             'produzioneMesePrecedente' => ProduzioneOperatore::findByIdAnnoMese($id, $mesePrecedente->year, $mesePrecedente->month),
@@ -253,8 +247,8 @@ class AgenteController extends Controller
                 'ticket_aperti' => $ticketAperti,
                 'ticket_chiusi' => $ticketChiusi,
                 'login_30gg' => $loginUltimi30,
-                'portafoglio_servizi' => (float)($record->agente?->portafoglio_servizi ?? 0),
-                'portafoglio_spedizioni' => (float)($record->agente?->portafoglio_spedizioni ?? 0),
+                'portafoglio_servizi' => (float) ($record->agente?->portafoglio_servizi ?? 0),
+                'portafoglio_spedizioni' => (float) ($record->agente?->portafoglio_spedizioni ?? 0),
             ],
         ]);
     }
@@ -262,14 +256,14 @@ class AgenteController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         abort_if($id == 1, 404);
         $record = User::withCount(['contratti', 'cafPatronato'])->find($id);
-        abort_if(!$record, 404, 'Questo agente non esiste');
+        abort_if(! $record, 404, 'Questo agente non esiste');
         if (($record->contratti_count + $record->caf_patronato_count) > 0) {
             $eliminabile = 'Non eliminabile';
         } else {
@@ -279,36 +273,33 @@ class AgenteController extends Controller
 
         /** @var User|null $authUser */
         $authUser = Auth::user();
-        if ($record->can('admin') && !($authUser?->can('admin') ?? false)) {
+        if ($record->can('admin') && ! ($authUser?->can('admin') ?? false)) {
             abort(403, 'Non hai il permesso per effettuare questa operazione');
         }
-
 
         return view('Backend.Agente.edit', [
             'record' => $record,
             'controller' => AgenteController::class,
-            'titoloPagina' => 'Modifica ' . Agente::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Agente::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([AgenteController::class, 'index']) => 'Torna a elenco ' . Agente::NOME_PLURALE],
-            'ruoli' => $this->ruoliApplicabili()
+            'breadcrumbs' => [action([AgenteController::class, 'index']) => 'Torna a elenco '.Agente::NOME_PLURALE],
+            'ruoli' => $this->ruoliApplicabili(),
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $record = User::find($id);
-        abort_if(!$record, 404, 'Questo ' . Agente::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.Agente::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDatiUtente($record, $request);
         $this->salvadatiAgente(Agente::firstOrNew(['user_id' => $id]), $request, $record);
-
 
         return $this->backToIndex();
     }
@@ -316,8 +307,8 @@ class AgenteController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function destroy($id)
     {
@@ -329,9 +320,8 @@ class AgenteController extends Controller
         $agente->delete();
 
         $record = User::find($id);
-        abort_if(!$record, 404, 'Questo agente non esiste');
+        abort_if(! $record, 404, 'Questo agente non esiste');
         $record->delete();
-
 
         return [
             'success' => true,
@@ -339,17 +329,17 @@ class AgenteController extends Controller
         ];
     }
 
-
     public function azioni(Request $request, $id, $azione)
     {
         $u = User::find($id);
-        if (!$u) {
+        if (! $u) {
             return ['success' => false, 'message' => 'Questo utente non esiste'];
         }
         switch ($azione) {
 
             case 'sospendi':
                 $u->syncPermissions([]);
+
                 return ['success' => true, 'redirect' => action([AgenteController::class, 'index'])];
 
             case 'impersona':
@@ -365,13 +355,14 @@ class AgenteController extends Controller
                 $mandatoId = $request->input('mandato');
                 $stato = $request->input('stato');
                 $record = Mandato::where('agente_id', $id)->where('gestore_id', $mandatoId)->first();
-                if (!$record) {
-                    $record = new Mandato();
+                if (! $record) {
+                    $record = new Mandato;
                     $record->agente_id = $id;
                     $record->gestore_id = $mandatoId;
                 }
                 $record->attivo = $stato;
                 $record->save();
+
                 return ['success' => true, 'mandatoId' => $mandatoId, 'stato' => $stato];
 
             case 'ricalcola_provvigioni':
@@ -379,6 +370,7 @@ class AgenteController extends Controller
                 $produzioneOperatore = ProduzioneOperatore::findByIdAnnoMese($id, $request->input('anno'), $request->input('mese'));
                 if ($produzioneOperatore) {
                     $produzioneOperatore->ricalcola();
+
                     return ['success' => true, 'title' => 'Provvigioni ricalcolate', 'message' => 'La provvigione è stata ricalcolata'];
 
                 } else {
@@ -387,18 +379,17 @@ class AgenteController extends Controller
                 }
 
             default:
-                return ['success' => false, 'title' => 'Azione sconosciouta', 'message' => 'Azione ' . $azione . ' non prevista'];
+                return ['success' => false, 'title' => 'Azione sconosciouta', 'message' => 'Azione '.$azione.' non prevista'];
 
         }
 
     }
 
-
     public function tab($id, $tab)
     {
         $cliente = User::find($id);
 
-        abort_if(!$cliente, 404);
+        abort_if(! $cliente, 404);
         switch ($tab) {
             case 'tab_mandati':
                 return view('Backend.Agente.show.tabMandati', [
@@ -426,6 +417,7 @@ class AgenteController extends Controller
 
             case 'tab_login':
                 $records = RegistroLogin::with('utente')->with('impersonatoDa')->where('user_id', $id)->latest()->paginate();
+
                 return view('Backend.Agente.show.tabLogin', [
                     'records' => $records,
                     'id' => $id,
@@ -438,29 +430,27 @@ class AgenteController extends Controller
                     'controller' => AgenteController::class,
                 ]);
 
-
             default:
 
                 return "il tab  $tab non esiste";
         }
     }
 
-
     /**
-     * @param User $model
-     * @param Request $request
+     * @param  User  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiUtente($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->password = Hash::make(Str::uuid());
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'cognome' => 'app\getInputUcwords',
@@ -481,9 +471,7 @@ class AgenteController extends Controller
         }
         $model->save();
 
-
         $model->syncPermissions(array_merge([$request->input('ruolo')], $request->input('vedi', [])));
-
 
         if ($nuovo) {
             dispatch(function () use ($model, $password) {
@@ -497,21 +485,21 @@ class AgenteController extends Controller
     }
 
     /**
-     * @param Agente $model
-     * @param Request $request
-     * @param User $user
+     * @param  Agente  $model
+     * @param  Request  $request
+     * @param  User  $user
      * @return mixed
      */
     protected function salvadatiAgente($model, $request, $user)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->user_id = $user->id;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'ragione_sociale' => 'app\getInputUcwords',
             'codice_fiscale' => 'strtoupper',
@@ -544,17 +532,17 @@ class AgenteController extends Controller
         }
         $model->save();
 
-        $user->alias = $model->ragione_sociale ?: ($user->cognome . ' ' . $user->nome);
+        $user->alias = $model->ragione_sociale ?: ($user->cognome.' '.$user->nome);
         $user->save();
 
         if ($request->file('visura_camerale')) {
 
             $tmpFile = $request->file('visura_camerale');
             $extensione = $tmpFile->getClientOriginalExtension();
-            $filename = hexdec(uniqid()) . '.' . $extensione;
+            $filename = hexdec(uniqid()).'.'.$extensione;
             $cartella = config('configurazione.visure_camerali.cartella');
             $tmpFile->storeAs($cartella, $filename);
-            $model->visura_camerale = $cartella . '/' . $filename;
+            $model->visura_camerale = $cartella.'/'.$filename;
             $model->save();
 
         }
@@ -563,10 +551,8 @@ class AgenteController extends Controller
             ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->user_id, now()->year, now()->month);
         }
 
-
         return $model;
     }
-
 
     protected function backToIndex()
     {
@@ -578,9 +564,8 @@ class AgenteController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Agente::get();
+        return Agente::get();
     }
-
 
     protected function rules($id = null)
     {
@@ -588,9 +573,9 @@ class AgenteController extends Controller
         $rules = [
             'nome' => ['required', 'max:255'],
             'cognome' => ['required', 'max:255'],
-            'codice_fiscale' => ['nullable', new CodiceFiscaleRule()],
-            'partita_iva' => ['nullable', new PartitaIvaRule()],
-            'iban' => ['nullable', new \App\Rules\IbanRule()],
+            'codice_fiscale' => ['nullable', new CodiceFiscaleRule],
+            'partita_iva' => ['nullable', new PartitaIvaRule],
+            'iban' => ['nullable', new IbanRule],
             'email' => [
                 'nullable',
                 'required_without:telefono',
@@ -604,25 +589,22 @@ class AgenteController extends Controller
                 'nullable',
                 'required_without:email',
                 'max:255',
-                new TelefonoRule(),
+                new TelefonoRule,
                 Rule::unique(User::class)->ignore($id),
             ],
-            'password' => [$id == null ? 'required' : 'nullable', 'string', new PasswordRules()],
+            'password' => [$id == null ? 'required' : 'nullable', 'string', new PasswordRules],
             'openapi_visure_token' => ['nullable', 'string', 'max:2048'],
             'openapi_catasto_token' => ['nullable', 'string', 'max:2048'],
 
         ];
 
-
         return $rules;
     }
-
 
     protected function ruoliApplicabili()
     {
         return Permission::where('id', '<=', 3)->orWhere('name', 'operatore')->orderBy('name')->get()->pluck('name')->toArray();
     }
-
 
     protected function azioneImpersona($id)
     {
@@ -634,6 +616,7 @@ class AgenteController extends Controller
 
         Session::put('impersona', Auth::id());
         Auth::loginUsingId($id, false);
+
         return ['success' => true, 'redirect' => '/'];
     }
 
@@ -641,17 +624,18 @@ class AgenteController extends Controller
     {
         $user = User::find($id);
 
-        if (!$user || !$user->email) {
+        if (! $user || ! $user->email) {
             Log::warning('AgenteController: invio reset password non eseguito, email non valida', [
                 'azione' => 'invia-mail-password-reset',
                 'agente_id' => $id,
-                'utente_trovato' => (bool)$user,
+                'utente_trovato' => (bool) $user,
             ]);
+
             return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'agente non ha un indirizzo email valido.'];
         }
 
         try {
-            /** @var \Illuminate\Auth\Passwords\PasswordBroker $passwordBroker */
+            /** @var PasswordBroker $passwordBroker */
             $passwordBroker = Password::broker('new_users');
             $token = $passwordBroker->createToken($user);
             $user->notify(new PasswordResetNotification($token));
@@ -670,13 +654,14 @@ class AgenteController extends Controller
                 'email' => $user->email,
                 'errore' => $e->getMessage(),
             ]);
+
             return ['success' => false, 'title' => 'Invio fallito', 'message' => $this->friendlyMailError($e)];
         }
 
         return [
             'success' => true,
             'title' => 'Email inviata',
-            'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo ' . $user->email,
+            'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo '.$user->email,
             'sent_at' => $sentAt,
         ];
 
@@ -685,12 +670,13 @@ class AgenteController extends Controller
     protected function azioneResettaPassword($id)
     {
         $user = User::find($id);
-        if (!$user || !$user->email) {
+        if (! $user || ! $user->email) {
             Log::warning('AgenteController: reset password non eseguito, email non valida', [
                 'azione' => 'resetta-password',
                 'agente_id' => $id,
-                'utente_trovato' => (bool)$user,
+                'utente_trovato' => (bool) $user,
             ]);
+
             return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'agente non ha un indirizzo email valido.'];
         }
 
@@ -715,17 +701,17 @@ class AgenteController extends Controller
                 'email' => $user->email,
                 'errore' => $e->getMessage(),
             ]);
-            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: ' . $this->friendlyMailError($e)];
+
+            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: '.$this->friendlyMailError($e)];
         }
 
         return [
             'success' => true,
             'title' => 'Password impostata',
-            'message' => 'La password è stata impostata a 123456 e inviata via email a ' . $user->email,
+            'message' => 'La password è stata impostata a 123456 e inviata via email a '.$user->email,
             'sent_at' => $sentAt,
         ];
     }
-
 
     protected function queryProduzione($id)
     {
@@ -734,15 +720,13 @@ class AgenteController extends Controller
 
     protected function friendlyMailError(\Throwable $e): string
     {
-        $message = (string)$e->getMessage();
+        $message = (string) $e->getMessage();
         $lower = strtolower($message);
 
         if (str_contains($lower, 'you can only send testing emails') || str_contains($lower, 'verify a domain at resend.com/domains')) {
             return 'Il provider Resend è in modalità test: puoi inviare solo verso l\'indirizzo autorizzato. Per inviare ad altri destinatari devi verificare un dominio su resend.com/domains e usare un mittente FROM su quel dominio.';
         }
 
-        return 'Errore durante invio email: ' . $message;
+        return 'Errore durante invio email: '.$message;
     }
-
-
 }

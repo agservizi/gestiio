@@ -10,17 +10,20 @@ use Throwable;
 class OpenApiVisureService
 {
     private const ENDPOINT_SANDBOX = 'https://test.visengine2.altravia.com/';
+
     private const ENDPOINT_PRODUCTION = 'https://visengine2.altravia.com/';
 
     protected PendingRequest $client;
+
     public ?string $message = null;
+
     protected ?string $bearerTokenOverride = null;
 
     public function __construct(?string $bearerToken = null)
     {
         $this->bearerTokenOverride = $bearerToken;
         $this->client = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->bearerToken(),
+            'Authorization' => 'Bearer '.$this->bearerToken(),
             'content-type' => 'application/json',
             'accept' => 'application/json',
         ])->timeout(30);
@@ -29,9 +32,10 @@ class OpenApiVisureService
     public function elencoVisure(): ?array
     {
         try {
-            $response = $this->client->get($this->endpoint() . 'visure');
+            $response = $this->client->get($this->endpoint().'visure');
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
         $payload = $this->decode($response);
@@ -48,9 +52,10 @@ class OpenApiVisureService
         ];
 
         try {
-            $response = $this->client->post($this->endpoint() . 'richiesta', $payload);
+            $response = $this->client->post($this->endpoint().'richiesta', $payload);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
         $decoded = $this->decode($response);
@@ -61,9 +66,10 @@ class OpenApiVisureService
     public function statoRichiesta(string $requestId): ?array
     {
         try {
-            $response = $this->client->put($this->endpoint() . 'richiesta/' . urlencode($requestId), []);
+            $response = $this->client->put($this->endpoint().'richiesta/'.urlencode($requestId), []);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
         $decoded = $this->decode($response);
@@ -73,11 +79,12 @@ class OpenApiVisureService
 
         // Fallback per varianti endpoint.
         try {
-            $fallback = $this->client->put($this->endpoint() . 'richiesta', [
+            $fallback = $this->client->put($this->endpoint().'richiesta', [
                 'request_id' => $requestId,
             ]);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
         $decoded = $this->decode($fallback);
@@ -88,9 +95,10 @@ class OpenApiVisureService
     public function scaricaDocumento(string $requestId): ?array
     {
         try {
-            $response = $this->client->get($this->endpoint() . 'documento/' . urlencode($requestId));
+            $response = $this->client->get($this->endpoint().'documento/'.urlencode($requestId));
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
         $decoded = $this->decode($response);
@@ -100,9 +108,10 @@ class OpenApiVisureService
 
         // Fallback per varianti endpoint.
         try {
-            $fallback = $this->client->get($this->endpoint() . 'documento', ['request_id' => $requestId]);
+            $fallback = $this->client->get($this->endpoint().'documento', ['request_id' => $requestId]);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
         $decoded = $this->decode($fallback);
@@ -116,6 +125,7 @@ class OpenApiVisureService
             $json = $response->json();
             if (is_array($json)) {
                 $this->message = $json['message'] ?? null;
+
                 return $json;
             }
 
@@ -124,11 +134,13 @@ class OpenApiVisureService
 
         $json = $response->json();
         if (is_array($json)) {
-            $this->message = $json['message'] ?? ('Errore OpenAPI (' . $response->status() . ')');
+            $this->message = $json['message'] ?? ('Errore OpenAPI ('.$response->status().')');
+
             return $json;
         }
 
-        $this->message = 'Errore OpenAPI (' . $response->status() . ')';
+        $this->message = 'Errore OpenAPI ('.$response->status().')';
+
         return [];
     }
 
@@ -137,11 +149,11 @@ class OpenApiVisureService
         $customSandbox = config('services.openapi.visure_base_url_sandbox');
         $customProduction = config('services.openapi.visure_base_url_production');
 
-        if (!config('services.openapi.sandbox')) {
-            return rtrim((string) ($customProduction ?: self::ENDPOINT_PRODUCTION), '/') . '/';
+        if (! config('services.openapi.sandbox')) {
+            return rtrim((string) ($customProduction ?: self::ENDPOINT_PRODUCTION), '/').'/';
         }
 
-        return rtrim((string) ($customSandbox ?: self::ENDPOINT_SANDBOX), '/') . '/';
+        return rtrim((string) ($customSandbox ?: self::ENDPOINT_SANDBOX), '/').'/';
     }
 
     protected function bearerToken(): string

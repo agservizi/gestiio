@@ -56,7 +56,7 @@ class File extends Model
         });
 
         static::deleting(function ($model) {
-            if (!Str::of($model->path_filename)->is('test*')) {
+            if (! Str::of($model->path_filename)->is('test*')) {
                 Storage::delete($model->path_filename);
             }
         });
@@ -68,12 +68,13 @@ class File extends Model
         if ($id) {
             $qb->orWhere('contratto_id', $id);
         }
+
         return $qb->get()->toArray();
     }
 
     public function urlFile()
     {
-        return '/storage' . $this->path_filename;
+        return '/storage'.$this->path_filename;
     }
 
     public function cartella()
@@ -115,8 +116,6 @@ class File extends Model
             case 'rar':
                 return 'zip';
 
-
-
             case 'xlsx':
                 return 'xls';
 
@@ -125,5 +124,4 @@ class File extends Model
         }
 
     }
-
 }

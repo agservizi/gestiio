@@ -11,22 +11,23 @@ use setasign\Fpdi\Fpdi;
 class PdfProdottoSkyTv
 {
     protected $border = 0;
-    protected $fpdf;
-    protected $col = 0; // Current column
-    protected $y0;      // Ordinate of column start
-    protected $nomeDocumento;
 
+    protected $fpdf;
+
+    protected $col = 0; // Current column
+
+    protected $y0;      // Ordinate of column start
+
+    protected $nomeDocumento;
 
     public function generaPdf(ContrattoTelefonia $contratto)
     {
 
-
         $contratto->load('prodotto');
 
-        $this->nomeDocumento = 'contratto_' . $contratto->id . '.pdf';
-        $this->fpdf = new Fpdi();
+        $this->nomeDocumento = 'contratto_'.$contratto->id.'.pdf';
+        $this->fpdf = new Fpdi;
         $pagecount = $this->fpdf->setSourceFile(public_path('/pdf/pda_sky.pdf'));
-
 
         $tpl = $this->fpdf->importPage(1);
         $this->fpdf->AddPage();
@@ -37,26 +38,22 @@ class PdfProdottoSkyTv
         $this->fpdf->SetFontSize('7'); // set font size
         $this->fpdf->SetAutoPageBreak(false);
 
-
-
-        //Codice cliente
+        // Codice cliente
         $chars = str_split($contratto->prodotto->codice_cliente);
         $posX = 41.2;
-        $posY=24.8;
+        $posY = 24.8;
         $this->fpdf->SetFontSize('8'); // set font size
 
         foreach ($chars as $char) {
             $this->fpdf->SetXY($posX, $posY);
-            $this->fpdf->Cell(32, 8, $char, $this->border, 0,);
+            $this->fpdf->Cell(32, 8, $char, $this->border, 0);
             $posX += 3.28;
         }
         $this->fpdf->SetFontSize('7'); // set font size
 
-
-        //Pay Tv
+        // Pay Tv
         $this->fpdf->SetXY(13, 30);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
-
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         switch ($contratto->prodotto->profilo) {
             case 'sky_open':
@@ -67,10 +64,10 @@ class PdfProdottoSkyTv
                 break;
         }
         $this->fpdf->SetXY($posX, 24.7);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         if ($contratto->prodotto->profilo == 'sky_smart') {
             $this->fpdf->SetXY(141, 25);
-            $this->fpdf->Cell(28, 8, $contratto->prodotto->codice_promozione, $this->border, 0,);
+            $this->fpdf->Cell(28, 8, $contratto->prodotto->codice_promozione, $this->border, 0);
         }
 
         $luogoNascita = null;
@@ -81,14 +78,13 @@ class PdfProdottoSkyTv
             case 'persona_fisica':
                 $posX = 33.2;
 
-                $parserCodiceFiscale = new CodiceFiscale();
+                $parserCodiceFiscale = new CodiceFiscale;
                 if ($parserCodiceFiscale->parse($contratto->codice_fiscale) !== false) {
                     $sesso = $parserCodiceFiscale->getGender();
                     $dataNascita = $parserCodiceFiscale->getBirthdate()->format('d/m/Y');
                     $luogoNascita = $parserCodiceFiscale->getBirthPlace();
                     $luogoNascita = $parserCodiceFiscale->getBirthPlaceComplete();
                 }
-
 
                 break;
             case 'societa':
@@ -102,115 +98,109 @@ class PdfProdottoSkyTv
                 break;
         }
         $this->fpdf->SetXY($posX, 57.5);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
-
-        //Dati del cliente
+        // Dati del cliente
         $posY = 62.3;
         $incrY = 4.18;
         $this->fpdf->SetFont('Arial');
         $this->fpdf->SetXY(25, $posY);
-        $this->fpdf->Cell(28, 8, $contratto->cognome, $this->border, 0,);
+        $this->fpdf->Cell(28, 8, $contratto->cognome, $this->border, 0);
         $this->fpdf->SetXY(82, $posY);
-        $this->fpdf->Cell(28, 8, $contratto->nome, $this->border, 0,);
+        $this->fpdf->Cell(28, 8, $contratto->nome, $this->border, 0);
         $this->fpdf->SetXY(139, $posY);
-        $this->fpdf->Cell(28, 8, $contratto->ragione_sociale, $this->border, 0,);
+        $this->fpdf->Cell(28, 8, $contratto->ragione_sociale, $this->border, 0);
 
         if ($sesso) {
             $this->fpdf->SetXY(match ($sesso) {
                 'M' => 184.5,
                 'F' => 188.5
             }, $posY - 0.4);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
-
 
         $posY += $incrY;
         $this->fpdf->SetXY(38.0, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($contratto->indirizzo), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($contratto->indirizzo), $this->border, 0);
         $this->fpdf->SetXY(115.0, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($contratto->civico), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($contratto->civico), $this->border, 0);
         $this->fpdf->SetXY(154.5, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($contratto->scala), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($contratto->scala), $this->border, 0);
         $this->fpdf->SetXY(167, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($contratto->piano), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($contratto->piano), $this->border, 0);
 
         $citta = Comune::find($contratto->citta);
 
         $posY += $incrY;
         $this->fpdf->SetXY(20.3, $posY);
-        $this->fpdf->Cell(32, 8, $contratto->cap, $this->border, 0,);
+        $this->fpdf->Cell(32, 8, $contratto->cap, $this->border, 0);
         $this->fpdf->SetXY(46.3, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($citta->comune), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($citta->comune), $this->border, 0);
         $this->fpdf->SetXY(92.7, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($citta->targa), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($citta->targa), $this->border, 0);
         $this->fpdf->SetXY(108, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($contratto->telefono), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($contratto->telefono), $this->border, 0);
 
         $posY += $incrY;
         $this->fpdf->SetXY(20.0, $posY);
-        $this->fpdf->Cell(28, 8, utf8_decode($contratto->email), $this->border, 0,);
+        $this->fpdf->Cell(28, 8, utf8_decode($contratto->email), $this->border, 0);
         if ($luogoNascita) {
             $this->fpdf->SetXY(93.5, $posY);
-            $this->fpdf->Cell(28, 8, utf8_decode($luogoNascita), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($luogoNascita), $this->border, 0);
         }
         if ($dataNascita) {
             $this->fpdf->SetXY(153.5, $posY);
-            $this->fpdf->Cell(28, 8, $dataNascita, $this->border, 0,);
+            $this->fpdf->Cell(28, 8, $dataNascita, $this->border, 0);
         }
 
-
         $posY += $incrY;
-        //$this->fpdf->SetFont('Courier');
+        // $this->fpdf->SetFont('Courier');
         $chars = str_split($contratto->codice_fiscale);
         $posX = 24;
         $this->fpdf->SetFontSize('8'); // set font size
 
         foreach ($chars as $char) {
             $this->fpdf->SetXY($posX, $posY);
-            $this->fpdf->Cell(32, 8, $char, $this->border, 0,);
+            $this->fpdf->Cell(32, 8, $char, $this->border, 0);
             $posX += 3.28;
         }
         $this->fpdf->SetFontSize('7'); // set font size
 
         $comuneRilascio = Comune::find($contratto->comune_rilascio);
 
-
         $this->fpdf->SetXY(88, $posY);
-        $this->fpdf->Cell(32, 8, utf8_decode(ContrattoTelefonia::TIPI_DOCUMENTO[$contratto->tipo_documento]), $this->border, 0,);
+        $this->fpdf->Cell(32, 8, utf8_decode(ContrattoTelefonia::TIPI_DOCUMENTO[$contratto->tipo_documento]), $this->border, 0);
         $this->fpdf->SetXY(116, $posY);
-        $this->fpdf->Cell(32, 8, utf8_decode($contratto->numero_documento), $this->border, 0,);
+        $this->fpdf->Cell(32, 8, utf8_decode($contratto->numero_documento), $this->border, 0);
         if ($comuneRilascio) {
             $this->fpdf->SetXY(144.5, $posY);
-            $this->fpdf->Cell(32, 8, utf8_decode($comuneRilascio->targa), $this->border, 0,);
+            $this->fpdf->Cell(32, 8, utf8_decode($comuneRilascio->targa), $this->border, 0);
         }
         $this->fpdf->SetXY(168, $posY);
-        $this->fpdf->Cell(32, 8, utf8_decode($contratto->rilasciato_da), $this->border, 0,);
+        $this->fpdf->Cell(32, 8, utf8_decode($contratto->rilasciato_da), $this->border, 0);
 
         $posY += $incrY;
         $this->fpdf->SetXY(27, $posY);
-        $this->fpdf->Cell(32, 8, utf8_decode($contratto->data_rilascio->format('d/m/Y')), $this->border, 0,);
+        $this->fpdf->Cell(32, 8, utf8_decode($contratto->data_rilascio->format('d/m/Y')), $this->border, 0);
         if ($comuneRilascio) {
             $this->fpdf->SetXY(64.2, $posY);
-            $this->fpdf->Cell(32, 8, utf8_decode($comuneRilascio->comune), $this->border, 0,);
+            $this->fpdf->Cell(32, 8, utf8_decode($comuneRilascio->comune), $this->border, 0);
         }
 
         if ($contratto->cittadinanza) {
             $nazione = Nazione::find($contratto->cittadinanza);
             if ($nazione) {
                 $this->fpdf->SetXY(101, $posY);
-                $this->fpdf->Cell(32, 8, utf8_decode($nazione->nazionalitaIT), $this->border, 0,);
+                $this->fpdf->Cell(32, 8, utf8_decode($nazione->nazionalitaIT), $this->border, 0);
             }
             $this->fpdf->SetXY(147, $posY);
-            $this->fpdf->Cell(32, 8, utf8_decode($contratto->permesso_soggiorno_numero), $this->border, 0,);
+            $this->fpdf->Cell(32, 8, utf8_decode($contratto->permesso_soggiorno_numero), $this->border, 0);
             $this->fpdf->SetXY(177, $posY);
-            $this->fpdf->Cell(32, 8, utf8_decode($contratto->permesso_soggiorno_scadenza?->format('d/m/Y') . 'aa'), $this->border, 0,);
+            $this->fpdf->Cell(32, 8, utf8_decode($contratto->permesso_soggiorno_scadenza?->format('d/m/Y').'aa'), $this->border, 0);
         }
 
         $this->fpdf->SetXY(178, $posY);
-        $this->fpdf->Cell(32, 8, utf8_decode($contratto->data_scadenza->format('d/m/Y')), $this->border, 0,);
-
-
+        $this->fpdf->Cell(32, 8, utf8_decode($contratto->data_scadenza->format('d/m/Y')), $this->border, 0);
 
         if ($contratto->partita_iva) {
             $posY = 94.6;
@@ -219,53 +209,51 @@ class PdfProdottoSkyTv
             $chars = str_split($contratto->partita_iva);
             foreach ($chars as $char) {
                 $this->fpdf->SetXY($posX, $posY);
-                $this->fpdf->Cell(32, 8, $char, $this->border, 0,);
+                $this->fpdf->Cell(32, 8, $char, $this->border, 0);
                 $posX += 3.28;
             }
             $this->fpdf->SetFontSize('7'); // set font size
 
         }
 
-        //Sky Tv
+        // Sky Tv
         $this->fpdf->SetXY(16.7, 175);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
-
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         $pacchettiSky = $contratto->prodotto->pacchetti_sky ?? [];
 
         if (in_array('kids', $pacchettiSky)) {
             $this->fpdf->SetXY(32, 173);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('cinema', $pacchettiSky)) {
             $this->fpdf->SetXY(32, 177.6);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('sport', $pacchettiSky)) {
             $this->fpdf->SetXY(54, 173);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('calcio', $pacchettiSky)) {
             $this->fpdf->SetXY(54, 177.6);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
-
 
         $pacchettiSky = $contratto->prodotto->servizi_opzionali ?? [];
         if (in_array('sky_ultra_hd', $pacchettiSky)) {
             $this->fpdf->SetXY(76.2, 173);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('sky_go', $pacchettiSky)) {
             $this->fpdf->SetXY(100, 173);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('sky_multiscreen', $pacchettiSky)) {
             $this->fpdf->SetXY(76.2, 177.8);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
 
-        if($contratto->prodotto->offerte_sky){
+        if ($contratto->prodotto->offerte_sky) {
             switch ($contratto->prodotto->offerte_sky) {
                 case 'base':
                     $posX = 16.7;
@@ -278,9 +266,8 @@ class PdfProdottoSkyTv
                     break;
             }
             $this->fpdf->SetXY($posX, 190.4);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
-
 
         switch ($contratto->prodotto->tecnologia) {
             case 'sky_q':
@@ -294,7 +281,7 @@ class PdfProdottoSkyTv
                 break;
         }
         $this->fpdf->SetXY($posX, 222.5);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         if ($contratto->prodotto->tecnologia == 'sky_q_platinum') {
             switch ($contratto->prodotto->sky_q_mini) {
@@ -312,37 +299,36 @@ class PdfProdottoSkyTv
                     break;
             }
             $this->fpdf->SetXY($posX, 226.5);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         }
 
         if ($contratto->prodotto->solo_smartcard) {
             $this->fpdf->SetXY(15.5, 236.0);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         }
 
-
-        //////////////////////////// SECONDA PAGINA   ////////////////////////////
+        // ////////////////////////// SECONDA PAGINA   ////////////////////////////
 
         $tpl = $this->fpdf->importPage(2);
         $this->fpdf->AddPage();
         $this->fpdf->useTemplate($tpl);
 
-        //Frequenza pagamento
+        // Frequenza pagamento
         $this->fpdf->SetXY(17.6, match ($contratto->prodotto->metodo_pagamento_tv) {
             'carta_credito' => 21,
             'sdd' => 24.2,
 
         });
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         $this->fpdf->SetXY(54.2, match ($contratto->prodotto->frequenza_pagamento_tv) {
             'unica_soluzione' => 20.5,
             'rate_mensili' => 24.1,
 
         });
-        $this->fpdf->Cell(27, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(27, 8, 'X', $this->border, 0);
         if ($contratto->prodotto->metodo_pagamento_tv == 'carta_credito') {
             $this->fpdf->SetXY(match ($contratto->prodotto->carta_di_credito_tipo) {
                 'american_express' => 37.5,
@@ -351,15 +337,15 @@ class PdfProdottoSkyTv
                 'visa' => 106.5,
 
             }, 30.6);
-            $this->fpdf->Cell(27, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(27, 8, 'X', $this->border, 0);
 
-            $chars = str_split(str_replace(' ','',$contratto->prodotto->carta_di_credito_numero));
+            $chars = str_split(str_replace(' ', '', $contratto->prodotto->carta_di_credito_numero));
             $posX = 127;
             $posY = 30.6;
             $this->fpdf->SetFontSize('8'); // set font size
             foreach ($chars as $char) {
                 $this->fpdf->SetXY($posX, $posY);
-                $this->fpdf->Cell(32, 8, $char, $this->border, 0,);
+                $this->fpdf->Cell(32, 8, $char, $this->border, 0);
                 $posX += 3.28;
             }
 
@@ -369,25 +355,23 @@ class PdfProdottoSkyTv
             $this->fpdf->SetFontSize('8'); // set font size
             foreach ($chars as $char) {
                 $this->fpdf->SetXY($posX, $posY);
-                $this->fpdf->Cell(32, 8, $char, $this->border, 0,);
+                $this->fpdf->Cell(32, 8, $char, $this->border, 0);
                 $posX += 3.28;
             }
 
-
             $this->fpdf->SetFontSize('7'); // set font size
 
-
             $this->fpdf->SetXY(45.5, 36);
-            $this->fpdf->Cell(28, 8, utf8_decode($contratto->cognome), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($contratto->cognome), $this->border, 0);
             $this->fpdf->SetXY(105.5, 36);
-            $this->fpdf->Cell(28, 8, utf8_decode($contratto->nome), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($contratto->nome), $this->border, 0);
 
         }
         if ($contratto->prodotto->metodo_pagamento_tv == 'sdd') {
             $this->fpdf->SetXY(39, 57.5);
-            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_banca), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_banca), $this->border, 0);
             $this->fpdf->SetXY(120, 57.5);
-            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_agenzia), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_agenzia), $this->border, 0);
 
             $posY = 62.5;
             $posX = 26.7;
@@ -395,14 +379,14 @@ class PdfProdottoSkyTv
             $chars = str_split($contratto->prodotto->sepa_iban);
             foreach ($chars as $char) {
                 $this->fpdf->SetXY($posX, $posY);
-                $this->fpdf->Cell(32, 8, $char, $this->border, 0,);
+                $this->fpdf->Cell(32, 8, $char, $this->border, 0);
                 $posX += 2.88;
             }
             $this->fpdf->SetFontSize('7'); // set font size
             $this->fpdf->SetXY(117, 64.7);
-            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_intestatario), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_intestatario), $this->border, 0);
             $this->fpdf->SetXY(13, 69);
-            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_via), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($contratto->prodotto->sepa_via), $this->border, 0);
 
             $chars = str_split($contratto->codice_fiscale);
             $posX = 22.5;
@@ -411,14 +395,14 @@ class PdfProdottoSkyTv
 
             foreach ($chars as $char) {
                 $this->fpdf->SetXY($posX, $posY);
-                $this->fpdf->Cell(32, 8, $char, $this->border, 0,);
+                $this->fpdf->Cell(32, 8, $char, $this->border, 0);
                 $posX += 3.28;
             }
             $this->fpdf->SetFontSize('7'); // set font size
 
             if ($dataNascita) {
                 $this->fpdf->SetXY(102, $posY);
-                $this->fpdf->Cell(28, 8, utf8_decode($dataNascita . ' - ' . $luogoNascita), $this->border, 0,);
+                $this->fpdf->Cell(28, 8, utf8_decode($dataNascita.' - '.$luogoNascita), $this->border, 0);
 
             }
 
@@ -427,16 +411,13 @@ class PdfProdottoSkyTv
                     'M' => 184.6,
                     'F' => 188.5
                 }, $posY - 0.1);
-                $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+                $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
             }
-
 
         }
 
         $this->fpdf->SetXY(20, 171.1);
-        $this->fpdf->Cell(28, 8, $contratto->data->format('d/m/Y'), $this->border, 0,);
-
-
+        $this->fpdf->Cell(28, 8, $contratto->data->format('d/m/Y'), $this->border, 0);
 
         $posXSi = 159.2;
         $posXNo = 180.4;
@@ -447,7 +428,7 @@ class PdfProdottoSkyTv
             $posX = $posXNo;
         }
         $this->fpdf->SetXY($posX, 248.2);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         if ($contratto->prodotto->consenso_2) {
             $posX = $posXSi;
@@ -455,7 +436,7 @@ class PdfProdottoSkyTv
             $posX = $posXNo;
         }
         $this->fpdf->SetXY($posX, 251.2);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         if ($contratto->prodotto->consenso_3) {
             $posX = $posXSi;
@@ -463,7 +444,7 @@ class PdfProdottoSkyTv
             $posX = $posXNo;
         }
         $this->fpdf->SetXY($posX, 256.0);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         if ($contratto->prodotto->consenso_4) {
             $posX = $posXSi;
@@ -471,7 +452,7 @@ class PdfProdottoSkyTv
             $posX = $posXNo;
         }
         $this->fpdf->SetXY($posX, 259.0);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         if ($contratto->prodotto->consenso_5) {
             $posX = $posXSi;
@@ -479,7 +460,7 @@ class PdfProdottoSkyTv
             $posX = $posXNo;
         }
         $this->fpdf->SetXY($posX, 265.2);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
         if ($contratto->prodotto->consenso_6) {
             $posX = $posXSi;
@@ -487,66 +468,61 @@ class PdfProdottoSkyTv
             $posX = $posXNo;
         }
         $this->fpdf->SetXY($posX, 268.8);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
-
-        ////////////////////////////
-
+        // //////////////////////////
 
         return;
 
-        //Dati documento
+        // Dati documento
         $posY = 79.9;
         $posY += $incrY;
         $posY += $incrY;
 
         $posY += $incrY;
         $this->fpdf->SetXY(41.3, $posY);
-        $this->fpdf->Cell(32, 8, utf8_decode($contratto->data_scadenza->format('d/m/Y')), $this->border, 0,);
+        $this->fpdf->Cell(32, 8, utf8_decode($contratto->data_scadenza->format('d/m/Y')), $this->border, 0);
 
-        //Dati a dx
+        // Dati a dx
 
         if ($contratto->prodotto->tipologia_cliente !== 'persona_fisica') {
             $this->fpdf->SetXY(155.5, 46.8);
-            $this->fpdf->Cell(28, 8, utf8_decode($contratto->codice_fiscale), $this->border, 0,);
+            $this->fpdf->Cell(28, 8, utf8_decode($contratto->codice_fiscale), $this->border, 0);
 
         }
 
-
-        //Paccketti sky
+        // Paccketti sky
         $pacchettiSky = $contratto->prodotto->pacchetti_sky ?? [];
 
         if (in_array('kids', $pacchettiSky)) {
             $this->fpdf->SetXY(64.5, 154.5);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('cinema', $pacchettiSky)) {
             $this->fpdf->SetXY(64.5, 158.5);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('sport', $pacchettiSky)) {
             $this->fpdf->SetXY(64.5, 162.5);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('calcio', $pacchettiSky)) {
             $this->fpdf->SetXY(64.5, 166.5);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
 
-
-        //servizi opzionali
+        // servizi opzionali
         $serviziOpzionali = $contratto->prodotto->servizi_opzionali ?? [];
         if (in_array('ultra_hd', $serviziOpzionali)) {
             $this->fpdf->SetXY(64.5, 184.0);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
         if (in_array('glass_multiscreen', $serviziOpzionali)) {
             $this->fpdf->SetXY(64.5, 188.0);
-            $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+            $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
         }
 
-
-        //Frequenza pagamento
+        // Frequenza pagamento
         switch ($contratto->prodotto->frequenza_pagamento_sky_glass) {
             case 'unica':
                 $posY = 247.3;
@@ -559,24 +535,24 @@ class PdfProdottoSkyTv
                 break;
         }
         $this->fpdf->SetXY(17.4, $posY);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
-        //Frequenza pagamento
+        // Frequenza pagamento
         switch ($contratto->prodotto->metodo_pagamento_sky_glass) {
             case 'carta_credito':
                 $posY = 266.3;
                 $this->fpdf->SetXY(17.3, $posY);
-                $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
+                $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
                 break;
 
             case 'iban':
                 $posY = 266.3;
                 $this->fpdf->SetXY(107.3, $posY);
-                $this->fpdf->Cell(28, 8, $contratto->iban, $this->border, 0,);
+                $this->fpdf->Cell(28, 8, $contratto->iban, $this->border, 0);
 
         }
 
-        //Frequenza pagamento
+        // Frequenza pagamento
         switch ($contratto->prodotto->metodo_pagamento_tv) {
             case 'carta_credito':
                 $posY = 247.3;
@@ -586,11 +562,9 @@ class PdfProdottoSkyTv
                 break;
         }
         $this->fpdf->SetXY(107.3, $posY);
-        $this->fpdf->Cell(28, 8, 'X', $this->border, 0,);
-
+        $this->fpdf->Cell(28, 8, 'X', $this->border, 0);
 
     }
-
 
     public function render($dest = '')
     {
@@ -605,6 +579,4 @@ class PdfProdottoSkyTv
     {
         return $this->nomeDocumento;
     }
-
-
 }

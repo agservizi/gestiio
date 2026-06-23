@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProdottoWindtre extends Model
@@ -13,7 +12,7 @@ class ProdottoWindtre extends Model
 
     protected $casts = ['opzioni' => 'array'];
 
-    public const OPZIONI=[
+    public const OPZIONI = [
         'CallYourCountryHome' => 'Call Your Country Home',
         'ChiamateIllimitate' => 'Chiamate illimitate',
         'ConvergenzaSuperFibra' => 'Convergenza Super Fibra',
@@ -23,17 +22,16 @@ class ProdottoWindtre extends Model
         'PiùSicuriCasaEUfficio' => 'Più Sicuri Casa&Ufficio',
     ];
 
-
     public function opzioniBlade()
     {
-        if (!$this->opzioni) {
+        if (! $this->opzioni) {
             return null;
         }
         $arr = [];
         foreach ($this->opzioni as $value) {
             $arr[] = self::OPZIONI[$value];
         }
+
         return implode(', ', $arr);
     }
-
 }

@@ -10,7 +10,7 @@ class RespectUserNotificationPreferences
 {
     public function handle(NotificationSending $event): bool
     {
-        if (!($event->notifiable instanceof User)) {
+        if (! ($event->notifiable instanceof User)) {
             return true;
         }
 

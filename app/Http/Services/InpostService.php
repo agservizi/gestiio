@@ -16,25 +16,43 @@ use Throwable;
 class InpostService
 {
     public const DEFAULT_API_BASE_URL = 'https://api.inpost-group.com';
+
     public const DEFAULT_TOKEN_URL = 'https://api.inpost-group.com/oauth2/token';
 
     protected string $baseUrl;
+
     protected string $tokenUrl;
+
     protected string $clientId;
+
     protected string $clientSecret;
+
     protected string $scope;
+
     protected string $organizationId;
+
     protected string $locationEndpoint;
+
     protected string $trackingEndpointTemplate;
+
     protected string $labelEndpointTemplate;
+
     protected string $shipmentReadEndpointTemplate;
+
     protected string $defaultCountry;
+
     protected int $pointSearchLimit;
+
     protected string $itPointsBaseUrl;
+
     protected string $senderType;
+
     protected string $senderPointId;
+
     protected array $senderAddress;
+
     protected array $defaultHeaders;
+
     protected string $trackingPortalBaseUrl;
 
     public function __construct()
@@ -71,7 +89,7 @@ class InpostService
     public function shipment(SpedizioneInpost $record): array
     {
         $endpoint = $this->shipmentEndpoint($record);
-        $url = $this->baseUrl . $endpoint;
+        $url = $this->baseUrl.$endpoint;
         $payload = $this->buildShipmentPayload($record);
 
         return $this->requestJson('post', $url, $payload, $record);
@@ -86,7 +104,7 @@ class InpostService
     {
         $path = str_replace('{trackingNumber}', urlencode($trackingNumber), $this->trackingEndpointTemplate);
 
-        return $this->requestJson('get', $this->baseUrl . $path);
+        return $this->requestJson('get', $this->baseUrl.$path);
     }
 
     public function getShipment(string $shipmentId, ?SpedizioneInpost $record = null): array
@@ -97,7 +115,7 @@ class InpostService
             $this->shipmentReadEndpointTemplate
         );
 
-        return $this->requestJson('get', $this->baseUrl . $path, [], $record);
+        return $this->requestJson('get', $this->baseUrl.$path, [], $record);
     }
 
     public function points(string $countryCode, string $city = '', string $postCode = ''): array
@@ -105,7 +123,7 @@ class InpostService
         $countryCode = strtoupper(trim($countryCode ?: $this->defaultCountry));
         if ($countryCode === 'IT' && $this->itPointsBaseUrl !== '') {
             $italyResult = $this->italyPoints($countryCode, $city, $postCode);
-            if (!empty($italyResult['points'])) {
+            if (! empty($italyResult['points'])) {
                 return $italyResult;
             }
         }
@@ -117,12 +135,12 @@ class InpostService
         ], fn ($value) => filled($value));
 
         try {
-            $response = $this->requestJson('get', $this->baseUrl . $this->locationEndpoint, $query);
+            $response = $this->requestJson('get', $this->baseUrl.$this->locationEndpoint, $query);
             $normalized = $this->normalizePoints($response, $countryCode, $city, $postCode);
 
             if ($countryCode === 'IT' && $this->itPointsBaseUrl !== '' && empty($normalized)) {
                 $italyResult = $this->italyPoints($countryCode, $city, $postCode);
-                if (!empty($italyResult['points'])) {
+                if (! empty($italyResult['points'])) {
                     return $italyResult;
                 }
             }
@@ -160,7 +178,7 @@ class InpostService
         ], fn ($value) => filled($value));
 
         try {
-            $response = Http::acceptJson()->get($this->itPointsBaseUrl . '/v1/points', $query)->json();
+            $response = Http::acceptJson()->get($this->itPointsBaseUrl.'/v1/points', $query)->json();
 
             return [
                 'raw' => is_array($response) ? $response : [],
@@ -185,7 +203,7 @@ class InpostService
             return [
                 'content' => base64_decode($base64),
                 'content_type' => 'application/pdf',
-                'filename' => 'inpost-label-' . $record->id . '.pdf',
+                'filename' => 'inpost-label-'.$record->id.'.pdf',
             ];
         }
 
@@ -196,7 +214,7 @@ class InpostService
             return [
                 'content' => $raw['body'],
                 'content_type' => $raw['content_type'] ?: 'application/pdf',
-                'filename' => 'inpost-label-' . $record->id . '.pdf',
+                'filename' => 'inpost-label-'.$record->id.'.pdf',
             ];
         }
 
@@ -208,7 +226,7 @@ class InpostService
             );
             $raw = $this->requestRaw(
                 'get',
-                $this->baseUrl . $path,
+                $this->baseUrl.$path,
                 [],
                 $record,
                 ['Accept' => $this->labelAcceptHeader()]
@@ -217,7 +235,7 @@ class InpostService
             return [
                 'content' => $raw['body'],
                 'content_type' => $raw['content_type'] ?: 'application/pdf',
-                'filename' => 'inpost-label-' . $record->id . '.pdf',
+                'filename' => 'inpost-label-'.$record->id.'.pdf',
             ];
         }
 
@@ -226,15 +244,15 @@ class InpostService
 
     public function trackingUrl(string $trackingNumber): string
     {
-        return $this->trackingPortalBaseUrl . '?number=' . urlencode($trackingNumber);
+        return $this->trackingPortalBaseUrl.'?number='.urlencode($trackingNumber);
     }
 
     public function createReturn(InpostReturn $record): array
     {
-        $endpoint = '/returns/v2/organizations/' . $this->organizationId . '/returns';
+        $endpoint = '/returns/v2/organizations/'.$this->organizationId.'/returns';
         $payload = $this->returnPayload($record);
 
-        return $this->requestJson('post', $this->baseUrl . $endpoint, $payload, $record);
+        return $this->requestJson('post', $this->baseUrl.$endpoint, $payload, $record);
     }
 
     public function buildReturnPayload(InpostReturn $record): array
@@ -254,17 +272,17 @@ class InpostService
 
     public function createPickup(InpostPickup $record): array
     {
-        $endpoint = '/pickups/v2/organizations/' . $this->organizationId . '/pickups';
+        $endpoint = '/pickups/v2/organizations/'.$this->organizationId.'/pickups';
         $payload = $this->pickupPayload($record);
 
-        return $this->requestJson('post', $this->baseUrl . $endpoint, $payload, $record);
+        return $this->requestJson('post', $this->baseUrl.$endpoint, $payload, $record);
     }
 
     public function pickupCutoffTime(): array
     {
-        $endpoint = '/pickups/v2/organizations/' . $this->organizationId . '/pickups/cutoff-time';
+        $endpoint = '/pickups/v2/organizations/'.$this->organizationId.'/pickups/cutoff-time';
 
-        return $this->requestJson('get', $this->baseUrl . $endpoint);
+        return $this->requestJson('get', $this->baseUrl.$endpoint);
     }
 
     protected function returnPayload(InpostReturn $record): array
@@ -285,8 +303,8 @@ class InpostService
     protected function pickupPayload(InpostPickup $record): array
     {
         $payload = [
-            'pickup_from' => $record->pickup_date->format('Y-m-d') . 'T09:00:00',
-            'pickup_to' => $record->pickup_date->format('Y-m-d') . 'T18:00:00',
+            'pickup_from' => $record->pickup_date->format('Y-m-d').'T09:00:00',
+            'pickup_to' => $record->pickup_date->format('Y-m-d').'T18:00:00',
             'address' => [
                 'street' => $record->street,
                 'building_number' => $record->building_number ?: '',
@@ -313,7 +331,7 @@ class InpostService
     {
         $type = $record->delivery_type === 'address' ? 'address-to-address' : 'address-to-point';
 
-        return '/shipping/v2/organizations/' . $this->organizationId . '/shipments/' . $type;
+        return '/shipping/v2/organizations/'.$this->organizationId.'/shipments/'.$type;
     }
 
     protected function shipmentPayload(SpedizioneInpost $record): array
@@ -492,7 +510,7 @@ class InpostService
 
     protected function makeLog(string $method, string $url, array $payload = [], ?Model $record = null): ChiamataApi
     {
-        $log = new ChiamataApi();
+        $log = new ChiamataApi;
         $log->servizio = 'inpost';
         $log->url = $url;
         $log->request = $payload;
@@ -519,7 +537,7 @@ class InpostService
             ->map(function ($point) {
                 $id = data_get($point, 'id') ?: data_get($point, 'name');
                 $name = data_get($point, 'name') ?: $id;
-                $pointCountry = strtoupper((string)(data_get($point, 'country') ?: data_get($point, 'address.country')));
+                $pointCountry = strtoupper((string) (data_get($point, 'country') ?: data_get($point, 'address.country')));
                 $pointCity = (string) data_get($point, 'address.city');
                 $pointPostCode = (string) (data_get($point, 'address.postCode') ?: data_get($point, 'address.postalCode'));
                 $description = (string) (data_get($point, 'description.content') ?: data_get($point, 'description'));
@@ -541,19 +559,19 @@ class InpostService
                 ];
             })
             ->filter(function ($item) use ($countryCode, $city, $postCode) {
-                if (!filled($item['id'])) {
+                if (! filled($item['id'])) {
                     return false;
                 }
 
-                if ($countryCode !== '' && strtoupper((string)$item['country']) !== $countryCode) {
+                if ($countryCode !== '' && strtoupper((string) $item['country']) !== $countryCode) {
                     return false;
                 }
 
-                if ($city !== '' && !str_contains(mb_strtolower((string)$item['city']), $city)) {
+                if ($city !== '' && ! str_contains(mb_strtolower((string) $item['city']), $city)) {
                     return false;
                 }
 
-                if ($postCode !== '' && !str_contains((string)$item['post_code'], $postCode)) {
+                if ($postCode !== '' && ! str_contains((string) $item['post_code'], $postCode)) {
                     return false;
                 }
 
@@ -580,7 +598,7 @@ class InpostService
                 $buildingNumber = (string) (data_get($point, 'address_details.building_number') ?: data_get($point, 'address.buildingNumber'));
                 $description = (string) (data_get($point, 'location_description') ?: data_get($point, 'description'));
                 $address = implode(', ', array_filter([
-                    trim($street . ' ' . $buildingNumber),
+                    trim($street.' '.$buildingNumber),
                     $pointPostCode,
                     $pointCity,
                     $description,
@@ -596,7 +614,7 @@ class InpostService
                 ];
             })
             ->filter(function ($item) use ($countryCode, $city, $postCode) {
-                if (!filled($item['id'])) {
+                if (! filled($item['id'])) {
                     return false;
                 }
 
@@ -604,11 +622,11 @@ class InpostService
                     return false;
                 }
 
-                if ($city !== '' && !str_contains(mb_strtolower((string) $item['city']), $city)) {
+                if ($city !== '' && ! str_contains(mb_strtolower((string) $item['city']), $city)) {
                     return false;
                 }
 
-                if ($postCode !== '' && !str_contains((string) $item['post_code'], $postCode)) {
+                if ($postCode !== '' && ! str_contains((string) $item['post_code'], $postCode)) {
                     return false;
                 }
 
@@ -680,7 +698,7 @@ class InpostService
             return $value;
         }
 
-        if (!is_string($value) || trim($value) === '') {
+        if (! is_string($value) || trim($value) === '') {
             return [];
         }
 

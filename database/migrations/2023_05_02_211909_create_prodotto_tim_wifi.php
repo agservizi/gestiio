@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -15,7 +16,6 @@ return new class extends Migration {
         Schema::create('prodotto_tim_wifi', function (Blueprint $table) {
             $table->id('contratto_id');
             $table->timestamps();
-
 
             $table->string('indirizzo_fattura')->nullable();
             $table->string('citta_fattura')->nullable();

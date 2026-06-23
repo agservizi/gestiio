@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-
 class RegistroLogin extends Model
 {
     //
@@ -17,7 +16,6 @@ class RegistroLogin extends Model
      */
     const UPDATED_AT = null;
 
-
     public static function boot()
     {
         parent::boot();
@@ -29,7 +27,6 @@ class RegistroLogin extends Model
 
     }
 
-
     public function utente()
     {
         return $this->hasOne(User::class, 'id', 'user_id');
@@ -39,5 +36,4 @@ class RegistroLogin extends Model
     {
         return $this->hasOneThrough('App\Models\User', 'App\Models\RegistroLoginImpersona', 'registro_id', 'id', 'id', 'user_id');
     }
-
 }

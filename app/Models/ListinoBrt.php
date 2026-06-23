@@ -9,10 +9,11 @@ class ListinoBrt extends Model
 {
     use HasFactory;
 
-    protected $table = "brt_listino";
+    protected $table = 'brt_listino';
 
-    public const NOME_SINGOLARE = "listinobrt";
-    public const NOME_PLURALE = "";
+    public const NOME_SINGOLARE = 'listinobrt';
+
+    public const NOME_PLURALE = '';
 
     /*
     |--------------------------------------------------------------------------
@@ -38,7 +39,6 @@ class ListinoBrt extends Model
     |--------------------------------------------------------------------------
     */
 
-
     public static function trovaTariffa($peso)
     {
         $record = self::where('da_peso', '<=', $peso)->where('a_peso', '>=', $peso)->first();
@@ -58,6 +58,7 @@ class ListinoBrt extends Model
         if ($this->al_kg) {
             return $tariffa * $peso;
         }
+
         return $tariffa;
     }
 

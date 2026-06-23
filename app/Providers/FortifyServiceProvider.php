@@ -12,7 +12,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\TwoFactorLoginResponse;
 use Laravel\Fortify\Fortify;
+
 use function App\getInputTelefono;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -36,12 +39,12 @@ class FortifyServiceProvider extends ServiceProvider
     {
         // register new LoginResponse
         $this->app->singleton(
-            \Laravel\Fortify\Contracts\LoginResponse::class,
+            LoginResponse::class,
             \App\Http\Responses\LoginResponse::class
         );
 
         $this->app->singleton(
-            \Laravel\Fortify\Contracts\TwoFactorLoginResponse::class,
+            TwoFactorLoginResponse::class,
             \App\Http\Responses\TwoFactorLoginResponse::class
         );
 
@@ -51,7 +54,6 @@ class FortifyServiceProvider extends ServiceProvider
             \App\Http\Responses\RegisterResponse::class
         );
         */
-
 
         Fortify::authenticateUsing(function (Request $request) {
 
@@ -65,18 +67,19 @@ class FortifyServiceProvider extends ServiceProvider
             if ($user &&
                 Hash::check($request->password, $user->password)) {
                 session()->put('user_login_id', $user->id);
+
                 return $user;
             }
         });
-
 
         Fortify::loginView(function () {
             return view('auth.login', ['registrati' => false]);
         });
 
         Fortify::registerView(function () {
-            $record = new User();
+            $record = new User;
             $record->nazione = 'IT';
+
             return view('auth.registratiAgente', ['cosa' => old('cosa', 'register'), 'record' => $record]);
         });
 
@@ -92,7 +95,7 @@ class FortifyServiceProvider extends ServiceProvider
             return view('auth.verify-email');
         });
 
-        //Autenticazione a due fattori
+        // Autenticazione a due fattori
         Fortify::confirmPasswordView(function () {
             return view('auth.password-confirm');
         });
@@ -100,16 +103,15 @@ class FortifyServiceProvider extends ServiceProvider
             return view('auth.two-factor-challenge');
         });
 
-
         Fortify::createUsersUsing(CreateNewUser::class);
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
         RateLimiter::for('login', function (Request $request) {
-            $email = (string)$request->email;
+            $email = (string) $request->email;
 
-            return Limit::perMinute(5)->by($email . $request->ip());
+            return Limit::perMinute(5)->by($email.$request->ip());
         });
 
         RateLimiter::for('two-factor', function (Request $request) {

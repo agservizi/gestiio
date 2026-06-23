@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Http\Funzioni\FunzioniAllegato;
 use App\Http\Funzioni\ThumbnailGenerationService;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AllegatoServizio extends Model
@@ -24,7 +23,7 @@ class AllegatoServizio extends Model
             $estensione = strtolower(pathinfo($model->filename_originale, PATHINFO_EXTENSION));
             $model->tipo_file = self::tipoFile($estensione);
 
-            $thumbnailGenerationService = new ThumbnailGenerationService();
+            $thumbnailGenerationService = new ThumbnailGenerationService;
             $thumbnailPath = $thumbnailGenerationService->generate($model->path_filename, $model->tipo_file, 500, 500);
             $model->thumbnail = $thumbnailPath;
 
@@ -40,7 +39,6 @@ class AllegatoServizio extends Model
         });
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI
@@ -50,7 +48,6 @@ class AllegatoServizio extends Model
     {
         return $this->morphTo();
     }
-
 
     public static function perBlade($uid, $allegatoServizioId, $allegatoServizioType, $perCliente = 0)
     {

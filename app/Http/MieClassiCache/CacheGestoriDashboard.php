@@ -2,7 +2,6 @@
 
 namespace App\Http\MieClassiCache;
 
-use App\Models\Agente;
 use App\Models\Gestore;
 use Cache;
 use Log;
@@ -53,7 +52,7 @@ class CacheGestoriDashboard
             ->get();
         $values[$userId] = $records;
         Cache::forever(self::CACHE_KEY, $values);
-        Log::debug('Creata cache ' . self::CACHE_KEY . '[' . $userId . '] in ' . number_format(microtime(true) - $start, 3));
+        Log::debug('Creata cache '.self::CACHE_KEY.'['.$userId.'] in '.number_format(microtime(true) - $start, 3));
 
         return $records;
     }

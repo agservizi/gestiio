@@ -15,8 +15,7 @@ class NotificaRichiestaAssistenzaCredenziali extends Notification
         protected RichiestaAssistenza $richiesta,
         protected string $pdfContent,
         protected string $pdfFileName
-    ) {
-    }
+    ) {}
 
     public function via($notifiable): array
     {
@@ -29,20 +28,20 @@ class NotificaRichiestaAssistenzaCredenziali extends Notification
         $prodotto = (string) optional($this->richiesta->prodotto)->nome;
         $prodotto = $prodotto !== '' ? $prodotto : 'Richiesta assistenza';
 
-        $email = (new MailMessage())
-            ->subject('Credenziali ' . $prodotto)
-            ->greeting('Ciao ' . trim((string) optional($cliente)->nome))
+        $email = (new MailMessage)
+            ->subject('Credenziali '.$prodotto)
+            ->greeting('Ciao '.trim((string) optional($cliente)->nome))
             ->line('In allegato trovi il PDF con le credenziali della tua richiesta assistenza.')
-            ->line('Prodotto: ' . $prodotto);
+            ->line('Prodotto: '.$prodotto);
 
         if ((string) $this->richiesta->nome_utente !== '') {
-            $email->line('Nome utente: ' . $this->richiesta->nome_utente);
+            $email->line('Nome utente: '.$this->richiesta->nome_utente);
         }
         if ((string) $this->richiesta->password !== '') {
-            $email->line('Password: ' . $this->richiesta->password);
+            $email->line('Password: '.$this->richiesta->password);
         }
         if ((string) $this->richiesta->pin !== '') {
-            $email->line('PIN: ' . $this->richiesta->pin);
+            $email->line('PIN: '.$this->richiesta->pin);
         }
 
         return $email

@@ -5,43 +5,44 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up()
     {
         Schema::table('tickets', function (Blueprint $table) {
-            if (!Schema::hasColumn('tickets', 'priorita')) {
+            if (! Schema::hasColumn('tickets', 'priorita')) {
                 $table->string('priorita', 20)->default('media')->after('stato')->index();
             }
-            if (!Schema::hasColumn('tickets', 'owner_team')) {
+            if (! Schema::hasColumn('tickets', 'owner_team')) {
                 $table->string('owner_team', 30)->default('helpdesk')->after('priorita')->index();
             }
-            if (!Schema::hasColumn('tickets', 'first_response_due_at')) {
+            if (! Schema::hasColumn('tickets', 'first_response_due_at')) {
                 $table->dateTime('first_response_due_at')->nullable()->after('owner_team');
             }
-            if (!Schema::hasColumn('tickets', 'resolution_due_at')) {
+            if (! Schema::hasColumn('tickets', 'resolution_due_at')) {
                 $table->dateTime('resolution_due_at')->nullable()->after('first_response_due_at');
             }
-            if (!Schema::hasColumn('tickets', 'first_response_at')) {
+            if (! Schema::hasColumn('tickets', 'first_response_at')) {
                 $table->dateTime('first_response_at')->nullable()->after('resolution_due_at');
             }
-            if (!Schema::hasColumn('tickets', 'resolved_at')) {
+            if (! Schema::hasColumn('tickets', 'resolved_at')) {
                 $table->dateTime('resolved_at')->nullable()->after('first_response_at');
             }
-            if (!Schema::hasColumn('tickets', 'last_customer_message_at')) {
+            if (! Schema::hasColumn('tickets', 'last_customer_message_at')) {
                 $table->dateTime('last_customer_message_at')->nullable()->after('resolved_at');
             }
-            if (!Schema::hasColumn('tickets', 'last_agent_message_at')) {
+            if (! Schema::hasColumn('tickets', 'last_agent_message_at')) {
                 $table->dateTime('last_agent_message_at')->nullable()->after('last_customer_message_at');
             }
-            if (!Schema::hasColumn('tickets', 'escalated_at')) {
+            if (! Schema::hasColumn('tickets', 'escalated_at')) {
                 $table->dateTime('escalated_at')->nullable()->after('last_agent_message_at');
             }
-            if (!Schema::hasColumn('tickets', 'automation_notes')) {
+            if (! Schema::hasColumn('tickets', 'automation_notes')) {
                 $table->json('automation_notes')->nullable()->after('escalated_at');
             }
         });
 
-        if (!Schema::hasTable('ticket_status_logs')) {
+        if (! Schema::hasTable('ticket_status_logs')) {
             Schema::create('ticket_status_logs', function (Blueprint $table) {
                 $table->id();
                 $table->timestamps();

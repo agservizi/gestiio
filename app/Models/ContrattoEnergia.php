@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -11,12 +10,11 @@ use Illuminate\Support\Facades\Schema;
 
 class ContrattoEnergia extends Model
 {
+    protected $table = 'contratti_energia';
 
-    protected $table = "contratti_energia";
+    public const NOME_SINGOLARE = 'contratto energia';
 
-    public const NOME_SINGOLARE = "contratto energia";
-    public const NOME_PLURALE = "contratti energia";
-
+    public const NOME_PLURALE = 'contratti energia';
 
     protected $casts = [
         'data' => 'datetime',
@@ -28,7 +26,7 @@ class ContrattoEnergia extends Model
     public const ESITI = [
         'ko' => '#eb3662',
         'ok' => '#4dc682',
-        'in-lavorazione' => '#009EF7'
+        'in-lavorazione' => '#009EF7',
     ];
 
     public const TIPI_DOCUMENTO = [
@@ -37,7 +35,6 @@ class ContrattoEnergia extends Model
         'passaporto' => 'Passaporto',
         'altro' => 'Altro',
     ];
-
 
     /**
      * The "booted" method of the model.
@@ -51,7 +48,7 @@ class ContrattoEnergia extends Model
 
             /** @var User|null $user */
             $user = Auth::user();
-            if (!$user) {
+            if (! $user) {
                 return;
             }
 
@@ -64,9 +61,8 @@ class ContrattoEnergia extends Model
             }
         });
 
-
         static::saving(function (ContrattoEnergia $model) {
-            if (self::hasInternalCodeColumn() && !$model->codice_contratto_interno && $model->id) {
+            if (self::hasInternalCodeColumn() && ! $model->codice_contratto_interno && $model->id) {
                 $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
             }
 
@@ -77,7 +73,7 @@ class ContrattoEnergia extends Model
 
             $esito = EsitoContrattoEnergia::find($model->esito_id);
             $model->esito_finale = $esito->esito_finale;
-            if (!$model->mese_pagamento && $model->esito_finale == 'ok') {
+            if (! $model->mese_pagamento && $model->esito_finale == 'ok') {
                 $model->mese_pagamento = now()->format('m_Y');
             }
 
@@ -85,27 +81,25 @@ class ContrattoEnergia extends Model
                 $model->mese_pagamento = null;
             }
 
-            $model->testo_ricerca = $model->denominazione . '|' . $model->codice_contratto . '|' . $model->codice_contratto_interno . '|' . $model->codice_fiscale;
+            $model->testo_ricerca = $model->denominazione.'|'.$model->codice_contratto.'|'.$model->codice_contratto_interno.'|'.$model->codice_fiscale;
 
         });
 
-
         self::saved(function ($model) {
-            Log::debug(__CLASS__ . '->' . __FUNCTION__ . ' contratto: ' . $model->id . ' mese_pagamento ' . $model->mese_pagamento);
+            Log::debug(__CLASS__.'->'.__FUNCTION__.' contratto: '.$model->id.' mese_pagamento '.$model->mese_pagamento);
             if ($model->isDirty('mese_pagamento')) {
                 if ($model->mese_pagamento) {
-                    list($mese, $anno) = explode('_', $model->mese_pagamento);
+                    [$mese, $anno] = explode('_', $model->mese_pagamento);
                     ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->agente_id, $anno, $mese);
                     self::calcolaProduzioneContrattiEnergia($model->agente_id, $anno, $mese);
 
                 }
                 if ($model->getOriginal('mese_pagamento')) {
-                    list($mese, $anno) = explode('_', $model->getOriginal('mese_pagamento'));
+                    [$mese, $anno] = explode('_', $model->getOriginal('mese_pagamento'));
                     self::calcolaProduzioneContrattiEnergia($model->agente_id, $anno, $mese);
 
                 }
             }
-
 
         });
 
@@ -114,26 +108,24 @@ class ContrattoEnergia extends Model
         });
 
         self::created(function (ContrattoEnergia $model) {
-            if (!$model->codice_contratto_interno && self::hasInternalCodeColumn()) {
+            if (! $model->codice_contratto_interno && self::hasInternalCodeColumn()) {
                 $model->codice_contratto_interno = self::buildInternalContractCode((int) $model->id);
                 $model->saveQuietly();
             }
         });
 
-
     }
 
     protected static function calcolaProduzioneContrattiEnergia($userId, $anno, $mese)
     {
-        Log::debug('calcolo contratti energia in pagamento per $userId:' . $userId . ' $anno:' . $anno . ' $mese:' . $mese);
-        $meseAnnoPagamento = $mese . '_' . $anno;
+        Log::debug('calcolo contratti energia in pagamento per $userId:'.$userId.' $anno:'.$anno.' $mese:'.$mese);
+        $meseAnnoPagamento = $mese.'_'.$anno;
         $inPagamento = self::withoutGlobalScope('filtroOperatore')
             ->where('mese_pagamento', $meseAnnoPagamento)
             ->where('agente_id', $userId)
             ->sum('provvigione_agente');
 
-        //Log::debug('=>$start:' . $start->format('d/m/Y') . ' $end:' . $end->format('d/m/Y') . ' $ordiniOk:' . $ordiniOk . ' $ordiniKo:' . $ordiniKo . ' $ordini' . $ordini . ' chiamata da ' . debug_backtrace()[1]['function']);
-
+        // Log::debug('=>$start:' . $start->format('d/m/Y') . ' $end:' . $end->format('d/m/Y') . ' $ordiniOk:' . $ordiniOk . ' $ordiniKo:' . $ordiniKo . ' $ordini' . $ordini . ' chiamata da ' . debug_backtrace()[1]['function']);
 
         $p = ProduzioneOperatore::findOrNewMio($userId, $anno, $mese);
         $p->user_id = $userId;
@@ -143,24 +135,24 @@ class ContrattoEnergia extends Model
         $p->importo_contratti_energia = $inPagamento;
         $p->save();
 
-        //self::calcolaGuadagnoAgenzia($anno, $mese);
+        // self::calcolaGuadagnoAgenzia($anno, $mese);
 
     }
 
     protected static function buildInternalContractCode(int $id): string
     {
-        return 'OP' . str_pad((string) $id, 11, '0', STR_PAD_LEFT);
+        return 'OP'.str_pad((string) $id, 11, '0', STR_PAD_LEFT);
     }
 
     protected static function hasInternalCodeColumn(): bool
     {
         static $hasColumn = null;
         if ($hasColumn === null) {
-            $hasColumn = Schema::hasColumn((new static())->getTable(), 'codice_contratto_interno');
+            $hasColumn = Schema::hasColumn((new static)->getTable(), 'codice_contratto_interno');
         }
+
         return $hasColumn;
     }
-
 
     protected static function calcolaGuadagnoAgenzia($anno, $mese)
     {
@@ -168,7 +160,6 @@ class ContrattoEnergia extends Model
         $guadagno->calcolaGuadagnoServizi();
 
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -196,7 +187,6 @@ class ContrattoEnergia extends Model
         return $this->hasOne(Cliente::class, 'id', 'cliente_id');
     }
 
-
     public function gestore()
     {
         return $this->hasOne(GestoreContrattoEnergia::class, 'id', 'gestore_id');
@@ -212,12 +202,10 @@ class ContrattoEnergia extends Model
         return $this->hasMany(Mandato::class, 'gestore_id', 'gestore_id');
     }
 
-
     public function prodotto()
     {
         return $this->morphTo();
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -247,20 +235,20 @@ class ContrattoEnergia extends Model
         return $this->denominazione;
     }
 
-
     public function bulletEsitoFinale()
     {
         if ($this->esito_finale) {
 
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:' . self::ESITI[$this->esito_finale] . ';"></span>';
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.self::ESITI[$this->esito_finale].';"></span>';
         }
 
     }
 
-
     public function labelPagato()
     {
-        if ($this->pagato) return "<span class='badge badge-success' >Pagato</span>";
+        if ($this->pagato) {
+            return "<span class='badge badge-success' >Pagato</span>";
+        }
     }
 
     public static function selected($id)
@@ -268,18 +256,16 @@ class ContrattoEnergia extends Model
         if ($id) {
             $record = ContrattoTelefonia::find($id);
             if ($record) {
-                return '<option value="' . $record->id . '">' . $record->nominativo() . ' - ' . $record->tipoContratto->nome . '</option>';
+                return '<option value="'.$record->id.'">'.$record->nominativo().' - '.$record->tipoContratto->nome.'</option>';
             }
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
     | ALTRO
     |--------------------------------------------------------------------------
     */
-
 
     public function puoModificare($puoModificare)
     {

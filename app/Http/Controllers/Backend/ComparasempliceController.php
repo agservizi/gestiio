@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\Comparasemplice;
 use App\Models\EsitoComparasemplice;
-use App\Models\EsitoServizioFinanziario;
-use App\Models\ServizioFinanziario;
 use App\Models\TabMotivoKo;
 use App\Notifications\NotificaAgenteCambioEsitoComparasemplice;
-use App\Notifications\NotificaAgenteCambioEsitoServizioFinanziario;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Comparasemplice;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+
 use function App\getInputCheckbox;
 use function App\getInputNumero;
 use function App\getInputToUpper;
@@ -22,11 +22,10 @@ class ComparasempliceController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -40,7 +39,7 @@ class ComparasempliceController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -49,7 +48,7 @@ class ComparasempliceController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -59,7 +58,7 @@ class ComparasempliceController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -72,9 +71,9 @@ class ComparasempliceController extends Controller
                 'html' => base64_encode(view('Backend.Comparasemplice.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                    'puoModificare' => $puoModificare
+                    'puoModificare' => $puoModificare,
 
-                ]))
+                ])),
             ];
 
         }
@@ -82,29 +81,27 @@ class ComparasempliceController extends Controller
         return view('Backend.Comparasemplice.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Comparasemplice::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Comparasemplice::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\Comparasemplice::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuovo '.Comparasemplice::NOME_SINGOLARE,
             'testoCerca' => 'Cerca in nominativo, email, telefono',
-            'puoModificare' => $puoModificare
-
+            'puoModificare' => $puoModificare,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Comparasemplice::query()
+        $queryBuilder = Comparasemplice::query()
             ->with('esito')
             ->with('agente')
             ->withCount('allegati');
@@ -116,20 +113,19 @@ class ComparasempliceController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
 
-        $record = new Comparasemplice();
+        $record = new Comparasemplice;
         if (Auth::user()->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         }
@@ -138,11 +134,10 @@ class ComparasempliceController extends Controller
 
         return view('Backend.Comparasemplice.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Comparasemplice::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Comparasemplice::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([ComparasempliceController::class, 'index']) => 'Torna a elenco ' . Comparasemplice::NOME_PLURALE],
+            'breadcrumbs' => [action([ComparasempliceController::class, 'index']) => 'Torna a elenco '.Comparasemplice::NOME_PLURALE],
             'allegatoServizioType' => Comparasemplice::class,
-
 
         ]);
     }
@@ -150,33 +145,34 @@ class ComparasempliceController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new Comparasemplice();
+        $record = new Comparasemplice;
         $record->esito_id = 'in-gestione';
         $this->salvaDati($record, $request);
+
         return redirect()->action([ComparasempliceController::class, 'show'], $record->id);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = Comparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo comparasemplice non esiste');
+        abort_if(! $record, 404, 'Questo comparasemplice non esiste');
+
         return view('Backend.Comparasemplice.show', [
             'record' => $record,
             'controller' => ComparasempliceController::class,
             'titoloPagina' => Comparasemplice::NOME_SINGOLARE,
-            'breadcrumbs' => [action([ComparasempliceController::class, 'index']) => 'Torna a elenco ' . Comparasemplice::NOME_PLURALE]
+            'breadcrumbs' => [action([ComparasempliceController::class, 'index']) => 'Torna a elenco '.Comparasemplice::NOME_PLURALE],
 
         ]);
     }
@@ -184,13 +180,13 @@ class ComparasempliceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = Comparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo comparasemplice non esiste');
+        abort_if(! $record, 404, 'Questo comparasemplice non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -200,9 +196,9 @@ class ComparasempliceController extends Controller
         return view('Backend.Comparasemplice.edit', [
             'record' => $record,
             'controller' => ComparasempliceController::class,
-            'titoloPagina' => 'Modifica ' . Comparasemplice::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Comparasemplice::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ComparasempliceController::class, 'index']) => 'Torna a elenco ' . Comparasemplice::NOME_PLURALE],
+            'breadcrumbs' => [action([ComparasempliceController::class, 'index']) => 'Torna a elenco '.Comparasemplice::NOME_PLURALE],
             'allegatoServizioType' => Comparasemplice::class,
         ]);
     }
@@ -210,32 +206,31 @@ class ComparasempliceController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = Comparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo ' . Comparasemplice::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.Comparasemplice::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = Comparasemplice::find($id);
-        abort_if(!$record, 404, 'Questo comparasemplice non esiste');
+        abort_if(! $record, 404, 'Questo comparasemplice non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -243,11 +238,10 @@ class ComparasempliceController extends Controller
         ];
     }
 
-
     public function aggiornaStato(Request $request, $id)
     {
         $servizioFinanziario = Comparasemplice::find($id);
-        abort_if(!$servizioFinanziario, 404, 'Questo servizio non esiste');
+        abort_if(! $servizioFinanziario, 404, 'Questo servizio non esiste');
 
         $esitoPrima = $servizioFinanziario->esito_id;
 
@@ -258,13 +252,12 @@ class ComparasempliceController extends Controller
         $servizioFinanziario->pagato = getInputCheckbox($request->input('pagato'));
         $servizioFinanziario->motivo_ko = getInputToUpper(Str::limit($request->input('motivo_ko'), 254));
         if ($esito->esito_finale == 'ko') {
-            //$servizioFinanziario->provvigione_agente = 0;
-            //$servizioFinanziario->provvigione_agenzia = 0;
+            // $servizioFinanziario->provvigione_agente = 0;
+            // $servizioFinanziario->provvigione_agenzia = 0;
         } else {
-            //$servizioFinanziario->provvigione_agente = getInputNumero($request->input('provvigione_agente')) ?? 0;
-            //$servizioFinanziario->provvigione_agenzia = getInputNumero($request->input('provvigione_agenzia')) ?? 0;
+            // $servizioFinanziario->provvigione_agente = getInputNumero($request->input('provvigione_agente')) ?? 0;
+            // $servizioFinanziario->provvigione_agenzia = getInputNumero($request->input('provvigione_agenzia')) ?? 0;
         }
-
 
         $servizioFinanziario->save();
 
@@ -284,7 +277,6 @@ class ComparasempliceController extends Controller
             ->with('agente')
             ->withCount('allegati')->where('id', $servizioFinanziario->id)->get();
 
-
         if ($servizioFinanziario->wasChanged(['esito_id'])) {
             $esito = EsitoComparasemplice::find($servizioFinanziario->esito_id);
             if ($esito->notifica_mail) {
@@ -299,34 +291,32 @@ class ComparasempliceController extends Controller
 
         }
 
-
         $view = 'Backend.Comparasemplice.tbody';
 
         return ['success' => true, 'id' => $id,
             'html' => base64_encode(view($view, [
                 'records' => $records,
                 'controller' => ContrattoTelefoniaController::class,
-                'puoModificare' => Auth::user()->hasPermissionTo('admin')
-            ]))
+                'puoModificare' => Auth::user()->hasPermissionTo('admin'),
+            ])),
         ];
     }
 
-
     /**
-     * @param Comparasemplice $model
-     * @param Request $request
+     * @param  Comparasemplice  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'agente_id' => '',
@@ -347,6 +337,7 @@ class ComparasempliceController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -360,13 +351,11 @@ class ComparasempliceController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Comparasemplice::get();
+        return Comparasemplice::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'data' => ['required'],
@@ -380,5 +369,4 @@ class ComparasempliceController extends Controller
 
         return $rules;
     }
-
 }

@@ -1,5 +1,19 @@
 <?php
 
+use App\Http\Controllers\Backend\AreaPersonaleController;
+use App\Http\Controllers\Backend\CartellaFilesController;
+use App\Http\Controllers\Backend\Select2;
+use App\Http\Controllers\Backend\VisuraCameraleController;
+use App\Http\Controllers\Frontend\AreaUtenteController;
+use App\Http\Controllers\Frontend\ContrattoController;
+use App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController;
+use App\Http\Controllers\Frontend\TicketController;
+use App\Http\Controllers\LogOut;
+use App\Http\Controllers\PagineController;
+use App\Http\Controllers\RegistratiController;
+use App\Http\Controllers\TestController;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,84 +27,84 @@ use Illuminate\Support\Facades\Route;
 |
 */
 Route::get('/', function () {
-    if (\Illuminate\Support\Facades\Auth::check()) {
-        /** @var \App\Models\User $user */
-        $user = \Illuminate\Support\Facades\Auth::user();
+    if (Auth::check()) {
+        /** @var User $user */
+        $user = Auth::user();
         if ($user->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore'])) {
             return redirect('/backend');
         }
+
         return redirect('/area-personale');
     }
 
     return redirect('/login');
 });
 
-Route::get('select2front', [\App\Http\Controllers\Backend\Select2::class, 'response']);
+Route::get('select2front', [Select2::class, 'response']);
 
+Route::get('/logout', [LogOut::class, 'logOut']);
+Route::post('/send-otp-email/{id}', [LogOut::class, 'sendOtpEmail']);
 
-Route::get('/logout', [\App\Http\Controllers\LogOut::class, 'logOut']);
-Route::post('/send-otp-email/{id}', [\App\Http\Controllers\LogOut::class, 'sendOtpEmail']);
+Route::post('/register', [RegistratiController::class, 'post']);
+Route::get('/registrato', [RegistratiController::class, 'show']);
+Route::post('/verifica-partita-iva', [RegistratiController::class, 'verificaPIvaEu']);
 
-Route::post('/register', [\App\Http\Controllers\RegistratiController::class, 'post']);
-Route::get('/registrato', [\App\Http\Controllers\RegistratiController::class, 'show']);
-Route::post('/verifica-partita-iva', [\App\Http\Controllers\RegistratiController::class, 'verificaPIvaEu']);
-
-Route::get('/test', \App\Http\Controllers\TestController::class);
+Route::get('/test', TestController::class);
 
 Route::view('/policies', 'auth.policies');
-Route::match(['get', 'post'], '/documenti/condivisi/{token}', [\App\Http\Controllers\Backend\CartellaFilesController::class, 'sharedDownload']);
+Route::match(['get', 'post'], '/documenti/condivisi/{token}', [CartellaFilesController::class, 'sharedDownload']);
 
-Route::get('/pagina/{pagina}', [\App\Http\Controllers\PagineController::class, 'show']);
+Route::get('/pagina/{pagina}', [PagineController::class, 'show']);
 
 Route::middleware('throttle:20,1')->group(function () {
-    Route::get('/contratto-energia/documenti/template', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'downloadTemplate'])
+    Route::get('/contratto-energia/documenti/template', [ContrattoEnergiaDocumentiController::class, 'downloadTemplate'])
         ->name('frontend.contratto-energia.magic.template');
-    Route::get('/contratto-energia/documenti/{token}', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'show'])
+    Route::get('/contratto-energia/documenti/{token}', [ContrattoEnergiaDocumentiController::class, 'show'])
         ->name('frontend.contratto-energia.magic.show');
-    Route::post('/contratto-energia/documenti/{token}', [\App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController::class, 'store'])
+    Route::post('/contratto-energia/documenti/{token}', [ContrattoEnergiaDocumentiController::class, 'store'])
         ->name('frontend.contratto-energia.magic.store');
 });
 
 Route::group(['middleware' => ['auth']], function () {
 
-    Route::get('area-personale', [\App\Http\Controllers\Frontend\AreaUtenteController::class, 'show']);
-    Route::get('area-personale/contratti', [\App\Http\Controllers\Frontend\ContrattoController::class, 'index']);
-    Route::get('ticket/{messaggioId}/allegato/{allegatoId}', [\App\Http\Controllers\Frontend\TicketController::class, 'downloadAllegato']);
+    Route::get('area-personale', [AreaUtenteController::class, 'show']);
+    Route::get('area-personale/contratti', [ContrattoController::class, 'index']);
+    Route::get('ticket/{messaggioId}/allegato/{allegatoId}', [TicketController::class, 'downloadAllegato']);
 
-    Route::resource('ticket', \App\Http\Controllers\Frontend\TicketController::class)->only(['index', 'create', 'show', 'store', 'update', 'edit']);
-    Route::post('/allegato-ticket', [\App\Http\Controllers\Frontend\TicketController::class, 'uploadAllegato'])->middleware('throttle:30,1');
-    Route::delete('/allegato-ticket', [\App\Http\Controllers\Frontend\TicketController::class, 'deleteAllegato'])->middleware('throttle:60,1');
+    Route::resource('ticket', TicketController::class)->only(['index', 'create', 'show', 'store', 'update', 'edit']);
+    Route::post('/allegato-ticket', [TicketController::class, 'uploadAllegato'])->middleware('throttle:30,1');
+    Route::delete('/allegato-ticket', [TicketController::class, 'deleteAllegato'])->middleware('throttle:60,1');
 
-    Route::get('select2', [\App\Http\Controllers\Frontend\Select2::class, 'response']);
+    Route::get('select2', [App\Http\Controllers\Frontend\Select2::class, 'response']);
 
-    //Dati utente
-    Route::get('/area-utente/{tab?}', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'index']);
-    Route::get('/dati-utente', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'show']);
-    Route::get('/dati-utente/export', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'exportDatiPersonali']);
-    Route::patch('/dati-utente/{cosa}', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'update']);
+    // Dati utente
+    Route::get('/area-utente/{tab?}', [AreaPersonaleController::class, 'index']);
+    Route::get('/dati-utente', [AreaPersonaleController::class, 'show']);
+    Route::get('/dati-utente/export', [AreaPersonaleController::class, 'exportDatiPersonali']);
+    Route::patch('/dati-utente/{cosa}', [AreaPersonaleController::class, 'update']);
 
-
-    Route::get('/metronic/{cosa}', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'metronic']);
+    Route::get('/metronic/{cosa}', [AreaPersonaleController::class, 'metronic']);
 
 });
 
 // Alias compatibilità: alcune chiamate legacy puntano senza prefisso /backend.
 Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa']], function () {
-    Route::get('/visura-cerca-azienda', [\App\Http\Controllers\Backend\VisuraCameraleController::class, 'showCercaAzienda']);
-    Route::post('/visura-cerca-azienda', [\App\Http\Controllers\Backend\VisuraCameraleController::class, 'postCercaAzienda']);
+    Route::get('/visura-cerca-azienda', [VisuraCameraleController::class, 'showCercaAzienda']);
+    Route::post('/visura-cerca-azienda', [VisuraCameraleController::class, 'postCercaAzienda']);
 });
 
 // Stop impersonation: restore original user stored in session('impersona')
 Route::get('/stop-impersona', function () {
-    if (!session()->has('impersona')) {
+    if (! session()->has('impersona')) {
         return redirect('/');
     }
     $orig = session('impersona');
     session()->forget('impersona');
-    \Illuminate\Support\Facades\Auth::loginUsingId($orig, false);
+    Auth::loginUsingId($orig, false);
+
     return redirect('/backend');
 })->middleware('auth');
 
 if (env('APP_ENV') == 'local') {
-    Route::get('login-id/{id}', [\App\Http\Controllers\LogOut::class, 'loginId']);
+    Route::get('login-id/{id}', [LogOut::class, 'loginId']);
 }

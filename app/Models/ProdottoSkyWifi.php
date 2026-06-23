@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProdottoSkyWifi extends Model
 {
-
-    protected $table = "prodotto_skywifi";
+    protected $table = 'prodotto_skywifi';
 
     protected $primaryKey = 'contratto_id';
 
-    public const NOME_SINGOLARE = "prodottoskytv";
-    public const NOME_PLURALE = "";
+    public const NOME_SINGOLARE = 'prodottoskytv';
+
+    public const NOME_PLURALE = '';
 
     protected $casts = [
         'pacchetti_voce' => 'array',
@@ -21,8 +20,9 @@ class ProdottoSkyWifi extends Model
 
     public const PROFILO = [
         'sky_open',
-        'sky_smart'
+        'sky_smart',
     ];
+
     public const TIPOLOGIA_CLIENTE = [
         'persona_fisica' => 'Persona fisica',
         'societa' => 'Società',
@@ -53,6 +53,7 @@ class ProdottoSkyWifi extends Model
 al cliente che non sarà necessario mandare disdetta al
 vecchio operatore"></i>',
     ];
+
     public const FREQUENZA_PAGAMENTO_TV = [
         'unica_soluzione',
         'rate_mensili',
@@ -64,7 +65,6 @@ vecchio operatore"></i>',
         'master_card',
         'visa',
     ];
-
 
     /*
     |--------------------------------------------------------------------------

@@ -2,26 +2,21 @@
 
 namespace App\Http\Services;
 
-use App\Models\ChiamataApi;
 use App\Models\ListinoBrt;
 use App\Models\ListinoBrtEuropa;
 use App\Models\NazioneEuropaBrt;
-use App\Models\SpedizioneBrt;
-use Illuminate\Support\Facades\Http;
+
 use function App\applicaPercentuale;
 
 class BrtTariffaService
 {
-
     protected $prezzo;
+
     protected $testotariffa;
 
     protected $error = false;
 
-    public function __construct(protected $nazione, protected $pesoTotale, protected $colli, protected $pudo = null, protected $contrassegno = null)
-    {
-
-    }
+    public function __construct(protected $nazione, protected $pesoTotale, protected $colli, protected $pudo = null, protected $contrassegno = null) {}
 
     public function calcola()
     {
@@ -34,27 +29,28 @@ class BrtTariffaService
             }
 
             if ($this->contrassegno) {
-                $this->prezzo =$this->prezzo+ $tariffa->contrassegno;
+                $this->prezzo = $this->prezzo + $tariffa->contrassegno;
             }
 
             $this->testotariffa = 'Italia';
         } else {
-            //Trovo gruppo
+            // Trovo gruppo
             $nazioneEuropaBrt = NazioneEuropaBrt::find($this->nazione);
-            if (!$nazioneEuropaBrt) {
+            if (! $nazioneEuropaBrt) {
                 \Log::alert("Nazione {$this->nazione} non trovata");
                 $this->error = "Nazione {$this->nazione} non trovata";
             }
             $tariffa = ListinoBrtEuropa::trovaTariffa($this->pesoTotale, $this->colli > 1 ? 'multi' : 'mono');
-            if (!$tariffa) {
+            if (! $tariffa) {
                 $this->error = 'Tariffa non trovata';
+
                 return;
             }
 
             if ($this->colli > 1) {
-                $this->testotariffa = 'Multicollo gruppo ' . $nazioneEuropaBrt->gruppo;
+                $this->testotariffa = 'Multicollo gruppo '.$nazioneEuropaBrt->gruppo;
             } else {
-                $this->testotariffa = 'Monocollo gruppo ' . $nazioneEuropaBrt->gruppo;
+                $this->testotariffa = 'Monocollo gruppo '.$nazioneEuropaBrt->gruppo;
             }
             $this->prezzo = $tariffa->calcolaPrezzo(strtolower($nazioneEuropaBrt->gruppo));
         }
@@ -88,6 +84,4 @@ class BrtTariffaService
     {
         return $this->testotariffa;
     }
-
-
 }

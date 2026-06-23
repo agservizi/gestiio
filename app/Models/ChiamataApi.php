@@ -9,15 +9,16 @@ class ChiamataApi extends Model
 {
     use HasFactory;
 
-    protected $table = "log_chiamate_api";
+    protected $table = 'log_chiamate_api';
 
     protected $casts = [
         'request' => 'array',
-        'response' => 'array'
+        'response' => 'array',
     ];
 
-    public const NOME_SINGOLARE = "chiamataapi";
-    public const NOME_PLURALE = "";
+    public const NOME_SINGOLARE = 'chiamataapi';
+
+    public const NOME_PLURALE = '';
 
     /*
     |--------------------------------------------------------------------------

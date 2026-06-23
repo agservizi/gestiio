@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -16,7 +17,6 @@ return new class extends Migration {
             $table->string('tipo_visura');
             $table->boolean('richiedi_allegati')->default(0);
         });
-
 
         Schema::table('visure', function (Blueprint $table) {
             $table->string('nome')->nullable();
@@ -36,7 +36,6 @@ return new class extends Migration {
             $table->boolean('per_cliente')->default(0)->index();
 
         });
-
 
     }
 

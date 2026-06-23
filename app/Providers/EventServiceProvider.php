@@ -29,14 +29,14 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
-        Login::class=>[
-            LogSuccessfulLogin::class
+        Login::class => [
+            LogSuccessfulLogin::class,
         ],
-        Failed::class=>[
-            RecordFailedLoginAttempt::class
+        Failed::class => [
+            RecordFailedLoginAttempt::class,
         ],
-        MessageSent::class=>[
-            EmailLogger::class
+        MessageSent::class => [
+            EmailLogger::class,
         ],
         NotificationSending::class => [
             RespectUserNotificationPreferences::class,

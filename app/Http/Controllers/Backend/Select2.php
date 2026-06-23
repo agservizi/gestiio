@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Http\Controllers\Controller;
 use App\Models\ClienteAssistenza;
 use App\Models\Comune;
 use App\Models\ContattoBrt;
@@ -15,7 +16,6 @@ use App\Models\TipoContratto;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 use robertogallea\LaravelCodiceFiscale\CodiceFiscale;
 
 class Select2 extends Controller
@@ -23,17 +23,14 @@ class Select2 extends Controller
     public function response(Request $request)
     {
 
-
         $querystring = $request->input();
 
-
-        //Prende la prima chiave della querystring
+        // Prende la prima chiave della querystring
         reset($querystring);
         $key = key($querystring);
         //
 
         $term = trim($request->input('term'));
-
 
         // $term=trim($term);
         switch ($key) {
@@ -69,6 +66,7 @@ class Select2 extends Controller
                 if ($term) {
                     $qb->where('nome', 'like', "%$term%");
                 }
+
                 return $qb->get();
 
             case 'contratto_id':
@@ -85,8 +83,9 @@ class Select2 extends Controller
                 }
                 $arr = [];
                 foreach ($qb->get() as $record) {
-                    $arr[] = ['id' => $record->id, 'text' => $record->nominativo() . ' - ' . $record->tipoContratto->nome];
+                    $arr[] = ['id' => $record->id, 'text' => $record->nominativo().' - '.$record->tipoContratto->nome];
                 }
+
                 return $arr;
 
             case 'agente_id':
@@ -96,6 +95,7 @@ class Select2 extends Controller
                     ->orderBy('alias')
                     ->has('permissions')
                     ->whereRaw('CONCAT_WS(" ",cognome,nome,alias) like ?', "%$term%");
+
                 return $qb->get();
 
             case 'tipo_contratto_id':
@@ -111,6 +111,7 @@ class Select2 extends Controller
                         $q->where('agente_id', $request->input('agente_id'))->where('attivo', 1);
                     });
                 }
+
                 return $qb->get();
 
             case 'offerta_sim_id':
@@ -125,6 +126,7 @@ class Select2 extends Controller
                         $q->where('gestore_id', $request->input('gestore_id'));
                     });
                 }
+
                 return $qb->get();
 
             case 'prodotto_assistenza':
@@ -134,6 +136,7 @@ class Select2 extends Controller
                 if ($term) {
                     $qb->where('nome', 'like', "%$term%");
                 }
+
                 return $qb->get();
 
             case 'cliente_assistenza':
@@ -141,13 +144,13 @@ class Select2 extends Controller
                     ->select('id', DB::raw('CONCAT_WS(" ",cognome,nome,codice_fiscale) as text'))
                     ->orderBy('cognome')->orderBy('nome')
                     ->whereRaw('CONCAT_WS(" ",cognome,nome,codice_fiscale) like ?', "%$term%");
-                return $qb->get();
 
+                return $qb->get();
 
             case 'dati-cf':
                 $codiceFiscale = $request->input('codice_fiscale');
                 $datiRitorno = [];
-                $parserCodiceFiscale = new CodiceFiscale();
+                $parserCodiceFiscale = new CodiceFiscale;
                 if ($parserCodiceFiscale->parse($codiceFiscale) !== false) {
                     $datiRitorno['genere'] = $parserCodiceFiscale->getGender();
                     $datiRitorno['data_di_nascita'] = $parserCodiceFiscale->getBirthdate()->format('d/m/Y');
@@ -162,7 +165,6 @@ class Select2 extends Controller
 
                 return ['success' => true, 'dati_ritorno' => $datiRitorno];
 
-
             case 'citta':
                 if (empty($term)) {
                     return [''];
@@ -171,19 +173,18 @@ class Select2 extends Controller
                     $term = $term['term'];
                 }
 
-
                 $queryBuilder = Comune::orderBy('comune')->select(['elenco_comuni.id', DB::raw('CONCAT(comune, " (", targa,")") AS text'), 'cap']);
-                return $queryBuilder->where('comune', 'like', $term . '%')->where('soppresso', 0)->get();
-                break;
 
+                return $queryBuilder->where('comune', 'like', $term.'%')->where('soppresso', 0)->get();
+                break;
 
             case 'provincia':
             case 'provincia_ricerca':
                 if (empty($term)) {
                     return [''];
                 }
-                return Provincia::orderBy('provincia')->select(['id', 'provincia as text'])->where('provincia', 'like', $term . '%')->get();
 
+                return Provincia::orderBy('provincia')->select(['id', 'provincia as text'])->where('provincia', 'like', $term.'%')->get();
 
             case 'provincia_destinatario':
                 if (empty($term)) {
@@ -193,44 +194,44 @@ class Select2 extends Controller
                 return DB::table('elenco_province')
                     ->select('sigla_automobilistica as id', 'provincia as text')
                     ->orderBy('provincia')
-                    ->where('provincia', 'like', $term . '%')
+                    ->where('provincia', 'like', $term.'%')
                     ->get();
-
 
             case 'regione':
                 $queryBuilder = Provincia::orderBy('regione')->select(['id_regione as id', 'regione as text']);
                 if ($term != '') {
-                    $queryBuilder->where('regione', 'like', $term . '%');
+                    $queryBuilder->where('regione', 'like', $term.'%');
                 }
+
                 return $queryBuilder->distinct()->get();
 
             case 'nazione':
                 if (empty($term)) {
                     return [''];
                 }
+
                 return DB::table('elenco_nazioni')
                     ->select('alpha2 as id', 'langit as text')
                     ->orderBy('langit')
-                    ->where('langit', 'like', $term . '%')
+                    ->where('langit', 'like', $term.'%')
                     ->get();
 
             case 'nazione_brt':
                 if (empty($term)) {
                     return [''];
                 }
+
                 return DB::table('brt_nazioni_europa')
                     ->select('id', 'nome_nazione as text')
                     ->orderBy('nome_nazione')
-                    ->where('nome_nazione', 'like', $term . '%')
+                    ->where('nome_nazione', 'like', $term.'%')
                     ->get();
-
 
             default:
 
                 return [];
 
         }
-
 
     }
 }

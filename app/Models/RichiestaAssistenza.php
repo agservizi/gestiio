@@ -9,10 +9,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class RichiestaAssistenza extends Model
 {
     use HasFactory;
-    protected $table="richieste_assistenza";
 
-    public const NOME_SINGOLARE = "richiesta assistenza";
-    public const NOME_PLURALE = "richieste assistenze";
+    protected $table = 'richieste_assistenza';
+
+    public const NOME_SINGOLARE = 'richiesta assistenza';
+
+    public const NOME_PLURALE = 'richieste assistenze';
 
     /*
     |--------------------------------------------------------------------------
@@ -22,11 +24,12 @@ class RichiestaAssistenza extends Model
 
     public function cliente(): HasOne
     {
-        return $this->hasOne(ClienteAssistenza::class,'id','cliente_id');
+        return $this->hasOne(ClienteAssistenza::class, 'id', 'cliente_id');
     }
+
     public function prodotto(): HasOne
     {
-        return $this->hasOne(ProdottoAssistenza::class,'id','prodotto_assistenza_id');
+        return $this->hasOne(ProdottoAssistenza::class, 'id', 'prodotto_assistenza_id');
     }
 
     /*

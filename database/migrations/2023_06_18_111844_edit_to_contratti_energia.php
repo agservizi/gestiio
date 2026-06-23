@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ContrattoEnergia;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -19,8 +20,8 @@ return new class extends Migration
             $table->dropIndex('contratti_energia_denominazione_index');
         });
 
-        foreach (\App\Models\ContrattoEnergia::withoutGlobalScope('filtroOperatore')->get() as $contratto) {
-            $contratto->testo_ricerca = $contratto->denominazione . '|' . $contratto->codice_contratto;
+        foreach (ContrattoEnergia::withoutGlobalScope('filtroOperatore')->get() as $contratto) {
+            $contratto->testo_ricerca = $contratto->denominazione.'|'.$contratto->codice_contratto;
             $contratto->save();
         }
     }

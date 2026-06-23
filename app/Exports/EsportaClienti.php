@@ -2,20 +2,16 @@
 
 namespace App\Exports;
 
-use App\Models\Cliente;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
 class EsportaClienti implements FromCollection, WithHeadings
 {
-
-    public function __construct(protected $builder)
-    {
-
-    }
+    public function __construct(protected $builder) {}
 
     /**
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function collection()
     {

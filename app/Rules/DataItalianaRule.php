@@ -23,8 +23,8 @@ class DataItalianaRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
@@ -33,6 +33,7 @@ class DataItalianaRule implements Rule
             $data = Carbon::createFromFormat('d/m/Y', $value);
         } catch (InvalidFormatException $e) {
             $this->errorMessage = 'Il formato della data non è corretto';
+
             return false;
         }
 

@@ -4,16 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
 
 class Notifica extends Model
 {
     use HasFactory;
 
-    protected $table = "notifiche";
+    protected $table = 'notifiche';
 
-    public const NOME_SINGOLARE = "notifica";
-    public const NOME_PLURALE = "notifiche";
+    public const NOME_SINGOLARE = 'notifica';
+
+    public const NOME_PLURALE = 'notifiche';
 
     /*
     |--------------------------------------------------------------------------
@@ -25,7 +25,6 @@ class Notifica extends Model
     {
         return $this->hasMany(NotificaLettura::class, 'notifica_id', 'id');
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -45,10 +44,9 @@ class Notifica extends Model
     |--------------------------------------------------------------------------
     */
 
-
     public static function notificaAdAdmin($titolo, $testo, $tipo = 'info')
     {
-        $notifica = new Notifica();
+        $notifica = new Notifica;
         $notifica->titolo = $titolo;
         $notifica->destinatario = 'admin';
         $notifica->testo = $testo;

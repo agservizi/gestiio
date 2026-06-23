@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Http\Controllers\Backend\AgenteController;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -26,7 +25,7 @@ class NotificaRegistrazioneAgente extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -37,21 +36,21 @@ class NotificaRegistrazioneAgente extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         return (new MailMessage)
             ->subject('Registrazione nuovo agente')
-            ->line('Si è registrato l\'agente ' . $this->user->nominativo())
+            ->line('Si è registrato l\'agente '.$this->user->nominativo())
             ->action('Vedi', url()->action([AgenteController::class, 'show'], $this->user->id));
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

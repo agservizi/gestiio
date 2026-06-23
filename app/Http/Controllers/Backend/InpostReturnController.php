@@ -30,15 +30,15 @@ class InpostReturnController extends Controller
         return view('Backend.InpostReturn.index', [
             'records' => $records,
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . InpostReturn::NOME_PLURALE,
-            'testoNuovo' => 'Nuovo ' . InpostReturn::NOME_SINGOLARE,
+            'titoloPagina' => 'Elenco '.InpostReturn::NOME_PLURALE,
+            'testoNuovo' => 'Nuovo '.InpostReturn::NOME_SINGOLARE,
             'testoCerca' => 'Cerca per destinatario',
         ]);
     }
 
     public function create()
     {
-        $record = new InpostReturn();
+        $record = new InpostReturn;
 
         $user = Auth::user();
         if ($user instanceof User && $user->hasPermissionTo('agente')) {
@@ -48,15 +48,15 @@ class InpostReturnController extends Controller
         return view('Backend.InpostReturn.edit', [
             'record' => $record,
             'controller' => get_class($this),
-            'titoloPagina' => 'Nuovo ' . InpostReturn::NOME_SINGOLARE,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . InpostReturn::NOME_PLURALE],
+            'titoloPagina' => 'Nuovo '.InpostReturn::NOME_SINGOLARE,
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.InpostReturn::NOME_PLURALE],
         ]);
     }
 
     public function store(Request $request)
     {
         $request->validate($this->rules());
-        $record = new InpostReturn();
+        $record = new InpostReturn;
         $this->salvaDati($record, $request);
         $this->creaReturnRemoto($record);
 
@@ -66,20 +66,20 @@ class InpostReturnController extends Controller
     public function show($id)
     {
         $record = InpostReturn::with(['chiamate' => fn ($q) => $q->latest()])->find($id);
-        abort_if(!$record, 404, 'Questo reso InPost non esiste');
+        abort_if(! $record, 404, 'Questo reso InPost non esiste');
 
         return view('Backend.InpostReturn.show', [
             'record' => $record,
             'controller' => self::class,
             'titoloPagina' => InpostReturn::NOME_SINGOLARE,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . InpostReturn::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.InpostReturn::NOME_PLURALE],
         ]);
     }
 
     public function destroy($id)
     {
         $record = InpostReturn::find($id);
-        abort_if(!$record, 404, 'Questo reso InPost non esiste');
+        abort_if(! $record, 404, 'Questo reso InPost non esiste');
         $record->delete();
 
         return [
@@ -91,17 +91,17 @@ class InpostReturnController extends Controller
     public function etichetta($id)
     {
         $record = InpostReturn::find($id);
-        abort_if(!$record, 404, 'Questo reso InPost non esiste');
+        abort_if(! $record, 404, 'Questo reso InPost non esiste');
 
         $url = $record->qrCodeUrl();
-        abort_if(!$url, 404, 'QR code non disponibile');
+        abort_if(! $url, 404, 'QR code non disponibile');
 
-        $service = new InpostService();
+        $service = new InpostService;
         $raw = $service->requestRawPublic('get', $url, [], $record);
 
         return Response::make($raw['body'], 200, [
             'Content-Type' => $raw['content_type'] ?: 'application/pdf',
-            'Content-Disposition' => 'inline; filename="inpost-return-' . $record->id . '.pdf"',
+            'Content-Disposition' => 'inline; filename="inpost-return-'.$record->id.'.pdf"',
         ]);
     }
 
@@ -120,7 +120,7 @@ class InpostReturnController extends Controller
     protected function salvaDati(InpostReturn $record, Request $request): void
     {
         DB::transaction(function () use ($record, $request) {
-            if (!$record->exists) {
+            if (! $record->exists) {
                 $record->agente_id = $request->input('agente_id') ?: Auth::id();
             }
 
@@ -137,7 +137,7 @@ class InpostReturnController extends Controller
 
     protected function creaReturnRemoto(InpostReturn $record): void
     {
-        $service = new InpostService();
+        $service = new InpostService;
         $record->request_payload = $service->buildReturnPayload($record);
         $response = $service->createReturn($record);
         $record->response = array_merge($record->response ?? [], $response);

@@ -1,10 +1,11 @@
 <?php
 
+use App\Models\EsitoServizioFinanziario;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -15,11 +16,11 @@ return new class extends Migration {
         $esiti = ['DA GESTIRE', 'CLIENTE NON ACQUISIBILE', 'CLIENTE ACQUISIBILE', 'FINALIZZATO'];
 
         foreach ($esiti as $e) {
-            $record = new \App\Models\EsitoServizioFinanziario();
-            $record->id=\Illuminate\Support\Str::slug($e);
-            $record->nome=\Illuminate\Support\Str::of($e)->lower()->ucfirst();
-            $record->attivo=1;
-            $record->colore_hex='#333333';
+            $record = new EsitoServizioFinanziario;
+            $record->id = Str::slug($e);
+            $record->nome = Str::of($e)->lower()->ucfirst();
+            $record->attivo = 1;
+            $record->colore_hex = '#333333';
             $record->save();
         }
     }

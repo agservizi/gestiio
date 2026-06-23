@@ -20,6 +20,7 @@ class BackfillGestoriEnergiaCategorie extends Command
         $gestori = GestoreContrattoEnergia::query()->orderBy('id')->get();
         if ($gestori->isEmpty()) {
             $this->warn('Nessun gestore trovato.');
+
             return self::SUCCESS;
         }
 
@@ -41,7 +42,7 @@ class BackfillGestoriEnergiaCategorie extends Command
             if ($dirty) {
                 $updated++;
                 $this->line("Aggiorno #{$gestore->id} {$gestore->nome}: {$categoria} / {$switchKey}");
-                if (!$dryRun) {
+                if (! $dryRun) {
                     $gestore->save();
                 }
             }
@@ -52,7 +53,7 @@ class BackfillGestoriEnergiaCategorie extends Command
 
         $created = 0;
         foreach ($gestori as $switchKey => $records) {
-            if (!$switchKey) {
+            if (! $switchKey) {
                 continue;
             }
 
@@ -64,7 +65,7 @@ class BackfillGestoriEnergiaCategorie extends Command
             }
 
             $source = $consumer ?: $business;
-            if (!$source) {
+            if (! $source) {
                 continue;
             }
 
@@ -80,7 +81,7 @@ class BackfillGestoriEnergiaCategorie extends Command
 
             $created++;
             $this->line("Creo variante {$targetCategoria} per {$switchKey}: {$nuovo->nome} ({$nuovo->model_prodotto})");
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $nuovo->save();
             }
         }
@@ -116,6 +117,7 @@ class BackfillGestoriEnergiaCategorie extends Command
         }
 
         $nome = preg_replace('/\b(consumer|business)\b/i', '', (string) $gestore->nome);
+
         return Str::slug(trim((string) $nome), '-');
     }
 
@@ -135,12 +137,13 @@ class BackfillGestoriEnergiaCategorie extends Command
     protected function normalizeNomePerCategoria(string $nome, string $categoria): string
     {
         $base = preg_replace('/\s*[\(\-]?\s*(consumer|business)\s*[\)]?$/i', '', trim($nome));
-        return trim($base) . ' ' . ucfirst($categoria);
+
+        return trim($base).' '.ucfirst($categoria);
     }
 
     protected function counterpartModelProdotto(string $modelProdotto, string $categoria): string
     {
-        if (!$modelProdotto) {
+        if (! $modelProdotto) {
             return $modelProdotto;
         }
 
@@ -149,6 +152,7 @@ class BackfillGestoriEnergiaCategorie extends Command
             if ($target !== $modelProdotto) {
                 return $target;
             }
+
             return $modelProdotto;
         }
 
@@ -160,4 +164,3 @@ class BackfillGestoriEnergiaCategorie extends Command
         return $modelProdotto;
     }
 }
-

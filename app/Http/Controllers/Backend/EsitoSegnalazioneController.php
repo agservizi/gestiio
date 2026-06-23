@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\EsitoSegnalazione;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class EsitoSegnalazioneController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -30,7 +31,7 @@ class EsitoSegnalazioneController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -39,7 +40,7 @@ class EsitoSegnalazioneController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -49,7 +50,7 @@ class EsitoSegnalazioneController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -60,44 +61,42 @@ class EsitoSegnalazioneController extends Controller
                 'html' => base64_encode(view('Backend.EsitoSegnalazione.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.EsitoSegnalazione.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoSegnalazione::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.EsitoSegnalazione::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo'=>'Nuovo '. \App\Models\EsitoSegnalazione::NOME_SINGOLARE,
-            'testoCerca'=>null
+            'testoNuovo' => 'Nuovo '.EsitoSegnalazione::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-        
+
         return view('Backend.EsitoSegnalazione.index', [
             'records' => $this->queryBuilderIndex(),
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoSegnalazione::NOME_PLURALE,
-            'testoNuovo'=>'Nuovo '. \App\Models\EsitoSegnalazione::NOME_SINGOLARE,
-            'testoCerca'=>null
+            'titoloPagina' => 'Elenco '.EsitoSegnalazione::NOME_PLURALE,
+            'testoNuovo' => 'Nuovo '.EsitoSegnalazione::NOME_SINGOLARE,
+            'testoCerca' => null,
         ]);
 
-
     }
-      
-            /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+
+    /**
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder =  \App\Models\EsitoSegnalazione::query();
+        $queryBuilder = EsitoSegnalazione::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -106,25 +105,24 @@ class EsitoSegnalazioneController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-                $record=new EsitoSegnalazione();
+        $record = new EsitoSegnalazione;
+
         return view('Backend.EsitoSegnalazione.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . EsitoSegnalazione::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.EsitoSegnalazione::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([EsitoSegnalazioneController::class, 'index']) => 'Torna a elenco ' . EsitoSegnalazione::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoSegnalazioneController::class, 'index']) => 'Torna a elenco '.EsitoSegnalazione::NOME_PLURALE],
 
         ]);
     }
@@ -132,14 +130,14 @@ class EsitoSegnalazioneController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
-                $request->validate($this->rules(null));
-        $record=new EsitoSegnalazione();
+        $request->validate($this->rules(null));
+        $record = new EsitoSegnalazione;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
@@ -147,17 +145,18 @@ class EsitoSegnalazioneController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
-                $record = EsitoSegnalazione::find($id);
-        abort_if(!$record, 404, 'Questo esitosegnalazione non esiste');
+        $record = EsitoSegnalazione::find($id);
+        abort_if(! $record, 404, 'Questo esitosegnalazione non esiste');
+
         return view('Backend.EsitoSegnalazione.show', [
             'record' => $record,
             'controller' => EsitoSegnalazioneController::class,
-            'titoloPagina' =>  EsitoSegnalazione::NOME_SINGOLARE,
-            'breadcrumbs' => [action([EsitoSegnalazioneController::class, 'index']) => 'Torna a elenco ' . EsitoSegnalazione::NOME_PLURALE]
+            'titoloPagina' => EsitoSegnalazione::NOME_SINGOLARE,
+            'breadcrumbs' => [action([EsitoSegnalazioneController::class, 'index']) => 'Torna a elenco '.EsitoSegnalazione::NOME_PLURALE],
 
         ]);
     }
@@ -166,23 +165,24 @@ class EsitoSegnalazioneController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
-                $record = EsitoSegnalazione::find($id);
-        abort_if(!$record, 404, 'Questo esitosegnalazione non esiste');
-         if (false) {
+        $record = EsitoSegnalazione::find($id);
+        abort_if(! $record, 404, 'Questo esitosegnalazione non esiste');
+        if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.EsitoSegnalazione.edit', [
             'record' => $record,
             'controller' => EsitoSegnalazioneController::class,
-            'titoloPagina' => 'Modifica ' . EsitoSegnalazione::NOME_SINGOLARE,
-            'eliminabile'=>$eliminabile,
-            'breadcrumbs' => [action([EsitoSegnalazioneController::class, 'index']) => 'Torna a elenco ' . EsitoSegnalazione::NOME_PLURALE]
+            'titoloPagina' => 'Modifica '.EsitoSegnalazione::NOME_SINGOLARE,
+            'eliminabile' => $eliminabile,
+            'breadcrumbs' => [action([EsitoSegnalazioneController::class, 'index']) => 'Torna a elenco '.EsitoSegnalazione::NOME_PLURALE],
 
         ]);
     }
@@ -190,16 +190,16 @@ class EsitoSegnalazioneController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
-                $record = EsitoSegnalazione::find($id);
-        abort_if(!$record, 404, 'Questo ' . EsitoSegnalazione::NOME_SINGOLARE . ' non esiste');
+        $record = EsitoSegnalazione::find($id);
+        abort_if(! $record, 404, 'Questo '.EsitoSegnalazione::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
@@ -207,43 +207,42 @@ class EsitoSegnalazioneController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
-                $record = EsitoSegnalazione::find($id);
-        abort_if(!$record, 404, 'Questo esitosegnalazione non esiste');
-        
+        $record = EsitoSegnalazione::find($id);
+        abort_if(! $record, 404, 'Questo esitosegnalazione non esiste');
+
         $record->delete();
-        
 
         return [
             'success' => true,
-            'redirect' => action([EsitoSegnalazioneController::class,'index']),
+            'redirect' => action([EsitoSegnalazioneController::class, 'index']),
         ];
     }
 
     /**
-     * @param EsitoSegnalazione $model
-     * @param Request $request
+     * @param  EsitoSegnalazione  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-            $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
-            'nome'=>'app\getInputUcwords',
-            'colore_hex'=>'',
-            'chiedi_motivo'=>'app\getInputCheckbox',
-            'notifica_mail'=>'app\getInputCheckbox',
-            'attivo'=>'app\getInputCheckbox',
+            'nome' => 'app\getInputUcwords',
+            'colore_hex' => '',
+            'chiedi_motivo' => 'app\getInputCheckbox',
+            'notifica_mail' => 'app\getInputCheckbox',
+            'attivo' => 'app\getInputCheckbox',
         ];
         foreach ($campi as $campo => $funzione) {
             $valore = $request->$campo;
@@ -254,6 +253,7 @@ class EsitoSegnalazioneController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -261,30 +261,26 @@ class EsitoSegnalazioneController extends Controller
     {
         return redirect()->action([get_class($this), 'index']);
     }
-    
+
     /** Query per index
-    * @return array
-    */
+     * @return array
+     */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\EsitoSegnalazione::get();
+        return EsitoSegnalazione::get();
     }
 
-
-
-    protected function rules($id=null)
+    protected function rules($id = null)
     {
 
-
-        $rules=[
-     'nome'=>['required','max:255'],
-     'colore_hex'=>['nullable','max:255'],
-     'chiedi_motivo'=>['nullable'],
-     'notifica_mail'=>['nullable'],
-     'attivo'=>['nullable'],
-];
+        $rules = [
+            'nome' => ['required', 'max:255'],
+            'colore_hex' => ['nullable', 'max:255'],
+            'chiedi_motivo' => ['nullable'],
+            'notifica_mail' => ['nullable'],
+            'attivo' => ['nullable'],
+        ];
 
         return $rules;
     }
-
 }

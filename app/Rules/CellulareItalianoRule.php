@@ -20,20 +20,20 @@ class CellulareItalianoRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
     {
 
-        if (!$value) {
+        if (! $value) {
             return true;
         }
 
-        //Tolgo +39
+        // Tolgo +39
         $valore = str_replace('+39', '', $value);
-        if (!Str::of($valore)->startsWith('3')) {
+        if (! Str::of($valore)->startsWith('3')) {
             return false;
         }
 

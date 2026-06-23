@@ -7,19 +7,14 @@ use Malhal\Geographical\Geographical;
 
 class Comune extends Model
 {
-
-
-    //https://github.com/malhal/Laravel-Geographical
-    //use Geographical;
-
-
-
+    // https://github.com/malhal/Laravel-Geographical
+    // use Geographical;
 
     public $timestamps = false;
+
     protected $table = 'elenco_comuni';
 
-    protected static $kilometers=true;
-
+    protected static $kilometers = true;
 
     /***************************************************
      * Relazioni
@@ -29,7 +24,6 @@ class Comune extends Model
     {
         return $this->hasOne('\App\Models\Provincia', 'id', 'provincia_id')->withDefault();
     }
-
 
     /***************************************************
      * Scopes
@@ -45,7 +39,6 @@ class Comune extends Model
         return $query->where('soppresso', 1);
     }
 
-
     /***************************************************
      * Accessor and mutators
      ***************************************************/
@@ -53,7 +46,7 @@ class Comune extends Model
     public function getComuneProvinciaAttribute()
     {
         if (array_key_exists('comune', $this->attributes)) {
-            return $this->attributes['comune'] . ' (' . $this->attributes['targa'] . ')';
+            return $this->attributes['comune'].' ('.$this->attributes['targa'].')';
 
         } else {
             return '';
@@ -63,9 +56,8 @@ class Comune extends Model
 
     public function comuneConTarga()
     {
-        return $this->comune . ' (' . $this->targa . ')';
+        return $this->comune.' ('.$this->targa.')';
     }
-
 
     public static function selected($id)
     {
@@ -74,6 +66,4 @@ class Comune extends Model
             return "<option value='$id' selected>{$record->comune} ({$record->targa})</option>";
         }
     }
-
-
 }

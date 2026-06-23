@@ -2,8 +2,8 @@
 
 namespace App\Notifications;
 
-use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\ContrattoTelefonia;
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -29,7 +29,7 @@ class NotificaSollecitoGestoreTelefonia extends Notification implements ShouldQu
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -40,8 +40,8 @@ class NotificaSollecitoGestoreTelefonia extends Notification implements ShouldQu
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
@@ -60,7 +60,7 @@ class NotificaSollecitoGestoreTelefonia extends Notification implements ShouldQu
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

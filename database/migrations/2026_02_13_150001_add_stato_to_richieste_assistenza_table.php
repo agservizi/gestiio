@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        if (!Schema::hasColumn('richieste_assistenza', 'stato')) {
+        if (! Schema::hasColumn('richieste_assistenza', 'stato')) {
             Schema::table('richieste_assistenza', function (Blueprint $table) {
                 $table->string('stato')->nullable()->after('pin');
                 $table->index('stato', 'idx_richieste_assistenza_stato');

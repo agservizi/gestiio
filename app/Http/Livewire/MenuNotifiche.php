@@ -13,9 +13,13 @@ use Livewire\Component;
 class MenuNotifiche extends Component
 {
     public $notifiche;
+
     public $conteggio;
+
     public $nuove = false;
+
     public $ora;
+
     protected $listeners = ['aggiornaNotifiche' => 'aggiornaNotifiche'];
 
     public function mount()
@@ -34,7 +38,6 @@ class MenuNotifiche extends Component
     {
         return view('livewire.menu-notifiche');
     }
-
 
     public function aggiornaNotifiche()
     {
@@ -56,11 +59,10 @@ class MenuNotifiche extends Component
 
         $this->conteggio = $this->notifiche->count();
 
-
         if ($this->conteggio == 0) {
             $this->nuove = false;
         } else {
-            if (!$this->nuove) {
+            if (! $this->nuove) {
                 /** @var User $user */
                 $user = Auth::user();
                 if (UserNotificationPreferences::wantsBrowserNotifications($user)) {
@@ -75,7 +77,6 @@ class MenuNotifiche extends Component
         } else {
             $this->dispatchBrowserEvent('no-notifiche');
         }
-
 
         if ($this->conteggio < 6) {
             $this->notifiche = $this->notifiche->merge(Notifica::query()
@@ -92,11 +93,10 @@ class MenuNotifiche extends Component
         }
 
         dispatch(function () {
-            Artisan::call("queue:work --once");
+            Artisan::call('queue:work --once');
         })->afterResponse();
 
     }
-
 
     public function hydrate()
     {
@@ -106,7 +106,7 @@ class MenuNotifiche extends Component
 
     public function visto($id)
     {
-        $visto = new NotificaLettura();
+        $visto = new NotificaLettura;
         $visto->notifica_id = $id;
         $visto->user_id = Auth::id();
         $visto->save();
@@ -116,7 +116,7 @@ class MenuNotifiche extends Component
     public function letteTutte()
     {
         foreach ($this->notifiche as $notifica) {
-            $visto = new NotificaLettura();
+            $visto = new NotificaLettura;
             $visto->notifica_id = $notifica->id;
             $visto->user_id = Auth::id();
             $visto->save();

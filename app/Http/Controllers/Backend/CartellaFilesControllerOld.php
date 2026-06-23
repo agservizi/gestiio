@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Http\MieClassi\AlertMessage2;
 use App\Http\MieClassi\DatiRitorno;
-use App\Models\File;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\CartellaFiles;
+use App\Models\File;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -18,17 +17,15 @@ class CartellaFilesControllerOld extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
@@ -38,36 +35,34 @@ class CartellaFilesControllerOld extends Controller
                 'html' => base64_encode(view('Backend.CartellaFiles.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.CartellaFiles.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\CartellaFiles::NOME_PLURALE,
-            'ordinamenti' => null,// $ordinamenti,
+            'titoloPagina' => 'Elenco '.CartellaFiles::NOME_PLURALE,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => 'Nuova cartella',
             'testoCerca' => 'Cerca nel nome',
-            'cartellaId' => null
+            'cartellaId' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\CartellaFiles::orderBy('nome')
+        $queryBuilder = CartellaFiles::orderBy('nome')
             ->withCount('files');
         $term = $request->input('cerca');
         if ($term) {
@@ -77,24 +72,24 @@ class CartellaFilesControllerOld extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new CartellaFiles();
+        $record = new CartellaFiles;
+
         return view('Backend.CartellaFiles.edit', [
             'record' => $record,
             'titoloPagina' => 'Nuova cartella',
             'controller' => get_class($this),
-            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco ' . CartellaFiles::NOME_PLURALE]
+            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco '.CartellaFiles::NOME_PLURALE],
 
         ]);
     }
@@ -102,30 +97,30 @@ class CartellaFilesControllerOld extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new CartellaFiles();
+        $record = new CartellaFiles;
         $this->salvaDati($record, $request);
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $html = view('Backend.CartellaFiles.elencoCartelle', [
             'records' => $this->applicaFiltri($request)->paginate(),
             'controller' => get_class($this),
             'reload' => true,
-            'cartellaId' => null
+            'cartellaId' => null,
 
         ]);
+
         return $datiRitorno->chiudiDialog(true)->oggettoReload('cartelle', $html)->getArray();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show(Request $request, $id)
     {
@@ -141,24 +136,25 @@ class CartellaFilesControllerOld extends Controller
                 $filesQb->where('cartella_id', $id);
             }
 
-            $datiRitorno = new DatiRitorno();
+            $datiRitorno = new DatiRitorno;
             $html = view('Backend.CartellaFiles.elencoFiles', [
                 'files' => $filesQb->get(),
                 'cartellaId' => $id,
                 'controller' => get_class($this),
                 'reload' => true,
             ]);
+
             return $datiRitorno->oggettoReload('aa', $html)->id($id)->getArray();
         }
 
-
         $record = CartellaFiles::find($id);
-        abort_if(!$record, 404, 'Questa cartellafiles non esiste');
+        abort_if(! $record, 404, 'Questa cartellafiles non esiste');
+
         return view('Backend.CartellaFiles.show', [
             'record' => $record,
             'controller' => CartellaFilesController::class,
             'titoloPagina' => CartellaFiles::NOME_SINGOLARE,
-            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco ' . CartellaFiles::NOME_PLURALE]
+            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco '.CartellaFiles::NOME_PLURALE],
 
         ]);
     }
@@ -166,24 +162,25 @@ class CartellaFilesControllerOld extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = CartellaFiles::withCount('files')->find($id);
-        abort_if(!$record, 404, 'Questa cartellafiles non esiste');
+        abort_if(! $record, 404, 'Questa cartellafiles non esiste');
         if ($record->files_count) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.CartellaFiles.edit', [
             'record' => $record,
             'controller' => CartellaFilesController::class,
-            'titoloPagina' => 'Modifica ' . CartellaFiles::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.CartellaFiles::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco ' . CartellaFiles::NOME_PLURALE]
+            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco '.CartellaFiles::NOME_PLURALE],
 
         ]);
     }
@@ -191,42 +188,40 @@ class CartellaFilesControllerOld extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
 
-
         $record = CartellaFiles::find($id);
-        abort_if(!$record, 404, 'Questa ' . CartellaFiles::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.CartellaFiles::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $html = view('Backend.CartellaFiles.elencoCartelle', [
             'records' => $this->applicaFiltri($request)->paginate(),
             'controller' => get_class($this),
             'reload' => true,
-            'cartellaId' => null
+            'cartellaId' => null,
 
         ]);
+
         return $datiRitorno->chiudiDialog(true)->oggettoReload('cartelle', $html)->getArray();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = CartellaFiles::find($id);
-        abort_if(!$record, 404, 'Questa cartellafiles non esiste');
+        abort_if(! $record, 404, 'Questa cartellafiles non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -234,18 +229,17 @@ class CartellaFilesControllerOld extends Controller
         ];
     }
 
-
     public function upload(Request $request, $cartellaId)
     {
         if ($request->file('file')) {
-            $file = new File();
+            $file = new File;
             $filePath = $request->file('file');
             $estensione = $filePath->extension();
-            $fileName = Str::ulid() . '.' . $estensione;
+            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.file_manager.cartella');
             $request->file('file')->storeAs($cartella, $fileName);
             $file->cartella_id = $cartellaId;
-            $file->path_filename = $cartella . '/' . $fileName;
+            $file->path_filename = $cartella.'/'.$fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
             $file->dimensione_file = $filePath->getSize();
             $file->save();
@@ -261,35 +255,35 @@ class CartellaFilesControllerOld extends Controller
         $id = $request->input('id');
         $record = File::find($id);
         $record->delete();
-        $datiRitorno = new DatiRitorno();
-        return $datiRitorno->rimuoviOggetto('#file_' . $id)->getArray();
+        $datiRitorno = new DatiRitorno;
 
+        return $datiRitorno->rimuoviOggetto('#file_'.$id)->getArray();
 
     }
 
     public function download($id)
     {
         $record = File::find($id);
-        abort_if(!$record, 404);
+        abort_if(! $record, 404);
+
         return response()->download(Storage::path($record->path_filename), $record->filename_originale);
     }
 
-
     /**
-     * @param CartellaFiles $model
-     * @param Request $request
+     * @param  CartellaFiles  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
         ];
@@ -302,6 +296,7 @@ class CartellaFilesControllerOld extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -315,13 +310,11 @@ class CartellaFilesControllerOld extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\CartellaFiles::get();
+        return CartellaFiles::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -329,5 +322,4 @@ class CartellaFilesControllerOld extends Controller
 
         return $rules;
     }
-
 }

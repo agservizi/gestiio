@@ -18,7 +18,6 @@ class TabelleProgetto extends Migration
             $table->decimal('portafoglio')->default(0);
         });
 
-
         Schema::create('licenze', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->timestamps();
@@ -29,7 +28,6 @@ class TabelleProgetto extends Migration
             $table->text('url')->nullable();
             $table->text('download')->nullable();
         });
-
 
         Schema::create('tab_esiti', function (Blueprint $table) {
             $table->string('id')->primary();
@@ -50,7 +48,6 @@ class TabelleProgetto extends Migration
             $table->string('nome')->index();
             $table->unsignedBigInteger('conteggio')->default(0)->index();
         });
-
 
         Schema::create('tab_gestori', function (Blueprint $table) {
             $table->id();
@@ -93,7 +90,6 @@ class TabelleProgetto extends Migration
 
         });
 
-
         Schema::create('clienti', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
@@ -110,7 +106,6 @@ class TabelleProgetto extends Migration
             $table->string('cap', 5)->nullable();
             $table->string('visura')->nullable();
         });
-
 
         Schema::create('contratti', function (Blueprint $table) {
             $table->id();
@@ -139,14 +134,10 @@ class TabelleProgetto extends Migration
             $table->string('uid')->index();
             $table->string('iban')->nullable();
             $table->string('carta_di_credito')->nullable();
-            $table->string('carta_di_credito_scadenza',5)->nullable();
+            $table->string('carta_di_credito_scadenza', 5)->nullable();
             $table->string('carta_di_credito_cvc')->nullable();
             $table->boolean('pagato')->default(0);
             $table->string('motivo_ko')->nullable();
-
-
-
-
 
         });
 
@@ -160,7 +151,6 @@ class TabelleProgetto extends Migration
             $table->unsignedBigInteger('dimensione_file');
             $table->string('tipo_file');
         });
-
 
         Schema::create('produzioni_operatori', function (Blueprint $table) {
             $table->string('id')->primary();
@@ -285,7 +275,6 @@ class TabelleProgetto extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
         });
 
-
     }
 
     /**
@@ -295,6 +284,6 @@ class TabelleProgetto extends Migration
      */
     public function down()
     {
-        ///
+        // /
     }
 }

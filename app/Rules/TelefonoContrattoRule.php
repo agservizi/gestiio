@@ -5,11 +5,11 @@ namespace App\Rules;
 use App\Models\ContrattoTelefonia;
 use App\Models\TipoContratto;
 use Illuminate\Contracts\Validation\Rule;
+
 use function App\getInputTelefono;
 
 class TelefonoContrattoRule implements Rule
 {
-
     protected $message;
 
     /**
@@ -25,8 +25,8 @@ class TelefonoContrattoRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
@@ -38,7 +38,8 @@ class TelefonoContrattoRule implements Rule
         $email = getInputTelefono($value);
         $esiste = ContrattoTelefonia::whereRelation('tipoContratto', 'gestore_id', $tipoContratto->gestore->id)->where('telefono', $email)->exists();
         if ($esiste) {
-            $this->message = 'Questo indirizzo email ha già stipulato un contratto con ' . $tipoContratto->gestore->nome;
+            $this->message = 'Questo indirizzo email ha già stipulato un contratto con '.$tipoContratto->gestore->nome;
+
             return false;
         } else {
             return true;

@@ -15,7 +15,7 @@ trait UsesPersonalizedMailSender
             if (method_exists($sender, 'nominativo')) {
                 $senderName = $sender->nominativo();
             } else {
-                $senderName = trim(($sender->nome ?? '') . ' ' . ($sender->cognome ?? ''));
+                $senderName = trim(($sender->nome ?? '').' '.($sender->cognome ?? ''));
             }
 
             if ($senderName !== '') {

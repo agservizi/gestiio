@@ -9,10 +9,11 @@ class TipoVisura extends Model
 {
     use HasFactory;
 
-    protected $table = "tipi_visure";
+    protected $table = 'tipi_visure';
 
-    public const NOME_SINGOLARE = "tipo visura";
-    public const NOME_PLURALE = "tipi visure";
+    public const NOME_SINGOLARE = 'tipo visura';
+
+    public const NOME_PLURALE = 'tipi visure';
 
     /*
     |--------------------------------------------------------------------------
@@ -23,7 +24,6 @@ class TipoVisura extends Model
     {
         return $this->hasMany(Visura::class, 'tipo_visura_id', 'id');
     }
-
 
     /*
     |--------------------------------------------------------------------------

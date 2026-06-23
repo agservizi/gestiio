@@ -8,16 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 class SostituzioneSim extends Model
 {
     use HasFactory;
-    protected $table="attivazioni_sim_sostituzioni";
 
-    public const NOME_SINGOLARE = "sostituzione sim";
-    public const NOME_PLURALE = "sostituzioni sim";
+    protected $table = 'attivazioni_sim_sostituzioni';
+
+    public const NOME_SINGOLARE = 'sostituzione sim';
+
+    public const NOME_PLURALE = 'sostituzioni sim';
 
     const MOTIVAZIONI = [
         'problemi_tecnici' => 'Problemi tecnici',
-        'forto_smarrimento' => 'Furto  o smarrimento'
+        'forto_smarrimento' => 'Furto  o smarrimento',
     ];
-
 
     /*
     |--------------------------------------------------------------------------

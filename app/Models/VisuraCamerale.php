@@ -6,22 +6,21 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class VisuraCamerale extends Model
 {
     use HasFactory;
 
-    protected $table = "visure_camerali";
+    protected $table = 'visure_camerali';
 
-    public const NOME_SINGOLARE = "visura camerale";
-    public const NOME_PLURALE = "visure camerali";
+    public const NOME_SINGOLARE = 'visura camerale';
+
+    public const NOME_PLURALE = 'visure camerali';
 
     protected $casts = [
         'response' => 'array',
         'allegati' => 'array',
     ];
-
 
     /**
      * The "booted" method of the model.
@@ -32,14 +31,12 @@ class VisuraCamerale extends Model
     {
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
-            if (Auth::check() && !Auth::user()->hasPermissionTo('admin')) {
+            if (Auth::check() && ! Auth::user()->hasPermissionTo('admin')) {
                 $builder->where('agente_id', Auth::id());
             }
         });
 
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -51,6 +48,7 @@ class VisuraCamerale extends Model
     {
         return $this->hasOne(User::class, 'id', 'agente_id');
     }
+
     public function cliente()
     {
         return $this->hasOne(Cliente::class, 'id', 'cliente_id');

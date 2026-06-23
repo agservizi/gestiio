@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -14,7 +15,6 @@ return new class extends Migration {
     {
         Schema::table('tickets', function (Blueprint $table) {
 
-
             $table->string('da_tipo_utente')->nullable();
             $table->string('a_tipo_utente')->nullable();
 
@@ -23,7 +23,6 @@ return new class extends Migration {
             $table->index(['servizio_id', 'servizio_type']);
 
         });
-
 
         Schema::create('tickets_letture', function (Blueprint $table) {
 
@@ -44,8 +43,6 @@ return new class extends Migration {
      */
     public function down()
     {
-        Schema::table('tickets', function (Blueprint $table) {
-
-        });
+        Schema::table('tickets', function (Blueprint $table) {});
     }
 };

@@ -30,12 +30,12 @@ class ListinoInpostController extends Controller
         return view('Backend.ListinoInpost.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . ListinoInpost::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.ListinoInpost::NOME_PLURALE,
             'orderBy' => null,
             'ordinamenti' => null,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . ListinoInpost::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuovo '.ListinoInpost::NOME_SINGOLARE,
             'testoCerca' => null,
         ]);
     }
@@ -55,20 +55,20 @@ class ListinoInpostController extends Controller
 
     public function create()
     {
-        $record = new ListinoInpost();
+        $record = new ListinoInpost;
 
         return view('Backend.ListinoInpost.edit-page', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . ListinoInpost::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.ListinoInpost::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.ListinoInpost::NOME_PLURALE],
         ]);
     }
 
     public function store(Request $request)
     {
         $request->validate($this->rules());
-        $record = new ListinoInpost();
+        $record = new ListinoInpost;
         $this->salvaDati($record, $request);
 
         return $this->backToIndex();
@@ -77,13 +77,13 @@ class ListinoInpostController extends Controller
     public function show($id)
     {
         $record = ListinoInpost::find($id);
-        abort_if(!$record, 404, 'Questo listino InPost non esiste');
+        abort_if(! $record, 404, 'Questo listino InPost non esiste');
 
         return view('Backend.ListinoInpost.show', [
             'record' => $record,
             'controller' => self::class,
             'titoloPagina' => ListinoInpost::NOME_SINGOLARE,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.ListinoInpost::NOME_PLURALE],
             'nascondiToolbar' => true,
         ]);
     }
@@ -91,22 +91,22 @@ class ListinoInpostController extends Controller
     public function edit($id)
     {
         $record = ListinoInpost::find($id);
-        abort_if(!$record, 404, 'Questo listino InPost non esiste');
+        abort_if(! $record, 404, 'Questo listino InPost non esiste');
         $eliminabile = true;
 
         return view('Backend.ListinoInpost.edit-page', [
             'record' => $record,
             'controller' => self::class,
-            'titoloPagina' => 'Modifica ' . ListinoInpost::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.ListinoInpost::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . ListinoInpost::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.ListinoInpost::NOME_PLURALE],
         ]);
     }
 
     public function update(Request $request, $id)
     {
         $record = ListinoInpost::find($id);
-        abort_if(!$record, 404, 'Questo listino InPost non esiste');
+        abort_if(! $record, 404, 'Questo listino InPost non esiste');
         $request->validate($this->rules());
         $this->salvaDati($record, $request);
 
@@ -116,7 +116,7 @@ class ListinoInpostController extends Controller
     public function destroy($id)
     {
         $record = ListinoInpost::find($id);
-        abort_if(!$record, 404, 'Questo listino InPost non esiste');
+        abort_if(! $record, 404, 'Questo listino InPost non esiste');
         $record->delete();
 
         return [

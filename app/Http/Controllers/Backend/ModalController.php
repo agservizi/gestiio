@@ -2,39 +2,36 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Http\Controllers\Controller;
 use App\Http\Services\BrtService;
 use App\Http\Services\InpostService;
-use App\Models\AllegatoAttivazioneSim;
 use App\Models\AllegatoCafPatronato;
-use App\Models\AllegatoContratto;
 use App\Models\AllegatoServizio;
 use App\Models\AttivazioneSim;
 use App\Models\CafPatronato;
 use App\Models\CartellaFiles;
 use App\Models\Comparasemplice;
-use App\Models\ContrattoTelefonia;
 use App\Models\ContrattoEnergia;
-use App\Models\EsitoComparasemplice;
-use App\Models\EsitoSegnalazione;
-use App\Models\EsitoTelefonia;
+use App\Models\ContrattoTelefonia;
 use App\Models\EsitoAttivazioneSim;
 use App\Models\EsitoCafPatronato;
+use App\Models\EsitoComparasemplice;
 use App\Models\EsitoContrattoEnergia;
+use App\Models\EsitoSegnalazione;
 use App\Models\EsitoServizioFinanziario;
+use App\Models\EsitoTelefonia;
 use App\Models\EsitoVisura;
 use App\Models\Nazione;
 use App\Models\Notifica;
 use App\Models\NotificaLettura;
-use App\Models\PianoRetribuzione;
-use App\Models\Ordine;
 use App\Models\ProduzioneOperatore;
 use App\Models\Segnalazione;
 use App\Models\ServizioFinanziario;
 use App\Models\SostituzioneSim;
+use App\Models\User;
 use App\Models\Visura;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Controller;
 
 class ModalController extends Controller
 {
@@ -44,19 +41,21 @@ class ModalController extends Controller
 
             case 'pudo_lista':
                 $nazione = Nazione::find($request->input('nazione'));
-                $service = new BrtService();
+                $service = new BrtService;
                 $pudos = $service->pudo($nazione->alpha3, $request->input('citta'), $request->input('cap'));
+
                 return view('Backend.SpedizioneBrt.modalPudo', [
                     'pudos' => $pudos['pudo'],
                     'titoloPagina' => 'Seleziona pudo ']);
             case 'calcola_volumi':
                 return view('Backend.SpedizioneBrt.modalVolumi', [
                     'colli' => $request->input('colli', 1),
-                    'titoloPagina' => 'Calcolo volumi '
+                    'titoloPagina' => 'Calcolo volumi ',
                 ]);
             case 'inpost_points':
-                $service = new InpostService();
+                $service = new InpostService;
                 $result = $service->points((string) $request->input('nazione', 'IT'), (string) $request->input('citta', ''), (string) $request->input('cap', ''));
+
                 return view('Backend.SpedizioneInpost.modalPunti', [
                     'points' => $result['points'],
                     'errorMessage' => $result['error'] ?? null,
@@ -65,8 +64,9 @@ class ModalController extends Controller
                 ]);
 
             case 'inpost_return_points':
-                $service = new InpostService();
+                $service = new InpostService;
                 $result = $service->points('IT', (string) $request->input('citta', ''), (string) $request->input('cap', ''));
+
                 return view('Backend.InpostReturn.modalPunti', [
                     'points' => $result['points'],
                     'errorMessage' => $result['error'] ?? null,
@@ -75,36 +75,38 @@ class ModalController extends Controller
 
             case 'sostituzione-sim':
                 $attivazione = AttivazioneSim::find($id);
-                abort_if(!$attivazione, 404);
-                $record = new SostituzioneSim();
+                abort_if(! $attivazione, 404);
+                $record = new SostituzioneSim;
                 $record->attivazione_sim_id = $id;
+
                 return view('Backend.AttivazioneSim.modalSostituzione', [
                     'attivazione' => $attivazione,
-                    'titoloPagina' => 'Sostituzione sim per ' . $attivazione->nominativo(),
+                    'titoloPagina' => 'Sostituzione sim per '.$attivazione->nominativo(),
                     'record' => $record,
-                    'controller' => SostituzioneSimController::class
+                    'controller' => SostituzioneSimController::class,
                 ]);
 
             case 'richiedi_visura':
                 $record = ContrattoTelefonia::find($id);
-                abort_if(!$record, 404);
-                $prezzo = config('configurazione.prezzo_visura.ordinaria-' . $record->natura_giuridica);
+                abort_if(! $record, 404);
+                $prezzo = config('configurazione.prezzo_visura.ordinaria-'.$record->natura_giuridica);
                 if (Auth::user()->portafoglio < $prezzo) {
                     $testo = 'Nel tuo portafoglio non hai credito sufficiente per sostenere il costo della visura camerale per <span class="fw-bolder">'
-                        . strtoupper(str_replace('-', ' ', $record->natura_giuridica)) . '</span> al prezzo di ' . \App\importo($prezzo, true) .
+                        .strtoupper(str_replace('-', ' ', $record->natura_giuridica)).'</span> al prezzo di '.\App\importo($prezzo, true).
                         '<br>Ricarica il tuo portafoglio';
                     $tipo = 'warning';
                 } else {
-                    $testo = 'Richiedi la visura camerale per <span class="fw-bolder">' . strtoupper(str_replace('-', ' ', $record->natura_giuridica)) . '</span> al prezzo di ' . \App\importo($prezzo, true) . ' che ti verrà scalato dal tuo portafoglio';
+                    $testo = 'Richiedi la visura camerale per <span class="fw-bolder">'.strtoupper(str_replace('-', ' ', $record->natura_giuridica)).'</span> al prezzo di '.\App\importo($prezzo, true).' che ti verrà scalato dal tuo portafoglio';
                     $tipo = 'primary';
                 }
+
                 return view('Backend.VisuraCamerale.modalVisura', [
                     'id' => $id,
-                    'titoloPagina' => 'Richiedi visura camerale ' . $record->ragione_sociale,
+                    'titoloPagina' => 'Richiedi visura camerale '.$record->ragione_sociale,
                     'record' => $record,
                     'prezzo' => $prezzo,
                     'testo' => $testo,
-                    'tipo' => $tipo
+                    'tipo' => $tipo,
                 ]);
 
             case 'upload-documento':
@@ -112,25 +114,28 @@ class ModalController extends Controller
                 $canUploadDocumenti = $this->userHasAnyPermission($authUser, ['admin']);
                 abort_unless($canUploadDocumenti, 403);
                 $record = ((int) $id) > 0 ? CartellaFiles::find($id) : null;
-                abort_if(((int) $id) > 0 && !$record, 404);
+                abort_if(((int) $id) > 0 && ! $record, 404);
                 $canDeleteFiles = $this->userHasAnyPermission($authUser, ['admin']);
+
                 return view('Backend.CartellaFiles.modalDropzone', [
                     'id' => $id,
-                    'titoloPagina' => 'Carica file in ' . ($record?->nome ?? 'Root'),
+                    'titoloPagina' => 'Carica file in '.($record?->nome ?? 'Root'),
                     'canDeleteFiles' => $canDeleteFiles,
                 ]);
 
             case 'dettaglio_produzione':
                 $record = ProduzioneOperatore::find($id);
-                abort_if(!$record, 404);
+                abort_if(! $record, 404);
+
                 return view('Backend.Agente.show.modalDettaglioProduzione', [
                     'id' => $id,
-                    'titoloPagina' => 'Dettaglio calcolo produzione ' . $record->mese . '/' . $record->anno,
-                    'record' => $record
+                    'titoloPagina' => 'Dettaglio calcolo produzione '.$record->mese.'/'.$record->anno,
+                    'record' => $record,
                 ]);
 
             case 'modal-allegati-telefonia':
                 $record = ContrattoTelefonia::with('allegati')->with('tipoContratto')->find($id);
+
                 return view('Backend.ContrattoTelefonia.modalDownload', [
                     'record' => $record,
                     'id' => $id,
@@ -140,6 +145,7 @@ class ModalController extends Controller
 
             case 'modal-allegati-energia':
                 $record = ContrattoEnergia::with('allegati')->find($id);
+
                 return view('Backend.ContrattoEnergia.modalDownload', [
                     'record' => $record,
                     'id' => $id,
@@ -148,16 +154,18 @@ class ModalController extends Controller
 
             case 'segnala-chat-contratto-energia':
                 $record = ContrattoEnergia::find($id);
-                abort_if(!$record, 404, 'Questo contratto non esiste');
+                abort_if(! $record, 404, 'Questo contratto non esiste');
+
                 return view('Backend.ContrattoEnergia.modalSegnalaChat', [
                     'record' => $record,
                     'id' => $id,
                     'titoloPagina' => 'Segnala contratto in chat',
-                    'controller' => \App\Http\Controllers\Backend\ContrattoEnergiaController::class,
+                    'controller' => ContrattoEnergiaController::class,
                 ]);
 
             case 'modal-allegati-attivazione':
                 $record = AttivazioneSim::with('allegati')->find($id);
+
                 return view('Backend.AttivazioneSim.modalDownload', [
                     'record' => $record,
                     'id' => $id,
@@ -168,6 +176,7 @@ class ModalController extends Controller
                 $records = AllegatoServizio::where('allegato_id', $id)->where('allegato_type', $request->input('classe'))
                     ->where('per_cliente', $request->input('per_cliente', 0))
                     ->get();
+
                 return view('Backend._components.modalDownloadTutti', [
                     'records' => $records,
                     'id' => $id,
@@ -177,6 +186,7 @@ class ModalController extends Controller
             case 'modal-allegati-caf':
                 $recordsCliente = AllegatoCafPatronato::where('caf_patronato_id', $id)->where('per_cliente', 1)->get();
                 $records = AllegatoCafPatronato::where('caf_patronato_id', $id)->where('per_cliente', 0)->get();
+
                 return view('Backend.CafPatronato.modalDownload', [
                     'recordsCliente' => $recordsCliente,
                     'records' => $records,
@@ -197,13 +207,13 @@ class ModalController extends Controller
 
             case 'modifica-stato':
                 $record = ContrattoTelefonia::find($id);
-                abort_if(!$record, 404, 'Questo contratto non esiste');
+                abort_if(! $record, 404, 'Questo contratto non esiste');
                 $statiQb = EsitoTelefonia::query();
                 if ($record->esito !== 'bozza') {
                     $statiQb->where('id', '<>', 'bozza');
                 }
 
-                /** @var \App\Models\User $authUser */
+                /** @var User $authUser */
                 $authUser = Auth::user();
                 if ($authUser && method_exists($authUser, 'hasPermissionTo') && $authUser->hasPermissionTo('supervisore')) {
                     return view('Backend.ContrattoTelefonia.modalModificaStatoSupervisore', [
@@ -214,6 +224,7 @@ class ModalController extends Controller
                         'uid' => $record->uid,
                     ]);
                 }
+
                 return view('Backend.ContrattoTelefonia.modalModificaStato', [
                     'record' => $record,
                     'titoloPagina' => 'Modifica stato contratto',
@@ -223,13 +234,13 @@ class ModalController extends Controller
 
             case 'modifica-stato-contratto-energia':
                 $record = ContrattoEnergia::find($id);
-                abort_if(!$record, 404, 'Questo contratto non esiste');
+                abort_if(! $record, 404, 'Questo contratto non esiste');
                 $statiQb = EsitoContrattoEnergia::query();
                 if ($record->esito !== 'bozza') {
                     $statiQb->where('id', '<>', 'bozza');
                 }
 
-                /** @var \App\Models\User $authUser */
+                /** @var User $authUser */
                 $authUser = Auth::user();
                 if ($authUser && method_exists($authUser, 'hasPermissionTo') && $authUser->hasPermissionTo('supervisore')) {
                     return view('Backend.ContrattoEnergia.modalModificaStatoSupervisore', [
@@ -250,8 +261,9 @@ class ModalController extends Controller
                 ]);
             case 'modifica-stato-segnalazione':
                 $record = Segnalazione::find($id);
-                abort_if(!$record, 404, 'Questa segnalazione non esiste');
+                abort_if(! $record, 404, 'Questa segnalazione non esiste');
                 $statiQb = EsitoSegnalazione::query();
+
                 return view('Backend.Segnalazione.modalModificaStato', [
                     'record' => $record,
                     'titoloPagina' => 'Modifica stato segnalazione',
@@ -262,33 +274,34 @@ class ModalController extends Controller
 
             case 'modifica-stato-servizio':
                 $record = ServizioFinanziario::find($id);
-                abort_if(!$record, 404, 'Questo ' . ServizioFinanziario::NOME_SINGOLARE . ' non esiste');
+                abort_if(! $record, 404, 'Questo '.ServizioFinanziario::NOME_SINGOLARE.' non esiste');
                 $statiQb = EsitoServizioFinanziario::query();
 
                 return view('Backend.ServizioFinanziario.modalModificaStato', [
                     'record' => $record,
-                    'titoloPagina' => 'Modifica stato ' . ServizioFinanziario::NOME_SINGOLARE,
-                    'stati' => $statiQb->get()
+                    'titoloPagina' => 'Modifica stato '.ServizioFinanziario::NOME_SINGOLARE,
+                    'stati' => $statiQb->get(),
                 ]);
 
             case 'modifica-esito-compara':
                 $record = Comparasemplice::find($id);
-                abort_if(!$record, 404, 'Questo ' . Comparasemplice::NOME_SINGOLARE . ' non esiste');
+                abort_if(! $record, 404, 'Questo '.Comparasemplice::NOME_SINGOLARE.' non esiste');
                 $statiQb = EsitoComparasemplice::query();
 
                 return view('Backend.Comparasemplice.modalModificaStato', [
                     'record' => $record,
-                    'titoloPagina' => 'Modifica stato ' . Comparasemplice::NOME_SINGOLARE,
-                    'stati' => $statiQb->get()
+                    'titoloPagina' => 'Modifica stato '.Comparasemplice::NOME_SINGOLARE,
+                    'stati' => $statiQb->get(),
                 ]);
 
             case 'modifica-stato-attivazione':
                 $record = AttivazioneSim::find($id);
-                abort_if(!$record, 404, 'Questa ' . AttivazioneSim::NOME_SINGOLARE . ' non esiste');
+                abort_if(! $record, 404, 'Questa '.AttivazioneSim::NOME_SINGOLARE.' non esiste');
                 $statiQb = EsitoAttivazioneSim::query();
+
                 return view('Backend.AttivazioneSim.modalModificaStato', [
                     'record' => $record,
-                    'titoloPagina' => 'Modifica stato ' . AttivazioneSim::NOME_SINGOLARE,
+                    'titoloPagina' => 'Modifica stato '.AttivazioneSim::NOME_SINGOLARE,
                     'stati' => $statiQb->get(),
                     'controller' => AttivazioneSimController::class,
                     'uid' => $record->uid,
@@ -297,38 +310,38 @@ class ModalController extends Controller
 
             case 'modifica-stato-caf':
                 $record = CafPatronato::find($id);
-                abort_if(!$record, 404, 'Questo ' . CafPatronato::NOME_SINGOLARE . ' non esiste');
+                abort_if(! $record, 404, 'Questo '.CafPatronato::NOME_SINGOLARE.' non esiste');
                 $statiQb = EsitoCafPatronato::query();
 
                 return view('Backend.CafPatronato.modalModificaStato', [
                     'record' => $record,
-                    'titoloPagina' => 'Modifica stato ' . CafPatronato::NOME_SINGOLARE,
+                    'titoloPagina' => 'Modifica stato '.CafPatronato::NOME_SINGOLARE,
                     'stati' => $statiQb->get(),
                     'controller' => CafPatronatoController::class,
                     'uid' => $record->uid,
                 ]);
             case 'modifica-stato-visura':
                 $record = Visura::find($id);
-                abort_if(!$record, 404, 'Questa ' . Visura::NOME_SINGOLARE . ' non esiste');
+                abort_if(! $record, 404, 'Questa '.Visura::NOME_SINGOLARE.' non esiste');
                 $statiQb = EsitoVisura::query();
 
                 return view('Backend.Visura.modalModificaStato', [
                     'record' => $record,
-                    'titoloPagina' => 'Modifica stato ' . Visura::NOME_SINGOLARE,
+                    'titoloPagina' => 'Modifica stato '.Visura::NOME_SINGOLARE,
                     'stati' => $statiQb->get(),
                     'controller' => VisuraController::class,
                     'uid' => $record->uid,
-                    'allegatiEsistenti' => \App\Models\AllegatoServizio::perBlade(null, $record->id, get_class($record), 1)
+                    'allegatiEsistenti' => AllegatoServizio::perBlade(null, $record->id, get_class($record), 1),
                 ]);
 
             default:
-                return 'Voce non gestita:' . $modal;
+                return 'Voce non gestita:'.$modal;
         }
     }
 
     protected function userHasAnyPermission($user, array $permissions): bool
     {
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 

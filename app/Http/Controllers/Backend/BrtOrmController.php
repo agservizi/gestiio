@@ -14,7 +14,7 @@ class BrtOrmController extends Controller
             'orders' => ['required', 'array', 'min:1'],
         ]);
 
-        $service = new BrtOrmService();
+        $service = new BrtOrmService;
         $response = $service->create($request->input('orders'));
 
         return response()->json($response);
@@ -22,7 +22,7 @@ class BrtOrmController extends Controller
 
     public function destroy(string $reservationId)
     {
-        $service = new BrtOrmService();
+        $service = new BrtOrmService;
         $response = $service->delete($reservationId);
 
         return response()->json($response);

@@ -1,10 +1,13 @@
 <?php
 
+use App\Models\ServizioFinanziario;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -23,9 +26,9 @@ return new class extends Migration {
             $table->string('thumbnail')->nullable();
             $table->boolean('per_cliente')->default(0)->index();
 
-            //$table->unsignedBigInteger('allegato_id')->nullable();
-            //$table->string('allegato_type')->nullable();
-            //$table->index(['allegato_id', 'allegato_type']);
+            // $table->unsignedBigInteger('allegato_id')->nullable();
+            // $table->string('allegato_type')->nullable();
+            // $table->index(['allegato_id', 'allegato_type']);
             $table->morphs('allegato');
         });
 
@@ -33,9 +36,8 @@ return new class extends Migration {
             $table->string('uid');
         });
 
-
-        foreach (\App\Models\ServizioFinanziario::get() as $s) {
-            $s->uid = \Illuminate\Support\Str::uuid();
+        foreach (ServizioFinanziario::get() as $s) {
+            $s->uid = Str::uuid();
             $s->save();
         }
     }

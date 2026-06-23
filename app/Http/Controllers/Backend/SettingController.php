@@ -43,7 +43,7 @@ class SettingController extends Controller
         ];
 
         foreach ($fallbackRules as $key => $rule) {
-            if (!array_key_exists($key, $rules)) {
+            if (! array_key_exists($key, $rules)) {
                 $rules[$key] = $rule;
             }
         }

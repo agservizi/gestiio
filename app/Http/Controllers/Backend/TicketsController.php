@@ -3,22 +3,23 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Http\MieClassiCache\CacheConteggioTicketsDaLeggere;
-use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
 use App\Models\AllegatoMessaggioTicket;
+use App\Models\ContrattoEnergia;
+use App\Models\ContrattoTelefonia;
 use App\Models\LetturaTicket;
+use App\Models\MessaggioTicket;
 use App\Models\Notifica;
 use App\Models\SpedizioneBrt;
 use App\Models\Ticket;
-use App\Models\ContrattoEnergia;
-use App\Models\ContrattoTelefonia;
-use App\Models\MessaggioTicket;
 use App\Models\TicketStatusLog;
 use App\Models\User;
 use App\Notifications\NotificaAggiornamentoTicketAUtente;
 use App\Notifications\NotificaLetturaTicket;
 use App\Notifications\NotificaNuovoTicketAdAdmin;
-use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -26,13 +27,12 @@ use Illuminate\Validation\Rule;
 
 class TicketsController extends Controller
 {
-
     protected $conFiltro = false;
 
     /**
      * Display a listing of the resource.
      *
-        * @return \Illuminate\Contracts\View\View
+     * @return View
      */
     public function index(Request $request)
     {
@@ -40,7 +40,7 @@ class TicketsController extends Controller
         $authUser = Auth::user();
         $canUseKanban = $authUser->hasAnyPermission(['admin', 'supervisore', 'operatore']);
         $currentView = $request->input('view', 'lista');
-        if (!$canUseKanban) {
+        if (! $canUseKanban) {
             $currentView = 'lista';
         }
 
@@ -68,7 +68,7 @@ class TicketsController extends Controller
             'totale' => $metricheRecords->count(),
             'non_assegnati' => $metricheRecords->whereNull('agente_id')->count(),
             'in_carico_a_me' => $metricheRecords->where('agente_id', Auth::id())->count(),
-            'nuovi_da_leggere' => $metricheRecords->filter(fn (Ticket $ticket) => (int)($ticket->lettura?->messaggio_letto ?? 1) === 0)->count(),
+            'nuovi_da_leggere' => $metricheRecords->filter(fn (Ticket $ticket) => (int) ($ticket->lettura?->messaggio_letto ?? 1) === 0)->count(),
             'sla_violato' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->isSlaViolated())->count(),
             'sla_in_scadenza' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->isSlaAtRisk())->count(),
             'risolti_oggi' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->resolved_at?->isToday())->count(),
@@ -109,10 +109,9 @@ class TicketsController extends Controller
 
     }
 
-
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
@@ -157,13 +156,13 @@ class TicketsController extends Controller
         }
 
         if ($request->filled('q')) {
-            $search = trim((string)$request->input('q'));
+            $search = trim((string) $request->input('q'));
             $queryBuilder->where(function ($query) use ($search) {
-                $query->where('oggetto', 'like', '%' . $search . '%')
-                    ->orWhere('uid', 'like', '%' . $search . '%')
+                $query->where('oggetto', 'like', '%'.$search.'%')
+                    ->orWhere('uid', 'like', '%'.$search.'%')
                     ->orWhereHas('utente', function ($utenteQuery) use ($search) {
-                        $utenteQuery->where('nome', 'like', '%' . $search . '%')
-                            ->orWhere('cognome', 'like', '%' . $search . '%');
+                        $utenteQuery->where('nome', 'like', '%'.$search.'%')
+                            ->orWhere('cognome', 'like', '%'.$search.'%');
                     });
             });
             $this->conFiltro = true;
@@ -201,15 +200,13 @@ class TicketsController extends Controller
             }
         }
 
-
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-        * @return \Illuminate\Contracts\View\View
+     * @return View
      */
     public function create(Request $request)
     {
@@ -217,7 +214,7 @@ class TicketsController extends Controller
         /** @var User $authUser */
         $authUser = Auth::user();
 
-        $record = new Ticket();
+        $record = new Ticket;
         $defaultDestinatarioTipo = null;
         $defaultDestinatarioId = null;
 
@@ -253,7 +250,7 @@ class TicketsController extends Controller
                     && $servizio->agente_id
                 ) {
                     $defaultDestinatarioTipo = 'agente';
-                    $defaultDestinatarioId = (int)$servizio->agente_id;
+                    $defaultDestinatarioId = (int) $servizio->agente_id;
                 }
             }
         }
@@ -287,11 +284,10 @@ class TicketsController extends Controller
                 ->get(['id', 'nome', 'cognome']);
         }
 
-
         return view('Backend.Tickets.create', [
             'controller' => get_class($this),
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Ticket::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Ticket::NOME_SINGOLARE,
             'admin' => $authUser->hasPermissionTo('admin'),
             'agentiDestinatari' => $agentiDestinatari,
             'supervisoriDestinatari' => $supervisoriDestinatari,
@@ -304,61 +300,60 @@ class TicketsController extends Controller
     protected function buildDefaultOggettoFromServizio(string $servizioType, $servizio): string
     {
         if ($servizioType === 'contratto-energia' && $servizio instanceof ContrattoEnergia) {
-            $codiceInterno = $servizio->codice_contratto_interno ?: ('OP' . str_pad((string)$servizio->id, 11, '0', STR_PAD_LEFT));
+            $codiceInterno = $servizio->codice_contratto_interno ?: ('OP'.str_pad((string) $servizio->id, 11, '0', STR_PAD_LEFT));
             $gestore = $servizio->gestore?->nome ?: 'N/D';
-            $cliente = trim((string)($servizio->denominazione ?: $servizio->nominativo()));
-            $documento = trim((string)($servizio->codice_fiscale ?: $servizio->partita_iva ?: ''));
+            $cliente = trim((string) ($servizio->denominazione ?: $servizio->nominativo()));
+            $documento = trim((string) ($servizio->codice_fiscale ?: $servizio->partita_iva ?: ''));
 
             $parts = [
                 'Ticket Contratto Energia',
-                'Gestore: ' . $gestore,
-                'Cod. interno: ' . $codiceInterno,
-                'Cod. esterno: ' . ($servizio->codice_contratto ?: 'N/D'),
+                'Gestore: '.$gestore,
+                'Cod. interno: '.$codiceInterno,
+                'Cod. esterno: '.($servizio->codice_contratto ?: 'N/D'),
             ];
 
             if ($cliente !== '') {
-                $parts[] = 'Cliente: ' . $cliente;
+                $parts[] = 'Cliente: '.$cliente;
             }
 
             if ($documento !== '') {
-                $parts[] = 'CF/P.IVA: ' . $documento;
+                $parts[] = 'CF/P.IVA: '.$documento;
             }
 
             return implode(' | ', $parts);
         }
 
         if ($servizioType === 'contratto-telefonia' && $servizio instanceof ContrattoTelefonia) {
-            $codiceInterno = $servizio->codice_contratto_interno ?: ('TEL' . str_pad((string)$servizio->id, 11, '0', STR_PAD_LEFT));
+            $codiceInterno = $servizio->codice_contratto_interno ?: ('TEL'.str_pad((string) $servizio->id, 11, '0', STR_PAD_LEFT));
             $tipoContratto = $servizio->tipoContratto?->nome ?: 'N/D';
-            $cliente = trim((string)$servizio->nominativo());
-            $documento = trim((string)($servizio->codice_fiscale ?: $servizio->partita_iva ?: ''));
+            $cliente = trim((string) $servizio->nominativo());
+            $documento = trim((string) ($servizio->codice_fiscale ?: $servizio->partita_iva ?: ''));
 
             $parts = [
                 'Ticket Contratto Telefonia',
-                'Tipo: ' . $tipoContratto,
-                'Cod. interno: ' . $codiceInterno,
-                'Cod. esterno: ' . ($servizio->codice_contratto ?: 'N/D'),
+                'Tipo: '.$tipoContratto,
+                'Cod. interno: '.$codiceInterno,
+                'Cod. esterno: '.($servizio->codice_contratto ?: 'N/D'),
             ];
 
             if ($cliente !== '') {
-                $parts[] = 'Cliente: ' . $cliente;
+                $parts[] = 'Cliente: '.$cliente;
             }
 
             if ($documento !== '') {
-                $parts[] = 'CF/P.IVA: ' . $documento;
+                $parts[] = 'CF/P.IVA: '.$documento;
             }
 
             return implode(' | ', $parts);
         }
 
-        return (string)($servizio->oggetto ?? '');
+        return (string) ($servizio->oggetto ?? '');
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @return RedirectResponse|JsonResponse
      */
     public function store(Request $request)
     {
@@ -388,14 +383,14 @@ class TicketsController extends Controller
                 })
                 ->exists();
 
-            if (!$destinatarioValido) {
+            if (! $destinatarioValido) {
                 return back()
                     ->withErrors(['destinatario_id' => 'Il destinatario selezionato non è valido per il tipo scelto.'])
                     ->withInput();
             }
         }
 
-        $ticket = new Ticket();
+        $ticket = new Ticket;
         $ticket->servizio_id = $request->input('servizio_id');
         $ticket->servizio_type = $request->input('servizio_type');
 
@@ -405,7 +400,7 @@ class TicketsController extends Controller
         $destinatarioId = $request->input('destinatario_id');
         $isTicketServizioContratto = in_array($request->input('servizio_type'), ['contratto-energia', 'contratto-telefonia'], true);
 
-        if (!$authUser->hasPermissionTo('admin') && $isTicketServizioContratto) {
+        if (! $authUser->hasPermissionTo('admin') && $isTicketServizioContratto) {
             // Ticket contratto (energia/telefonia) aperto da agente/operatore/supervisore: destinatario sempre admin.
             $destinatarioTipo = 'admin';
             $destinatarioId = $this->trovaAdminDestinatarioId(Auth::id());
@@ -435,7 +430,7 @@ class TicketsController extends Controller
         $ticket->save();
         $this->logStatusChange($ticket, null, $ticket->stato, 'Apertura ticket');
 
-        $messaggio = new MessaggioTicket();
+        $messaggio = new MessaggioTicket;
         $messaggio->ticket_id = $ticket->id;
         $messaggio->user_id = Auth::id();
         $messaggio->messaggio = $request->input('messaggio');
@@ -446,7 +441,7 @@ class TicketsController extends Controller
         $this->syncActivityTimestamps($ticket, false);
         $ticket->save();
 
-        $lettura = new LetturaTicket();
+        $lettura = new LetturaTicket;
         $lettura->ticket_id = $ticket->id;
         $lettura->user_id = Auth::id();
         $lettura->messaggio_letto = 1;
@@ -459,14 +454,13 @@ class TicketsController extends Controller
             $destinatarioNotificaId = $this->trovaAdminDestinatarioId(Auth::id());
         }
 
-        if ($destinatarioNotificaId && (int)$destinatarioNotificaId !== (int)Auth::id()) {
-            $lettura = new LetturaTicket();
+        if ($destinatarioNotificaId && (int) $destinatarioNotificaId !== (int) Auth::id()) {
+            $lettura = new LetturaTicket;
             $lettura->ticket_id = $ticket->id;
             $lettura->user_id = $destinatarioNotificaId;
             $lettura->messaggio_letto = 0;
             $lettura->save();
         }
-
 
         AllegatoMessaggioTicket::where('uid', $messaggio->uid)->whereNull('messaggio_id')->update(['messaggio_id' => $messaggio->id, 'uid' => null]);
 
@@ -479,11 +473,10 @@ class TicketsController extends Controller
                     $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
                 }
             } elseif ($destinatarioNotificaId) {
-                Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $ticket->oggetto . '</span> da ' . $ticket->da_tipo_utente . ' <span class="fw-bold">' . $authUserNominativo . '</span>');
+                Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">'.$ticket->oggetto.'</span> da '.$ticket->da_tipo_utente.' <span class="fw-bold">'.$authUserNominativo.'</span>');
                 $utente = User::find($destinatarioNotificaId);
                 $utente->notify(new NotificaNuovoTicketAdAdmin($ticket));
             }
-
 
         })->afterResponse();
 
@@ -503,8 +496,8 @@ class TicketsController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return \Illuminate\Contracts\View\View
+     * @param  int  $id
+     * @return View
      */
     public function show($id)
     {
@@ -517,16 +510,16 @@ class TicketsController extends Controller
             ->with('statusLogs.utente:id,nome,cognome')
             ->find($id);
 
-        abort_if(!$record, 404, 'Questo ticket non esiste');
+        abort_if(! $record, 404, 'Questo ticket non esiste');
         if ($authUser->hasAnyPermission(['agente', 'operatore'])) {
-            abort_if((int)$record->agente_id !== (int)Auth::id() && (int)$record->user_id !== (int)Auth::id(), 403, 'Non autorizzato ad accedere a questo ticket');
+            abort_if((int) $record->agente_id !== (int) Auth::id() && (int) $record->user_id !== (int) Auth::id(), 403, 'Non autorizzato ad accedere a questo ticket');
         }
-        //abort_if(!$record->contratto, 404, 'Questo ticket non esiste');
+        // abort_if(!$record->contratto, 404, 'Questo ticket non esiste');
 
         dispatch(function () use ($record) {
 
             $lettura = LetturaTicket::where('ticket_id', $record->id)->where('user_id', Auth::id())->first();
-            if ($lettura && !$lettura->messaggio_letto) {
+            if ($lettura && ! $lettura->messaggio_letto) {
                 LetturaTicket::where('ticket_id', $record->id)->where('user_id', '<>', Auth::id())->get()->each(function ($da) use ($record) {
                     User::find($da->user_id)->notify(new NotificaLetturaTicket($record));
                 });
@@ -557,7 +550,6 @@ class TicketsController extends Controller
                 ->get(['id', 'nome', 'cognome']);
         }
 
-
         return view('Backend.Tickets.show', [
             'controller' => get_class($this),
             'record' => $record,
@@ -573,7 +565,7 @@ class TicketsController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
+     * @param  int  $id
      * @return void
      */
     public function edit($id)
@@ -584,9 +576,8 @@ class TicketsController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return RedirectResponse|JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -604,15 +595,15 @@ class TicketsController extends Controller
             ]);
         } else {
             $request->validate([
-                'messaggio' => ['required']
+                'messaggio' => ['required'],
             ]);
 
         }
 
         $ticket = Ticket::find($id);
-        abort_if(!$ticket, 404, 'Questo ' . Ticket::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $ticket, 404, 'Questo '.Ticket::NOME_SINGOLARE.' non esiste');
         if ($authUser->hasAnyPermission(['agente', 'operatore'])) {
-            abort_if((int)$ticket->agente_id !== (int)Auth::id() && (int)$ticket->user_id !== (int)Auth::id(), 403, 'Non autorizzato ad aggiornare questo ticket');
+            abort_if((int) $ticket->agente_id !== (int) Auth::id() && (int) $ticket->user_id !== (int) Auth::id(), 403, 'Non autorizzato ad aggiornare questo ticket');
         }
         $oldState = $ticket->stato;
 
@@ -635,7 +626,7 @@ class TicketsController extends Controller
             $ticket->agente_id = $request->integer('agente_id');
             $ticket->save();
 
-            if ((int)$ticket->agente_id !== (int)Auth::id()) {
+            if ((int) $ticket->agente_id !== (int) Auth::id()) {
                 LetturaTicket::updateOrCreate(
                     ['ticket_id' => $ticket->id, 'user_id' => $ticket->agente_id],
                     ['messaggio_letto' => 0]
@@ -663,7 +654,7 @@ class TicketsController extends Controller
         }
 
         if ($request->input('messaggio')) {
-            $messaggio = new MessaggioTicket();
+            $messaggio = new MessaggioTicket;
             $messaggio->ticket_id = $ticket->id;
             $messaggio->user_id = Auth::id();
             $messaggio->messaggio = $request->input('messaggio');
@@ -681,7 +672,6 @@ class TicketsController extends Controller
                 $utente->notify(new NotificaAggiornamentoTicketAUtente($ticket));
             })->afterResponse();
 
-
         }
 
         $this->applySlaDefaults($ticket);
@@ -693,23 +683,20 @@ class TicketsController extends Controller
             $this->logStatusChange($ticket, $oldState, $ticket->stato, 'Aggiornamento manuale');
         }
 
-
         return $this->backToIndex();
-
 
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
+     * @param  int  $id
      * @return void
      */
     public function destroy($id)
     {
         abort(404);
     }
-
 
     protected function backToIndex()
     {
@@ -731,7 +718,6 @@ class TicketsController extends Controller
             return 'agente';
         }
     }
-
 
     protected function determinaATipoUtente($daTipoUtente, ?string $destinatarioTipo = null)
     {
@@ -757,7 +743,7 @@ class TicketsController extends Controller
             return $priorita;
         }
 
-        $oggetto = mb_strtolower((string)$request->input('oggetto'));
+        $oggetto = mb_strtolower((string) $request->input('oggetto'));
         if (str_contains($oggetto, 'blocco') || str_contains($oggetto, 'urgente')) {
             return 'urgente';
         }
@@ -766,7 +752,7 @@ class TicketsController extends Controller
             return 'alta';
         }
 
-        $servizioType = (string)$request->input('servizio_type');
+        $servizioType = (string) $request->input('servizio_type');
         if (in_array($servizioType, ['contratto-energia', 'contratto-telefonia'], true)) {
             return 'media';
         }
@@ -781,12 +767,12 @@ class TicketsController extends Controller
             return $ownerTeam;
         }
 
-        $servizioType = (string)$request->input('servizio_type');
+        $servizioType = (string) $request->input('servizio_type');
         if ($servizioType === 'contratto-energia' || $servizioType === 'contratto-telefonia') {
             return 'commerciale';
         }
 
-        $oggetto = mb_strtolower((string)$request->input('oggetto'));
+        $oggetto = mb_strtolower((string) $request->input('oggetto'));
         if (str_contains($oggetto, 'fattura') || str_contains($oggetto, 'pagamento')) {
             return 'amministrazione';
         }
@@ -812,13 +798,13 @@ class TicketsController extends Controller
             default => 48,
         };
 
-        if (!$ticket->first_response_due_at) {
+        if (! $ticket->first_response_due_at) {
             $ticket->first_response_due_at = $ticket->created_at
                 ? $ticket->created_at->copy()->addHours($firstResponseHours)
                 : now()->addHours($firstResponseHours);
         }
 
-        if (!$ticket->resolution_due_at) {
+        if (! $ticket->resolution_due_at) {
             $anchor = $ticket->created_at ? $ticket->created_at->copy() : now();
             $ticket->resolution_due_at = $anchor->addHours($resolutionHours);
         }
@@ -839,8 +825,9 @@ class TicketsController extends Controller
     protected function syncActivityTimestamps(Ticket $ticket, bool $isCreation): void
     {
         $isInternalUser = $this->currentUser()?->hasAnyPermission(['admin', 'supervisore', 'operatore']) ?? false;
-        if ($isCreation && !$isInternalUser) {
+        if ($isCreation && ! $isInternalUser) {
             $ticket->last_customer_message_at = now();
+
             return;
         }
 
@@ -853,21 +840,23 @@ class TicketsController extends Controller
 
     protected function syncResolutionState(Ticket $ticket): void
     {
-        if ($ticket->stato === 'risolto' && !$ticket->resolved_at) {
+        if ($ticket->stato === 'risolto' && ! $ticket->resolved_at) {
             $ticket->resolved_at = now();
+
             return;
         }
 
-        if ($ticket->stato === 'chiuso' && !$ticket->resolved_at) {
+        if ($ticket->stato === 'chiuso' && ! $ticket->resolved_at) {
             $ticket->resolved_at = now();
+
             return;
         }
 
-        if (!in_array($ticket->stato, ['risolto', 'chiuso'], true)) {
+        if (! in_array($ticket->stato, ['risolto', 'chiuso'], true)) {
             $ticket->resolved_at = null;
         }
 
-        if ($ticket->isSlaViolated() && !$ticket->escalated_at) {
+        if ($ticket->isSlaViolated() && ! $ticket->escalated_at) {
             $ticket->escalated_at = now();
         }
     }
@@ -877,8 +866,8 @@ class TicketsController extends Controller
         $notes = [];
 
         if ($isNew) {
-            $notes[] = 'Ticket classificato automaticamente su team ' . ($ticket->owner_team ?: 'helpdesk') . '.';
-            $notes[] = 'Priorita impostata automaticamente a ' . ($ticket->priorita ?: 'media') . '.';
+            $notes[] = 'Ticket classificato automaticamente su team '.($ticket->owner_team ?: 'helpdesk').'.';
+            $notes[] = 'Priorita impostata automaticamente a '.($ticket->priorita ?: 'media').'.';
         }
 
         if ($ticket->isSlaViolated()) {
@@ -916,5 +905,4 @@ class TicketsController extends Controller
 
         return $user;
     }
-
 }

@@ -2,12 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Notifications\Concerns\UsesPersonalizedMailSender;
-use App\Models\ContrattoTelefonia;
-use App\Models\Gestore;
 use App\Models\ServizioFinanziario;
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
@@ -20,7 +17,7 @@ class NotificaClienteServizioFinanziario extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param ServizioFinanziario $servizioFinanziario
+     * @param  ServizioFinanziario  $servizioFinanziario
      */
     public function __construct(protected $servizioFinanziario)
     {
@@ -30,7 +27,7 @@ class NotificaClienteServizioFinanziario extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -41,22 +38,20 @@ class NotificaClienteServizioFinanziario extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
 
         $email = (new MailMessage)
-
-
-        ->greeting('Ciao ' . $this->servizioFinanziario->nome)
-        ->line('Grazie per la fiducia che ci hai dedicato,')
-        //->action('Notification Action', url('/'))
-        ->line('la segnalazione per ' . $this->servizioFinanziario->tipoProdottoBlade())
-        ->line('è stata inserita.')
-        ->line('Segui l\'avanzamento sul nostro sito')
-        ->salutation(new HtmlString('Saluti,<br>' . $this->servizioFinanziario->agente->nominativo()));
+            ->greeting('Ciao '.$this->servizioFinanziario->nome)
+            ->line('Grazie per la fiducia che ci hai dedicato,')
+        // ->action('Notification Action', url('/'))
+            ->line('la segnalazione per '.$this->servizioFinanziario->tipoProdottoBlade())
+            ->line('è stata inserita.')
+            ->line('Segui l\'avanzamento sul nostro sito')
+            ->salutation(new HtmlString('Saluti,<br>'.$this->servizioFinanziario->agente->nominativo()));
 
         return $this->applyPersonalizedSender($email, $this->servizioFinanziario->agente);
 
@@ -65,7 +60,7 @@ class NotificaClienteServizioFinanziario extends Notification
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

@@ -3,29 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class Comparasemplice extends Model
 {
-    protected $table = "comparasemplice";
+    protected $table = 'comparasemplice';
 
-    public const NOME_SINGOLARE = "segnalazione compara semplice";
-    public const NOME_PLURALE = "segnalazioni compara semplice";
+    public const NOME_SINGOLARE = 'segnalazione compara semplice';
+
+    public const NOME_PLURALE = 'segnalazioni compara semplice';
 
     protected $casts = [
         'data' => 'datetime',
-        'tipo_segnalazione' => 'array'
-        ,];
+        'tipo_segnalazione' => 'array', ];
 
     public const ESITI = [
         'ko' => '#eb3662',
         'ok' => '#4dc682',
-        'in-lavorazione' => '#009EF7'
+        'in-lavorazione' => '#009EF7',
     ];
-
 
     public const SERVIZI = [
         'luce' => 'Luce',
@@ -50,16 +47,15 @@ class Comparasemplice extends Model
             }
         });
 
-
         static::saving(function (Comparasemplice $model) {
 
             $esito = EsitoComparasemplice::find($model->esito_id);
             $model->esito_finale = $esito->esito_finale;
             \Log::debug('saving');
-            if (!$model->mese_pagamento && $model->esito_finale == 'ok') {
-                //$now = now();
-                //$model->mese_pagamento = $now->month . '_' . $now->year;
-                $model->mese_pagamento = $model->created_at->month . '_' . $model->created_at->year;
+            if (! $model->mese_pagamento && $model->esito_finale == 'ok') {
+                // $now = now();
+                // $model->mese_pagamento = $now->month . '_' . $now->year;
+                $model->mese_pagamento = $model->created_at->month.'_'.$model->created_at->year;
             }
 
             if ($model->esito_finale != 'ok') {
@@ -67,24 +63,17 @@ class Comparasemplice extends Model
             }
         });
 
-        self::saved(function ($model) {
+        self::saved(function ($model) {});
 
-        });
-
-        self::deleted(function ($model) {
-        });
-
+        self::deleted(function ($model) {});
 
     }
-
-
 
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI
     |--------------------------------------------------------------------------
     */
-
 
     public function agente()
     {
@@ -101,7 +90,6 @@ class Comparasemplice extends Model
         return $this->hasOne(EsitoComparasemplice::class, 'id', 'esito_id');
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | SCOPE
@@ -114,10 +102,9 @@ class Comparasemplice extends Model
     |--------------------------------------------------------------------------
     */
 
-
     public function nominativo()
     {
-        return $this->cognome . ' ' . $this->nome;
+        return $this->cognome.' '.$this->nome;
     }
 
     public function tipoProdottoBlade()
@@ -127,14 +114,16 @@ class Comparasemplice extends Model
 
     public function labelPagato()
     {
-        if ($this->pagato) return "<span class='badge badge-success' >Pagato</span>";
+        if ($this->pagato) {
+            return "<span class='badge badge-success' >Pagato</span>";
+        }
     }
 
     public function bulletEsitoFinale()
     {
         if ($this->esito_finale) {
 
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:' . self::ESITI[$this->esito_finale] . ';"></span>';
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.self::ESITI[$this->esito_finale].';"></span>';
         }
 
     }
@@ -154,6 +143,4 @@ class Comparasemplice extends Model
     {
         return $puoModificare;
     }
-
-
 }

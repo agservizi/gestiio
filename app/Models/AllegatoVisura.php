@@ -4,9 +4,7 @@ namespace App\Models;
 
 use App\Http\Funzioni\FunzioniAllegato;
 use App\Http\Funzioni\ThumbnailGenerationService;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 class AllegatoVisura extends Model
 {
@@ -25,7 +23,7 @@ class AllegatoVisura extends Model
             $estensione = strtolower(pathinfo($model->filename_originale, PATHINFO_EXTENSION));
             $model->tipo_file = self::tipoFile($estensione);
 
-            $thumbnailGenerationService = new ThumbnailGenerationService();
+            $thumbnailGenerationService = new ThumbnailGenerationService;
             $thumbnailPath = $thumbnailGenerationService->generate($model->path_filename, $model->tipo_file, 500, 500);
             $model->thumbnail = $thumbnailPath;
 
@@ -53,9 +51,6 @@ class AllegatoVisura extends Model
 
         $qb->where('per_cliente', $perCliente);
 
-
         return $qb->get(['id', 'path_filename', 'dimensione_file', 'thumbnail'])->toArray();
     }
-
-
 }

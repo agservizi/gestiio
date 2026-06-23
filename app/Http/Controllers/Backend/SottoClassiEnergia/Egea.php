@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers\Backend\SottoClassiEnergia;
 
-use App\Http\Controllers\Controller;
-
 use App\Models\Comune;
-use App\Models\GestoreContrattoEnergia;
 use App\Models\ProdottoEnergiaEgea;
+use App\Rules\IbanRule;
+use App\Rules\PartitaIvaRule;
+use App\Rules\PdrRule;
+use App\Rules\PodRule;
 use Illuminate\Http\Request;
 
 class Egea extends ProdottoEnergiaAbstract
 {
-
-
     /**
-     * @param EnelBusiness $model
-     * @param Request $request
+     * @param  EnelBusiness  $model
+     * @param  Request  $request
      * @return mixed
      */
     public function salvaDatiProdotto($contrattoEnergia, $request)
@@ -23,12 +22,12 @@ class Egea extends ProdottoEnergiaAbstract
 
         $model = $contrattoEnergia->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoEnergiaEgea();
+            $model = new ProdottoEnergiaEgea;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
 
             'nome' => 'app\getInputUcwords',
@@ -105,17 +104,16 @@ class Egea extends ProdottoEnergiaAbstract
         }
         $isBusiness = $request->input('categoria_pratica') === 'business';
         $denominazione = trim((string) $request->input('denominazione'));
-        if (!$isBusiness || $denominazione === '') {
-            $denominazione = trim((string) ($model->cognome . ' ' . $model->nome));
+        if (! $isBusiness || $denominazione === '') {
+            $denominazione = trim((string) ($model->cognome.' '.$model->nome));
         }
         $contrattoEnergia->denominazione = $denominazione;
-        $contrattoEnergia->indirizzo_completo = $model->indirizzo . ' ' . Comune::find($model->citta)?->comuneConTarga();
-        $contrattoEnergia->testo_ricerca = $contrattoEnergia->denominazione . '|' . $contrattoEnergia->codice_contratto;
+        $contrattoEnergia->indirizzo_completo = $model->indirizzo.' '.Comune::find($model->citta)?->comuneConTarga();
+        $contrattoEnergia->testo_ricerca = $contrattoEnergia->denominazione.'|'.$contrattoEnergia->codice_contratto;
         $contrattoEnergia->save();
 
         return $model;
     }
-
 
     public function rulesProdotto($id = null)
     {
@@ -123,7 +121,7 @@ class Egea extends ProdottoEnergiaAbstract
         $isBusiness = request()->input('categoria_pratica') === 'business';
 
         $rules = [
-            'partita_iva' => $isBusiness ? ['required', new \App\Rules\PartitaIvaRule()] : ['nullable', new \App\Rules\PartitaIvaRule()],
+            'partita_iva' => $isBusiness ? ['required', new PartitaIvaRule] : ['nullable', new PartitaIvaRule],
             'forma_giuridica' => $isBusiness ? ['required', 'max:255'] : ['nullable', 'max:255'],
             'cellulare' => ['nullable', 'max:255'],
             'fax' => ['nullable', 'max:255'],
@@ -139,10 +137,10 @@ class Egea extends ProdottoEnergiaAbstract
             'nominativo_residente_fatturazione' => ['nullable', 'max:255'],
             'banca' => ['required', 'max:255'],
             'agenzia_filiale' => ['required', 'max:255'],
-            'iban' => ['required', new \App\Rules\IbanRule()],
+            'iban' => ['required', new IbanRule],
             'bic_swift' => ['required', 'max:255'],
             'tipo_attivazione_gas' => ['required_without:tipo_attivazione_luce', 'max:255'],
-            'pdr' => ['required_with:tipo_attivazione_gas', new \App\Rules\PdrRule()],
+            'pdr' => ['required_with:tipo_attivazione_gas', new PdrRule],
             'matricola_contatore' => ['nullable', 'max:255'],
             'cat_uso_arera' => ['required_with:tipo_attivazione_gas', 'max:255'],
             'cabina_remi' => ['nullable', 'max:255'],
@@ -154,7 +152,7 @@ class Egea extends ProdottoEnergiaAbstract
             'consumo_anno_termico' => ['nullable', 'max:255'],
 
             'tipo_attivazione_luce' => ['required_without:tipo_attivazione_gas', 'max:255'],
-            'pod' => ['required_with:tipo_attivazione_luce', new \App\Rules\PodRule()],
+            'pod' => ['required_with:tipo_attivazione_luce', new PodRule],
             'tipologia_uso' => ['required_with:tipo_attivazione_luce', 'max:255'],
             'tensione' => ['nullable', 'max:255'],
             'potenza_contrattuale' => ['nullable', 'max:255'],
@@ -171,11 +169,8 @@ class Egea extends ProdottoEnergiaAbstract
         return $rules;
     }
 
-
     public function determinaProvvigione(Request $request)
     {
         return $this->calcolaProvvigioneDaGestore($request, 2, false);
     }
-
-
 }

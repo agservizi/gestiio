@@ -18,8 +18,9 @@ class PdrRule implements Rule
         $pdr = preg_replace('/\s+/', '', $pdr);
 
         // Formato PDR Italia: 14 cifre numeriche.
-        if (!preg_match('/^\d{14}$/', $pdr)) {
+        if (! preg_match('/^\d{14}$/', $pdr)) {
             $this->message = 'Il PDR deve contenere esattamente 14 cifre.';
+
             return false;
         }
 
@@ -31,4 +32,3 @@ class PdrRule implements Rule
         return $this->message;
     }
 }
-

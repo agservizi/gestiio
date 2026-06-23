@@ -5,7 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::table('contratti', function (Blueprint $table) {
@@ -24,7 +25,7 @@ return new class extends Migration {
                     DB::table('contratti')
                         ->where('id', $row->id)
                         ->update([
-                            'codice_contratto_interno' => 'TEL' . str_pad((string) $row->id, 11, '0', STR_PAD_LEFT),
+                            'codice_contratto_interno' => 'TEL'.str_pad((string) $row->id, 11, '0', STR_PAD_LEFT),
                         ]);
                 }
             });
@@ -37,7 +38,7 @@ return new class extends Migration {
                     DB::table('contratti_energia')
                         ->where('id', $row->id)
                         ->update([
-                            'codice_contratto_interno' => 'OP' . str_pad((string) $row->id, 11, '0', STR_PAD_LEFT),
+                            'codice_contratto_interno' => 'OP'.str_pad((string) $row->id, 11, '0', STR_PAD_LEFT),
                         ]);
                 }
             });
@@ -54,4 +55,3 @@ return new class extends Migration {
         });
     }
 };
-

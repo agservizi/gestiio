@@ -4,8 +4,8 @@ namespace App\Http\Livewire;
 
 use App\Http\Controllers\Backend\CafPatronatoController;
 use App\Http\Controllers\Backend\ClienteController;
-use App\Http\Controllers\Backend\ContrattoTelefoniaController;
 use App\Http\Controllers\Backend\ContrattoEnergiaController;
+use App\Http\Controllers\Backend\ContrattoTelefoniaController;
 use App\Models\CafPatronato;
 use App\Models\Cliente;
 use App\Models\ContrattoEnergia;
@@ -27,29 +27,29 @@ class Ricerca extends Component
             $this->mostra = true;
             $arrRisultati = [];
 
-            //Cerco contratti
+            // Cerco contratti
             $records = ContrattoTelefonia::with('tipoContratto:id,nome')
                 ->where(DB::raw('concat_ws(\' \',nome,cognome,email,telefono,codice_fiscale,iban,codice_cliente,codice_contratto)'), 'like', "%{$this->testoRicerca}%")
                 ->get();
             foreach ($records as $record) {
-                $arrRisultati[] = ['testo' => $record->denominazione(), 'sottotesto' => 'Contratto ' . $record->tipoContratto->nome, 'url' => action([ContrattoTelefoniaController::class, 'show'], $record->id)];
+                $arrRisultati[] = ['testo' => $record->denominazione(), 'sottotesto' => 'Contratto '.$record->tipoContratto->nome, 'url' => action([ContrattoTelefoniaController::class, 'show'], $record->id)];
             }
 
             $records = ContrattoEnergia::with('gestore:id,nome')
                 ->where(DB::raw('concat_ws(\' \',testo_ricerca,email,telefono,codice_fiscale)'), 'like', "%{$this->testoRicerca}%")
                 ->get();
             foreach ($records as $record) {
-                $arrRisultati[] = ['testo' => $record->denominazione, 'sottotesto' => 'Contratto ' . $record->gestore->nome, 'url' => action([ContrattoEnergiaController::class, 'show'], $record->id)];
+                $arrRisultati[] = ['testo' => $record->denominazione, 'sottotesto' => 'Contratto '.$record->gestore->nome, 'url' => action([ContrattoEnergiaController::class, 'show'], $record->id)];
             }
 
-            //Cerco CafPatronato
+            // Cerco CafPatronato
             $records = CafPatronato::with('tipo:id,nome')->where(DB::raw('concat_ws(\' \',nome,cognome,email,cellulare,codice_fiscale)'), 'like', "%{$this->testoRicerca}%")
                 ->get();
             foreach ($records as $record) {
-                $arrRisultati[] = ['testo' => $record->nominativo(), 'sottotesto' => 'Pratica ' . $record->tipo->nome, 'url' => action([CafPatronatoController::class, 'edit'], $record->id)];
+                $arrRisultati[] = ['testo' => $record->nominativo(), 'sottotesto' => 'Pratica '.$record->tipo->nome, 'url' => action([CafPatronatoController::class, 'edit'], $record->id)];
             }
 
-            //Cerco clienti
+            // Cerco clienti
             $records = Cliente::where(DB::raw('concat_ws(\' \',ragione_sociale,nome,cognome,email,telefono,codice_fiscale)'), 'like', "%{$this->testoRicerca}%")
                 ->get();
             foreach ($records as $record) {
@@ -63,9 +63,7 @@ class Ricerca extends Component
         }
 
         return view('livewire.ricerca', [
-            'risultati' => $this->risultati
+            'risultati' => $this->risultati,
         ]);
     }
-
-
 }

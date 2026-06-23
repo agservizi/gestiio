@@ -23,8 +23,9 @@ class PollOpenApiVisure extends Command
 
     public function handle(): int
     {
-        if (!Schema::hasColumn('visure', 'openapi_request_id')) {
+        if (! Schema::hasColumn('visure', 'openapi_request_id')) {
             $this->warn('Colonne OpenAPI su visure non presenti. Esegui prima le migration.');
+
             return self::SUCCESS;
         }
 
@@ -44,6 +45,7 @@ class PollOpenApiVisure extends Command
         $records = $query->orderBy('id')->limit($limit)->get();
         if ($records->isEmpty()) {
             $this->info('Nessuna visura in attesa di polling.');
+
             return self::SUCCESS;
         }
 
@@ -62,45 +64,50 @@ class PollOpenApiVisure extends Command
             $service = $provider === 'catasto'
                 ? $this->buildCatastoServiceForRecord($record)
                 : $this->buildVisureServiceForRecord($record);
-            if (!$service) {
+            if (! $service) {
                 $this->warn("Visura #{$record->id}: credenziali agente mancanti, polling saltato");
+
                 continue;
             }
             $statusData = $provider === 'catasto'
                 ? $service->statoVisuraCatastale($requestId)
                 : $service->statoRichiesta($requestId);
-            if (!$statusData) {
+            if (! $statusData) {
                 $errors++;
                 $this->warn("Visura #{$record->id}: errore stato ({$service->message})");
+
                 continue;
             }
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $this->salvaStato($record, $statusData);
             }
 
             $stato = strtolower((string) ($statusData['stato_richiesta'] ?? $statusData['status'] ?? ''));
-            if (!$this->isDocumentoPronto($stato)) {
+            if (! $this->isDocumentoPronto($stato)) {
                 $this->line("Visura #{$record->id}: non pronta ({$stato})");
+
                 continue;
             }
 
-            if (!$dryRun && Schema::hasColumn('visure', 'openapi_documento_scaricato_at') && $record->openapi_documento_scaricato_at) {
+            if (! $dryRun && Schema::hasColumn('visure', 'openapi_documento_scaricato_at') && $record->openapi_documento_scaricato_at) {
                 continue;
             }
 
             $document = $provider === 'catasto'
                 ? $service->scaricaDocumentoVisuraCatastale($requestId)
                 : $service->scaricaDocumento($requestId);
-            if (!$document) {
+            if (! $document) {
                 $errors++;
                 $this->warn("Visura #{$record->id}: documento non disponibile ({$service->message})");
+
                 continue;
             }
 
             if ($dryRun) {
                 $this->info("Visura #{$record->id}: PDF pronto (dry-run)");
                 $downloaded++;
+
                 continue;
             }
 
@@ -156,7 +163,7 @@ class PollOpenApiVisure extends Command
             return null;
         }
 
-        $fileName = (string) ($document['nome'] ?? ('visura_' . $record->id . '.pdf'));
+        $fileName = (string) ($document['nome'] ?? ('visura_'.$record->id.'.pdf'));
         $mimeType = (string) ($document['mime_type'] ?? $document['content_type'] ?? 'application/octet-stream');
 
         // Evita duplicati se il polling ripete lo stesso documento.
@@ -170,11 +177,12 @@ class PollOpenApiVisure extends Command
                 $record->openapi_documento_scaricato_at = now();
                 $record->save();
             }
+
             return ['fileName' => $fileName];
         }
 
         $path = ltrim(config('configurazione.allegati_visure.cartella'), '/')
-            . '/' . Str::ulid() . '-' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
+            .'/'.Str::ulid().'-'.preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
 
         try {
             Storage::put($path, $content);
@@ -183,10 +191,11 @@ class PollOpenApiVisure extends Command
                 'visura_id' => $record->id,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
 
-        $allegato = new AllegatoServizio();
+        $allegato = new AllegatoServizio;
         $allegato->uid = $record->uid;
         $allegato->filename_originale = $fileName;
         $allegato->path_filename = $path;
@@ -225,6 +234,7 @@ class PollOpenApiVisure extends Command
         }
 
         $decoded = base64_decode($base64, true);
+
         return $decoded === false ? $base64 : $decoded;
     }
 
@@ -243,7 +253,7 @@ class PollOpenApiVisure extends Command
 
     protected function isCatastaleType(?TipoVisura $tipo): bool
     {
-        if (!$tipo) {
+        if (! $tipo) {
             return false;
         }
 
@@ -253,30 +263,32 @@ class PollOpenApiVisure extends Command
     protected function buildVisureServiceForRecord(Visura $record): ?OpenApiVisureService
     {
         $token = $this->getAgenteOpenApiToken($record, 'visure');
-        if (!$token) {
+        if (! $token) {
             return null;
         }
+
         return new OpenApiVisureService($token);
     }
 
     protected function buildCatastoServiceForRecord(Visura $record): ?OpenApiCatastoService
     {
         $token = $this->getAgenteOpenApiToken($record, 'catasto');
-        if (!$token) {
+        if (! $token) {
             return null;
         }
+
         return new OpenApiCatastoService($token);
     }
 
     protected function getAgenteOpenApiToken(Visura $record, string $tipo): ?string
     {
         $agente = $record->agente;
-        if (!$agente instanceof User) {
+        if (! $agente instanceof User) {
             return null;
         }
 
         $profiloAgente = $agente->agente;
-        if (!$profiloAgente) {
+        if (! $profiloAgente) {
             return null;
         }
 

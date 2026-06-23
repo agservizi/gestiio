@@ -2,18 +2,23 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Events\ChatMessageSent;
 use App\Http\Controllers\Backend\SottoClassiEnergia\ProdottoEnergiaAbstract;
 use App\Http\Controllers\Controller;
 use App\Http\Services\ContrattiCfRiskService;
-
+use App\Jobs\SendChatWebPushNotification;
 use App\Models\AllegatoContrattoEnergia;
+use App\Models\ChatMessage;
+use App\Models\ChatMessageAttachment;
+use App\Models\ChatThread;
 use App\Models\Cliente;
+use App\Models\ContrattoEnergia;
+use App\Models\ContrattoEnergiaMagicLink;
 use App\Models\EsitoContrattoEnergia;
 use App\Models\GestoreContrattoEnergia;
 use App\Models\Notifica;
 use App\Models\TabMotivoKo;
 use App\Models\User;
-use App\Models\ContrattoEnergiaMagicLink;
 use App\Notifications\NotificaAdminContrattoEnergia;
 use App\Notifications\NotificaAgenteCambioEsitoContrattoEnergia;
 use App\Notifications\NotificaAgenteNuovoContrattoEnergia;
@@ -21,13 +26,15 @@ use App\Notifications\NotificaClienteContrattoEnergia;
 use App\Notifications\NotificaClienteRichiestaDocumentiContrattoEnergia;
 use App\Notifications\NotificaDatiAccessoClienteContrattoEnergia;
 use App\Notifications\NotificaGenericaGestoreContrattoEnergia;
+use App\Notifications\NotificaPrimoMessaggioChatInterna;
 use App\Rules\CodiceFiscaleRule;
 use App\Rules\DataItalianaRule;
+use App\Rules\TelefonoRule;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ContrattoEnergia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -35,13 +42,9 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
-use App\Models\ChatThread;
-use App\Models\ChatMessage;
-use App\Models\ChatThreadUser;
-use App\Events\ChatMessageSent;
-use App\Jobs\SendChatWebPushNotification;
 
 class ContrattoEnergiaController extends Controller
 {
@@ -62,9 +65,9 @@ class ContrattoEnergiaController extends Controller
         ]);
 
         $contratto = ContrattoEnergia::find($id);
-        abort_if(!$contratto, 404, 'Questo contratto non esiste');
+        abort_if(! $contratto, 404, 'Questo contratto non esiste');
 
-        /** @var \App\Models\User $authUser */
+        /** @var User $authUser */
         $authUser = Auth::user();
 
         // Determine the recipient based on who is sending:
@@ -72,10 +75,10 @@ class ContrattoEnergiaController extends Controller
         // - If sender is not admin: deliver to an admin (prefer id 2 if different), otherwise fallback to an available operator.
         $recipient = null;
         if ($authUser->hasPermissionTo('admin')) {
-            if (!empty($contratto->agente_id) && $contratto->agente_id !== $authUser->id) {
+            if (! empty($contratto->agente_id) && $contratto->agente_id !== $authUser->id) {
                 $recipient = User::find($contratto->agente_id);
             }
-            if (!$recipient) {
+            if (! $recipient) {
                 $recipient = User::whereHas('permissions', function ($q) {
                     $q->whereIn('name', ['agente', 'supervisore']);
                 })->where('id', '<>', $authUser->id)->first();
@@ -86,18 +89,18 @@ class ContrattoEnergiaController extends Controller
             if ($recipient && $recipient->id === $authUser->id) {
                 $recipient = null;
             }
-            if (!$recipient) {
+            if (! $recipient) {
                 $recipient = User::whereHas('permissions', function ($q) {
                     $q->where('name', 'admin');
                 })->where('id', '<>', $authUser->id)->first();
             }
-            if (!$recipient) {
+            if (! $recipient) {
                 $recipient = User::whereHas('permissions', function ($q) {
                     $q->whereIn('name', ['agente', 'supervisore']);
                 })->where('id', '<>', $authUser->id)->first();
             }
         }
-        abort_if(!$recipient, 404, 'Destinatario non trovato');
+        abort_if(! $recipient, 404, 'Destinatario non trovato');
 
         // Cerca thread esistente tra i due utenti
         $thread = ChatThread::query()
@@ -113,8 +116,8 @@ class ContrattoEnergiaController extends Controller
             ->latest('id')
             ->first();
 
-        if (!$thread) {
-            $thread = new ChatThread();
+        if (! $thread) {
+            $thread = new ChatThread;
             $thread->created_by = $authUser->id;
             $thread->save();
             $thread->partecipanti()->attach([
@@ -123,11 +126,11 @@ class ContrattoEnergiaController extends Controller
             ]);
         }
 
-        $testo = trim((string)$request->input('messaggio'));
-        $messaggio = new ChatMessage();
+        $testo = trim((string) $request->input('messaggio'));
+        $messaggio = new ChatMessage;
         $messaggio->thread_id = $thread->id;
         $messaggio->user_id = $authUser->id;
-        $messaggio->messaggio = "Segnalazione contratto #{$contratto->id} ({$contratto->codice_contratto}) - " . $authUser->nominativo() . "\n\n" . $testo;
+        $messaggio->messaggio = "Segnalazione contratto #{$contratto->id} ({$contratto->codice_contratto}) - ".$authUser->nominativo()."\n\n".$testo;
         $messaggio->save();
         $messaggio->load('mittente');
 
@@ -136,15 +139,15 @@ class ContrattoEnergiaController extends Controller
         broadcast(new ChatMessageSent($messaggio))->toOthers();
 
         // Notifica via email se primo messaggio non letto e push
-        $recipient->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
+        $recipient->notify(new NotificaPrimoMessaggioChatInterna($messaggio));
 
         SendChatWebPushNotification::dispatch($recipient->id, [
-            'title' => $authUser->nominativo() . ' · Chat interna',
+            'title' => $authUser->nominativo().' · Chat interna',
             'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: 'Segnalazione in chat')), 120),
-            'url' => url('/backend/chat-interna?thread=' . $thread->id),
+            'url' => url('/backend/chat-interna?thread='.$thread->id),
             'thread_id' => (int) $thread->id,
             'message_id' => (int) $messaggio->id,
-            'tag' => 'chat-thread-' . $thread->id,
+            'tag' => 'chat-thread-'.$thread->id,
             'icon' => url('/images/logo_small_icon_only.png'),
             'badge' => url('/images/logo_small_icon_only.png'),
         ]);
@@ -155,18 +158,18 @@ class ContrattoEnergiaController extends Controller
     public function apriChat(Request $request, $id)
     {
         $contratto = ContrattoEnergia::find($id);
-        abort_if(!$contratto, 404, 'Questo contratto non esiste');
+        abort_if(! $contratto, 404, 'Questo contratto non esiste');
 
-        /** @var \App\Models\User $authUser */
+        /** @var User $authUser */
         $authUser = Auth::user();
 
         // Determine recipient: symmetric to segnalaChat logic
         $recipient = null;
         if ($authUser->hasPermissionTo('admin')) {
-            if (!empty($contratto->agente_id) && $contratto->agente_id !== $authUser->id) {
+            if (! empty($contratto->agente_id) && $contratto->agente_id !== $authUser->id) {
                 $recipient = User::find($contratto->agente_id);
             }
-            if (!$recipient) {
+            if (! $recipient) {
                 $recipient = User::whereHas('permissions', function ($q) {
                     $q->whereIn('name', ['agente', 'supervisore']);
                 })->where('id', '<>', $authUser->id)->first();
@@ -176,18 +179,18 @@ class ContrattoEnergiaController extends Controller
             if ($recipient && $recipient->id === $authUser->id) {
                 $recipient = null;
             }
-            if (!$recipient) {
+            if (! $recipient) {
                 $recipient = User::whereHas('permissions', function ($q) {
                     $q->where('name', 'admin');
                 })->where('id', '<>', $authUser->id)->first();
             }
-            if (!$recipient) {
+            if (! $recipient) {
                 $recipient = User::whereHas('permissions', function ($q) {
                     $q->whereIn('name', ['agente', 'supervisore']);
                 })->where('id', '<>', $authUser->id)->first();
             }
         }
-        abort_if(!$recipient, 404, 'Destinatario non trovato');
+        abort_if(! $recipient, 404, 'Destinatario non trovato');
 
         // trova o crea thread tra authUser e recipient
         $thread = ChatThread::query()
@@ -203,8 +206,8 @@ class ContrattoEnergiaController extends Controller
             ->latest('id')
             ->first();
 
-        if (!$thread) {
-            $thread = new ChatThread();
+        if (! $thread) {
+            $thread = new ChatThread;
             $thread->created_by = $authUser->id;
             $thread->save();
             $thread->partecipanti()->attach([
@@ -214,17 +217,17 @@ class ContrattoEnergiaController extends Controller
         }
 
         // crea messaggio con riferimento al contratto
-        $messaggio = new ChatMessage();
+        $messaggio = new ChatMessage;
         $messaggio->thread_id = $thread->id;
         $messaggio->user_id = $authUser->id;
-        $messaggio->messaggio = "Segnalazione contratto #{$contratto->id} ({$contratto->codice_contratto}) da " . $authUser->nominativo();
+        $messaggio->messaggio = "Segnalazione contratto #{$contratto->id} ({$contratto->codice_contratto}) da ".$authUser->nominativo();
         $messaggio->save();
         $messaggio->load('mittente');
 
         // allega primo file del contratto, se presente
         $allegato = AllegatoContrattoEnergia::where('contratto_energia_id', $contratto->id)->first();
         if ($allegato) {
-            $attachment = new \App\Models\ChatMessageAttachment();
+            $attachment = new ChatMessageAttachment;
             $attachment->message_id = $messaggio->id;
             $attachment->filename_originale = $allegato->filename_originale;
             $attachment->path_filename = ltrim($allegato->path_filename, '/');
@@ -241,31 +244,30 @@ class ContrattoEnergiaController extends Controller
         broadcast(new ChatMessageSent($messaggio))->toOthers();
 
         // notify recipient
-        $recipient->notify(new \App\Notifications\NotificaPrimoMessaggioChatInterna($messaggio));
+        $recipient->notify(new NotificaPrimoMessaggioChatInterna($messaggio));
 
         SendChatWebPushNotification::dispatch($recipient->id, [
-            'title' => $authUser->nominativo() . ' · Chat interna',
+            'title' => $authUser->nominativo().' · Chat interna',
             'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: 'Segnalazione in chat')), 120),
-            'url' => url('/backend/chat-interna?thread=' . $thread->id),
+            'url' => url('/backend/chat-interna?thread='.$thread->id),
             'thread_id' => (int) $thread->id,
             'message_id' => (int) $messaggio->id,
-            'tag' => 'chat-thread-' . $thread->id,
+            'tag' => 'chat-thread-'.$thread->id,
         ]);
 
         return response()->json(['ok' => true, 'thread_id' => $thread->id]);
     }
 
-
     /**
      * Display a listing of the resource.
      *
-    * @return mixed
+     * @return mixed
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-        $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+        $giorniFermo = max(1, (int) $request->input('giorni_fermo', 7));
 
         $ordinamenti = [
             'data' => ['testo' => 'Data', 'filtro' => function ($q) {
@@ -276,7 +278,7 @@ class ContrattoEnergiaController extends Controller
             }],
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
         ];
 
         $orderByUser = $this->currentUser()->getExtra($nomeClasse);
@@ -284,7 +286,7 @@ class ContrattoEnergiaController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -294,7 +296,7 @@ class ContrattoEnergiaController extends Controller
             $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $contrattiFermiCount = (clone $recordsQB)
@@ -318,21 +320,20 @@ class ContrattoEnergiaController extends Controller
                     'puoCambiareStato' => $puoCambiareStato,
                     'puoCreare' => $puoCreare,
 
-                ])->render())
+                ])->render()),
             ];
 
         }
 
-
         return view('Backend.ContrattoEnergia.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\ContrattoEnergia::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.ContrattoEnergia::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\ContrattoEnergia::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuovo '.ContrattoEnergia::NOME_SINGOLARE,
             'testoCerca' => 'Cerca in nominativo, email, telefono',
             'puoModificare' => $puoModificare,
             'puoCambiareStato' => $puoCambiareStato,
@@ -340,20 +341,18 @@ class ContrattoEnergiaController extends Controller
             'giorniFermo' => $giorniFermo,
             'contrattiFermiCount' => $contrattiFermiCount,
 
-
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\ContrattoEnergia::query()
+        $queryBuilder = ContrattoEnergia::query()
             ->with(['esito' => function ($q) {
                 $q->select('id', 'nome', 'colore_hex');
             }])
@@ -399,7 +398,6 @@ class ContrattoEnergiaController extends Controller
             $queryBuilder->whereDate('created_at', '>=', $dataDa)->whereDate('created_at', '<=', $dataA);
         }
 
-
         if ($request->has('agente_id')) {
             $queryBuilder->where('agente_id', $request->input('agente_id'));
             $this->conFiltro = true;
@@ -407,7 +405,7 @@ class ContrattoEnergiaController extends Controller
         }
 
         if ($request->boolean('solo_fermi')) {
-            $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+            $giorniFermo = max(1, (int) $request->input('giorni_fermo', 7));
             $queryBuilder
                 ->whereIn('esito_id', ['bozza', 'da-gestire'])
                 ->whereDate('created_at', '<=', now()->subDays($giorniFermo));
@@ -417,33 +415,31 @@ class ContrattoEnergiaController extends Controller
         return $queryBuilder;
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
-    * @return mixed
+     * @return mixed
      */
     public function create(Request $request, $gestoreId = null)
     {
 
-
-        if (!$gestoreId) {
-            $record = new ContrattoEnergia();
+        if (! $gestoreId) {
+            $record = new ContrattoEnergia;
             if ($this->currentUser()->hasPermissionTo('agente')) {
                 $record->agente_id = Auth::id();
             }
+
             return view('Backend.ContrattoEnergia.modalNuovo', [
-                'servizi' => \App\Models\GestoreContrattoEnergia::orderBy('nome')->where('attivo', 1)->get(),
+                'servizi' => GestoreContrattoEnergia::orderBy('nome')->where('attivo', 1)->get(),
                 'record' => $record,
                 'controller' => get_class($this),
-                'titoloPagina' => 'Nuovo ContrattoEnergia'
+                'titoloPagina' => 'Nuovo ContrattoEnergia',
             ]);
         }
 
         $prodotto = null;
 
-
-        $record = new ContrattoEnergia();
+        $record = new ContrattoEnergia;
         if ($this->currentUser()->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         } else {
@@ -452,10 +448,10 @@ class ContrattoEnergiaController extends Controller
         $record->gestore_id = $gestoreId;
 
         $gestore = GestoreContrattoEnergia::find($record->gestore_id);
-        abort_if(!$gestore, 404, 'Questo gestore non esiste');
+        abort_if(! $gestore, 404, 'Questo gestore non esiste');
 
         $categoriaRichiesta = $request->input('categoria_pratica');
-        if (!in_array($categoriaRichiesta, ['consumer', 'business'], true)) {
+        if (! in_array($categoriaRichiesta, ['consumer', 'business'], true)) {
             $categoriaGestore = strtolower((string) $gestore->categoria_pratica);
             $categoriaRichiesta = in_array($categoriaGestore, ['consumer', 'business'], true)
                 ? $categoriaGestore
@@ -471,22 +467,21 @@ class ContrattoEnergiaController extends Controller
                 );
 
                 $url = action([self::class, 'create'], [$gestoreTarget->id]);
-                $url .= '?' . http_build_query($query);
+                $url .= '?'.http_build_query($query);
 
                 return redirect()->to($url);
             }
         }
 
         if ($gestore->model_prodotto) {
-            $classe = 'App\Models\\' . $gestore->model_prodotto;
-            $prodotto = $this->presetCampi(new $classe(), $gestore->model_prodotto);
+            $classe = 'App\Models\\'.$gestore->model_prodotto;
+            $prodotto = $this->presetCampi(new $classe, $gestore->model_prodotto);
         }
 
         $record->uid = Str::ulid();
         $record->data = today();
         $this->applyCreatePrefillToContratto($record, $request);
         $this->applyCreatePrefillToProdotto($prodotto, $request);
-
 
         $categoriaPratica = $this->determinaCategoriaPratica(
             $record,
@@ -499,9 +494,9 @@ class ContrattoEnergiaController extends Controller
         return view('Backend.ContrattoEnergia.edit', [
             'record' => $record,
             'contratto' => $record,
-            'titoloPagina' => 'Nuovo ' . ContrattoEnergia::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.ContrattoEnergia::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . ContrattoEnergia::NOME_PLURALE],
+            'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.ContrattoEnergia::NOME_PLURALE],
             'recordProdotto' => $prodotto,
             'tipoProdotto' => $gestore->model_prodotto,
             'creaContratto' => false,
@@ -509,7 +504,6 @@ class ContrattoEnergiaController extends Controller
             'categoriaSwitchUrls' => $categoriaSwitchUrls,
         ]);
     }
-
 
     protected function presetCampi($record, $prodotto)
     {
@@ -530,8 +524,7 @@ class ContrattoEnergiaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-    * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
@@ -550,7 +543,7 @@ class ContrattoEnergiaController extends Controller
         if ($cfRisk['blocked']) {
             return $this->redirectCodiceFiscaleBloccato($cfRisk);
         }
-        $record = new ContrattoEnergia();
+        $record = new ContrattoEnergia;
         $this->salvaDati($record, $request, $classeProdotto);
 
         if ($record->esito_id !== 'bozza') {
@@ -558,7 +551,7 @@ class ContrattoEnergiaController extends Controller
         }
 
         if ($this->currentUser()->hasPermissionTo('agente')) {
-            Notifica::notificaAdAdmin('Nuovo Contratto Energia', '<span class="fw-bold">' . $record->gestore->nome . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
+            Notifica::notificaAdAdmin('Nuovo Contratto Energia', '<span class="fw-bold">'.$record->gestore->nome.'</span> caricato da <span class="fw-bold">'.$record->agente->nominativo().'</span> per il cliente <span class="fw-bold">'.$record->nominativo().'</span>');
         }
 
         return redirect()->action([ContrattoEnergiaController::class, 'show'], $record->id);
@@ -567,13 +560,13 @@ class ContrattoEnergiaController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-    * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
         $record = ContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo ContrattoEnergia non esiste');
+        abort_if(! $record, 404, 'Questo ContrattoEnergia non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -581,13 +574,12 @@ class ContrattoEnergiaController extends Controller
         }
         $puoCreare = $this->currentUser()->hasAnyPermission(['admin', 'agente']);
 
-
         return view('Backend.ContrattoEnergia.show', [
             'record' => $record,
             'controller' => ContrattoEnergiaController::class,
-            'titoloPagina' => ucfirst(ContrattoEnergia::NOME_SINGOLARE) . ' ' . $record->nominativo(),
-            'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . ContrattoEnergia::NOME_PLURALE],
-            'puoCreare' => $puoCreare
+            'titoloPagina' => ucfirst(ContrattoEnergia::NOME_SINGOLARE).' '.$record->nominativo(),
+            'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.ContrattoEnergia::NOME_PLURALE],
+            'puoCreare' => $puoCreare,
 
         ]);
     }
@@ -595,15 +587,15 @@ class ContrattoEnergiaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-    * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         $record = ContrattoEnergia::with('gestore')->find($id);
-        abort_if(!$record, 404, 'Questo ContrattoEnergia non esiste');
+        abort_if(! $record, 404, 'Questo ContrattoEnergia non esiste');
 
-        abort_if(!$record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 404, 'Non puo modificare questo ContrattoEnergia');
+        abort_if(! $record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 404, 'Non puo modificare questo ContrattoEnergia');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -613,14 +605,13 @@ class ContrattoEnergiaController extends Controller
         $tipoProdotto = $record->gestore->model_prodotto;
         if ($tipoProdotto) {
             $recordProdotto = $record->prodotto;
-            if (!$recordProdotto) {
-                $classe = 'App\Models\\' . $tipoProdotto;
-                $recordProdotto = new $classe();
+            if (! $recordProdotto) {
+                $classe = 'App\Models\\'.$tipoProdotto;
+                $recordProdotto = new $classe;
 
             }
 
         }
-
 
         $categoriaPratica = $this->determinaCategoriaPratica(
             $record,
@@ -635,9 +626,9 @@ class ContrattoEnergiaController extends Controller
             'contratto' => $record,
 
             'controller' => ContrattoEnergiaController::class,
-            'titoloPagina' => 'Modifica ' . ContrattoEnergia::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.ContrattoEnergia::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . ContrattoEnergia::NOME_PLURALE],
+            'breadcrumbs' => [action([ContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.ContrattoEnergia::NOME_PLURALE],
             'recordProdotto' => $recordProdotto,
             'tipoProdotto' => $tipoProdotto,
             'creaContratto' => true,
@@ -650,16 +641,15 @@ class ContrattoEnergiaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-    * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $this->normalizzaCodiciEnergia($request);
 
         $record = ContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo ' . ContrattoEnergia::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.ContrattoEnergia::NOME_SINGOLARE.' non esiste');
 
         $tipoProdotto = $request->input('tipo_prodotto');
         $rules = $this->rules($request, $id);
@@ -680,7 +670,6 @@ class ContrattoEnergiaController extends Controller
         if ($esitoPrima == 'bozza' && $record->esito_id == 'da-gestire') {
             $this->inviaNotifiche($record);
         }
-
 
         return redirect()
             ->action([self::class, 'edit'], [$record->id])
@@ -742,13 +731,13 @@ class ContrattoEnergiaController extends Controller
         ]);
 
         $record = ContrattoEnergia::with('gestore')->find($id);
-        abort_if(!$record, 404, 'Questo contratto non esiste');
-        abort_if(!$record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 403, 'Non puoi modificare questo contratto');
+        abort_if(! $record, 404, 'Questo contratto non esiste');
+        abort_if(! $record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 403, 'Non puoi modificare questo contratto');
 
         $categoriaRichiesta = $request->input('categoria_pratica');
         $gestoreTarget = $this->resolveGestoreByCategoria($record->gestore, $categoriaRichiesta);
 
-        if (!$gestoreTarget) {
+        if (! $gestoreTarget) {
             return response()->json([
                 'success' => false,
                 'message' => 'Switch non disponibile per questa categoria.',
@@ -772,7 +761,7 @@ class ContrattoEnergiaController extends Controller
     public function pda($id)
     {
         $contratto = ContrattoEnergia::find($id);
-        abort_if(!$contratto, 404, 'Questo contratto non esiste');
+        abort_if(! $contratto, 404, 'Questo contratto non esiste');
 
         // Al momento per energia non è previsto un generatore PDA dedicato.
         // Evita errore 500 in view e mostra feedback utente coerente.
@@ -783,16 +772,16 @@ class ContrattoEnergiaController extends Controller
 
     public function duplicaAnagrafica($id)
     {
-        abort_if(!$this->determinaPuoCreare(), 403, 'Non autorizzato a creare un nuovo contratto');
+        abort_if(! $this->determinaPuoCreare(), 403, 'Non autorizzato a creare un nuovo contratto');
 
         $record = ContrattoEnergia::with(['gestore', 'prodotto'])->find($id);
-        abort_if(!$record, 404, 'Questo contratto non esiste');
+        abort_if(! $record, 404, 'Questo contratto non esiste');
 
         $query = $this->buildDuplicaAnagraficaQuery($record);
 
         $url = action([self::class, 'create'], [$record->gestore_id]);
-        if (!empty($query)) {
-            $url .= '?' . http_build_query($query);
+        if (! empty($query)) {
+            $url .= '?'.http_build_query($query);
         }
 
         return redirect()->to($url);
@@ -801,19 +790,18 @@ class ContrattoEnergiaController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-    * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function destroy($id)
     {
         $record = ContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo ContrattoEnergia non esiste');
+        abort_if(! $record, 404, 'Questo ContrattoEnergia non esiste');
 
         foreach ($record->allegati as $allegato) {
             $allegato->delete();
         }
         $record->delete();
-
 
         return [
             'success' => true,
@@ -821,11 +809,10 @@ class ContrattoEnergiaController extends Controller
         ];
     }
 
-
     public function downloadAllegato($ContrattoEnergiaId, $allegatoId, Request $request)
     {
         $record = AllegatoContrattoEnergia::find($allegatoId);
-        abort_if(!$record, 404, 'Questo allegato non esiste');
+        abort_if(! $record, 404, 'Questo allegato non esiste');
         abort_if($record->contratto_energia_id != $ContrattoEnergiaId, 404, 'Questo allegato non esiste');
         $inlinePreview = $request->boolean('anteprima');
         $contentDisposition = $inlinePreview ? 'inline' : 'attachment';
@@ -835,7 +822,7 @@ class ContrattoEnergiaController extends Controller
             if ($contenuto !== false) {
                 return response($contenuto, 200, [
                     'Content-Type' => $record->mime_type ?: 'application/octet-stream',
-                    'Content-Disposition' => $contentDisposition . '; filename="' . addslashes($record->filename_originale) . '"',
+                    'Content-Disposition' => $contentDisposition.'; filename="'.addslashes($record->filename_originale).'"',
                 ]);
             }
         }
@@ -847,7 +834,7 @@ class ContrattoEnergiaController extends Controller
         if ($inlinePreview) {
             return response()->file($path, [
                 'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . addslashes($record->filename_originale) . '"',
+                'Content-Disposition' => 'inline; filename="'.addslashes($record->filename_originale).'"',
             ]);
         }
 
@@ -873,15 +860,15 @@ class ContrattoEnergiaController extends Controller
 
     public function uploadAllegato(Request $request)
     {
-        $file = new AllegatoContrattoEnergia();
+        $file = new AllegatoContrattoEnergia;
 
         if ($request->file('file')) {
             $filePath = $request->file('file');
             $estensione = $filePath->extension();
-            $fileName = Str::ulid() . '.' . $estensione;
+            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.allegati_contratti_energia.cartella');
             $request->file('file')->storeAs($cartella, $fileName);
-            $file->path_filename = $cartella . '/' . $fileName;
+            $file->path_filename = $cartella.'/'.$fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
             $file->mime_type = $filePath->getMimeType();
             $contenuto = file_get_contents($filePath->getRealPath());
@@ -903,18 +890,19 @@ class ContrattoEnergiaController extends Controller
     public function deleteAllegato(Request $request)
     {
         $record = AllegatoContrattoEnergia::find($request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        abort_if(! $record, 404, 'File non trovato');
         Log::debug(__FUNCTION__, $record->toArray());
 
-        Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente'.$record->path_filename);
         $record->delete();
+
         return $record->path_filename;
     }
 
     public function aggiornaStato(Request $request, $id)
     {
         $ContrattoEnergia = ContrattoEnergia::withCount('allegati')->find($id);
-        abort_if(!$ContrattoEnergia, 404, 'Questo ContrattoEnergia non esiste');
+        abort_if(! $ContrattoEnergia, 404, 'Questo ContrattoEnergia non esiste');
 
         $request->validate([
             'esito_id' => ['required'],
@@ -925,11 +913,11 @@ class ContrattoEnergiaController extends Controller
         $esitoPrima = $ContrattoEnergia->esito_id;
 
         $esito = EsitoContrattoEnergia::find($request->input('esito_id'));
-        if (!$esito) {
+        if (! $esito) {
             return response()->json(['success' => false, 'message' => 'Stato selezionato non valido.'], 422);
         }
 
-        if ((int)$esito->chiedi_motivo === 1 && trim((string)$request->input('motivo_ko')) === '') {
+        if ((int) $esito->chiedi_motivo === 1 && trim((string) $request->input('motivo_ko')) === '') {
             return response()->json(['success' => false, 'message' => 'La motivazione KO è obbligatoria per lo stato selezionato.'], 422);
         }
 
@@ -956,11 +944,9 @@ class ContrattoEnergiaController extends Controller
         }
         $records = collect([$ContrattoEnergia]);
 
-
         if ($esitoPrima == 'bozza') {
             $this->inviaNotifiche($ContrattoEnergia);
         }
-
 
         if ($ContrattoEnergia->wasChanged(['esito_id'])) {
             $esito = EsitoContrattoEnergia::find($ContrattoEnergia->esito_id);
@@ -995,7 +981,7 @@ class ContrattoEnergiaController extends Controller
                         report($exception);
                         Notifica::notificaAdAdmin(
                             'Errore invio magic-link documenti',
-                            'Contratto energia #' . $ContrattoEnergia->id . ': ' . $exception->getMessage(),
+                            'Contratto energia #'.$ContrattoEnergia->id.': '.$exception->getMessage(),
                             'error'
                         );
                     }
@@ -1003,11 +989,10 @@ class ContrattoEnergiaController extends Controller
             }
 
             if ($request->input('ruolo') == 'supervisore') {
-                Notifica::notificaAdAdmin('Cambio stato', 'Esito per il ContrattoEnergia di ' . $ContrattoEnergia->nominativo() . ' modificato a ' . $esito->nome);
+                Notifica::notificaAdAdmin('Cambio stato', 'Esito per il ContrattoEnergia di '.$ContrattoEnergia->nominativo().' modificato a '.$esito->nome);
             }
 
         }
-
 
         if ($request->input('aggiorna') == 'dash') {
             $view = 'Backend.Dashboard.admin.contratti';
@@ -1022,48 +1007,45 @@ class ContrattoEnergiaController extends Controller
                 'puoModificare' => $this->determinaPuoModificare(),
                 'puoCreare' => $this->determinaPuoCreare(),
                 'puoCambiareStato' => $this->determinaPuoCambiareStato(),
-            ])->render())
+            ])->render()),
         ];
     }
 
-
     /**
-     * @param ContrattoEnergia $ContrattoEnergia
+     * @param  ContrattoEnergia  $ContrattoEnergia
      * @return void
      */
     public function inviaNotifiche($ContrattoEnergia)
     {
 
-
         $this->creaUtente($ContrattoEnergia);
 
-
         dispatch(function () use ($ContrattoEnergia) {
-            //Notifica a agente
+            // Notifica a agente
             $user = $ContrattoEnergia->agente;
             try {
                 $user->notify(new NotificaAgenteNuovoContrattoEnergia($ContrattoEnergia));
 
             } catch (\Exception $exception) {
                 report($exception);
-                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il ContrattoEnergia di ' . $ContrattoEnergia->nominativo() . ': ' . $exception->getMessage(), 'error');
+                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il ContrattoEnergia di '.$ContrattoEnergia->nominativo().': '.$exception->getMessage(), 'error');
             }
 
         })->afterResponse();
 
-        //Notifiche al gestore
+        // Notifiche al gestore
 
         if ($ContrattoEnergia->gestore->email_notifica_a_gestore) {
 
             dispatch(function () use ($ContrattoEnergia) {
                 foreach (explode(';', $ContrattoEnergia->gestore->email_notifica_a_gestore) as $email) {
-                    $user = new User();
+                    $user = new User;
                     $user->email = trim($email);
                     try {
                         $user->notify(new NotificaGenericaGestoreContrattoEnergia($ContrattoEnergia));
                     } catch (\Exception $exception) {
                         report($exception);
-                        Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il ContrattoEnergia di ' . $ContrattoEnergia->nominativo() . ': ' . $exception->getMessage(), 'error');
+                        Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il ContrattoEnergia di '.$ContrattoEnergia->nominativo().': '.$exception->getMessage(), 'error');
                     }
                 }
             })->afterResponse();
@@ -1072,14 +1054,14 @@ class ContrattoEnergiaController extends Controller
 
         if ($this->currentUser()->hasPermissionTo('agente')) {
             dispatch(function () use ($ContrattoEnergia) {
-                $user = new User();
+                $user = new User;
                 $user->email = 'noreply@gestiio.it';
                 try {
                     $user->notify(new NotificaAdminContrattoEnergia($ContrattoEnergia));
 
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il ContrattoEnergia di ' . $ContrattoEnergia->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il ContrattoEnergia di '.$ContrattoEnergia->nominativo().': '.$exception->getMessage(), 'error');
 
                 }
             })->afterResponse();
@@ -1089,15 +1071,15 @@ class ContrattoEnergiaController extends Controller
     }
 
     /**
-     * @param ContrattoEnergia $model
-     * @param Request $request
-     * @param ProdottoEnergiaAbstract $classeProdotto
+     * @param  ContrattoEnergia  $model
+     * @param  Request  $request
+     * @param  ProdottoEnergiaAbstract  $classeProdotto
      * @return mixed
      */
     protected function salvaDati($model, $request, $classeProdotto)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->esito_id = 'da-gestire';
@@ -1105,7 +1087,7 @@ class ContrattoEnergiaController extends Controller
             $model->caricato_da_user_id = Auth::id();
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'agente_id' => '',
@@ -1124,10 +1106,10 @@ class ContrattoEnergiaController extends Controller
             $model->$campo = $valore;
         }
 
-        if (!$model->cliente_id) {
+        if (! $model->cliente_id) {
             $cliente = Cliente::where('codice_fiscale', $model->codice_fiscale)->first();
-            if (!$cliente) {
-                $cliente = new Cliente();
+            if (! $cliente) {
+                $cliente = new Cliente;
             }
         } else {
             $cliente = Cliente::find($model->cliente_id);
@@ -1141,45 +1123,41 @@ class ContrattoEnergiaController extends Controller
             $model->esito_id = 'da-gestire';
         }
 
-
         $provvigioneAgente = 0;
         if ($classeProdotto) {
             $provvigioneAgente = $classeProdotto->determinaProvvigione($request);
         }
         $model->provvigione_agente = $provvigioneAgente;
 
-
         $model->save();
 
-
         AllegatoContrattoEnergia::where('uid', $model->uid)->whereNull('contratto_energia_id')->update(['contratto_energia_id' => $model->id, 'uid' => null]);
-
 
         if ($classeProdotto) {
             $classeProdotto->salvaDatiProdotto($model, $request);
         }
+
         return $model;
     }
 
-
     /**
-     * @param Cliente $model
-     * @param Request $request
+     * @param  Cliente  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiCliente($model, $request)
     {
 
-        if (!$request->input('cognome')) {
+        if (! $request->input('cognome')) {
             return null;
         }
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_fiscale' => 'strtoupper',
             'nome' => 'app\getInputUcwords',
@@ -1199,13 +1177,11 @@ class ContrattoEnergiaController extends Controller
 
         $model->save();
 
-
         return $model->id;
     }
 
     /**
-     * @param ContrattoEnergia $ContrattoEnergia
-    * @return void
+     * @return void
      */
     protected function creaUtente(ContrattoEnergia $ContrattoEnergia)
     {
@@ -1213,8 +1189,8 @@ class ContrattoEnergiaController extends Controller
 
         if ($cliente && $cliente->email && $cliente->telefono) {
             $user = User::where('email', $cliente->email)->orWhere('telefono', $cliente->telefono)->first();
-            if (!$user) {
-                $user = new User();
+            if (! $user) {
+                $user = new User;
                 $user->nome = $cliente->nome;
                 $user->cognome = $cliente->cognome;
                 $user->email = $cliente->email;
@@ -1226,21 +1202,21 @@ class ContrattoEnergiaController extends Controller
                 $cliente->save();
 
                 dispatch(function () use ($ContrattoEnergia, $password, $user) {
-                    //Notifica a cliente
+                    // Notifica a cliente
                     try {
                         $user->notify(new NotificaDatiAccessoClienteContrattoEnergia($ContrattoEnergia, $password));
                         $user->invio_dati_accesso = now();
                         $user->save();
                     } catch (\Exception $exception) {
                         report($exception);
-                        Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a ' . $user->nominativo() . ': ' . $exception->getMessage(), 'error');
+                        Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a '.$user->nominativo().': '.$exception->getMessage(), 'error');
 
                     }
                 })->afterResponse();
 
             } else {
                 dispatch(function () use ($ContrattoEnergia, $user) {
-                    //Notifica a cliente
+                    // Notifica a cliente
                     $user->notify(new NotificaClienteContrattoEnergia($ContrattoEnergia));
                 })->afterResponse();
 
@@ -1248,9 +1224,7 @@ class ContrattoEnergiaController extends Controller
 
         }
 
-
     }
-
 
     protected function backToIndex()
     {
@@ -1262,9 +1236,8 @@ class ContrattoEnergiaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\ContrattoEnergia::get();
+        return ContrattoEnergia::get();
     }
-
 
     protected function rules(Request $request, $id = null)
     {
@@ -1272,14 +1245,14 @@ class ContrattoEnergiaController extends Controller
         $isBusiness = $categoriaPratica === 'business';
 
         $rules = [
-            'data' => ['required', new DataItalianaRule()],
+            'data' => ['required', new DataItalianaRule],
             'agente_id' => ['required'],
             'gestore_id' => ['required'],
             'categoria_pratica' => ['required', 'in:consumer,business'],
-            'codice_fiscale' => ['required', new CodiceFiscaleRule()],
+            'codice_fiscale' => ['required', new CodiceFiscaleRule],
             'denominazione' => $isBusiness ? ['required', 'max:255'] : ['nullable', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'telefono' => ['required', new \App\Rules\TelefonoRule()],
+            'telefono' => ['required', new TelefonoRule],
         ];
 
         return $rules;
@@ -1287,11 +1260,12 @@ class ContrattoEnergiaController extends Controller
 
     protected function isRichiestaDocumentiEsito(?EsitoContrattoEnergia $esito): bool
     {
-        if (!$esito) {
+        if (! $esito) {
             return false;
         }
 
         $nome = strtolower(trim((string) $esito->nome));
+
         return Str::contains($nome, ['richiesta documenti', 'richiesta documento']);
     }
 
@@ -1300,8 +1274,7 @@ class ContrattoEnergiaController extends Controller
         Request $request,
         ?string $tipoProdotto = null,
         ?string $categoriaGestore = null
-    ): string
-    {
+    ): string {
         $oldCategoria = old('categoria_pratica');
         if (in_array($oldCategoria, ['consumer', 'business'], true)) {
             return $oldCategoria;
@@ -1352,7 +1325,7 @@ class ContrattoEnergiaController extends Controller
 
     protected function categoriaDaTipoProdotto(?string $tipoProdotto): ?string
     {
-        if (!$tipoProdotto) {
+        if (! $tipoProdotto) {
             return null;
         }
 
@@ -1380,7 +1353,7 @@ class ContrattoEnergiaController extends Controller
         ];
 
         foreach ($targets as $categoria => $gestore) {
-            if (!$gestore) {
+            if (! $gestore) {
                 continue;
             }
 
@@ -1389,7 +1362,7 @@ class ContrattoEnergiaController extends Controller
                 $query['agente_id'] = $agenteId;
             }
 
-            $url = action([self::class, 'create'], [$gestore->id]) . '?' . http_build_query($query);
+            $url = action([self::class, 'create'], [$gestore->id]).'?'.http_build_query($query);
             $urls[$categoria] = $url;
         }
 
@@ -1448,7 +1421,7 @@ class ContrattoEnergiaController extends Controller
     protected function buildDuplicaAnagraficaQuery(ContrattoEnergia $record): array
     {
         $categoria = strtolower((string) ($record->gestore->categoria_pratica ?? ''));
-        if (!in_array($categoria, ['consumer', 'business'], true)) {
+        if (! in_array($categoria, ['consumer', 'business'], true)) {
             $categoria = $this->categoriaDaTipoProdotto((string) ($record->gestore->model_prodotto ?? '')) ?? 'consumer';
         }
 
@@ -1460,7 +1433,7 @@ class ContrattoEnergiaController extends Controller
             'denominazione' => (string) ($record->denominazione ?? ''),
         ];
 
-        if (!$this->currentUser()->hasPermissionTo('agente') && $record->agente_id) {
+        if (! $this->currentUser()->hasPermissionTo('agente') && $record->agente_id) {
             $data['agente_id'] = (int) $record->agente_id;
         }
 
@@ -1489,7 +1462,7 @@ class ContrattoEnergiaController extends Controller
                 'indirizzo_pec',
             ] as $campo) {
                 $valore = $prodotto->{$campo} ?? null;
-                if (!is_scalar($valore)) {
+                if (! is_scalar($valore)) {
                     continue;
                 }
                 $valore = is_string($valore) ? trim($valore) : $valore;
@@ -1515,7 +1488,7 @@ class ContrattoEnergiaController extends Controller
 
     protected function applyCreatePrefillToProdotto($prodotto, Request $request): void
     {
-        if (!$prodotto) {
+        if (! $prodotto) {
             return;
         }
 
@@ -1548,7 +1521,7 @@ class ContrattoEnergiaController extends Controller
             'pdr',
             'iban',
         ] as $campo) {
-            if (!array_key_exists($campo, $prefill)) {
+            if (! array_key_exists($campo, $prefill)) {
                 continue;
             }
             $this->setModelColumnValue($prodotto, $campo, $prefill[$campo]);
@@ -1571,9 +1544,10 @@ class ContrattoEnergiaController extends Controller
     protected function prefillValue(array $prefill, array $keys, $default = null)
     {
         foreach ($keys as $key) {
-            if (!array_key_exists($key, $prefill)) {
+            if (! array_key_exists($key, $prefill)) {
                 continue;
             }
+
             return $prefill[$key];
         }
 
@@ -1582,46 +1556,46 @@ class ContrattoEnergiaController extends Controller
 
     protected function normalizzaPrefillData(array $data): array
     {
-        if (empty($data['indirizzo']) && !empty($data['indirizzo_sede'])) {
+        if (empty($data['indirizzo']) && ! empty($data['indirizzo_sede'])) {
             $data['indirizzo'] = $data['indirizzo_sede'];
         }
-        if (empty($data['indirizzo_sede']) && !empty($data['indirizzo'])) {
+        if (empty($data['indirizzo_sede']) && ! empty($data['indirizzo'])) {
             $data['indirizzo_sede'] = $data['indirizzo'];
         }
 
-        if (empty($data['citta']) && !empty($data['comune_sede'])) {
+        if (empty($data['citta']) && ! empty($data['comune_sede'])) {
             $data['citta'] = $data['comune_sede'];
         }
-        if (empty($data['comune_sede']) && !empty($data['citta'])) {
+        if (empty($data['comune_sede']) && ! empty($data['citta'])) {
             $data['comune_sede'] = $data['citta'];
         }
 
-        if (empty($data['cap']) && !empty($data['cap_sede'])) {
+        if (empty($data['cap']) && ! empty($data['cap_sede'])) {
             $data['cap'] = $data['cap_sede'];
         }
-        if (empty($data['cap_sede']) && !empty($data['cap'])) {
+        if (empty($data['cap_sede']) && ! empty($data['cap'])) {
             $data['cap_sede'] = $data['cap'];
         }
 
-        if (empty($data['interno']) && !empty($data['nr_sede'])) {
+        if (empty($data['interno']) && ! empty($data['nr_sede'])) {
             $data['interno'] = $data['nr_sede'];
         }
-        if (empty($data['nr_sede']) && !empty($data['interno'])) {
+        if (empty($data['nr_sede']) && ! empty($data['interno'])) {
             $data['nr_sede'] = $data['interno'];
         }
 
-        if (empty($data['telefono']) && !empty($data['cellulare'])) {
+        if (empty($data['telefono']) && ! empty($data['cellulare'])) {
             $data['telefono'] = $data['cellulare'];
         }
-        if (empty($data['cellulare']) && !empty($data['telefono'])) {
+        if (empty($data['cellulare']) && ! empty($data['telefono'])) {
             $data['cellulare'] = $data['telefono'];
         }
 
-        if (empty($data['denominazione']) && (!empty($data['nome']) || !empty($data['cognome']))) {
-            $data['denominazione'] = trim(($data['cognome'] ?? '') . ' ' . ($data['nome'] ?? ''));
+        if (empty($data['denominazione']) && (! empty($data['nome']) || ! empty($data['cognome']))) {
+            $data['denominazione'] = trim(($data['cognome'] ?? '').' '.($data['nome'] ?? ''));
         }
 
-        if ((empty($data['nome']) && empty($data['cognome'])) && !empty($data['denominazione'])) {
+        if ((empty($data['nome']) && empty($data['cognome'])) && ! empty($data['denominazione'])) {
             $parts = preg_split('/\s+/', trim((string) $data['denominazione']));
             if (is_array($parts) && count($parts) > 1) {
                 $data['nome'] = array_pop($parts);
@@ -1637,7 +1611,7 @@ class ContrattoEnergiaController extends Controller
         if ($valore === null || $valore === '') {
             return;
         }
-        if (!$this->modelHasColumn($model, $campo)) {
+        if (! $this->modelHasColumn($model, $campo)) {
             return;
         }
         $model->{$campo} = $valore;
@@ -1648,7 +1622,7 @@ class ContrattoEnergiaController extends Controller
         static $cache = [];
 
         $table = $model->getTable();
-        if (!isset($cache[$table])) {
+        if (! isset($cache[$table])) {
             $cache[$table] = Schema::getColumnListing($table);
         }
 
@@ -1658,7 +1632,7 @@ class ContrattoEnergiaController extends Controller
     protected function resolveGestoreByCategoria(GestoreContrattoEnergia $gestoreCorrente, string $categoria): ?GestoreContrattoEnergia
     {
         $categoria = strtolower($categoria);
-        if (!in_array($categoria, ['consumer', 'business'], true)) {
+        if (! in_array($categoria, ['consumer', 'business'], true)) {
             return null;
         }
 
@@ -1676,7 +1650,7 @@ class ContrattoEnergiaController extends Controller
         $modelProdotto = (string) $gestoreCorrente->model_prodotto;
         $modelProdottoLower = strtolower($modelProdotto);
 
-        if (!str_contains($modelProdottoLower, 'consumer') && !str_contains($modelProdottoLower, 'business')) {
+        if (! str_contains($modelProdottoLower, 'consumer') && ! str_contains($modelProdottoLower, 'business')) {
             return null;
         }
 
@@ -1722,7 +1696,6 @@ class ContrattoEnergiaController extends Controller
 
     }
 
-
     protected function determinaPuoModificare()
     {
         return $this->currentUser()->hasAnyPermission(['admin', 'supervisore']);
@@ -1740,6 +1713,4 @@ class ContrattoEnergiaController extends Controller
         return $this->currentUser()->hasAnyPermission(['admin', 'agente']);
 
     }
-
-
 }

@@ -19,15 +19,15 @@ return new class extends Migration
             $table->json('fornitura_richiesta');
             $table->json('fasce_reperibilita');
 
-            //DATI TECNICI ENERGIA ELETTRICA
+            // DATI TECNICI ENERGIA ELETTRICA
             $table->string('attuale_fornitore_luce')->nullable();
             $table->string('pod')->nullable();
             $table->string('indirizzo_fornitura_luce')->nullable();
             $table->string('civico_fornitura_luce')->nullable();
             $table->string('comune_fornitura_luce')->nullable();
-            $table->string('cap_fornitura_luce',5)->nullable();
+            $table->string('cap_fornitura_luce', 5)->nullable();
 
-            //DATI TECNICI GAS NATURALE
+            // DATI TECNICI GAS NATURALE
             $table->string('attuale_fornitore_gas')->nullable();
             $table->string('pdr')->nullable();
             $table->json('tipologia_uso_gas')->nullable();
@@ -35,9 +35,9 @@ return new class extends Migration
             $table->string('indirizzo_fornitura_gas')->nullable();
             $table->string('civico_fornitura_gas')->nullable();
             $table->string('comune_fornitura_gas')->nullable();
-            $table->string('cap_fornitura_gas',5)->nullable();
+            $table->string('cap_fornitura_gas', 5)->nullable();
 
-            //MODALITÀ DI PAGAMENTO E SPEDIZIONE FATTURA
+            // MODALITÀ DI PAGAMENTO E SPEDIZIONE FATTURA
             $table->string('modalita_pagamento_fattura');
             $table->string('intestatario_conto_corrente');
             $table->string('codice_fiscale_intestatario');
@@ -49,7 +49,6 @@ return new class extends Migration
             $table->string('cap_spedizione_fattura')->nullable();
             $table->string('c_o')->nullable();
             $table->string('virtu_titolo')->nullable();
-
 
         });
     }

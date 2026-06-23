@@ -14,13 +14,14 @@ class TicketsAuditIntegrity extends Command
 
     public function handle(): int
     {
-        $limit = max(1, (int)$this->option('limit'));
+        $limit = max(1, (int) $this->option('limit'));
 
         try {
             DB::connection()->getPdo();
         } catch (\Throwable $e) {
             $this->error('Connessione DB non disponibile. Verifica .env e whitelist host.');
-            $this->line('Dettaglio: ' . $e->getMessage());
+            $this->line('Dettaglio: '.$e->getMessage());
+
             return self::FAILURE;
         }
 
@@ -41,13 +42,13 @@ class TicketsAuditIntegrity extends Command
             ->count();
 
         $this->info('Audit integrita tickets');
-        $this->line('Totale tickets: ' . $total);
-        $this->line('causale_ticket_id NULL: ' . $nullCausale);
-        $this->line('causale_ticket_id non valida: ' . $invalidCausaleFk);
-        $this->line('user_id NULL: ' . $nullUser);
-        $this->line('user_id non valido: ' . $invalidUserFk);
-        $this->line('agente_id NULL (non assegnato): ' . $nullAssegnatario);
-        $this->line('agente_id non valido: ' . $invalidAssegnatarioFk);
+        $this->line('Totale tickets: '.$total);
+        $this->line('causale_ticket_id NULL: '.$nullCausale);
+        $this->line('causale_ticket_id non valida: '.$invalidCausaleFk);
+        $this->line('user_id NULL: '.$nullUser);
+        $this->line('user_id non valido: '.$invalidUserFk);
+        $this->line('agente_id NULL (non assegnato): '.$nullAssegnatario);
+        $this->line('agente_id non valido: '.$invalidAssegnatarioFk);
 
         $this->newLine();
         $this->warn('Campione record senza causale (NULL):');
@@ -103,6 +104,7 @@ class TicketsAuditIntegrity extends Command
     {
         if (empty($rows)) {
             $this->line('Nessun record trovato.');
+
             return;
         }
 

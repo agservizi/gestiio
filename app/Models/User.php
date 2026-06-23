@@ -7,7 +7,6 @@ use App\Notifications\PasswordResetNotification;
 use App\Notifications\VerifyEmail;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -18,11 +17,11 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use  HasFactory, Notifiable, HasRoles, Billable, TwoFactorAuthenticatable;
+    use Billable, HasFactory, HasRoles, Notifiable, TwoFactorAuthenticatable;
     use FunzioniContatti;
 
-
     public const NOME_PLURALE = 'operatori';
+
     public const NOME_SINGOLARE = 'operatore';
 
     /**
@@ -34,7 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
-        'cognome'
+        'cognome',
     ];
 
     /**
@@ -56,7 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verified_at' => 'datetime',
         'ultimo_accesso' => 'datetime',
         'invio_dati_accesso' => 'datetime',
-        'extra' => 'array'
+        'extra' => 'array',
     ];
 
     /*
@@ -97,7 +96,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(ChatPushSubscription::class, 'user_id');
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | SCOPE
@@ -117,7 +115,6 @@ class User extends Authenticatable implements MustVerifyEmail
         });
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | PASSWORD RESET LOCALIZZATO
@@ -127,35 +124,34 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Send the password reset notification.
      *
-     * @param string $token
+     * @param  string  $token
      */
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new PasswordResetNotification($token));
     }
 
-
     /**********************
      * ALTRO
      **********************/
     public function nominativo()
     {
-        return $this->nome . ' ' . $this->cognome;
+        return $this->nome.' '.$this->cognome;
     }
 
     public function denominazione()
     {
-        return $this->name . ' ' . $this->cognome;
+        return $this->name.' '.$this->cognome;
     }
 
     public function iniziali()
     {
-        return $this->nome[0] . $this->cognome[0];
+        return $this->nome[0].$this->cognome[0];
     }
 
     public function cogomeN()
     {
-        return $this->cognome . ' ' . $this->nome[0];
+        return $this->cognome.' '.$this->nome[0];
     }
 
     public function aliasAgente()
@@ -165,9 +161,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function codiceAgente()
     {
-        return 'AG' . str_pad(($this->id - 1), 5, '0', STR_PAD_LEFT);
+        return 'AG'.str_pad(($this->id - 1), 5, '0', STR_PAD_LEFT);
     }
-
 
     public static function selected($id)
     {
@@ -179,11 +174,9 @@ class User extends Authenticatable implements MustVerifyEmail
         }
     }
 
-
     /***************************************************
      * Campo extra
      ***************************************************/
-
 
     public function setExtra(array $value): void
     {
@@ -197,7 +190,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     }
 
-
     public function getExtra(?string $key = null): mixed
     {
         if ($key !== null && is_array($this->extra)) {
@@ -205,6 +197,7 @@ class User extends Authenticatable implements MustVerifyEmail
                 return $this->extra[$key];
             }
         }
+
         return null;
     }
 
@@ -218,7 +211,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $this->extra = ['invio_email_verifica' => Carbon::now()->format('d/m/Y H:m:s')];
         $this->save();
-        $this->notify(new VerifyEmail());
+        $this->notify(new VerifyEmail);
     }
 
     public function userLevel($small, $user)
@@ -235,7 +228,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     }
 
-
     public function labelLivelloOperatore($livello, $small = false)
     {
         if ($small) {
@@ -245,22 +237,20 @@ class User extends Authenticatable implements MustVerifyEmail
         }
         switch ($livello) {
             case 'admin':
-                return '<span class="badge badge-info fw-bolder ' . $small . '">Admin</span>';
+                return '<span class="badge badge-info fw-bolder '.$small.'">Admin</span>';
 
             case 'agente':
-                return '<span class="badge badge-primary fw-bolder ' . $small . '">Agente</span>';
+                return '<span class="badge badge-primary fw-bolder '.$small.'">Agente</span>';
 
             case 'supervisore':
-                return '<span class="badge badge-warning fw-bolder ' . $small . '">Supervisore</span>';
+                return '<span class="badge badge-warning fw-bolder '.$small.'">Supervisore</span>';
 
             case 'operatore':
-                return '<span class="badge badge-warning fw-bolder ' . $small . '">Operatore</span>';
+                return '<span class="badge badge-warning fw-bolder '.$small.'">Operatore</span>';
 
             case 'sospeso':
-                return '<span class="badge badge-danger fw-bolder ' . $small . '">Sospeso</span>';
+                return '<span class="badge badge-danger fw-bolder '.$small.'">Sospeso</span>';
 
         }
     }
-
-
 }

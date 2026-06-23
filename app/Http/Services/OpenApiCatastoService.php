@@ -10,17 +10,20 @@ use Throwable;
 class OpenApiCatastoService
 {
     private const ENDPOINT_SANDBOX = 'https://test.catasto.openapi.it/';
+
     private const ENDPOINT_PRODUCTION = 'https://catasto.openapi.it/';
 
     protected PendingRequest $client;
+
     public ?string $message = null;
+
     protected ?string $bearerTokenOverride = null;
 
     public function __construct(?string $bearerToken = null)
     {
         $this->bearerTokenOverride = $bearerToken;
         $this->client = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->bearerToken(),
+            'Authorization' => 'Bearer '.$this->bearerToken(),
             'content-type' => 'application/json',
             'accept' => 'application/json',
         ])->timeout(45);
@@ -29,35 +32,40 @@ class OpenApiCatastoService
     public function creaVisuraCatastale(array $payload): ?array
     {
         try {
-            $response = $this->client->post($this->endpoint() . 'visura_catastale', $payload);
+            $response = $this->client->post($this->endpoint().'visura_catastale', $payload);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
 
         $decoded = $this->decodeJson($response);
+
         return is_array($decoded['data'] ?? null) ? $decoded['data'] : null;
     }
 
     public function statoVisuraCatastale(string $id): ?array
     {
         try {
-            $response = $this->client->get($this->endpoint() . 'visura_catastale/' . urlencode($id));
+            $response = $this->client->get($this->endpoint().'visura_catastale/'.urlencode($id));
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
 
         $decoded = $this->decodeJson($response);
+
         return is_array($decoded['data'] ?? null) ? $decoded['data'] : null;
     }
 
     public function scaricaDocumentoVisuraCatastale(string $id): ?array
     {
         try {
-            $response = $this->client->get($this->endpoint() . 'visura_catastale/' . urlencode($id) . '/documento');
+            $response = $this->client->get($this->endpoint().'visura_catastale/'.urlencode($id).'/documento');
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
+
             return null;
         }
 
@@ -68,16 +76,18 @@ class OpenApiCatastoService
             if (is_array($data)) {
                 return $data;
             }
+
             return null;
         }
 
-        if (!$response->successful()) {
-            $this->message = 'Errore Catasto (' . $response->status() . ')';
+        if (! $response->successful()) {
+            $this->message = 'Errore Catasto ('.$response->status().')';
+
             return null;
         }
 
         $disposition = (string) $response->header('content-disposition');
-        $fileName = $this->extractFilenameFromDisposition($disposition) ?: ('visura_catastale_' . $id . '.pdf');
+        $fileName = $this->extractFilenameFromDisposition($disposition) ?: ('visura_catastale_'.$id.'.pdf');
 
         return [
             'raw_content' => $response->body(),
@@ -92,17 +102,21 @@ class OpenApiCatastoService
             $json = $response->json();
             if (is_array($json)) {
                 $this->message = $json['message'] ?? null;
+
                 return $json;
             }
+
             return [];
         }
 
         $json = $response->json();
         if (is_array($json)) {
-            $this->message = $json['message'] ?? ('Errore Catasto (' . $response->status() . ')');
+            $this->message = $json['message'] ?? ('Errore Catasto ('.$response->status().')');
+
             return $json;
         }
-        $this->message = 'Errore Catasto (' . $response->status() . ')';
+        $this->message = 'Errore Catasto ('.$response->status().')';
+
         return [];
     }
 
@@ -111,11 +125,11 @@ class OpenApiCatastoService
         $customSandbox = config('services.openapi.catasto_base_url_sandbox');
         $customProduction = config('services.openapi.catasto_base_url_production');
 
-        if (!config('services.openapi.sandbox')) {
-            return rtrim((string) ($customProduction ?: self::ENDPOINT_PRODUCTION), '/') . '/';
+        if (! config('services.openapi.sandbox')) {
+            return rtrim((string) ($customProduction ?: self::ENDPOINT_PRODUCTION), '/').'/';
         }
 
-        return rtrim((string) ($customSandbox ?: self::ENDPOINT_SANDBOX), '/') . '/';
+        return rtrim((string) ($customSandbox ?: self::ENDPOINT_SANDBOX), '/').'/';
     }
 
     protected function bearerToken(): string
@@ -135,6 +149,7 @@ class OpenApiCatastoService
         if (preg_match("/filename\\*?=(?:UTF-8''|UTF-8\\\\'\\\\')?\"?([^\";]+)/i", $disposition, $matches)) {
             return trim(rawurldecode($matches[1]));
         }
+
         return null;
     }
 }

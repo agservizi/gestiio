@@ -18,8 +18,7 @@ class NotificaVisuraACliente extends Notification
     public function __construct(
         protected Visura $visura,
         protected AllegatoServizio $allegato
-    ) {
-    }
+    ) {}
 
     public function via($notifiable): array
     {
@@ -34,9 +33,9 @@ class NotificaVisuraACliente extends Notification
             $tipoNome = 'visura';
         }
 
-        $email = (new MailMessage())
-            ->subject('Invio visura ' . $tipoNome)
-            ->line('Le inviamo la visura richiesta: ' . $tipoNome . '.')
+        $email = (new MailMessage)
+            ->subject('Invio visura '.$tipoNome)
+            ->line('Le inviamo la visura richiesta: '.$tipoNome.'.')
             ->line('In allegato trova il documento PDF.')
             ->salutation($agente?->nominativo() ?: config('mail.from.name'));
 
@@ -44,7 +43,7 @@ class NotificaVisuraACliente extends Notification
 
         $nomeAllegato = trim((string) $this->allegato->filename_originale);
         if ($nomeAllegato === '') {
-            $nomeAllegato = 'visura_' . $this->visura->id . '.pdf';
+            $nomeAllegato = 'visura_'.$this->visura->id.'.pdf';
         }
 
         if ($this->allegato->path_filename && Storage::exists($this->allegato->path_filename)) {

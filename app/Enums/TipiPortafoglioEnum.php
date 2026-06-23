@@ -16,5 +16,4 @@ enum TipiPortafoglioEnum: string
             self::VISURE => 'Visure',
         };
     }
-
 }

@@ -14,7 +14,6 @@ return new class extends Migration
     public function up()
     {
 
-
         Schema::table('produzioni_operatori', function (Blueprint $table) {
             $table->decimal('importo_segnalazioni')->default(0);
         });

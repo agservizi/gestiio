@@ -4,24 +4,21 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Mail\NotificaMail;
+use App\Models\Notifica;
 use App\Models\User;
-use App\Notifications\NotificaAgenteCambioEsitoContratto;
-use App\Notifications\NotificaMessaggioPerAgenti;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use App\Models\Notifica;
 
 class NotificaController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function index(Request $request)
     {
@@ -35,7 +32,7 @@ class NotificaController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -46,7 +43,7 @@ class NotificaController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -56,7 +53,7 @@ class NotificaController extends Controller
             $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -67,56 +64,54 @@ class NotificaController extends Controller
                 'html' => base64_encode(view('Backend.Notifica.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
             ];
 
         }
 
-
         return view('Backend.Notifica.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Notifica::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Notifica::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuova ' . \App\Models\Notifica::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuova '.Notifica::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Notifica::query()
+        $queryBuilder = Notifica::query()
             ->withCount('letture');
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function create()
     {
-        $record = new Notifica();
+        $record = new Notifica;
+
         return view('Backend.Notifica.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Notifica::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Notifica::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([NotificaController::class, 'index']) => 'Torna a elenco ' . Notifica::NOME_PLURALE]
+            'breadcrumbs' => [action([NotificaController::class, 'index']) => 'Torna a elenco '.Notifica::NOME_PLURALE],
 
         ]);
     }
@@ -124,13 +119,12 @@ class NotificaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new Notifica();
+        $record = new Notifica;
         $this->salvaDati($record, $request);
         $emails = $this->resolveRecipientEmails($request);
 
@@ -140,24 +134,25 @@ class NotificaController extends Controller
             }
         })->afterResponse();
 
-        return $this->backToIndex('Notifica inviata a ' . count($emails) . ' destinatari');
+        return $this->backToIndex('Notifica inviata a '.count($emails).' destinatari');
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
         $record = Notifica::find($id);
-        abort_if(!$record, 404, 'Questa notifica non esiste');
+        abort_if(! $record, 404, 'Questa notifica non esiste');
+
         return view('Backend.Notifica.show', [
             'record' => $record,
             'controller' => NotificaController::class,
             'titoloPagina' => Notifica::NOME_SINGOLARE,
-            'breadcrumbs' => [action([NotificaController::class, 'index']) => 'Torna a elenco ' . Notifica::NOME_PLURALE]
+            'breadcrumbs' => [action([NotificaController::class, 'index']) => 'Torna a elenco '.Notifica::NOME_PLURALE],
 
         ]);
     }
@@ -165,24 +160,25 @@ class NotificaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         $record = Notifica::find($id);
-        abort_if(!$record, 404, 'Questa notifica non esiste');
+        abort_if(! $record, 404, 'Questa notifica non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.Notifica.edit', [
             'record' => $record,
             'controller' => NotificaController::class,
-            'titoloPagina' => 'Modifica ' . Notifica::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Notifica::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([NotificaController::class, 'index']) => 'Torna a elenco ' . Notifica::NOME_PLURALE]
+            'breadcrumbs' => [action([NotificaController::class, 'index']) => 'Torna a elenco '.Notifica::NOME_PLURALE],
 
         ]);
     }
@@ -190,32 +186,31 @@ class NotificaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $record = Notifica::find($id);
-        abort_if(!$record, 404, 'Questa ' . Notifica::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.Notifica::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function destroy($id)
     {
         $record = Notifica::find($id);
-        abort_if(!$record, 404, 'Questa notifica non esiste');
+        abort_if(! $record, 404, 'Questa notifica non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -224,20 +219,20 @@ class NotificaController extends Controller
     }
 
     /**
-     * @param Notifica $model
-     * @param Request $request
+     * @param  Notifica  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'titolo' => 'app\getInputUcfirst',
             'testo' => '',
@@ -251,6 +246,7 @@ class NotificaController extends Controller
         }
         $model->destinatario = $request->input('destinatario', 'agente');
         $model->save();
+
         return $model;
     }
 
@@ -266,7 +262,7 @@ class NotificaController extends Controller
 
     protected function resolveRecipientEmails(Request $request): array
     {
-        $destinatario = (string)$request->input('destinatario', 'agente');
+        $destinatario = (string) $request->input('destinatario', 'agente');
 
         $users = User::query()
             ->whereNotNull('email')
@@ -279,16 +275,16 @@ class NotificaController extends Controller
         }
 
         $emails = $users->pluck('email')
-            ->map(fn($email) => strtolower(trim((string)$email)))
-            ->filter(fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL) !== false)
+            ->map(fn ($email) => strtolower(trim((string) $email)))
+            ->filter(fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL) !== false)
             ->values()
             ->all();
 
-        $extraRaw = (string)$request->input('emails_aggiuntive', '');
+        $extraRaw = (string) $request->input('emails_aggiuntive', '');
         if ($extraRaw !== '') {
             $extra = preg_split('/[;,\s]+/', $extraRaw) ?: [];
             foreach ($extra as $email) {
-                $email = strtolower(trim((string)$email));
+                $email = strtolower(trim((string) $email));
                 if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
                     $emails[] = $email;
                 }
@@ -303,13 +299,11 @@ class NotificaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Notifica::get();
+        return Notifica::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'titolo' => ['required', 'max:255'],
@@ -320,5 +314,4 @@ class NotificaController extends Controller
 
         return $rules;
     }
-
 }

@@ -10,7 +10,6 @@ use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 
 class TwoFactorLoginResponse implements LoginResponseContract
 {
-
     public function toResponse($request)
     {
 
@@ -38,5 +37,4 @@ class TwoFactorLoginResponse implements LoginResponseContract
             ? response()->json(['two_factor' => false])
             : redirect()->intended($redirectTo);
     }
-
 }

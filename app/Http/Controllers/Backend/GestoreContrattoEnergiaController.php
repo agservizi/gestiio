@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\GestoreContrattoEnergia;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -26,11 +28,10 @@ class GestoreContrattoEnergiaController extends Controller
         return $user;
     }
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -44,7 +45,7 @@ class GestoreContrattoEnergiaController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -53,7 +54,7 @@ class GestoreContrattoEnergiaController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -63,7 +64,7 @@ class GestoreContrattoEnergiaController extends Controller
             $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -74,36 +75,34 @@ class GestoreContrattoEnergiaController extends Controller
                 'html' => base64_encode(view('Backend.GestoreContrattoEnergia.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
             ];
 
         }
 
-
         return view('Backend.GestoreContrattoEnergia.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\GestoreContrattoEnergia::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.GestoreContrattoEnergia::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\GestoreContrattoEnergia::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.GestoreContrattoEnergia::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\GestoreContrattoEnergia::query();
+        $queryBuilder = GestoreContrattoEnergia::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -112,24 +111,24 @@ class GestoreContrattoEnergiaController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new GestoreContrattoEnergia();
+        $record = new GestoreContrattoEnergia;
+
         return view('Backend.GestoreContrattoEnergia.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . GestoreContrattoEnergia::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.GestoreContrattoEnergia::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([GestoreContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . GestoreContrattoEnergia::NOME_PLURALE]
+            'breadcrumbs' => [action([GestoreContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.GestoreContrattoEnergia::NOME_PLURALE],
 
         ]);
     }
@@ -137,22 +136,22 @@ class GestoreContrattoEnergiaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new GestoreContrattoEnergia();
+        $record = new GestoreContrattoEnergia;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
@@ -162,13 +161,13 @@ class GestoreContrattoEnergiaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = GestoreContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo gestore non esiste');
+        abort_if(! $record, 404, 'Questo gestore non esiste');
         if (Auth::id() > 1) {
             $eliminabile = 'Non eliminabile';
         } else {
@@ -178,9 +177,9 @@ class GestoreContrattoEnergiaController extends Controller
         return view('Backend.GestoreContrattoEnergia.edit', [
             'record' => $record,
             'controller' => GestoreContrattoEnergiaController::class,
-            'titoloPagina' => 'Modifica ' . GestoreContrattoEnergia::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.GestoreContrattoEnergia::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([GestoreContrattoEnergiaController::class, 'index']) => 'Torna a elenco ' . GestoreContrattoEnergia::NOME_PLURALE]
+            'breadcrumbs' => [action([GestoreContrattoEnergiaController::class, 'index']) => 'Torna a elenco '.GestoreContrattoEnergia::NOME_PLURALE],
 
         ]);
     }
@@ -188,35 +187,34 @@ class GestoreContrattoEnergiaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = GestoreContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo ' . GestoreContrattoEnergia::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.GestoreContrattoEnergia::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = GestoreContrattoEnergia::find($id);
-        abort_if(!$record, 404, 'Questo gestore non esiste');
+        abort_if(! $record, 404, 'Questo gestore non esiste');
 
         if ($record->logo) {
             Storage::delete($record->logo);
         }
         $record->delete();
-
 
         return [
             'success' => true,
@@ -225,21 +223,21 @@ class GestoreContrattoEnergiaController extends Controller
     }
 
     /**
-     * @param GestoreContrattoEnergia $model
-     * @param Request $request
+     * @param  GestoreContrattoEnergia  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->model_prodotto = 'ProdottoEnergiaGenerico';
             $model->categoria_pratica = 'consumer';
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
@@ -271,7 +269,7 @@ class GestoreContrattoEnergiaController extends Controller
             $model->model_prodotto = $request->input('model_prodotto');
         }
 
-        if (!$model->switch_key) {
+        if (! $model->switch_key) {
             $nomeBase = preg_replace('/\b(consumer|business)\b/i', '', (string) $model->nome);
             $model->switch_key = Str::slug(trim((string) $nomeBase), '-');
         }
@@ -281,14 +279,14 @@ class GestoreContrattoEnergiaController extends Controller
         if ($request->file('logo')) {
             $tmpFile = $request->file('logo');
             $extensione = $tmpFile->extension();
-            $filename = hexdec(uniqid()) . '.' . $extensione;
+            $filename = hexdec(uniqid()).'.'.$extensione;
             if ($model->logo) {
                 $oldPath = ltrim((string) $model->logo, '/');
                 if (Storage::disk('public')->exists($oldPath)) {
                     Storage::disk('public')->delete($oldPath);
                 }
-                if (Storage::exists('/' . $oldPath)) {
-                    Storage::delete('/' . $oldPath);
+                if (Storage::exists('/'.$oldPath)) {
+                    Storage::delete('/'.$oldPath);
                 }
             }
             $logo = $this->salvaImmagine($tmpFile, $filename, true);
@@ -311,13 +309,11 @@ class GestoreContrattoEnergiaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\GestoreContrattoEnergia::get();
+        return GestoreContrattoEnergia::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -330,7 +326,7 @@ class GestoreContrattoEnergiaController extends Controller
                 'max:100',
                 Rule::unique('tab_gestori_contratti_energia')
                     ->ignore($id)
-                    ->where(fn($q) => $q->where('categoria_pratica', request()->input('categoria_pratica'))),
+                    ->where(fn ($q) => $q->where('categoria_pratica', request()->input('categoria_pratica'))),
             ],
         ];
 
@@ -342,22 +338,21 @@ class GestoreContrattoEnergiaController extends Controller
 
         $cartella = ltrim((string) config('configurazione.loghi.cartella'), '/');
         $storagePublic = Storage::disk('public');
-        if (!$storagePublic->exists($cartella)) {
+        if (! $storagePublic->exists($cartella)) {
             $storagePublic->makeDirectory($cartella);
         }
 
-
         $img = Image::make($tmpFile);
         $dimensioni = config('configurazione.loghi.dimensioni');
-        //$img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
+        // $img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
         $img = $this->ridimensionaImmagine($img, $dimensioni['width'], $dimensioni['height'], $canvas, 'normale');
-        $absolutePath = storage_path('app/public/' . $cartella . '/' . $nomefile);
+        $absolutePath = storage_path('app/public/'.$cartella.'/'.$nomefile);
         $img->save($absolutePath, 80);
 
         $binary = (string) $img->encode('jpg', 80);
 
         return [
-            'path' => '/' . $cartella . '/' . $nomefile,
+            'path' => '/'.$cartella.'/'.$nomefile,
             'base64' => base64_encode($binary),
             'mime_type' => 'image/jpeg',
         ];
@@ -366,13 +361,13 @@ class GestoreContrattoEnergiaController extends Controller
 
     protected function ridimensionaImmagine($img, $width, $height, $canvas, $testoLog)
     {
-        //Resize immagine
+        // Resize immagine
         $img->resize($width, $height, function ($constraint) {
             $constraint->aspectRatio();
             $constraint->upsize();
         });
 
-        //Aggiusta rapporto immagine
+        // Aggiusta rapporto immagine
         Log::debug("Immagine $testoLog {$img->width()}x{$img->height()}");
         if ($canvas) {
 
@@ -387,6 +382,4 @@ class GestoreContrattoEnergiaController extends Controller
         return $img;
 
     }
-
-
 }

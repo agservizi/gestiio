@@ -10,8 +10,8 @@ class TabMotivoKo extends Model
     use HasFactory;
 
     protected $table = 'tab_motivi_ko';
-    protected $fillable = ['nome', 'tipo'];
 
+    protected $fillable = ['nome', 'tipo'];
 
     public function scopePerModal($query, $tipo)
     {

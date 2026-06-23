@@ -8,10 +8,10 @@ use Imagick;
 
 class ThumbnailGenerationService
 {
-    public function generate($pdfPath, string $tipoFile, $width, $height): string|null
+    public function generate($pdfPath, string $tipoFile, $width, $height): ?string
     {
 
-        if (!in_array($tipoFile, ['pdf', 'immagine'])) {
+        if (! in_array($tipoFile, ['pdf', 'immagine'])) {
             return null;
         }
 
@@ -31,21 +31,20 @@ class ThumbnailGenerationService
         return null;
     }
 
-
     private function pdf($pdfPath, string $hashName, $cartellaThumbnails)
     {
         $thumbnailPath = null;
         try {
-            $thumbnailPath = $cartellaThumbnails . $hashName . '.jpg';
+            $thumbnailPath = $cartellaThumbnails.$hashName.'.jpg';
 
             $source = Storage::disk('public')->path($pdfPath);
             $target = Storage::disk('public')->path($thumbnailPath);
 
-            $image = new Imagick();
-            $image->setResolution(160, 160); //180
-            $image->readImage($source . "[0]");
+            $image = new Imagick;
+            $image->setResolution(160, 160); // 180
+            $image->readImage($source.'[0]');
             $image->setImageFormat('jpeg');
-            $image->setImageCompression(imagick::COMPRESSION_JPEG);
+            $image->setImageCompression(Imagick::COMPRESSION_JPEG);
             $image->setImageCompressionQuality(10);
             $image->setImageBackgroundColor('white');
             $image->setImageAlphaChannel(11);
@@ -63,7 +62,7 @@ class ThumbnailGenerationService
 
     private function immagine($path, string $hashName, $cartellaThumbnails, $width, $height)
     {
-        $thumbnailPath = $cartellaThumbnails . $hashName . '.jpg';
+        $thumbnailPath = $cartellaThumbnails.$hashName.'.jpg';
         $source = Storage::disk('public')->path($path);
         $target = Storage::disk('public')->path($thumbnailPath);
 
@@ -71,8 +70,8 @@ class ThumbnailGenerationService
             $constraint->aspectRatio();
         });
         $img->save($target);
+
         return $thumbnailPath;
 
     }
-
 }

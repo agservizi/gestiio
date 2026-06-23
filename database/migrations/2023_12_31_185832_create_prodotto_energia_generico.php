@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -20,7 +21,6 @@ return new class extends Migration {
         Schema::table('contratti_energia', function (Blueprint $table) {
             $table->foreign('gestore_id')->references('id')->on('tab_gestori_contratti_energia');
         });
-
 
         Schema::create('prodotto_energia_generico', function (Blueprint $table) {
 
@@ -44,7 +44,7 @@ return new class extends Migration {
             $table->json('fornitura_richiesta')->nullable();
             $table->json('fasce_reperibilita')->nullable();
 
-            //DATI TECNICI ENERGIA ELETTRICA
+            // DATI TECNICI ENERGIA ELETTRICA
             $table->string('attuale_fornitore_luce')->nullable();
             $table->string('pod')->nullable();
             $table->string('indirizzo_fornitura_luce')->nullable();
@@ -52,7 +52,7 @@ return new class extends Migration {
             $table->string('comune_fornitura_luce')->nullable();
             $table->string('cap_fornitura_luce', 5)->nullable();
 
-            //DATI TECNICI GAS NATURALE
+            // DATI TECNICI GAS NATURALE
             $table->string('attuale_fornitore_gas')->nullable();
             $table->string('pdr')->nullable();
             $table->json('tipologia_uso_gas')->nullable();
@@ -62,7 +62,7 @@ return new class extends Migration {
             $table->string('comune_fornitura_gas')->nullable();
             $table->string('cap_fornitura_gas', 5)->nullable();
 
-            //MODALITÀ DI PAGAMENTO E SPEDIZIONE FATTURA
+            // MODALITÀ DI PAGAMENTO E SPEDIZIONE FATTURA
             $table->string('modalita_pagamento_fattura')->nullable();
             $table->string('intestatario_conto_corrente')->nullable();
             $table->string('codice_fiscale_intestatario')->nullable();

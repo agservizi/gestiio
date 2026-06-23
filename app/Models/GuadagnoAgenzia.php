@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use App\Http\Funzioni\FunzioniCalcoloProvvigioni;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+
 use function App\meseStrPad;
 
 class GuadagnoAgenzia extends Model
@@ -18,17 +16,15 @@ class GuadagnoAgenzia extends Model
     protected $table = 'guadagni_agenzia';
 
     protected $casts = [
-        'dettaglio_tipi_contratto' => 'array'
+        'dettaglio_tipi_contratto' => 'array',
     ];
 
     protected $fillable = [
-        'anno', 'mese'
+        'anno', 'mese',
     ];
-
 
     protected static function booted()
     {
-
 
         static::saving(function (GuadagnoAgenzia $model) {
             $model->entrate = $model->entrate_contratti + $model->entrate_servizi;
@@ -37,7 +33,6 @@ class GuadagnoAgenzia extends Model
         });
 
     }
-
 
     public function calcolaGuadagnoContratti()
     {
@@ -56,7 +51,6 @@ class GuadagnoAgenzia extends Model
 
     }
 
-
     public static function calcolaGuadagnoMeseServizi($anno, $mese)
     {
         return (object) [
@@ -65,32 +59,26 @@ class GuadagnoAgenzia extends Model
         ];
     }
 
-
     /**
-     * @param $userId
-     * @param $anno
-     * @param $mese
-     * @return array
+     * @param  $userId
      */
     public static function calcolaGuadagnoMeseContrattiTelefonia($anno, $mese): array
     {
 
         $mese = meseStrPad($mese);
-        //Trovo i vari tipi di contratto nel periodo
+        // Trovo i vari tipi di contratto nel periodo
         $contrattiGroupByTipoContratto = ContrattoTelefonia::query()
             ->withoutGlobalScope('filtroOperatore')
-            ->where('mese_pagamento', $mese . '_' . $anno)
+            ->where('mese_pagamento', $mese.'_'.$anno)
             ->groupBy('tipo_contratto_id')
             ->select('tipo_contratto_id', DB::raw('count(*) as conteggio'))
             ->get();
 
-
         $importo = 0;
         $dettaglioTipiContratto = [];
 
-
         foreach ($contrattiGroupByTipoContratto as $tipoContratto) {
-            //Cerco la fascia di retribuzione per quel tipo di contratto
+            // Cerco la fascia di retribuzione per quel tipo di contratto
             $soglia = self::determinaSogliaContrattiTelefonia($tipoContratto->conteggio, 4, $tipoContratto->tipo_contratto_id);
             $importoTmp = 0;
             if ($soglia) {
@@ -102,13 +90,11 @@ class GuadagnoAgenzia extends Model
             $dettaglioTipiContratto[$tipoContratto->tipo_contratto_id] = $arr;
         }
 
-
-        Log::debug(__FUNCTION__ . ' importo:' . $importo);
+        Log::debug(__FUNCTION__.' importo:'.$importo);
 
         return ['importo' => $importo, 'dettaglio' => $dettaglioTipiContratto];
 
     }
-
 
     public static function calcolaUsciteContratti($anno, $mese)
     {
@@ -118,5 +104,4 @@ class GuadagnoAgenzia extends Model
             ->where('user_id', '<>', 2)
             ->sum('importo_totale');
     }
-
 }

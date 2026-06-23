@@ -8,7 +8,6 @@ use Illuminate\Contracts\Validation\Rule;
 
 class EmailContrattoRule implements Rule
 {
-
     protected $message;
 
     /**
@@ -24,8 +23,8 @@ class EmailContrattoRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
@@ -37,7 +36,8 @@ class EmailContrattoRule implements Rule
         $email = strtolower($value);
         $esiste = ContrattoTelefonia::whereRelation('tipoContratto', 'gestore_id', $tipoContratto->gestore->id)->where('email', $email)->exists();
         if ($esiste) {
-            $this->message = 'Questo indirizzo email ha già stipulato un contratto con ' . $tipoContratto->gestore->nome;
+            $this->message = 'Questo indirizzo email ha già stipulato un contratto con '.$tipoContratto->gestore->nome;
+
             return false;
         } else {
             return true;

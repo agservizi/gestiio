@@ -10,16 +10,14 @@ use App\Models\AbiCab;
 use App\Models\Cliente;
 use App\Models\Comune;
 use App\Models\ContrattoTelefonia;
-use App\Models\ElencoComuni;
-use App\Models\ListinoBrt;
-use App\Models\ListinoBrtEuropa;
-use App\Models\NazioneEuropaBrt;
+use App\Models\SpedizioneInpost;
 use App\Models\TipoContratto;
 use App\Rules\CodiceFiscaleRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use robertogallea\LaravelCodiceFiscale\CodiceFiscale;
+
 use function App\getInputNumero;
 use function App\getInputTelefono;
 use function App\importo;
@@ -63,11 +61,11 @@ class AjaxController extends Controller
                     'tariffa' => $service->getTestotariffa(),
                 ];
 
-
             case 'genera-iban':
                 $abiCab = AbiCab::inRandomOrder()->first();
                 $numeroConto = Str::padLeft(rand(11111111111, 99999999999), 12, '0');
                 $ibanGenerator = new IbanGenerator($abiCab->abi, $abiCab->cab, $numeroConto);
+
                 return ['success' => true, 'iban' => $ibanGenerator->generate()];
 
             case 'controlla-email-telefonia':
@@ -75,7 +73,7 @@ class AjaxController extends Controller
                 $email = strtolower($request->input('email'));
                 $esiste = ContrattoTelefonia::whereRelation('tipoContratto', 'gestore_id', $tipoContratto->gestore->id)->where('email', $email)->exists();
                 if ($esiste) {
-                    return ['success' => true, 'message' => 'Questo indirizzo email ha già stipulato un contratto con ' . $tipoContratto->gestore->nome];
+                    return ['success' => true, 'message' => 'Questo indirizzo email ha già stipulato un contratto con '.$tipoContratto->gestore->nome];
                 } else {
                     return ['success' => false];
                 }
@@ -86,14 +84,14 @@ class AjaxController extends Controller
                 $telefono = getInputTelefono($request->input('telefono'));
                 $esiste = ContrattoTelefonia::whereRelation('tipoContratto', 'gestore_id', $tipoContratto->gestore->id)->where('telefono', $telefono)->exists();
                 if ($esiste) {
-                    return ['success' => true, 'message' => 'Questo numero di telefono ha già stipulato un contratto con ' . $tipoContratto->gestore->nome];
+                    return ['success' => true, 'message' => 'Questo numero di telefono ha già stipulato un contratto con '.$tipoContratto->gestore->nome];
                 } else {
                     return ['success' => false];
                 }
 
             case 'ricerca-contatti-inpost':
                 $term = trim((string) $request->input('term', ''));
-                $contatti = \App\Models\SpedizioneInpost::query()
+                $contatti = SpedizioneInpost::query()
                     ->select('ragione_sociale_destinatario', 'indirizzo_destinatario', 'cap_destinatario',
                         'localita_destinazione', 'mobile_referente_consegna', 'provincia_destinatario')
                     ->when($term !== '', fn ($q) => $q->where('ragione_sociale_destinatario', 'like', "%{$term}%"))
@@ -101,11 +99,12 @@ class AjaxController extends Controller
                     ->orderBy('ragione_sociale_destinatario')
                     ->limit(8)
                     ->get();
+
                 return ['success' => true, 'html' => base64_encode(view('Backend.SpedizioneInpost.ricercaLista', ['contatti' => $contatti])->render())];
 
             case 'cliente-cf':
                 $codiceFiscale = strtoupper($request->input('codice_fiscale'));
-                $validator = Validator::make(['codice_fiscale' => $codiceFiscale], ['codice_fiscale' => new CodiceFiscaleRule()]);
+                $validator = Validator::make(['codice_fiscale' => $codiceFiscale], ['codice_fiscale' => new CodiceFiscaleRule]);
                 if ($validator->fails()) {
                     return ['success' => false, 'message' => $validator->messages()->first('codice_fiscale')];
                 }
@@ -113,7 +112,7 @@ class AjaxController extends Controller
                 $record = Cliente::with('comune')->where('codice_fiscale', $codiceFiscale)->first();
 
                 $datiRitorno = [];
-                $parserCodiceFiscale = new CodiceFiscale();
+                $parserCodiceFiscale = new CodiceFiscale;
                 if ($parserCodiceFiscale->parse($codiceFiscale) !== false) {
                     $datiRitorno['genere'] = $parserCodiceFiscale->getGender();
                     $datiRitorno['data_di_nascita'] = $parserCodiceFiscale->getBirthdate()->format('d/m/Y');

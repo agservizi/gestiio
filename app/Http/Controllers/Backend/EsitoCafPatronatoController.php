@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\EsitoCafPatronato;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class EsitoCafPatronatoController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -30,7 +31,7 @@ class EsitoCafPatronatoController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -39,7 +40,7 @@ class EsitoCafPatronatoController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -49,7 +50,7 @@ class EsitoCafPatronatoController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -60,44 +61,42 @@ class EsitoCafPatronatoController extends Controller
                 'html' => base64_encode(view('Backend.EsitoCafPatronato.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.EsitoCafPatronato.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoCafPatronato::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.EsitoCafPatronato::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo'=>'Nuovo '. \App\Models\EsitoCafPatronato::NOME_SINGOLARE,
-            'testoCerca'=>null
+            'testoNuovo' => 'Nuovo '.EsitoCafPatronato::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
 
         return view('Backend.EsitoCafPatronato.index', [
             'records' => $this->queryBuilderIndex(),
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoCafPatronato::NOME_PLURALE,
-            'testoNuovo'=>'Nuovo '. \App\Models\EsitoCafPatronato::NOME_SINGOLARE,
-            'testoCerca'=>null
+            'titoloPagina' => 'Elenco '.EsitoCafPatronato::NOME_PLURALE,
+            'testoNuovo' => 'Nuovo '.EsitoCafPatronato::NOME_SINGOLARE,
+            'testoCerca' => null,
         ]);
-
 
     }
 
-            /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+    /**
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder =  \App\Models\EsitoCafPatronato::query();
+        $queryBuilder = EsitoCafPatronato::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -106,25 +105,24 @@ class EsitoCafPatronatoController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-                $record=new EsitoCafPatronato();
+        $record = new EsitoCafPatronato;
+
         return view('Backend.EsitoCafPatronato.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . EsitoCafPatronato::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.EsitoCafPatronato::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([EsitoCafPatronatoController::class, 'index']) => 'Torna a elenco ' . EsitoCafPatronato::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoCafPatronatoController::class, 'index']) => 'Torna a elenco '.EsitoCafPatronato::NOME_PLURALE],
 
         ]);
     }
@@ -132,14 +130,14 @@ class EsitoCafPatronatoController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
-                $request->validate($this->rules(null));
-        $record=new EsitoCafPatronato();
+        $request->validate($this->rules(null));
+        $record = new EsitoCafPatronato;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
@@ -147,17 +145,18 @@ class EsitoCafPatronatoController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
-                $record = EsitoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo esitocafpatronato non esiste');
+        $record = EsitoCafPatronato::find($id);
+        abort_if(! $record, 404, 'Questo esitocafpatronato non esiste');
+
         return view('Backend.EsitoCafPatronato.show', [
             'record' => $record,
             'controller' => EsitoCafPatronatoController::class,
-            'titoloPagina' =>  EsitoCafPatronato::NOME_SINGOLARE,
-            'breadcrumbs' => [action([EsitoCafPatronatoController::class, 'index']) => 'Torna a elenco ' . EsitoCafPatronato::NOME_PLURALE]
+            'titoloPagina' => EsitoCafPatronato::NOME_SINGOLARE,
+            'breadcrumbs' => [action([EsitoCafPatronatoController::class, 'index']) => 'Torna a elenco '.EsitoCafPatronato::NOME_PLURALE],
 
         ]);
     }
@@ -166,23 +165,24 @@ class EsitoCafPatronatoController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
-                $record = EsitoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo esitocafpatronato non esiste');
-         if (false) {
+        $record = EsitoCafPatronato::find($id);
+        abort_if(! $record, 404, 'Questo esitocafpatronato non esiste');
+        if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.EsitoCafPatronato.edit', [
             'record' => $record,
             'controller' => EsitoCafPatronatoController::class,
-            'titoloPagina' => 'Modifica ' . EsitoCafPatronato::NOME_SINGOLARE,
-            'eliminabile'=>$eliminabile,
-            'breadcrumbs' => [action([EsitoCafPatronatoController::class, 'index']) => 'Torna a elenco ' . EsitoCafPatronato::NOME_PLURALE]
+            'titoloPagina' => 'Modifica '.EsitoCafPatronato::NOME_SINGOLARE,
+            'eliminabile' => $eliminabile,
+            'breadcrumbs' => [action([EsitoCafPatronatoController::class, 'index']) => 'Torna a elenco '.EsitoCafPatronato::NOME_PLURALE],
 
         ]);
     }
@@ -190,16 +190,16 @@ class EsitoCafPatronatoController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
-                $record = EsitoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo ' . EsitoCafPatronato::NOME_SINGOLARE . ' non esiste');
+        $record = EsitoCafPatronato::find($id);
+        abort_if(! $record, 404, 'Questo '.EsitoCafPatronato::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
@@ -207,44 +207,43 @@ class EsitoCafPatronatoController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
-                $record = EsitoCafPatronato::find($id);
-        abort_if(!$record, 404, 'Questo esitocafpatronato non esiste');
+        $record = EsitoCafPatronato::find($id);
+        abort_if(! $record, 404, 'Questo esitocafpatronato non esiste');
 
         $record->delete();
 
-
         return [
             'success' => true,
-            'redirect' => action([EsitoCafPatronatoController::class,'index']),
+            'redirect' => action([EsitoCafPatronatoController::class, 'index']),
         ];
     }
 
     /**
-     * @param EsitoCafPatronato $model
-     * @param Request $request
+     * @param  EsitoCafPatronato  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-            $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
-            'nome'=>'app\getInputUcwords',
-            'colore_hex'=>'',
-            'chiedi_motivo'=>'app\getInputCheckbox',
-            'notifica_mail'=>'app\getInputCheckbox',
-            'attivo'=>'app\getInputCheckbox',
-            'esito_finale'=>'',
+            'nome' => 'app\getInputUcwords',
+            'colore_hex' => '',
+            'chiedi_motivo' => 'app\getInputCheckbox',
+            'notifica_mail' => 'app\getInputCheckbox',
+            'attivo' => 'app\getInputCheckbox',
+            'esito_finale' => '',
         ];
         foreach ($campi as $campo => $funzione) {
             $valore = $request->$campo;
@@ -255,6 +254,7 @@ class EsitoCafPatronatoController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -264,29 +264,25 @@ class EsitoCafPatronatoController extends Controller
     }
 
     /** Query per index
-    * @return array
-    */
+     * @return array
+     */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\EsitoCafPatronato::get();
+        return EsitoCafPatronato::get();
     }
 
-
-
-    protected function rules($id=null)
+    protected function rules($id = null)
     {
 
-
-        $rules=[
-     'nome'=>['required','max:255'],
-     'colore_hex'=>['nullable','max:255'],
-     'chiedi_motivo'=>['nullable'],
-     'notifica_mail'=>['nullable'],
-     'attivo'=>['nullable'],
-     'esito_finale'=>['nullable','max:255'],
-];
+        $rules = [
+            'nome' => ['required', 'max:255'],
+            'colore_hex' => ['nullable', 'max:255'],
+            'chiedi_motivo' => ['nullable'],
+            'notifica_mail' => ['nullable'],
+            'attivo' => ['nullable'],
+            'esito_finale' => ['nullable', 'max:255'],
+        ];
 
         return $rules;
     }
-
 }

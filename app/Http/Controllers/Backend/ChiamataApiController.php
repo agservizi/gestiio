@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\ChiamataApi;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class ChiamataApiController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -30,7 +31,7 @@ class ChiamataApiController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -39,7 +40,7 @@ class ChiamataApiController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -49,7 +50,7 @@ class ChiamataApiController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -60,35 +61,33 @@ class ChiamataApiController extends Controller
                 'html' => base64_encode(view('Backend.ChiamataApi.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.ChiamataApi.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\ChiamataApi::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.ChiamataApi::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => null,//'Nuova '. \App\Models\ChiamataApi::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => null, // 'Nuova '. \App\Models\ChiamataApi::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
-        $queryBuilder = \App\Models\ChiamataApi::query();
+        $queryBuilder = ChiamataApi::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -96,25 +95,26 @@ class ChiamataApiController extends Controller
                 $queryBuilder->where(DB::raw('concat_ws(\' \',nome)'), 'like', "%$t%");
             }
         }
+
         return $queryBuilder;
     }
-
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = ChiamataApi::find($id);
-        abort_if(!$record, 404, 'Questa chiamataapi non esiste');
+        abort_if(! $record, 404, 'Questa chiamataapi non esiste');
+
         return view('Backend.ChiamataApi.show', [
             'record' => $record,
             'controller' => ChiamataApiController::class,
             'titoloPagina' => ChiamataApi::NOME_SINGOLARE,
-            'breadcrumbs' => [action([ChiamataApiController::class, 'index']) => 'Torna a elenco ' . ChiamataApi::NOME_PLURALE]
+            'breadcrumbs' => [action([ChiamataApiController::class, 'index']) => 'Torna a elenco '.ChiamataApi::NOME_PLURALE],
 
         ]);
     }
@@ -122,32 +122,31 @@ class ChiamataApiController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = ChiamataApi::find($id);
-        abort_if(!$record, 404, 'Questa ' . ChiamataApi::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.ChiamataApi::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = ChiamataApi::find($id);
-        abort_if(!$record, 404, 'Questa chiamataapi non esiste');
+        abort_if(! $record, 404, 'Questa chiamataapi non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -156,20 +155,20 @@ class ChiamataApiController extends Controller
     }
 
     /**
-     * @param ChiamataApi $model
-     * @param Request $request
+     * @param  ChiamataApi  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'servizio' => '',
             'url' => '',
@@ -187,6 +186,7 @@ class ChiamataApiController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -200,13 +200,11 @@ class ChiamataApiController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\ChiamataApi::get();
+        return ChiamataApi::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'servizio' => ['required', 'max:255'],
@@ -219,5 +217,4 @@ class ChiamataApiController extends Controller
 
         return $rules;
     }
-
 }

@@ -12,6 +12,7 @@ class RicaricaCartaIban extends Model
     protected $table = 'ricariche_carte_iban';
 
     public const NOME_SINGOLARE = 'iban';
+
     public const NOME_PLURALE = 'iban';
 
     protected $fillable = [
@@ -34,6 +35,6 @@ class RicaricaCartaIban extends Model
 
     public function nominativo(): string
     {
-        return $this->cognome . ' ' . $this->nome;
+        return $this->cognome.' '.$this->nome;
     }
 }

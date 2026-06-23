@@ -8,11 +8,12 @@ use Illuminate\Support\Facades\Http;
 class BrtOrmService
 {
     protected $baseUrl;
+
     protected $apiKey;
 
     public function __construct()
     {
-        $this->baseUrl = rtrim((string)config('services.brt.orm_base_url'), '/');
+        $this->baseUrl = rtrim((string) config('services.brt.orm_base_url'), '/');
         $this->apiKey = config('services.brt.orm_api_key');
     }
 
@@ -25,21 +26,21 @@ class BrtOrmService
 
     public function delete(string $reservationId): array
     {
-        $url = $this->ormEndpoint('/colreqs/' . $reservationId);
+        $url = $this->ormEndpoint('/colreqs/'.$reservationId);
 
         return $this->requestJson('delete', $url, []);
     }
 
     protected function requestJson(string $method, string $url, array $payload): array
     {
-        if (!$this->baseUrl || !$this->apiKey) {
+        if (! $this->baseUrl || ! $this->apiKey) {
             return [
                 'success' => false,
                 'message' => 'Configurazione ORM BRT mancante (BRT_ORM_BASE_URL o BRT_ORM_API_KEY)',
             ];
         }
 
-        $log = new ChiamataApi();
+        $log = new ChiamataApi;
         $log->servizio = 'brt-orm';
         $log->url = $url;
         $log->request = $payload;
@@ -63,7 +64,7 @@ class BrtOrmService
         $log->response = is_array($json) ? $json : ['raw' => $res->body()];
         $log->save();
 
-        if (!is_array($json)) {
+        if (! is_array($json)) {
             return [
                 'success' => $res->successful(),
                 'status' => $res->status(),
@@ -79,9 +80,9 @@ class BrtOrmService
         $base = rtrim($this->baseUrl, '/');
 
         if (str_ends_with($base, '/api/geodata/v410')) {
-            return $base . $suffix;
+            return $base.$suffix;
         }
 
-        return $base . '/api/geodata/v410' . $suffix;
+        return $base.'/api/geodata/v410'.$suffix;
     }
 }

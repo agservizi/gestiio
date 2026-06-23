@@ -12,13 +12,12 @@ class MessaggioTicket extends Model
     protected $table = 'tickets_messaggi';
 
     protected $casts = [
-        'letto' => 'datetime'
+        'letto' => 'datetime',
     ];
 
     protected $fillable = [
-        'letto'
+        'letto',
     ];
-
 
     /*
     |--------------------------------------------------------------------------
@@ -28,7 +27,7 @@ class MessaggioTicket extends Model
 
     public function utente()
     {
-        return $this->hasOne(User::class, 'id', 'user_id',);
+        return $this->hasOne(User::class, 'id', 'user_id');
     }
 
     public function allegati()
@@ -40,6 +39,4 @@ class MessaggioTicket extends Model
     {
         return $this->belongsTo(Ticket::class, 'ticket_id', 'id');
     }
-
-
 }

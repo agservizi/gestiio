@@ -32,7 +32,6 @@ return new class extends Migration
             $table->string('metodo_pagamento_tv')->nullable();
             $table->string('frequenza_pagamento_tv')->nullable();
 
-
             $table->string('offerta');
             $table->boolean('modem_wifi_hub')->default(0);
             $table->boolean('ultra_wifi')->default(0);
@@ -44,9 +43,6 @@ return new class extends Migration
             $table->string('codice_migrazione_voce')->nullable();
             $table->string('codice_migrazione_dati')->nullable();
             $table->string('metodo_pagamento_internet')->nullable();
-
-
-
 
             $table->string('carta_di_credito_tipo')->nullable();
             $table->string('carta_di_credito_numero')->nullable();

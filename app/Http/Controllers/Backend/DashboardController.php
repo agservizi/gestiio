@@ -2,30 +2,34 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Http\Controllers\Controller;
 use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
 use App\Models\CafPatronato;
-use App\Models\ContrattoEnergia;
-use App\Models\ClienteAssistenza;
 use App\Models\ChatMessage;
 use App\Models\ChatThreadUser;
+use App\Models\ClienteAssistenza;
+use App\Models\ContrattoEnergia;
 use App\Models\ContrattoTelefonia;
 use App\Models\EsitoCafPatronato;
 use App\Models\EsitoVisura;
 use App\Models\File;
 use App\Models\ProduzioneOperatore;
-use App\Models\RichiestaAssistenza;
 use App\Models\RegistroLogin;
+use App\Models\RichiestaAssistenza;
 use App\Models\SpedizioneBrt;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Visura;
 use Carbon\Carbon;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use robertogallea\LaravelCodiceFiscale\CodiceFiscale;
+
 use function App\mese;
 
 class DashboardController extends Controller
@@ -34,16 +38,16 @@ class DashboardController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-        $nome = trim((string)($user?->nome ?? ''));
-        $genere = strtolower((string)($user?->genere ?? $user?->sesso ?? ''));
+        $nome = trim((string) ($user?->nome ?? ''));
+        $genere = strtolower((string) ($user?->genere ?? $user?->sesso ?? ''));
 
         if ($genere === '') {
-            $codiceFiscale = strtoupper((string)($user?->codice_fiscale ?? ''));
+            $codiceFiscale = strtoupper((string) ($user?->codice_fiscale ?? ''));
             if ($codiceFiscale !== '') {
                 try {
-                    $parserCodiceFiscale = new CodiceFiscale();
+                    $parserCodiceFiscale = new CodiceFiscale;
                     if ($parserCodiceFiscale->parse($codiceFiscale) !== false) {
-                        $genere = strtolower((string)$parserCodiceFiscale->getGender());
+                        $genere = strtolower((string) $parserCodiceFiscale->getGender());
                     }
                 } catch (\Throwable $e) {
                 }
@@ -70,8 +74,8 @@ class DashboardController extends Controller
         };
 
         return $nome !== ''
-            ? $icona . ' ' . $saluto . ' ' . $nome . ', ' . $rientro . ' nella tua dashboard'
-            : $icona . ' ' . $saluto . ', ' . $rientro . ' nella tua dashboard';
+            ? $icona.' '.$saluto.' '.$nome.', '.$rientro.' nella tua dashboard'
+            : $icona.' '.$saluto.', '.$rientro.' nella tua dashboard';
     }
 
     protected function produzioneDisponibile(): bool
@@ -83,13 +87,13 @@ class DashboardController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-        abort_if(!$user, 403);
+        abort_if(! $user, 403);
 
         CacheUnaVoltaAlGiorno::get();
 
         if ($user->hasPermissionTo('admin')) {
             return $this->showAdmin($request);
-        } else if ($user->hasPermissionTo('supervisore')) {
+        } elseif ($user->hasPermissionTo('supervisore')) {
             return $this->showSupervisore($request);
         } else {
             return $this->showAgente($request);
@@ -101,7 +105,7 @@ class DashboardController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-        abort_if(!$user, 403);
+        abort_if(! $user, 403);
         $id = $user->id;
 
         $canTelefonia = $user->can('servizio_contratti_telefonia');
@@ -242,7 +246,7 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_contratti_telefonia',
                 'titolo' => 'Contratti telefonia',
                 'descrizione' => 'Panoramica contratti del periodo selezionato',
-                'url' => action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class, 'index']),
+                'url' => action([ContrattoTelefoniaController::class, 'index']),
                 'cta' => 'Apri elenco',
                 'kpi_valore' => $kpiSupervisore['contratti_telefonia_mese'],
                 'kpi_testo' => 'Pratiche mese',
@@ -252,7 +256,7 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_contratti_energia',
                 'titolo' => 'Contratti energia',
                 'descrizione' => 'Panoramica pratiche luce e gas del periodo',
-                'url' => action([\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'index']),
+                'url' => action([ContrattoEnergiaController::class, 'index']),
                 'cta' => 'Apri elenco',
                 'kpi_valore' => $kpiSupervisore['contratti_energia_mese'],
                 'kpi_testo' => 'Pratiche mese',
@@ -262,7 +266,7 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_caf_patronato',
                 'titolo' => 'Caf / Patronato',
                 'descrizione' => 'Panoramica pratiche CAF e Patronato',
-                'url' => action([\App\Http\Controllers\Backend\CafPatronatoController::class, 'index']),
+                'url' => action([CafPatronatoController::class, 'index']),
                 'cta' => 'Apri elenco',
                 'kpi_valore' => $kpiSupervisore['pratiche_caf_mese'],
                 'kpi_testo' => 'Pratiche mese',
@@ -272,7 +276,7 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_ticket',
                 'titolo' => 'Ticket assistenza',
                 'descrizione' => 'Panoramica ticket aperti e priorità operative',
-                'url' => action([\App\Http\Controllers\Backend\TicketsController::class, 'index']),
+                'url' => action([TicketsController::class, 'index']),
                 'cta' => 'Apri elenco',
                 'kpi_valore' => $kpiSupervisore['ticket_aperti'],
                 'kpi_testo' => 'Ticket aperti',
@@ -282,7 +286,7 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_visure',
                 'titolo' => 'Visure',
                 'descrizione' => 'Panoramica visure in lavorazione',
-                'url' => action([\App\Http\Controllers\Backend\VisuraController::class, 'index']),
+                'url' => action([VisuraController::class, 'index']),
                 'cta' => 'Apri elenco',
                 'kpi_valore' => $kpiSupervisore['visure_mese'],
                 'kpi_testo' => 'Visure mese',
@@ -292,7 +296,7 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_spedizioni',
                 'titolo' => 'Spedizioni BRT',
                 'descrizione' => 'Panoramica spedizioni gestite nel periodo',
-                'url' => action([\App\Http\Controllers\Backend\SpedizioneBrtController::class, 'index']),
+                'url' => action([SpedizioneBrtController::class, 'index']),
                 'cta' => 'Apri elenco',
                 'kpi_valore' => $kpiSupervisore['spedizioni_mese'],
                 'kpi_testo' => 'Spedizioni mese',
@@ -302,7 +306,7 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_documentazione',
                 'titolo' => 'Documentazione',
                 'descrizione' => 'Panoramica documenti caricati nel periodo',
-                'url' => action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'index']),
+                'url' => action([CartellaFilesController::class, 'index']),
                 'cta' => 'Apri elenco',
                 'kpi_valore' => $kpiSupervisore['documenti_mese'],
                 'kpi_testo' => 'File mese',
@@ -365,19 +369,17 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     * @param  Request  $request
+     * @return Application|Factory|View
      */
     protected function showAdmin($request)
     {
         $id = Auth::user()->id;
         $this->elencoMesi();
 
-
         $mese = $request->input('mese', now()->format('Y_m'));
 
-        list($filtroAnno, $filtroMese) = explode('_', $mese);
-
+        [$filtroAnno, $filtroMese] = explode('_', $mese);
 
         $contratti = ContrattoTelefonia::query()
             ->with('agente')
@@ -387,7 +389,7 @@ class DashboardController extends Controller
             ->orderByDesc('data')
             ->get();
 
-        $servizi = \App\Models\CafPatronato::query()
+        $servizi = CafPatronato::query()
             ->with('esito')
             ->with('agente')
             ->with('tipo:id,nome')
@@ -453,7 +455,7 @@ class DashboardController extends Controller
             ->get();
 
         $produzioneMese = $this->produzioneDisponibile()
-            ? ProduzioneOperatore::find($id . '_' . $mese)
+            ? ProduzioneOperatore::find($id.'_'.$mese)
             : null;
 
         $chatDashboard = [
@@ -484,7 +486,6 @@ class DashboardController extends Controller
             }
         }
 
-
         return view('Backend.Dashboard.showAdmin', [
             'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
@@ -506,7 +507,6 @@ class DashboardController extends Controller
 
     }
 
-
     /**
      * @return array
      */
@@ -520,6 +520,7 @@ class DashboardController extends Controller
             $dataInizio->subMonthNoOverflow();
             $arr[$dataInizio->format('Y_m')] = ucfirst($dataInizio->translatedFormat('M Y'));
         }
+
         return $arr;
     }
 
@@ -530,7 +531,7 @@ class DashboardController extends Controller
         $periodo = $request->input('periodo', '7d');
         $priorita = $request->input('priorita', '');
         $stato = $request->input('stato', 'aperto');
-        $cliente = trim((string)$request->input('cliente', ''));
+        $cliente = trim((string) $request->input('cliente', ''));
 
         $days = match ($periodo) {
             'oggi' => 0,
@@ -580,21 +581,21 @@ class DashboardController extends Controller
         if ($cliente !== '') {
             $ticketDaPrendereInCaricoQb->where(function ($query) use ($cliente) {
                 $query
-                    ->where('oggetto', 'like', '%' . $cliente . '%')
-                    ->orWhere('uid', 'like', '%' . $cliente . '%')
+                    ->where('oggetto', 'like', '%'.$cliente.'%')
+                    ->orWhere('uid', 'like', '%'.$cliente.'%')
                     ->orWhereHas('utente', function ($utenteQuery) use ($cliente) {
-                        $utenteQuery->where(DB::raw('concat_ws(\' \',nome,cognome)'), 'like', '%' . $cliente . '%');
+                        $utenteQuery->where(DB::raw('concat_ws(\' \',nome,cognome)'), 'like', '%'.$cliente.'%');
                     });
             });
 
             $visureInAttesaQb->where(function ($query) use ($cliente) {
                 $query
-                    ->where(DB::raw('concat_ws(\' \',nome,cognome,ragione_sociale,partita_iva,codice_fiscale)'), 'like', '%' . $cliente . '%');
+                    ->where(DB::raw('concat_ws(\' \',nome,cognome,ragione_sociale,partita_iva,codice_fiscale)'), 'like', '%'.$cliente.'%');
             });
 
             $cafInAttesaQb->where(function ($query) use ($cliente) {
                 $query
-                    ->where(DB::raw('concat_ws(\' \',nome,cognome,codice_fiscale,email)'), 'like', '%' . $cliente . '%');
+                    ->where(DB::raw('concat_ws(\' \',nome,cognome,codice_fiscale,email)'), 'like', '%'.$cliente.'%');
             });
         }
 
@@ -778,7 +779,7 @@ class DashboardController extends Controller
                 return [
                     'quando' => $record->created_at,
                     'tipo' => 'Accesso',
-                    'descrizione' => 'Accesso piattaforma da ' . ($record->ip ?: 'IP non disponibile'),
+                    'descrizione' => 'Accesso piattaforma da '.($record->ip ?: 'IP non disponibile'),
                     'prossima_azione' => 'Continua lavorazione attività prioritarie',
                     'url' => action([ProfiloController::class, 'show']),
                 ];
@@ -841,7 +842,6 @@ class DashboardController extends Controller
 
     }
 
-
     protected function datiTortaEsiti()
     {
 
@@ -865,7 +865,7 @@ class DashboardController extends Controller
             'data' => $arrValori,
             'backgroundColor' => $arrColori,
             'labels' => $arrTesti,
-            'totale' => $totale
+            'totale' => $totale,
         ];
     }
 
@@ -873,7 +873,7 @@ class DashboardController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-        abort_if(!$user, 403);
+        abort_if(! $user, 403);
 
         $dati = $request->validate([
             'azione' => ['required', 'in:open,assign,complete'],
@@ -887,9 +887,10 @@ class DashboardController extends Controller
 
         if ($azione === 'open') {
             $first = $items->first();
+
             return [
                 'success' => true,
-                'redirect' => $this->resolveBulkOpenUrl($first['type'], (int)$first['id']),
+                'redirect' => $this->resolveBulkOpenUrl($first['type'], (int) $first['id']),
                 'message' => 'Apertura elemento selezionato',
             ];
         }
@@ -899,12 +900,12 @@ class DashboardController extends Controller
         $esitoCafOkId = EsitoCafPatronato::query()->where('esito_finale', 'ok')->value('id');
 
         $items->each(function ($item) use ($user, $azione, $esitoVisuraOkId, $esitoCafOkId, &$processed) {
-            $id = (int)$item['id'];
+            $id = (int) $item['id'];
             $type = $item['type'];
 
             if ($type === 'ticket') {
                 $record = Ticket::query()->where('id', $id)->where('agente_id', $user->id)->first();
-                if (!$record) {
+                if (! $record) {
                     return;
                 }
 
@@ -921,7 +922,7 @@ class DashboardController extends Controller
 
             if ($type === 'visura') {
                 $record = Visura::query()->where('id', $id)->where('agente_id', $user->id)->first();
-                if (!$record) {
+                if (! $record) {
                     return;
                 }
 
@@ -939,7 +940,7 @@ class DashboardController extends Controller
 
             if ($type === 'caf') {
                 $record = CafPatronato::query()->where('id', $id)->where('agente_id', $user->id)->first();
-                if (!$record) {
+                if (! $record) {
                     return;
                 }
 
@@ -959,7 +960,7 @@ class DashboardController extends Controller
         return [
             'success' => true,
             'processed' => $processed,
-            'message' => 'Azione completata su ' . $processed . ' elementi',
+            'message' => 'Azione completata su '.$processed.' elementi',
         ];
     }
 
@@ -979,7 +980,7 @@ class DashboardController extends Controller
         $arrOk = [];
         $arrMese = [];
 
-        if (!$this->produzioneDisponibile()) {
+        if (! $this->produzioneDisponibile()) {
             for ($mese = 1; $mese <= 12; $mese++) {
                 $arrOk[] = 0;
                 $arrMese[] = mese($mese);
@@ -987,7 +988,7 @@ class DashboardController extends Controller
 
             return [
                 'arrOk' => $arrOk,
-                'arrMese' => $arrMese
+                'arrMese' => $arrMese,
             ];
         }
 
@@ -1005,12 +1006,9 @@ class DashboardController extends Controller
             $arrMese[] = mese($mese);
         }
 
-
         return [
             'arrOk' => $arrOk,
-            'arrMese' => $arrMese
+            'arrMese' => $arrMese,
         ];
     }
-
-
 }

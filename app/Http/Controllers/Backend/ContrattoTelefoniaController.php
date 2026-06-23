@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Http\Services\ContrattiCfRiskService;
 use App\Http\Funzioni\VisuraCameraleService;
-use App\Http\MieClassi\PdfProdottoSkyGlass;
-use App\Http\MieClassi\PdfProdottoSkyTv;
+use App\Http\Services\ContrattiCfRiskService;
 use App\Models\AllegatoContratto;
 use App\Models\Cliente;
+use App\Models\ContrattoTelefonia;
 use App\Models\EsitoTelefonia;
 use App\Models\MovimentoPortafoglio;
 use App\Models\Notifica;
@@ -33,17 +32,22 @@ use App\Rules\CodiceFiscaleRule;
 use App\Rules\DataItalianaRule;
 use App\Rules\EmailContrattoRule;
 use App\Rules\TelefonoContrattoRule;
+use App\Rules\TelefonoRule;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ContrattoTelefonia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
 
@@ -59,17 +63,16 @@ class ContrattoTelefoniaController extends Controller
         return $user;
     }
 
-
     /**
      * Display a listing of the resource.
      *
-        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|array
+     * @return Factory|View|array
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-        $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+        $giorniFermo = max(1, (int) $request->input('giorni_fermo', 7));
 
         $ordinamenti = [
             'data' => ['testo' => 'Data', 'filtro' => function ($q) {
@@ -80,7 +83,7 @@ class ContrattoTelefoniaController extends Controller
             }],
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
         ];
 
         $orderByUser = $this->currentUser()->getExtra($nomeClasse);
@@ -88,7 +91,7 @@ class ContrattoTelefoniaController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -98,7 +101,7 @@ class ContrattoTelefoniaController extends Controller
             $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $contrattiFermiCount = (clone $recordsQB)
@@ -121,20 +124,19 @@ class ContrattoTelefoniaController extends Controller
                     'puoCambiareStato' => $puoCambiareStato,
                     'puoCreare' => $puoCreare,
 
-                ])->render())
+                ])->render()),
             ];
         }
-
 
         return view('Backend.ContrattoTelefonia.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\ContrattoTelefonia::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.ContrattoTelefonia::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\ContrattoTelefonia::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuovo '.ContrattoTelefonia::NOME_SINGOLARE,
             'testoCerca' => 'Cerca in codice cliente, codice contratto, nominativo, email, telefono',
             'puoModificare' => $puoModificare,
             'puoCambiareStato' => $puoCambiareStato,
@@ -143,17 +145,16 @@ class ContrattoTelefoniaController extends Controller
             'contrattiFermiCount' => $contrattiFermiCount,
         ]);
 
-
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\ContrattoTelefonia::query()
+        $queryBuilder = ContrattoTelefonia::query()
             ->with(['comune' => function ($q) {
                 $q->select('id', 'comune', 'targa');
             }])
@@ -205,7 +206,6 @@ class ContrattoTelefoniaController extends Controller
             $queryBuilder->whereDate('created_at', '>=', $dataDa)->whereDate('created_at', '<=', $dataA);
         }
 
-
         if ($request->has('agente_id')) {
             $queryBuilder->where('agente_id', $request->input('agente_id'));
             $this->conFiltro = true;
@@ -218,7 +218,7 @@ class ContrattoTelefoniaController extends Controller
         }
 
         if ($request->boolean('solo_fermi')) {
-            $giorniFermo = max(1, (int)$request->input('giorni_fermo', 7));
+            $giorniFermo = max(1, (int) $request->input('giorni_fermo', 7));
             $queryBuilder
                 ->whereIn('esito_id', ['bozza', 'da-gestire'])
                 ->whereDate('created_at', '<=', now()->subDays($giorniFermo));
@@ -228,26 +228,25 @@ class ContrattoTelefoniaController extends Controller
         return $queryBuilder;
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
-        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     * @return Factory|View
      */
     public function create(Request $request)
     {
 
-
         if ($request->ajax()) {
-            $record = new ContrattoTelefonia();
+            $record = new ContrattoTelefonia;
 
             if ($this->currentUser()->hasPermissionTo('agente')) {
                 $record->agente_id = Auth::id();
             }
+
             return view('Backend.ContrattoTelefonia.modalNuovo', [
                 'record' => $record,
                 'controller' => get_class($this),
-                'titoloPagina' => 'Nuovo contratto telefonia'
+                'titoloPagina' => 'Nuovo contratto telefonia',
             ]);
         }
 
@@ -255,13 +254,13 @@ class ContrattoTelefoniaController extends Controller
 
         if ($request->has('duplica')) {
             $record = ContrattoTelefonia::find($request->input('duplica'));
-            abort_if(!$record, 404);
+            abort_if(! $record, 404);
             $record->id = null;
             $tipoContratto = TipoContratto::find($record->tipo_contratto_id);
             $prodotto = $record->prodotto;
 
         } else {
-            $record = new ContrattoTelefonia();
+            $record = new ContrattoTelefonia;
             if ($this->currentUser()->hasPermissionTo('agente')) {
                 $record->agente_id = Auth::id();
             } else {
@@ -271,29 +270,27 @@ class ContrattoTelefoniaController extends Controller
 
             $tipoContratto = TipoContratto::find($record->tipo_contratto_id);
             if ($tipoContratto->prodotto) {
-                $classe = 'App\Models\\' . $tipoContratto->prodotto;
-                $prodotto = $this->presetCampi(new $classe(), $tipoContratto->prodotto);
+                $classe = 'App\Models\\'.$tipoContratto->prodotto;
+                $prodotto = $this->presetCampi(new $classe, $tipoContratto->prodotto);
             }
 
         }
         $record->uid = Str::ulid();
         $record->data = today();
 
-
         $record->categoria_pratica = $this->determinaCategoriaPratica($record, $request);
 
         return view('Backend.ContrattoTelefonia.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . ContrattoTelefonia::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.ContrattoTelefonia::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco ' . ContrattoTelefonia::NOME_PLURALE],
+            'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco '.ContrattoTelefonia::NOME_PLURALE],
             'recordProdotto' => $prodotto,
             'tipoProdotto' => $tipoContratto->prodotto,
-            'creaContratto' => !$tipoContratto->crea_in_bozza,
+            'creaContratto' => ! $tipoContratto->crea_in_bozza,
             'categoriaPratica' => $record->categoria_pratica,
         ]);
     }
-
 
     protected function presetCampi($record, $prodotto)
     {
@@ -310,8 +307,7 @@ class ContrattoTelefoniaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function store(Request $request)
     {
@@ -319,7 +315,7 @@ class ContrattoTelefoniaController extends Controller
         $tipoProdotto = $request->input('tipo_prodotto');
         $rules = $this->rules($request, null);
         if ($tipoProdotto) {
-            $altreRules = 'rules' . $tipoProdotto;
+            $altreRules = 'rules'.$tipoProdotto;
             $rules = array_merge($rules, $this->{$altreRules}(null));
         }
 
@@ -328,7 +324,7 @@ class ContrattoTelefoniaController extends Controller
         if ($cfRisk['blocked']) {
             return $this->redirectCodiceFiscaleBloccato($cfRisk);
         }
-        $record = new ContrattoTelefonia();
+        $record = new ContrattoTelefonia;
         $this->salvaDati($record, $request);
 
         if ($record->esito_id !== 'bozza') {
@@ -336,7 +332,7 @@ class ContrattoTelefoniaController extends Controller
         }
 
         if ($this->currentUser()->hasPermissionTo('agente')) {
-            Notifica::notificaAdAdmin('Nuovo contratto', '<span class="fw-bold">' . $record->tipoContratto->nome . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
+            Notifica::notificaAdAdmin('Nuovo contratto', '<span class="fw-bold">'.$record->tipoContratto->nome.'</span> caricato da <span class="fw-bold">'.$record->agente->nominativo().'</span> per il cliente <span class="fw-bold">'.$record->nominativo().'</span>');
         }
 
         return redirect()->action([ContrattoTelefoniaController::class, 'show'], $record->id);
@@ -345,13 +341,13 @@ class ContrattoTelefoniaController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     * @param  int  $id
+     * @return Factory|View
      */
     public function show($id)
     {
         $record = ContrattoTelefonia::find($id);
-        abort_if(!$record, 404, 'Questo contratto non esiste');
+        abort_if(! $record, 404, 'Questo contratto non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -359,13 +355,12 @@ class ContrattoTelefoniaController extends Controller
         }
         $puoCreare = $this->currentUser()->hasAnyPermission(['admin', 'agente']);
 
-
         return view('Backend.ContrattoTelefonia.show', [
             'record' => $record,
             'controller' => ContrattoTelefoniaController::class,
-            'titoloPagina' => ucfirst(ContrattoTelefonia::NOME_SINGOLARE) . ' ' . $record->nominativo(),
-            'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco ' . ContrattoTelefonia::NOME_PLURALE],
-            'puoCreare' => $puoCreare
+            'titoloPagina' => ucfirst(ContrattoTelefonia::NOME_SINGOLARE).' '.$record->nominativo(),
+            'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco '.ContrattoTelefonia::NOME_PLURALE],
+            'puoCreare' => $puoCreare,
 
         ]);
     }
@@ -373,14 +368,14 @@ class ContrattoTelefoniaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     * @param  int  $id
+     * @return Factory|View
      */
     public function edit($id)
     {
         $record = ContrattoTelefonia::with('tipoContratto')->find($id);
-        abort_if(!$record, 404, 'Questo contratto non esiste');
-        abort_if(!$record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 404, 'Non puo modificare questo contratto');
+        abort_if(! $record, 404, 'Questo contratto non esiste');
+        abort_if(! $record->puoModificare($this->currentUser()->hasPermissionTo('admin')), 404, 'Non puo modificare questo contratto');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -390,9 +385,9 @@ class ContrattoTelefoniaController extends Controller
         $tipoProdotto = $record->tipoContratto->prodotto;
         if ($tipoProdotto) {
             $recordProdotto = $record->prodotto;
-            if (!$recordProdotto) {
-                $classe = 'App\Models\\' . $tipoProdotto;
-                $recordProdotto = new $classe();
+            if (! $recordProdotto) {
+                $classe = 'App\Models\\'.$tipoProdotto;
+                $recordProdotto = new $classe;
 
             }
 
@@ -403,9 +398,9 @@ class ContrattoTelefoniaController extends Controller
         return view('Backend.ContrattoTelefonia.edit', [
             'record' => $record,
             'controller' => ContrattoTelefoniaController::class,
-            'titoloPagina' => 'Modifica ' . ContrattoTelefonia::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.ContrattoTelefonia::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco ' . ContrattoTelefonia::NOME_PLURALE],
+            'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco '.ContrattoTelefonia::NOME_PLURALE],
             'recordProdotto' => $recordProdotto,
             'tipoProdotto' => $record->tipoContratto->prodotto,
             'creaContratto' => true,
@@ -417,19 +412,18 @@ class ContrattoTelefoniaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return \Illuminate\Http\RedirectResponse
+     * @param  int  $id
+     * @return RedirectResponse
      */
     public function update(Request $request, $id)
     {
         $record = ContrattoTelefonia::find($id);
-        abort_if(!$record, 404, 'Questo ' . ContrattoTelefonia::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.ContrattoTelefonia::NOME_SINGOLARE.' non esiste');
 
         $tipoProdotto = $request->input('tipo_prodotto');
         $rules = $this->rules($request, $id);
         if ($tipoProdotto) {
-            $altreRules = 'rules' . $tipoProdotto;
+            $altreRules = 'rules'.$tipoProdotto;
             $rules = array_merge($rules, $this->{$altreRules}(null));
         }
 
@@ -446,7 +440,6 @@ class ContrattoTelefoniaController extends Controller
         if ($esitoPrima == 'bozza' && $record->esito_id == 'da-gestire') {
             $this->inviaNotifiche($record);
         }
-
 
         return $this->backToIndex();
     }
@@ -502,19 +495,18 @@ class ContrattoTelefoniaController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return array
+     * @param  int  $id
+     * @return array
      */
     public function destroy($id)
     {
         $record = ContrattoTelefonia::find($id);
-        abort_if(!$record, 404, 'Questo contratto non esiste');
+        abort_if(! $record, 404, 'Questo contratto non esiste');
 
         foreach ($record->allegati as $allegato) {
             $allegato->delete();
         }
         $record->delete();
-
 
         return [
             'success' => true,
@@ -522,11 +514,10 @@ class ContrattoTelefoniaController extends Controller
         ];
     }
 
-
     public function downloadAllegato($contrattoId, $allegatoId, Request $request)
     {
         $record = AllegatoContratto::find($allegatoId);
-        abort_if(!$record, 404, 'Questo allegato non esiste');
+        abort_if(! $record, 404, 'Questo allegato non esiste');
         abort_if($record->contratto_id != $contrattoId, 404, 'Questo allegato non esiste');
         $inlinePreview = $request->boolean('anteprima');
         $contentDisposition = $inlinePreview ? 'inline' : 'attachment';
@@ -536,7 +527,7 @@ class ContrattoTelefoniaController extends Controller
             if ($contenuto !== false) {
                 return response($contenuto, 200, [
                     'Content-Type' => $record->mime_type ?: 'application/octet-stream',
-                    'Content-Disposition' => $contentDisposition . '; filename="' . addslashes($record->filename_originale) . '"',
+                    'Content-Disposition' => $contentDisposition.'; filename="'.addslashes($record->filename_originale).'"',
                 ]);
             }
         }
@@ -548,7 +539,7 @@ class ContrattoTelefoniaController extends Controller
         if ($inlinePreview) {
             return response()->file($path, [
                 'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . addslashes($record->filename_originale) . '"',
+                'Content-Disposition' => 'inline; filename="'.addslashes($record->filename_originale).'"',
             ]);
         }
 
@@ -557,15 +548,15 @@ class ContrattoTelefoniaController extends Controller
 
     public function uploadAllegato(Request $request)
     {
-        $file = new AllegatoContratto();
+        $file = new AllegatoContratto;
 
         if ($request->file('file')) {
             $filePath = $request->file('file');
             $estensione = $filePath->extension();
-            $fileName = Str::ulid() . '.' . $estensione;
+            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.allegati_contratti.cartella');
             $request->file('file')->storeAs($cartella, $fileName);
-            $file->path_filename = $cartella . '/' . $fileName;
+            $file->path_filename = $cartella.'/'.$fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
             $file->mime_type = $filePath->getMimeType();
             $contenuto = file_get_contents($filePath->getRealPath());
@@ -577,7 +568,6 @@ class ContrattoTelefoniaController extends Controller
             }
             $file->save();
 
-
             return response()->json(['success' => true, 'id' => $file->id, 'filename' => $fileName, 'thumbnail' => $file->urlThumbnail()]);
 
         }
@@ -588,18 +578,19 @@ class ContrattoTelefoniaController extends Controller
     public function deleteAllegato(Request $request)
     {
         $record = AllegatoContratto::find($request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        abort_if(! $record, 404, 'File non trovato');
         Log::debug(__FUNCTION__, $record->toArray());
 
-        Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente'.$record->path_filename);
         $record->delete();
+
         return $record->path_filename;
     }
 
     public function aggiornaStato(Request $request, $id)
     {
         $contratto = ContrattoTelefonia::withCount('allegati')->with('tipoContratto')->find($id);
-        abort_if(!$contratto, 404, 'Questo contratto non esiste');
+        abort_if(! $contratto, 404, 'Questo contratto non esiste');
 
         $request->validate([
             'esito_id' => ['required'],
@@ -611,11 +602,11 @@ class ContrattoTelefoniaController extends Controller
         $esitoPrima = $contratto->esito_id;
 
         $esito = EsitoTelefonia::find($request->input('esito_id'));
-        if (!$esito) {
+        if (! $esito) {
             return response()->json(['success' => false, 'message' => 'Stato selezionato non valido.'], 422);
         }
 
-        if ((int)$esito->chiedi_motivo === 1 && trim((string)$request->input('motivo_ko')) === '') {
+        if ((int) $esito->chiedi_motivo === 1 && trim((string) $request->input('motivo_ko')) === '') {
             return response()->json(['success' => false, 'message' => 'La motivazione KO è obbligatoria per lo stato selezionato.'], 422);
         }
 
@@ -628,7 +619,7 @@ class ContrattoTelefoniaController extends Controller
         $contratto->esito_id = $esito->id;
         $contratto->esito_finale = $esito->esito_finale;
         $contratto->motivo_ko = getInputToUpper(Str::limit($request->input('motivo_ko'), 254));
-        if (!$contratto->data_reminder && $esito->id == 'attivo' && $contratto->tipoContratto->durata_contratto) {
+        if (! $contratto->data_reminder && $esito->id == 'attivo' && $contratto->tipoContratto->durata_contratto) {
             $contratto->data_reminder = now()->addMonths($contratto->tipoContratto->durata_contratto)->subDays(20);
         }
         $contratto->save();
@@ -646,11 +637,9 @@ class ContrattoTelefoniaController extends Controller
         }
         $records = collect([$contratto]);
 
-
         if ($esitoPrima == 'bozza') {
             $this->inviaNotifiche($contratto);
         }
-
 
         if ($contratto->wasChanged(['esito_id'])) {
             $esito = EsitoTelefonia::find($contratto->esito_id);
@@ -663,11 +652,10 @@ class ContrattoTelefoniaController extends Controller
                 })->afterResponse();
             }
             if ($request->input('ruolo') == 'supervisore') {
-                Notifica::notificaAdAdmin('Cambio stato', 'Esito per il contratto di ' . $contratto->nominativo() . ' modificato a ' . $esito->nome);
+                Notifica::notificaAdAdmin('Cambio stato', 'Esito per il contratto di '.$contratto->nominativo().' modificato a '.$esito->nome);
             }
 
         }
-
 
         if ($request->input('aggiorna') == 'dash') {
             $view = 'Backend.Dashboard.admin.contratti';
@@ -682,15 +670,14 @@ class ContrattoTelefoniaController extends Controller
                 'puoModificare' => ContrattoTelefonia::determinaPuoModificare(),
                 'puoCreare' => ContrattoTelefonia::determinaPuoCreare(),
                 'puoCambiareStato' => ContrattoTelefonia::determinaPuoCambiareStato(),
-            ])->render())
+            ])->render()),
         ];
     }
-
 
     public function azioni($id, $azione)
     {
         $u = ContrattoTelefonia::find($id);
-        if (!$u) {
+        if (! $u) {
             return ['success' => false, 'message' => 'Questo contratto non esiste'];
         }
         switch ($azione) {
@@ -701,24 +688,20 @@ class ContrattoTelefoniaController extends Controller
 
                 }
 
-
-                $visuraService = new VisuraCameraleService();
-
+                $visuraService = new VisuraCameraleService;
 
                 $res = $visuraService->richiediVisura($u->natura_giuridica, $u->partita_iva);
-
 
                 if ($res) {
 
                     $prezzoVisura = $visuraService->calcolaPrezzo($res->data->tipo);
-                    $movimento = new MovimentoPortafoglio();
+                    $movimento = new MovimentoPortafoglio;
                     $movimento->agente_id = Auth::id();
                     $movimento->importo = -$prezzoVisura;
-                    $movimento->descrizione = 'Visura camerale ' . $res->data->tipo . ' per ' . $u->partita_iva;
+                    $movimento->descrizione = 'Visura camerale '.$res->data->tipo.' per '.$u->partita_iva;
                     $movimento->save();
 
-
-                    $record = new VisuraCamerale();
+                    $record = new VisuraCamerale;
                     $record->agente_id = Auth::id();
                     $record->contratto_id = $u->id;
                     $record->cliente_id = $u->cliente_id;
@@ -728,12 +711,12 @@ class ContrattoTelefoniaController extends Controller
                     $record->stato_richiesta = $res->data->stato_richiesta;
                     $record->prezzo = $prezzoVisura;
                     $record->save();
+
                     return ['success' => true, 'message' => 'Visura richiesta'];
 
                 } else {
                     return ['success' => false, 'message' => $visuraService->message];
                 }
-
 
             case 'impersona':
                 return $this->azioneImpersona($id);
@@ -745,60 +728,56 @@ class ContrattoTelefoniaController extends Controller
                 $user = User::find($id);
                 $user->password = bcrypt('123456');
                 $user->save();
+
                 return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
 
             default:
-                return ['success' => false, 'message' => 'Azione ' . $azione . ' non esiste'];
-
+                return ['success' => false, 'message' => 'Azione '.$azione.' non esiste'];
 
         }
 
     }
-
 
     public function pda($id)
     {
         $contratto = ContrattoTelefonia::find($id);
 
-
         if ($contratto->tipoContratto->pda) {
-            //Allega PDA
-            $classe = 'App\Http\MieClassi\Pdf' . $contratto->tipoContratto->pda;
-            $pdf = new $classe();
+            // Allega PDA
+            $classe = 'App\Http\MieClassi\Pdf'.$contratto->tipoContratto->pda;
+            $pdf = new $classe;
             $pdf->generaPdf($contratto);
+
             return $pdf->render();
         }
 
     }
 
-
     /**
-     * @param ContrattoTelefonia $contratto
+     * @param  ContrattoTelefonia  $contratto
      * @return void
      */
     public function inviaNotifiche($contratto)
     {
 
-
         $this->creaUtente($contratto);
 
-
         dispatch(function () use ($contratto) {
-            //Notifica ad agente
+            // Notifica ad agente
             $user = $contratto->agente;
             try {
                 $user->notify(new NotificaAgenteNuovoContratto($contratto));
 
             } catch (\Exception $exception) {
                 report($exception);
-                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il contratto di ' . $contratto->nominativo() . ': ' . $exception->getMessage(), 'error');
+                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il contratto di '.$contratto->nominativo().': '.$exception->getMessage(), 'error');
             }
 
         })->afterResponse();
 
-        //Notifiche al gestore
+        // Notifiche al gestore
         $emailGestore = $contratto->tipoContratto->email_notifica_gestore;
-        if (!$emailGestore) {
+        if (! $emailGestore) {
             $emailGestore = $contratto->tipoContratto->gestore->email_notifica_a_gestore;
         }
         if ($emailGestore) {
@@ -808,7 +787,7 @@ class ContrattoTelefoniaController extends Controller
                         Notification::route('mail', $email)->notify(new NotificaGenericaGestore($contratto));
                     } catch (\Exception $exception) {
                         report($exception);
-                        Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $email . ' per il contratto di ' . $contratto->nominativo() . ': ' . $exception->getMessage(), 'error');
+                        Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$email.' per il contratto di '.$contratto->nominativo().': '.$exception->getMessage(), 'error');
                     }
                 }
             })->afterResponse();
@@ -816,14 +795,14 @@ class ContrattoTelefoniaController extends Controller
 
         if ($this->currentUser()->hasPermissionTo('agente')) {
             dispatch(function () use ($contratto) {
-                $user = new User();
+                $user = new User;
                 $user->email = 'noreply@gestiio.it';
                 try {
                     $user->notify(new NotificaAdmin($contratto));
 
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il contratto di ' . $contratto->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il contratto di '.$contratto->nominativo().': '.$exception->getMessage(), 'error');
 
                 }
             })->afterResponse();
@@ -833,21 +812,21 @@ class ContrattoTelefoniaController extends Controller
     }
 
     /**
-     * @param ContrattoTelefonia $model
-     * @param Request $request
+     * @param  ContrattoTelefonia  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->esito_id = 'da-gestire';
             $model->caricato_da_user_id = Auth::id();
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'codice_cliente' => '',
@@ -896,10 +875,10 @@ class ContrattoTelefoniaController extends Controller
 
         $this->normalizzaCampiPerCategoriaPratica($request, $model);
 
-        if (!$model->cliente_id) {
+        if (! $model->cliente_id) {
             $cliente = Cliente::where('codice_fiscale', $model->codice_fiscale)->first();
-            if (!$cliente) {
-                $cliente = new Cliente();
+            if (! $cliente) {
+                $cliente = new Cliente;
             }
         } else {
             $cliente = Cliente::find($model->cliente_id);
@@ -915,9 +894,7 @@ class ContrattoTelefoniaController extends Controller
 
         $model->save();
 
-
         AllegatoContratto::where('uid', $model->uid)->whereNull('contratto_id')->update(['contratto_id' => $model->id, 'uid' => null]);
-
 
         $this->salvaDatiProdotti($model, $request);
 
@@ -932,6 +909,7 @@ class ContrattoTelefoniaController extends Controller
             $model->nome = null;
             $model->cognome = null;
             $model->codice_fiscale = null;
+
             return;
         }
 
@@ -940,38 +918,36 @@ class ContrattoTelefoniaController extends Controller
         $model->natura_giuridica = null;
     }
 
-
     /**
-     * @param ContrattoTelefonia $ordineModel
-     * @param Request $request
+     * @param  ContrattoTelefonia  $ordineModel
+     * @param  Request  $request
      * @return void
      */
     protected function salvaDatiProdotti($ordineModel, $request)
     {
         $tipoContratto = TipoContratto::find($ordineModel->tipo_contratto_id);
         if ($tipoContratto->prodotto) {
-            $classe = 'salvaDati' . $tipoContratto->prodotto;
+            $classe = 'salvaDati'.$tipoContratto->prodotto;
             $this->$classe($ordineModel, $request);
         }
-
 
     }
 
     /**
-     * @param ContrattoTelefonia $model
-     * @param Request $request
+     * @param  ContrattoTelefonia  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiProdottoSkyGlass($ordineModel, $request)
     {
         $model = $ordineModel->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoSkyGlass();
+            $model = new ProdottoSkyGlass;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'dimensione' => '',
             'colore_sky_glass' => '',
@@ -1007,22 +983,21 @@ class ContrattoTelefoniaController extends Controller
 
     }
 
-
     /**
-     * @param Cliente $model
-     * @param ContrattoTelefonia $request
+     * @param  Cliente  $model
+     * @param  ContrattoTelefonia  $request
      * @return mixed
      */
     protected function salvaDatiCliente($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_fiscale' => 'strtoupper',
             'partita_iva' => 'strtoupper',
@@ -1042,21 +1017,19 @@ class ContrattoTelefoniaController extends Controller
 
         $model->save();
 
-
         return $model->id;
     }
 
     /**
-     * @param ContrattoTelefonia $contratto
-        * @return void
+     * @return void
      */
     protected function creaUtente(ContrattoTelefonia $contratto)
     {
         $cliente = Cliente::find($contratto->cliente_id);
 
         $user = User::where('email', $cliente->email)->orWhere('telefono', $cliente->telefono)->first();
-        if (!$user) {
-            $user = new User();
+        if (! $user) {
+            $user = new User;
             $user->nome = $cliente->nome;
             $user->cognome = $cliente->cognome;
             $user->email = $cliente->email;
@@ -1068,32 +1041,31 @@ class ContrattoTelefoniaController extends Controller
             $cliente->save();
 
             dispatch(function () use ($contratto, $password, $user) {
-                //Notifica a cliente
+                // Notifica a cliente
                 try {
                     $user->notify(new NotificaDatiAccessoClienteContratto($contratto, $password));
                     $user->invio_dati_accesso = now();
                     $user->save();
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a ' . $user->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a '.$user->nominativo().': '.$exception->getMessage(), 'error');
 
                 }
             })->afterResponse();
 
         } else {
             dispatch(function () use ($contratto, $user) {
-                //Notifica a cliente
+                // Notifica a cliente
                 $user->notify(new NotificaCliente($contratto));
             })->afterResponse();
 
         }
 
-
     }
 
     /**
-     * @param ContrattoTelefonia $ordineModel
-     * @param Request $request
+     * @param  ContrattoTelefonia  $ordineModel
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiProdottoSkyTv($ordineModel, $request)
@@ -1101,12 +1073,12 @@ class ContrattoTelefoniaController extends Controller
 
         $model = $ordineModel->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoSkyTv();
+            $model = new ProdottoSkyTv;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_cliente' => '',
             'profilo' => '',
@@ -1156,12 +1128,13 @@ class ContrattoTelefoniaController extends Controller
             $ordineModel->prodotto_type = get_class($model);
             $ordineModel->save();
         }
+
         return $model;
     }
 
     /**
-     * @param ContrattoTelefonia $ordineModel
-     * @param Request $request
+     * @param  ContrattoTelefonia  $ordineModel
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiProdottoSkyWifi($ordineModel, $request)
@@ -1169,12 +1142,12 @@ class ContrattoTelefoniaController extends Controller
 
         $model = $ordineModel->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoSkyWifi();
+            $model = new ProdottoSkyWifi;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_cliente' => '',
             'tipologia_cliente' => '',
@@ -1223,13 +1196,13 @@ class ContrattoTelefoniaController extends Controller
             $ordineModel->prodotto_type = get_class($model);
             $ordineModel->save();
         }
+
         return $model;
     }
 
-
     /**
-     * @param ContrattoTelefonia $ordineModel
-     * @param Request $request
+     * @param  ContrattoTelefonia  $ordineModel
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiProdottoSkyTvWifi($ordineModel, $request)
@@ -1237,12 +1210,12 @@ class ContrattoTelefoniaController extends Controller
 
         $model = $ordineModel->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoSkyTvWifi();
+            $model = new ProdottoSkyTvWifi;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_cliente' => '',
             'profilo' => '',
@@ -1277,7 +1250,7 @@ class ContrattoTelefoniaController extends Controller
             'consenso_5' => 'app\getInputCheckbox',
             'consenso_6' => 'app\getInputCheckbox',
 
-            //Wifi
+            // Wifi
             'offerta' => '',
             'modem_wifi_hub' => 'app\getInputCheckbox',
             'ultra_wifi' => 'app\getInputCheckbox',
@@ -1305,13 +1278,13 @@ class ContrattoTelefoniaController extends Controller
             $ordineModel->prodotto_type = get_class($model);
             $ordineModel->save();
         }
+
         return $model;
     }
 
-
     /**
-     * @param ProdottoTimWifi $model
-     * @param Request $request
+     * @param  ProdottoTimWifi  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiProdottoTimWifi($ordineModel, $request)
@@ -1319,12 +1292,12 @@ class ContrattoTelefoniaController extends Controller
 
         $model = $ordineModel->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoTimWifi();
+            $model = new ProdottoTimWifi;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'citta_di_nascita' => '',
             'provincia_di_nascita' => '',
@@ -1386,13 +1359,13 @@ class ContrattoTelefoniaController extends Controller
             $ordineModel->prodotto_type = get_class($model);
             $ordineModel->save();
         }
+
         return $model;
     }
 
-
     /**
-     * @param ContrattoTelefonia $ordineModel
-     * @param Request $request
+     * @param  ContrattoTelefonia  $ordineModel
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiProdottoVodafoneFissa($ordineModel, $request)
@@ -1400,12 +1373,12 @@ class ContrattoTelefoniaController extends Controller
 
         $model = $ordineModel->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoVodafoneFissa();
+            $model = new ProdottoVodafoneFissa;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'offerta' => '',
             'tecnologia' => '',
@@ -1433,8 +1406,8 @@ class ContrattoTelefoniaController extends Controller
     }
 
     /**
-     * @param ContrattoTelefonia $ordineModel
-     * @param Request $request
+     * @param  ContrattoTelefonia  $ordineModel
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiProdottoWindtre($ordineModel, $request)
@@ -1442,12 +1415,12 @@ class ContrattoTelefoniaController extends Controller
 
         $model = $ordineModel->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoWindtre();
+            $model = new ProdottoWindtre;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'opzioni' => '',
 
@@ -1470,7 +1443,6 @@ class ContrattoTelefoniaController extends Controller
         return $model;
     }
 
-
     protected function backToIndex()
     {
         return redirect()->action([get_class($this), 'index']);
@@ -1481,9 +1453,8 @@ class ContrattoTelefoniaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\ContrattoTelefonia::get();
+        return ContrattoTelefonia::get();
     }
-
 
     protected function rules($request, $id = null)
     {
@@ -1491,20 +1462,20 @@ class ContrattoTelefoniaController extends Controller
         $isBusiness = $categoriaPratica === 'business';
 
         $rules = [
-            'data' => ['required', new DataItalianaRule()],
+            'data' => ['required', new DataItalianaRule],
             'codice_cliente' => ['nullable', 'max:255'],
             'codice_contratto' => ['nullable', 'max:255'],
             'agente_id' => ['required'],
             'tipo_contratto_id' => ['required'],
             'categoria_pratica' => ['required', 'in:consumer,business'],
-            'codice_fiscale' => $isBusiness ? ['nullable', new CodiceFiscaleRule()] : ['required', new CodiceFiscaleRule()],
+            'codice_fiscale' => $isBusiness ? ['nullable', new CodiceFiscaleRule] : ['required', new CodiceFiscaleRule],
             'ragione_sociale' => $isBusiness ? ['required', 'max:255'] : ['nullable', 'max:255'],
             'partita_iva' => $isBusiness ? ['required', 'max:30'] : ['nullable', 'max:30'],
             'natura_giuridica' => $isBusiness ? ['required', 'in:impresa-individuale,societa-capitale,societa-persone'] : ['nullable'],
             'nome' => $isBusiness ? ['nullable', 'max:255'] : ['required', 'max:255'],
             'cognome' => $isBusiness ? ['nullable', 'max:255'] : ['required', 'max:255'],
             'email' => ['required', 'email', 'max:255', new EmailContrattoRule($request->input('tipo_contratto_id'), $id)],
-            'telefono' => ['required', new \App\Rules\TelefonoRule(), new TelefonoContrattoRule($request->input('tipo_contratto_id'), $id)],
+            'telefono' => ['required', new TelefonoRule, new TelefonoContrattoRule($request->input('tipo_contratto_id'), $id)],
             'indirizzo' => ['required', 'max:255'],
             'citta' => ['required', 'max:255'],
             'cap' => ['required'],
@@ -1552,7 +1523,6 @@ class ContrattoTelefoniaController extends Controller
     protected function rulesProdottoSkyGlass($id = null)
     {
 
-
         $rules = [
             'tipologia_cliente' => ['required'],
             'dimensione' => ['required', 'max:255'],
@@ -1570,8 +1540,8 @@ class ContrattoTelefoniaController extends Controller
             'tipo_documento' => ['required'],
             'numero_documento' => ['required'],
             'rilasciato_da' => ['required'],
-            'data_rilascio' => ['required', new DataItalianaRule()],
-            'data_scadenza' => ['required', new DataItalianaRule()],
+            'data_rilascio' => ['required', new DataItalianaRule],
+            'data_scadenza' => ['required', new DataItalianaRule],
         ];
 
         return $rules;
@@ -1579,7 +1549,6 @@ class ContrattoTelefoniaController extends Controller
 
     protected function rulesProdottoSkyTv($id = null)
     {
-
 
         $rules = [
             'codice_cliente' => ['nullable', 'max:255'],
@@ -1617,8 +1586,8 @@ class ContrattoTelefoniaController extends Controller
             'tipo_documento' => ['required'],
             'numero_documento' => ['required'],
             'rilasciato_da' => ['required'],
-            'data_rilascio' => ['required', new DataItalianaRule()],
-            'data_scadenza' => ['required', new DataItalianaRule()],
+            'data_rilascio' => ['required', new DataItalianaRule],
+            'data_scadenza' => ['required', new DataItalianaRule],
 
         ];
 
@@ -1627,7 +1596,6 @@ class ContrattoTelefoniaController extends Controller
 
     protected function rulesProdottoSkyWifi($id = null)
     {
-
 
         $rules = [
             'codice_cliente' => ['nullable', 'max:255'],
@@ -1654,8 +1622,8 @@ class ContrattoTelefoniaController extends Controller
             'tipo_documento' => ['required'],
             'numero_documento' => ['required'],
             'rilasciato_da' => ['required'],
-            'data_rilascio' => ['required', new DataItalianaRule()],
-            'data_scadenza' => ['required', new DataItalianaRule()],
+            'data_rilascio' => ['required', new DataItalianaRule],
+            'data_scadenza' => ['required', new DataItalianaRule],
 
         ];
 
@@ -1664,7 +1632,6 @@ class ContrattoTelefoniaController extends Controller
 
     protected function rulesProdottoSkyTvWifi($id = null)
     {
-
 
         $rules = [
             'codice_cliente' => ['nullable', 'max:255'],
@@ -1704,8 +1671,8 @@ class ContrattoTelefoniaController extends Controller
             'tipo_documento' => ['required'],
             'numero_documento' => ['required'],
             'rilasciato_da' => ['required'],
-            'data_rilascio' => ['required', new DataItalianaRule()],
-            'data_scadenza' => ['required', new DataItalianaRule()],
+            'data_rilascio' => ['required', new DataItalianaRule],
+            'data_scadenza' => ['required', new DataItalianaRule],
         ];
 
         return $rules;
@@ -1715,12 +1682,12 @@ class ContrattoTelefoniaController extends Controller
     {
         $rules = [
         ];
+
         return $rules;
     }
 
     protected function rulesProdottoTimWifi($id = null)
     {
-
 
         $rules = [
             'indirizzo_fattura' => ['nullable', 'max:255'],
@@ -1753,11 +1720,8 @@ class ContrattoTelefoniaController extends Controller
         return $rules;
     }
 
-
     protected function rulesProdottoWindtre($id = null)
     {
         return [];
     }
-
-
 }

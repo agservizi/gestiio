@@ -24,7 +24,6 @@ return new class extends Migration
             $table->string('citta')->nullable();
             $table->string('cap', 5)->nullable();
 
-
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento')->nullable();
             $table->string('rilasciato_da')->nullable();

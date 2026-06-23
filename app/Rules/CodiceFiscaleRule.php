@@ -6,14 +6,13 @@ use Illuminate\Contracts\Validation\Rule;
 
 class CodiceFiscaleRule implements Rule
 {
-
     protected $message;
 
     /**
      * Create a new rule instance.
      *
-     * @param string $nazione
-     * @param null $tipoCliente
+     * @param  string  $nazione
+     * @param  null  $tipoCliente
      */
     public function __construct()
     {
@@ -24,8 +23,8 @@ class CodiceFiscaleRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
@@ -37,28 +36,33 @@ class CodiceFiscaleRule implements Rule
 
         $cf = $value;
 
-        if ($cf === '') return '';
+        if ($cf === '') {
+            return '';
+        }
         if (strlen($cf) != 16) {
 
-            $this->message = "La lunghezza del codice fiscale non  è "
-                . "corretta: il codice fiscale dovrebbe essere lungo "
-                . "esattamente 16 caratteri.";
+            $this->message = 'La lunghezza del codice fiscale non  è '
+                .'corretta: il codice fiscale dovrebbe essere lungo '
+                .'esattamente 16 caratteri.';
+
             return false;
         }
         $cf = strtoupper($cf);
-        if (preg_match("/^[A-Z0-9]+\$/", $cf) != 1) {
+        if (preg_match('/^[A-Z0-9]+$/', $cf) != 1) {
 
-            $this->message = "Il codice fiscale contiene dei caratteri non validi: "
-                . "i soli caratteri validi sono le lettere e le cifre.";
+            $this->message = 'Il codice fiscale contiene dei caratteri non validi: '
+                .'i soli caratteri validi sono le lettere e le cifre.';
+
             return false;
         }
         $s = 0;
         for ($i = 1; $i <= 13; $i += 2) {
             $c = $cf[$i];
-            if (strcmp($c, "0") >= 0 and strcmp($c, "9") <= 0)
+            if (strcmp($c, '0') >= 0 and strcmp($c, '9') <= 0) {
                 $s += ord($c) - ord('0');
-            else
+            } else {
                 $s += ord($c) - ord('A');
+            }
         }
         for ($i = 0; $i <= 14; $i += 2) {
             $c = $cf[$i];
@@ -171,14 +175,16 @@ class CodiceFiscaleRule implements Rule
                 case 'Z':
                     $s += 23;
                     break;
-                /*. missing_default: .*/
+                    /* . missing_default: . */
             }
         }
         if (chr($s % 26 + ord('A')) != $cf[15]) {
-            $this->message = "Il codice fiscale non  è corretto: "
-                . "il codice di controllo non corrisponde.";
+            $this->message = 'Il codice fiscale non  è corretto: '
+                .'il codice di controllo non corrisponde.';
+
             return false;
         }
+
         return true;
     }
 
@@ -192,40 +198,45 @@ class CodiceFiscaleRule implements Rule
         return $this->message;
     }
 
-
     protected function partitaIva($pi)
     {
 
-        if ($pi === '') return '';
+        if ($pi === '') {
+            return '';
+        }
         if (strlen($pi) != 11) {
-            $this->message = "La lunghezza della partita IVA non è "
-                . "corretta: la partita IVA dovrebbe essere lunga "
-                . "esattamente 11 caratteri. ";
+            $this->message = 'La lunghezza della partita IVA non è '
+                .'corretta: la partita IVA dovrebbe essere lunga '
+                .'esattamente 11 caratteri. ';
+
             return false;
 
         }
-        if (preg_match("/^[0-9]+\$/", $pi) != 1) {
-            $this->message = "La partita IVA contiene dei caratteri non ammessi: "
-                . "la partita IVA dovrebbe contenere solo cifre. ";
+        if (preg_match('/^[0-9]+$/', $pi) != 1) {
+            $this->message = 'La partita IVA contiene dei caratteri non ammessi: '
+                .'la partita IVA dovrebbe contenere solo cifre. ';
+
             return false;
         }
         $s = 0;
-        for ($i = 0; $i <= 9; $i += 2)
+        for ($i = 0; $i <= 9; $i += 2) {
             $s += ord($pi[$i]) - ord('0');
+        }
         for ($i = 1; $i <= 9; $i += 2) {
             $c = 2 * (ord($pi[$i]) - ord('0'));
-            if ($c > 9) $c = $c - 9;
+            if ($c > 9) {
+                $c = $c - 9;
+            }
             $s += $c;
         }
         if ((10 - $s % 10) % 10 != ord($pi[10]) - ord('0')) {
-            $this->message = "La partita IVA non è valida: "
-                . "il codice di controllo non corrisponde.";
+            $this->message = 'La partita IVA non è valida: '
+                .'il codice di controllo non corrisponde.';
+
             return false;
         }
-
 
         return true;
 
     }
-
 }

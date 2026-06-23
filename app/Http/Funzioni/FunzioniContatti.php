@@ -10,7 +10,7 @@ trait FunzioniContatti
     {
         $html = '';
         if ($this->email) {
-            $html .= '<a href = "mailto:' . $this->email . '" class="text-gray-900 text-hover-primary" >' . $this->email . '</a >';
+            $html .= '<a href = "mailto:'.$this->email.'" class="text-gray-900 text-hover-primary" >'.$this->email.'</a >';
         }
         if ($this->telefono) {
             if ($html) {
@@ -26,5 +26,4 @@ trait FunzioniContatti
     {
         return telefonoWhatsapp($this->telefono);
     }
-
 }

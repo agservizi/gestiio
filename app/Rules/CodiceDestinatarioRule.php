@@ -7,13 +7,14 @@ use Illuminate\Contracts\Validation\Rule;
 class CodiceDestinatarioRule implements Rule
 {
     protected $message;
+
     protected $nazione;
 
     /**
      * Create a new rule instance.
      *
-     * @param string $nazione
-     * @param null $tipoCliente
+     * @param  string  $nazione
+     * @param  null  $tipoCliente
      */
     public function __construct($nazione)
     {
@@ -23,8 +24,8 @@ class CodiceDestinatarioRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
@@ -32,9 +33,11 @@ class CodiceDestinatarioRule implements Rule
         if ($this->nazione != 'IT') {
             $upper = strtoupper($value);
             if ($upper !== 'XXXXXXX' && $upper !== '0000000') {
-                $this->message = "Il codice destinatario per gli stati esteri deve essere XXXXXXX o 0000000";
+                $this->message = 'Il codice destinatario per gli stati esteri deve essere XXXXXXX o 0000000';
+
                 return false;
             }
+
             return true;
         }
 
@@ -51,23 +54,24 @@ class CodiceDestinatarioRule implements Rule
         return $this->message;
     }
 
-
     protected function controlloLunghezza($attribute)
     {
         $lunghezza = strlen($attribute);
 
         if ($attribute === '000000') {
-            $this->message = "Il codice destinatario è errato. La lunghezza deve essere di 7 caratteri";
+            $this->message = 'Il codice destinatario è errato. La lunghezza deve essere di 7 caratteri';
+
             return false;
 
         }
 
-        if (!in_array($lunghezza, [6, 7])) {
-            $this->message = "La lunghezza del codice destinatario deve essere di 6 o 7 caratteri";
+        if (! in_array($lunghezza, [6, 7])) {
+            $this->message = 'La lunghezza del codice destinatario deve essere di 6 o 7 caratteri';
+
             return false;
         }
+
         return true;
 
     }
-
 }

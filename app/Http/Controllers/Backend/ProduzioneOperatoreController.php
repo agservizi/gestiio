@@ -6,21 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Http\MieClassi\AlertMessage;
 use App\Http\Services\FatturaProformaService;
 use App\Models\ProduzioneOperatore;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\FatturaProforma;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class ProduzioneOperatoreController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -34,7 +33,7 @@ class ProduzioneOperatoreController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -43,7 +42,7 @@ class ProduzioneOperatoreController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -53,7 +52,7 @@ class ProduzioneOperatoreController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -64,36 +63,34 @@ class ProduzioneOperatoreController extends Controller
                 'html' => base64_encode(view('Backend.ProduzioneOperatore.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
-
 
         return view('Backend.ProduzioneOperatore.index', [
             'records' => $records,
             'controller' => $nomeClasse,
             'titoloPagina' => 'Elenco produzioni',
             'orderBy' => $orderBy,
-            'ordinamenti' => null,//$ordinamenti,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => null,//'Nuova ' . \App\Models\FatturaProforma::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => null, // 'Nuova ' . \App\Models\FatturaProforma::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\ProduzioneOperatore::query()
+        $queryBuilder = ProduzioneOperatore::query()
             ->where('user_id', '>', 2)
             ->with('agente:id,nome,cognome')
             ->with('fatturaProforma:id,numero');
@@ -105,10 +102,9 @@ class ProduzioneOperatoreController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     public function creaProforma($id)
     {
@@ -118,13 +114,11 @@ class ProduzioneOperatoreController extends Controller
         $fatturaService = new FatturaProformaService($produzione->anno, $produzione->mese);
         $res = $fatturaService->creaFatturaProformaAgente($produzione->user_id);
         if ($res === false) {
-            $alert = new AlertMessage();
+            $alert = new AlertMessage;
             $alert->messaggio($fatturaService->getErrore(), 'danger')->flash();
         }
 
         return redirect()->action([ProduzioneOperatoreController::class, 'index']);
 
     }
-
-
 }

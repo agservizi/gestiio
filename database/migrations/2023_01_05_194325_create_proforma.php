@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -58,8 +59,6 @@ return new class extends Migration {
             $table->foreignId('fattura_proforma_id')->nullable()->constrained('fatture_proforma');
         });
 
-
-
     }
 
     /**
@@ -77,7 +76,6 @@ return new class extends Migration {
         Schema::table('contratti', function (Blueprint $table) {
             $table->dropColumn('fattura_proforma_id');
         });
-
 
         Schema::table('contratti_energia', function (Blueprint $table) {
             $table->dropForeign('contratti_energia_fattura_proforma_id_foreign');

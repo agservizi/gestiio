@@ -9,6 +9,7 @@ use App\Models\MovimentoPortafoglio;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+
 use function App\getInputNumero;
 
 class RicaricaPlafonController extends Controller
@@ -18,11 +19,11 @@ class RicaricaPlafonController extends Controller
         $filtroAgenteId = (int) request()->input('filtro_agente_id');
         $walletTabs = array_map(static fn (TipiPortafoglioEnum $case) => $case->value, TipiPortafoglioEnum::cases());
         $tabPortafoglio = (string) request()->input('tab_portafoglio', TipiPortafoglioEnum::SERVIZI->value);
-        if (!in_array($tabPortafoglio, $walletTabs, true)) {
+        if (! in_array($tabPortafoglio, $walletTabs, true)) {
             $tabPortafoglio = TipiPortafoglioEnum::SERVIZI->value;
         }
 
-        $record = new MovimentoPortafoglio();
+        $record = new MovimentoPortafoglio;
         $record->agente_id = null;
         $record->portafoglio = $tabPortafoglio;
 
@@ -41,7 +42,7 @@ class RicaricaPlafonController extends Controller
 
         $agenteIds = [];
         foreach ($ultimeRicariche as $movimento) {
-            if (!empty($movimento->agente_id)) {
+            if (! empty($movimento->agente_id)) {
                 $agenteIds[] = (int) $movimento->agente_id;
             }
         }
@@ -62,7 +63,7 @@ class RicaricaPlafonController extends Controller
             }
 
             $agente = $agenti->get((int) $movimento->agente_id);
-            $movimento->agente_nominativo = $agente ? $agente->nominativo() : ('Utente #' . $movimento->agente_id);
+            $movimento->agente_nominativo = $agente ? $agente->nominativo() : ('Utente #'.$movimento->agente_id);
             $movimento->tipo_ricarica = $tipo;
         }
 
@@ -97,16 +98,16 @@ class RicaricaPlafonController extends Controller
             ]);
         }
 
-
-        $movimento = new MovimentoPortafoglio();
+        $movimento = new MovimentoPortafoglio;
         $movimento->agente_id = $request->input('agente_id');
         $movimento->importo = $importo;
         $movimento->descrizione = 'Ricarica manuale portafoglio';
         $movimento->portafoglio = $request->input('portafoglio');
         $movimento->save();
 
-        $alertMessage = new AlertMessage();
+        $alertMessage = new AlertMessage;
         $alertMessage->messaggio('Portafoglio ricaricato')->flash();
+
         return redirect()->back();
 
     }

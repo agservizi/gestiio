@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Minishlink\WebPush\VAPID;
 
 class GenerateChatVapidKeys extends Command
 {
@@ -14,18 +15,19 @@ class GenerateChatVapidKeys extends Command
     {
         $keys = $this->generateKeys();
 
-        if (!$keys) {
+        if (! $keys) {
             $this->error('Impossibile generare chiavi VAPID. Verifica dipendenze e OpenSSL.');
             $this->line('Suggerimenti:');
             $this->line('- composer require minishlink/web-push:^9.0');
             $this->line('- composer dump-autoload -o');
             $this->line('- php -m | grep openssl');
+
             return self::FAILURE;
         }
 
         $this->info('Chiavi VAPID generate. Inserisci queste variabili nel tuo .env:');
-        $this->line('WEBPUSH_VAPID_PUBLIC_KEY=' . $keys['publicKey']);
-        $this->line('WEBPUSH_VAPID_PRIVATE_KEY=' . $keys['privateKey']);
+        $this->line('WEBPUSH_VAPID_PUBLIC_KEY='.$keys['publicKey']);
+        $this->line('WEBPUSH_VAPID_PRIVATE_KEY='.$keys['privateKey']);
         $this->line('WEBPUSH_VAPID_SUBJECT=mailto:dev@example.com');
 
         return self::SUCCESS;
@@ -34,10 +36,10 @@ class GenerateChatVapidKeys extends Command
     protected function generateKeys(): ?array
     {
         if (class_exists('\\Minishlink\\WebPush\\VAPID')) {
-            return \Minishlink\WebPush\VAPID::createVapidKeys();
+            return VAPID::createVapidKeys();
         }
 
-        if (!function_exists('openssl_pkey_new')) {
+        if (! function_exists('openssl_pkey_new')) {
             return null;
         }
 
@@ -46,7 +48,7 @@ class GenerateChatVapidKeys extends Command
             'curve_name' => 'prime256v1',
         ]);
 
-        if (!$resource) {
+        if (! $resource) {
             return null;
         }
 
@@ -55,11 +57,11 @@ class GenerateChatVapidKeys extends Command
         $y = $details['ec']['y'] ?? null;
         $d = $details['ec']['d'] ?? null;
 
-        if (!$x || !$y || !$d) {
+        if (! $x || ! $y || ! $d) {
             return null;
         }
 
-        $publicKey = "\x04" . $x . $y;
+        $publicKey = "\x04".$x.$y;
 
         return [
             'publicKey' => $this->base64UrlEncode($publicKey),

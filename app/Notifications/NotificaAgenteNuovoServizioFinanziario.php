@@ -14,7 +14,7 @@ class NotificaAgenteNuovoServizioFinanziario extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param ServizioFinanziario $servizioFinanziario
+     * @param  ServizioFinanziario  $servizioFinanziario
      */
     public function __construct(protected $servizioFinanziario)
     {
@@ -24,7 +24,7 @@ class NotificaAgenteNuovoServizioFinanziario extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -35,22 +35,22 @@ class NotificaAgenteNuovoServizioFinanziario extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         return (new MailMessage)
             ->subject('Segnalazione inserita')
-            ->line('La segnalazione per ' . $this->servizioFinanziario->tipoProdottoBlade())
-            ->line('di ' . $this->servizioFinanziario->nominativo())
+            ->line('La segnalazione per '.$this->servizioFinanziario->tipoProdottoBlade())
+            ->line('di '.$this->servizioFinanziario->nominativo())
             ->line('è stato inserita.');
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

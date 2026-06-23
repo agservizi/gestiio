@@ -26,7 +26,6 @@ return new class extends Migration
             $table->boolean('ultra_wifi')->default(0);
             $table->unsignedTinyInteger('wifi_spot')->default(0);
 
-
             $table->json('pacchetti_voce')->nullable();
 
             $table->string('metodo_pagamento_internet')->nullable();

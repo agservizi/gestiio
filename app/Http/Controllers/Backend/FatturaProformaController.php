@@ -3,36 +3,34 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\FatturaProforma;
 use App\Models\ProduzioneOperatore;
 use App\Models\RigaFatturaProforma;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\FatturaProforma;
 use DB;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use PDF;
 
 class FatturaProformaController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
 
-        //Aggiusta
+        // Aggiusta
 
         foreach (RigaFatturaProforma::where('classe', 'App\Models\Contratto')->get() as $riga) {
             $riga->classe = 'App\Models\ContrattoTelefonia';
             $riga->save();
         }
-
 
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
@@ -44,7 +42,7 @@ class FatturaProformaController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -53,7 +51,7 @@ class FatturaProformaController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -63,7 +61,7 @@ class FatturaProformaController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -74,36 +72,34 @@ class FatturaProformaController extends Controller
                 'html' => base64_encode(view('Backend.FatturaProforma.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.FatturaProforma.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\FatturaProforma::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.FatturaProforma::NOME_PLURALE,
             'orderBy' => $orderBy,
-            'ordinamenti' => null,//$ordinamenti,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => null,//'Nuova ' . \App\Models\FatturaProforma::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => null, // 'Nuova ' . \App\Models\FatturaProforma::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\FatturaProforma::query()
+        $queryBuilder = FatturaProforma::query()
             ->with('intestazione:id,denominazione');
         $term = $request->input('cerca');
         if ($term) {
@@ -113,78 +109,75 @@ class FatturaProformaController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = FatturaProforma::with('intestazione')->with('righe')->find($id);
-        abort_if(!$record, 404, 'Questa fattura proforma non esiste');
+        abort_if(! $record, 404, 'Questa fattura proforma non esiste');
+
         return view('Backend.FatturaProforma.show', [
             'record' => $record,
             'controller' => FatturaProformaController::class,
-            'titoloPagina' => ucfirst(FatturaProforma::NOME_SINGOLARE) . ' #' . $record->numero,
-            'breadcrumbs' => [action([FatturaProformaController::class, 'index']) => 'Torna a elenco ' . FatturaProforma::NOME_PLURALE]
+            'titoloPagina' => ucfirst(FatturaProforma::NOME_SINGOLARE).' #'.$record->numero,
+            'breadcrumbs' => [action([FatturaProformaController::class, 'index']) => 'Torna a elenco '.FatturaProforma::NOME_PLURALE],
         ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function pdf($id)
     {
         $record = FatturaProforma::find($id);
-        abort_if(!$record, 404, 'Questa fatturaproforma non esiste');
-
+        abort_if(! $record, 404, 'Questa fatturaproforma non esiste');
 
         $pdf = PDF::loadView('Backend.FatturaProforma.pdf', [
             'record' => $record,
         ]);
 
-
         return $pdf->stream('aa.pdf');
-
 
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = FatturaProforma::find($id);
-        abort_if(!$record, 404, 'Questa ' . FatturaProforma::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.FatturaProforma::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
 
         $record = FatturaProforma::find($id);
-        abort_if(!$record, 404, 'Questa fatturaproforma non esiste');
+        abort_if(! $record, 404, 'Questa fatturaproforma non esiste');
         $produzione = ProduzioneOperatore::firstWhere('fattura_proforma_id', $id);
         if ($produzione) {
             $produzione->fattura_proforma_id = null;
@@ -193,7 +186,6 @@ class FatturaProformaController extends Controller
 
         $record->delete();
 
-
         return [
             'success' => true,
             'redirect' => action([FatturaProformaController::class, 'index']),
@@ -201,20 +193,20 @@ class FatturaProformaController extends Controller
     }
 
     /**
-     * @param FatturaProforma $model
-     * @param Request $request
+     * @param  FatturaProforma  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'numero' => '',
@@ -232,6 +224,7 @@ class FatturaProformaController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -245,13 +238,11 @@ class FatturaProformaController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\FatturaProforma::get();
+        return FatturaProforma::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'data' => ['required'],
@@ -264,5 +255,4 @@ class FatturaProformaController extends Controller
 
         return $rules;
     }
-
 }

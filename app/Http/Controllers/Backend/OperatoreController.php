@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\Operatore;
 use App\Models\RegistroLogin;
 use App\Models\User;
 use App\Notifications\DatiAccessoNotification;
 use App\Notifications\PasswordResetNotification;
 use Carbon\Carbon;
+use Illuminate\Auth\Passwords\PasswordBroker;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,25 +20,26 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
+
 use function App\mese;
 
 class OperatoreController extends Controller
 {
-
     protected $ruoli = ['operatore' => 'Operatore', 'teamleader' => 'Team leader', 'supervisore' => 'Supervisore', 'admin' => 'Amministratore'];
+
     protected $ruolo;
+
     protected $conFiltro = false;
 
     /**
      * Display a listing of the resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-
 
         $ordinamenti = [
             'recente' => ['testo' => 'Più recente', 'filtro' => function ($q) {
@@ -46,10 +48,9 @@ class OperatoreController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('name');
-            }]
+            }],
 
         ];
-
 
         /** @var User|null $authUser */
         $authUser = Auth::user();
@@ -58,7 +59,7 @@ class OperatoreController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -68,33 +69,30 @@ class OperatoreController extends Controller
             $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         if ($request->ajax()) {
 
             $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
-
             return [
                 'html' => base64_encode(view('Backend.Operatore.tabella', [
                     'records' => $records,
                     'controller' => OperatoreController::class,
                     'colonnaTeamleader' => $this->ruolo == 'operatore',
-                    'colonnaOperatori' => $this->ruolo == 'teamleader'
+                    'colonnaOperatori' => $this->ruolo == 'teamleader',
 
-                ])->render())
+                ])->render()),
             ];
 
-
         }
-
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
         return view('Backend.Operatore.index', [
             'records' => $records,
-            'titoloPagina' => 'Elenco ' . $this->titoloPaginaIndex(),
+            'titoloPagina' => 'Elenco '.$this->titoloPaginaIndex(),
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
@@ -106,10 +104,9 @@ class OperatoreController extends Controller
         ]);
     }
 
-
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
@@ -125,34 +122,29 @@ class OperatoreController extends Controller
             }
         }
 
-
         if ($where) {
             $this->conFiltro = true;
         }
 
-
         return $queryBuilder;
 
-
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function create()
     {
         $nomeClasse = get_class($this);
 
         return view('Backend.Operatore.edit', [
-            'record' => new User(),
-            'titoloPagina' => 'Nuovo ' . User::NOME_SINGOLARE,
+            'record' => new User,
+            'titoloPagina' => 'Nuovo '.User::NOME_SINGOLARE,
             'controller' => $nomeClasse,
             'ruoli' => $this->ruoliApplicabili(),
-            'breadcrumbs' => [action([$nomeClasse, 'index']) => 'Elenco ' . User::NOME_PLURALE]
-
+            'breadcrumbs' => [action([$nomeClasse, 'index']) => 'Elenco '.User::NOME_PLURALE],
 
         ]);
     }
@@ -160,42 +152,41 @@ class OperatoreController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $this->salvaDati(new User(), $request, __FUNCTION__);
+        $this->salvaDati(new User, $request, __FUNCTION__);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
 
         $record = User::find($id);
-        abort_if(!$record, 404, 'Questo operatore non esiste');
+        abort_if(! $record, 404, 'Questo operatore non esiste');
         $controller = get_class($this);
-
 
         $records = RegistroLogin::where('user_id', $record->id)->latest()->paginate();
         $ultimoAccesso = $records[0];
+
         return view('Backend.Operatore.show', [
             'record' => $record,
             'ultimoAccesso' => $ultimoAccesso,
             'titoloPagina' => $record->nominativo(),
             'controller' => $controller,
-            'breadcrumbs' => [action([$controller, 'index']) => 'Torna a elenco ' . \App\Models\User::NOME_PLURALE],
-            'records'=>$records
+            'breadcrumbs' => [action([$controller, 'index']) => 'Torna a elenco '.User::NOME_PLURALE],
+            'records' => $records,
         ]);
     }
-
 
     public function tab($id, $tab)
     {
@@ -211,45 +202,45 @@ class OperatoreController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         $record = User::find($id);
-        if (!$record) {
+        if (! $record) {
             abort(404, 'Questo operatore non esiste');
         }
 
         /** @var User|null $authUser */
         $authUser = Auth::user();
-        if ($record->can('admin') && !($authUser?->can('admin') ?? false)) {
+        if ($record->can('admin') && ! ($authUser?->can('admin') ?? false)) {
             abort(403, 'Non hai il permesso per effettuare questa operazione');
         }
 
         return view('Backend.Operatore.edit', [
             'record' => $record,
-            'titoloPagina' => 'Modifica ' . User::NOME_SINGOLARE . ' ' . $record->nominativo(),
+            'titoloPagina' => 'Modifica '.User::NOME_SINGOLARE.' '.$record->nominativo(),
             'controller' => get_class($this),
-            'ruoli' => $this->ruoliApplicabili()
+            'ruoli' => $this->ruoliApplicabili(),
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $record = User::find($id);
-        if (!$record) {
+        if (! $record) {
             abort(404);
         }
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request, __FUNCTION__);
+
         return $this->backToIndex();
 
     }
@@ -257,30 +248,31 @@ class OperatoreController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
+     * @param  int  $id
      * @return array
      */
     public function destroy($id)
     {
         $u = User::find($id);
-        if (!$u) {
+        if (! $u) {
             return ['success' => false, 'message' => 'Questo utente non esiste'];
         }
-        //$u->delete();
+
+        // $u->delete();
         return ['success' => true, 'redirect' => action([OperatoreController::class, 'index'])];
     }
-
 
     public function azioni($id, $azione)
     {
         $u = User::visibili()->find($id);
-        if (!$u) {
+        if (! $u) {
             return ['success' => false, 'message' => 'Questo utente non esiste'];
         }
         switch ($azione) {
             case 'sospendi':
                 $p = Permission::findByName('sospeso');
                 $u->syncPermissions([$p]);
+
                 return ['success' => true, 'redirect' => action([OperatoreController::class, 'index'])];
 
             case 'impersona':
@@ -292,22 +284,21 @@ class OperatoreController extends Controller
             case 'resetta-password':
                 return $this->azioneResettaPassword($id);
 
-
         }
 
     }
 
     /**
-     * @param User $model
-     * @param Request $request
-     * @param string $function
+     * @param  User  $model
+     * @param  Request  $request
+     * @param  string  $function
      * @return mixed
      */
     protected function salvaDati($model, $request, $function)
     {
 
-        //Ciclo su campi '
-        $nuovo = !$model->id;
+        // Ciclo su campi '
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->password = Hash::make(Str::uuid());
@@ -331,13 +322,11 @@ class OperatoreController extends Controller
         }
         $model->save();
 
-
         $model->syncPermissions([$request->input('ruolo')]);
-
 
         if ($nuovo) {
             dispatch(function () use ($model) {
-                /** @var \Illuminate\Auth\Passwords\PasswordBroker $passwordBroker */
+                /** @var PasswordBroker $passwordBroker */
                 $passwordBroker = Password::broker('new_users');
                 $token = $passwordBroker->createToken($model);
                 $model->notify(new PasswordResetNotification($token));
@@ -346,16 +335,14 @@ class OperatoreController extends Controller
 
         }
 
-
         return $model;
 
     }
 
-
     protected function rules($userId)
     {
 
-        //https://github.com/lucasvdh/laravel-iban
+        // https://github.com/lucasvdh/laravel-iban
 
         $rules = [
             'name' => ['required', 'string', 'max:255'],
@@ -365,7 +352,7 @@ class OperatoreController extends Controller
         ];
 
         if ($userId) {
-            $rules           ['email'] = [
+            $rules['email'] = [
                 'required',
                 'string',
                 'email:rfc,dns',
@@ -374,7 +361,7 @@ class OperatoreController extends Controller
             ];
 
         } else {
-            $rules           ['email'] = [
+            $rules['email'] = [
                 'required',
                 'string',
                 'email',
@@ -383,7 +370,6 @@ class OperatoreController extends Controller
             ];
 
         }
-
 
         return $rules;
     }
@@ -403,6 +389,7 @@ class OperatoreController extends Controller
 
         Session::put('impersona', Auth::id());
         Auth::loginUsingId($id, false);
+
         return ['success' => true, 'redirect' => '/'];
     }
 
@@ -411,17 +398,18 @@ class OperatoreController extends Controller
 
         $user = User::find($id);
 
-        if (!$user || !$user->email) {
+        if (! $user || ! $user->email) {
             Log::warning('OperatoreController: invio reset password non eseguito, email non valida', [
                 'azione' => 'invia-mail-password-reset',
                 'operatore_id' => $id,
-                'utente_trovato' => (bool)$user,
+                'utente_trovato' => (bool) $user,
             ]);
+
             return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'operatore non ha un indirizzo email valido.'];
         }
 
         try {
-            /** @var \Illuminate\Auth\Passwords\PasswordBroker $passwordBroker */
+            /** @var PasswordBroker $passwordBroker */
             $passwordBroker = Password::broker('new_users');
             $token = $passwordBroker->createToken($user);
             $user->notify(new PasswordResetNotification($token));
@@ -440,28 +428,29 @@ class OperatoreController extends Controller
                 'email' => $user->email,
                 'errore' => $e->getMessage(),
             ]);
+
             return ['success' => false, 'title' => 'Invio fallito', 'message' => $this->friendlyMailError($e)];
         }
 
         return [
             'success' => true,
             'title' => 'Email inviata',
-            'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo ' . $user->email,
+            'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo '.$user->email,
             'sent_at' => $sentAt,
         ];
-
 
     }
 
     protected function azioneResettaPassword($id)
     {
         $user = User::find($id);
-        if (!$user || !$user->email) {
+        if (! $user || ! $user->email) {
             Log::warning('OperatoreController: reset password non eseguito, email non valida', [
                 'azione' => 'resetta-password',
                 'operatore_id' => $id,
-                'utente_trovato' => (bool)$user,
+                'utente_trovato' => (bool) $user,
             ]);
+
             return ['success' => false, 'title' => 'Email non valida', 'message' => 'L\'operatore non ha un indirizzo email valido.'];
         }
 
@@ -486,13 +475,14 @@ class OperatoreController extends Controller
                 'email' => $user->email,
                 'errore' => $e->getMessage(),
             ]);
-            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: ' . $this->friendlyMailError($e)];
+
+            return ['success' => false, 'title' => 'Password impostata', 'message' => 'Password aggiornata ma invio email fallito: '.$this->friendlyMailError($e)];
         }
 
         return [
             'success' => true,
             'title' => 'Password impostata',
-            'message' => 'La password è stata impostata a 123456 e inviata via email a ' . $user->email,
+            'message' => 'La password è stata impostata a 123456 e inviata via email a '.$user->email,
             'sent_at' => $sentAt,
         ];
 
@@ -501,8 +491,9 @@ class OperatoreController extends Controller
     protected function tabLogin($id)
     {
         $record = User::find($id);
+
         return view('Backend.Operatore.show.tabLogin', [
-            'record' => $record
+            'record' => $record,
         ]);
     }
 
@@ -512,10 +503,11 @@ class OperatoreController extends Controller
         $dataDa = Carbon::today()->firstOfMonth();
         $dataA = $dataDa->copy()->endOfMonth();
         $record = User::find($id);
+
         return view('Backend.Operatore.show.tabOreMese', [
             'record' => $record,
             'records' => collect(),
-            'titoloPagina' => 'Ore lavorate ' . mese($dataDa->month) . ' ' . $dataDa->year
+            'titoloPagina' => 'Ore lavorate '.mese($dataDa->month).' '.$dataDa->year,
         ]);
     }
 
@@ -535,7 +527,6 @@ class OperatoreController extends Controller
 
         return $ruoli;
     }
-
 
     protected function titoloPaginaIndex()
     {
@@ -560,15 +551,13 @@ class OperatoreController extends Controller
 
     protected function friendlyMailError(\Throwable $e): string
     {
-        $message = (string)$e->getMessage();
+        $message = (string) $e->getMessage();
         $lower = strtolower($message);
 
         if (str_contains($lower, 'you can only send testing emails') || str_contains($lower, 'verify a domain at resend.com/domains')) {
             return 'Il provider Resend è in modalità test: puoi inviare solo verso l\'indirizzo autorizzato. Per inviare ad altri destinatari devi verificare un dominio su resend.com/domains e usare un mittente FROM su quel dominio.';
         }
 
-        return 'Errore durante invio email: ' . $message;
+        return 'Errore durante invio email: '.$message;
     }
-
-
 }

@@ -30,8 +30,6 @@ class CreateUsersTable extends Migration
             $table->boolean('paga_con_paypal')->default(0);
             $table->json('extra')->nullable();
 
-
-
         });
     }
 

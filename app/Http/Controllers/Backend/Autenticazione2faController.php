@@ -13,7 +13,7 @@ class Autenticazione2faController extends Controller
         return view('Backend.DatiUtente.abilita2fa', [
             'record' => Auth::user(),
             'controller' => AreaPersonaleController::class,
-            'titoloPagina' => 'Autenticazione a due fattori richiesta'
+            'titoloPagina' => 'Autenticazione a due fattori richiesta',
         ]);
 
     }

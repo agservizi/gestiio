@@ -3,27 +3,28 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\TipoContratto;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+
 use function App\getInputCheckbox;
 
 class TipoContrattoController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
         $nomeClasse = get_class($this);
         $recordsQB = $this->applicaFiltri($request);
-
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
@@ -33,35 +34,33 @@ class TipoContrattoController extends Controller
                 'html' => base64_encode(view('Backend.TipoContratto.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.TipoContratto.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\TipoContratto::NOME_PLURALE,
-            'ordinamenti' => null,//$ordinamenti,
+            'titoloPagina' => 'Elenco '.TipoContratto::NOME_PLURALE,
+            'ordinamenti' => null, // $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\TipoContratto::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.TipoContratto::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\TipoContratto::with('gestore')->orderBy('nome');
+        $queryBuilder = TipoContratto::with('gestore')->orderBy('nome');
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -70,25 +69,25 @@ class TipoContrattoController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new TipoContratto();
+        $record = new TipoContratto;
         $record->attivo = 1;
+
         return view('Backend.TipoContratto.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . TipoContratto::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.TipoContratto::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([TipoContrattoController::class, 'index']) => 'Torna a elenco ' . TipoContratto::NOME_PLURALE]
+            'breadcrumbs' => [action([TipoContrattoController::class, 'index']) => 'Torna a elenco '.TipoContratto::NOME_PLURALE],
 
         ]);
     }
@@ -96,39 +95,39 @@ class TipoContrattoController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new TipoContratto();
+        $record = new TipoContratto;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
-
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = TipoContratto::withCount('contratti')->find($id);
-        abort_if(!$record, 404, 'Questo tipocontratto non esiste');
+        abort_if(! $record, 404, 'Questo tipocontratto non esiste');
         if ($record->contratti_count) {
-            $eliminabile = 'Non eliminabile perchè ha ' . $record->contratti_count . ' contratti';
+            $eliminabile = 'Non eliminabile perchè ha '.$record->contratti_count.' contratti';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.TipoContratto.edit', [
             'record' => $record,
             'controller' => TipoContrattoController::class,
-            'titoloPagina' => 'Modifica ' . TipoContratto::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.TipoContratto::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([TipoContrattoController::class, 'index']) => 'Torna a elenco ' . TipoContratto::NOME_PLURALE]
+            'breadcrumbs' => [action([TipoContrattoController::class, 'index']) => 'Torna a elenco '.TipoContratto::NOME_PLURALE],
 
         ]);
     }
@@ -136,32 +135,31 @@ class TipoContrattoController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = TipoContratto::find($id);
-        abort_if(!$record, 404, 'Questo ' . TipoContratto::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.TipoContratto::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = TipoContratto::find($id);
-        abort_if(!$record, 404, 'Questo tipocontratto non esiste');
+        abort_if(! $record, 404, 'Questo tipocontratto non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -170,20 +168,20 @@ class TipoContrattoController extends Controller
     }
 
     /**
-     * @param TipoContratto $model
-     * @param Request $request
+     * @param  TipoContratto  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'gestore_id' => '',
@@ -204,6 +202,7 @@ class TipoContrattoController extends Controller
             $model->crea_in_bozza = getInputCheckbox($request->input('crea_in_bozza'));
         }
         $model->save();
+
         return $model;
     }
 
@@ -217,13 +216,11 @@ class TipoContrattoController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\TipoContratto::get();
+        return TipoContratto::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -234,5 +231,4 @@ class TipoContrattoController extends Controller
 
         return $rules;
     }
-
 }

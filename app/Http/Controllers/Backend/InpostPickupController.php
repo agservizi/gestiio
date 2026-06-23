@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Services\InpostService;
 use App\Models\InpostPickup;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,15 +31,15 @@ class InpostPickupController extends Controller
         return view('Backend.InpostPickup.index', [
             'records' => $records,
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . InpostPickup::NOME_PLURALE,
-            'testoNuovo' => 'Nuovo ' . InpostPickup::NOME_SINGOLARE,
+            'titoloPagina' => 'Elenco '.InpostPickup::NOME_PLURALE,
+            'testoNuovo' => 'Nuovo '.InpostPickup::NOME_SINGOLARE,
             'testoCerca' => 'Cerca per città o contatto',
         ]);
     }
 
     public function create()
     {
-        $record = new InpostPickup();
+        $record = new InpostPickup;
         $record->country_code = 'IT';
         $record->parcel_count = 1;
 
@@ -50,8 +51,8 @@ class InpostPickupController extends Controller
         return view('Backend.InpostPickup.edit', [
             'record' => $record,
             'controller' => get_class($this),
-            'titoloPagina' => 'Nuovo ' . InpostPickup::NOME_SINGOLARE,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . InpostPickup::NOME_PLURALE],
+            'titoloPagina' => 'Nuovo '.InpostPickup::NOME_SINGOLARE,
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.InpostPickup::NOME_PLURALE],
         ]);
     }
 
@@ -60,7 +61,7 @@ class InpostPickupController extends Controller
         $request->validate($this->rules());
         $this->validatePickupWindow($request);
 
-        $record = new InpostPickup();
+        $record = new InpostPickup;
         $this->salvaDati($record, $request);
         $this->creaPickupRemoto($record);
 
@@ -70,20 +71,20 @@ class InpostPickupController extends Controller
     public function show($id)
     {
         $record = InpostPickup::with(['chiamate' => fn ($q) => $q->latest()])->find($id);
-        abort_if(!$record, 404, 'Questo ritiro InPost non esiste');
+        abort_if(! $record, 404, 'Questo ritiro InPost non esiste');
 
         return view('Backend.InpostPickup.show', [
             'record' => $record,
             'controller' => self::class,
             'titoloPagina' => InpostPickup::NOME_SINGOLARE,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . InpostPickup::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.InpostPickup::NOME_PLURALE],
         ]);
     }
 
     public function destroy($id)
     {
         $record = InpostPickup::find($id);
-        abort_if(!$record, 404, 'Questo ritiro InPost non esiste');
+        abort_if(! $record, 404, 'Questo ritiro InPost non esiste');
         $record->delete();
 
         return [
@@ -94,7 +95,7 @@ class InpostPickupController extends Controller
 
     public function cutoffTime()
     {
-        $service = new InpostService();
+        $service = new InpostService;
         $result = $service->pickupCutoffTime();
 
         return ['success' => true, 'data' => $result];
@@ -108,7 +109,7 @@ class InpostPickupController extends Controller
         if ($term !== '') {
             $qb->where(function ($q) use ($term) {
                 $q->where('city', 'like', "%{$term}%")
-                  ->orWhere('contact_name', 'like', "%{$term}%");
+                    ->orWhere('contact_name', 'like', "%{$term}%");
             });
         }
 
@@ -118,7 +119,7 @@ class InpostPickupController extends Controller
     protected function salvaDati(InpostPickup $record, Request $request): void
     {
         DB::transaction(function () use ($record, $request) {
-            if (!$record->exists) {
+            if (! $record->exists) {
                 $record->agente_id = $request->input('agente_id') ?: Auth::id();
             }
 
@@ -141,7 +142,7 @@ class InpostPickupController extends Controller
 
     protected function creaPickupRemoto(InpostPickup $record): void
     {
-        $service = new InpostService();
+        $service = new InpostService;
         $record->request_payload = $service->buildPickupPayload($record);
         $response = $service->createPickup($record);
         $record->response = array_merge($record->response ?? [], $response);
@@ -153,12 +154,12 @@ class InpostPickupController extends Controller
     protected function validatePickupWindow(Request $request): void
     {
         $date = $request->input('pickup_date');
-        if (!$date) {
+        if (! $date) {
             return;
         }
 
-        $pickupDate = \Carbon\Carbon::parse($date);
-        if ($pickupDate->isPast() && !$pickupDate->isToday()) {
+        $pickupDate = Carbon::parse($date);
+        if ($pickupDate->isPast() && ! $pickupDate->isToday()) {
             throw ValidationException::withMessages(['pickup_date' => 'La data di ritiro non può essere nel passato.']);
         }
     }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Services;
 
-use App\Models\ContrattoTelefonia;
 use App\Models\ContrattoEnergia;
+use App\Models\ContrattoTelefonia;
 use App\Models\FatturaProforma;
 use App\Models\IntestazioneFatturaProforma;
 use App\Models\ProduzioneOperatore;
@@ -20,9 +20,8 @@ class FatturaProformaService
 
     public function __construct(protected $anno, protected $mese)
     {
-        $this->periodo = $anno . '_' . $mese;
+        $this->periodo = $anno.'_'.$mese;
     }
-
 
     public function creaFattureProformaTutti(): int
     {
@@ -40,7 +39,6 @@ class FatturaProformaService
         return $conteggio;
     }
 
-
     public function creaFatturaProformaAgente($agenteId): int|false
     {
 
@@ -48,6 +46,7 @@ class FatturaProformaService
 
         if ($produzione->fattura_proforma_id) {
             $this->error = 'Fattura proforma già esistente';
+
             return false;
         }
 
@@ -58,9 +57,9 @@ class FatturaProformaService
         $periodo = Carbon::createFromDate($this->anno, $this->mese, 1)->translatedFormat('F Y');
 
         $intestazione = IntestazioneFatturaProforma::firstWhere('user_id', $agenteId);
-        if (!$intestazione) {
+        if (! $intestazione) {
             $user = User::find($agenteId);
-            $intestazione = new IntestazioneFatturaProforma();
+            $intestazione = new IntestazioneFatturaProforma;
             $intestazione->user_id = $agenteId;
             $intestazione->denominazione = $user->nominativo();
             $intestazione->codice_fiscale = $user->codice_fiscale;
@@ -72,7 +71,7 @@ class FatturaProformaService
 
         DB::beginTransaction();
         $dataFattura = today();
-        $fattura = new FatturaProforma();
+        $fattura = new FatturaProforma;
         $fattura->data = $dataFattura;
         $fattura->numero = $this->trovaNumero($dataFattura);
         $fattura->intestazione_id = $intestazione->id;
@@ -81,16 +80,14 @@ class FatturaProformaService
 
         $totaleImponibile = 0;
 
-
-        //Riga contratti telefonia
-        $mesePagamento = str_pad($this->mese, 2, '0', STR_PAD_LEFT) . '_' . $this->anno;
+        // Riga contratti telefonia
+        $mesePagamento = str_pad($this->mese, 2, '0', STR_PAD_LEFT).'_'.$this->anno;
         $conteggio = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')->where('agente_id', $agenteId)->where('mese_pagamento', $mesePagamento)->count();
         ContrattoTelefonia::withoutGlobalScope('filtroOperatore')->where('agente_id', $agenteId)->where('mese_pagamento', $mesePagamento)->update(['fattura_proforma_id' => $fattura->id]);
 
-
-        $riga = new RigaFatturaProforma();
+        $riga = new RigaFatturaProforma;
         $riga->fattura_proforma_id = $fattura->id;
-        $riga->descrizione = 'Provvigioni contratti Telefonia ' . $periodo;
+        $riga->descrizione = 'Provvigioni contratti Telefonia '.$periodo;
         $riga->imponibile = $produzione->importo_ordini ?? 0;
         $riga->quantita = $conteggio;
         $riga->totale_imponibile = $riga->imponibile;
@@ -99,7 +96,7 @@ class FatturaProformaService
         $contratti = ContrattoTelefonia::where('fattura_proforma_id', $fattura->id)->with('tipoContratto')->get();
         $testo = [];
         foreach ($contratti as $contratto) {
-            $testo[] = $contratto->nominativo() . ' - ' . $contratto->tipoContratto->nome;
+            $testo[] = $contratto->nominativo().' - '.$contratto->tipoContratto->nome;
         }
         if (count($testo)) {
             $riga->dettaglio = implode(', ', $testo);
@@ -108,13 +105,13 @@ class FatturaProformaService
 
         $totaleImponibile += $riga->imponibile;
 
-        //Riga energia
+        // Riga energia
         $conteggio = ContrattoEnergia::withoutGlobalScope('filtroOperatore')->where('agente_id', $agenteId)->where('mese_pagamento', $mesePagamento)->count();
         ContrattoEnergia::withoutGlobalScope('filtroOperatore')->where('agente_id', $agenteId)->where('mese_pagamento', $mesePagamento)->update(['fattura_proforma_id' => $fattura->id]);
 
-        $riga = new RigaFatturaProforma();
+        $riga = new RigaFatturaProforma;
         $riga->fattura_proforma_id = $fattura->id;
-        $riga->descrizione = 'Provvigioni contratti Energia ' . $periodo;
+        $riga->descrizione = 'Provvigioni contratti Energia '.$periodo;
         $riga->imponibile = $produzione->importo_contratti_energia ?? 0;
         $riga->quantita = $conteggio;
         $riga->totale_imponibile = $riga->imponibile;
@@ -122,7 +119,7 @@ class FatturaProformaService
         $contratti = ContrattoEnergia::where('fattura_proforma_id', $fattura->id)->with('gestore')->get();
         $testo = [];
         foreach ($contratti as $contratto) {
-            $testo[] = $contratto->nominativo() . ' - ' . $contratto->gestore->nome;
+            $testo[] = $contratto->nominativo().' - '.$contratto->gestore->nome;
         }
         if (count($testo)) {
             $riga->dettaglio = implode(', ', $testo);
@@ -149,9 +146,10 @@ class FatturaProformaService
     protected function trovaNumero($data)
     {
         $numero = FatturaProforma::whereYear('data', $data->year)->max('numero');
-        if (!$numero) {
+        if (! $numero) {
             $numero = 0;
         }
+
         return $numero + 1;
     }
 }

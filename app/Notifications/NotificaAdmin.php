@@ -4,7 +4,6 @@ namespace App\Notifications;
 
 use App\Models\ContrattoTelefonia;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -15,7 +14,7 @@ class NotificaAdmin extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param ContrattoTelefonia $contratto
+     * @param  ContrattoTelefonia  $contratto
      */
     public function __construct(protected $contratto)
     {
@@ -25,7 +24,7 @@ class NotificaAdmin extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -36,22 +35,22 @@ class NotificaAdmin extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         return (new MailMessage)
             ->subject('Nuovo contratto')
-            ->line('L\'agente ' . $this->contratto->agente->nominativo())
-            ->line('ha inserito un nuovo contratto ' . $this->contratto->tipoContratto->nome)
-            ->line('per ' . $this->contratto->nominativo());
+            ->line('L\'agente '.$this->contratto->agente->nominativo())
+            ->line('ha inserito un nuovo contratto '.$this->contratto->tipoContratto->nome)
+            ->line('per '.$this->contratto->nominativo());
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

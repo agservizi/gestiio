@@ -4,10 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
-        if (Schema::hasTable('chat_thread_users') && !Schema::hasColumn('chat_thread_users', 'muted_until')) {
+        if (Schema::hasTable('chat_thread_users') && ! Schema::hasColumn('chat_thread_users', 'muted_until')) {
             Schema::table('chat_thread_users', function (Blueprint $table) {
                 $table->dateTime('muted_until')->nullable()->after('last_read_at');
                 $table->index(['user_id', 'muted_until']);
@@ -16,19 +17,19 @@ return new class extends Migration {
 
         if (Schema::hasTable('chat_messages')) {
             Schema::table('chat_messages', function (Blueprint $table) {
-                if (!Schema::hasColumn('chat_messages', 'delivered_at')) {
+                if (! Schema::hasColumn('chat_messages', 'delivered_at')) {
                     $table->dateTime('delivered_at')->nullable()->after('reply_to_id');
                 }
-                if (!Schema::hasColumn('chat_messages', 'edited_at')) {
+                if (! Schema::hasColumn('chat_messages', 'edited_at')) {
                     $table->dateTime('edited_at')->nullable()->after('delivered_at');
                 }
-                if (!Schema::hasColumn('chat_messages', 'deleted_at')) {
+                if (! Schema::hasColumn('chat_messages', 'deleted_at')) {
                     $table->dateTime('deleted_at')->nullable()->after('edited_at');
                 }
-                if (!Schema::hasColumn('chat_messages', 'priority')) {
+                if (! Schema::hasColumn('chat_messages', 'priority')) {
                     $table->unsignedTinyInteger('priority')->default(0)->after('deleted_at');
                 }
-                if (!Schema::hasColumn('chat_messages', 'forwarded_from_id')) {
+                if (! Schema::hasColumn('chat_messages', 'forwarded_from_id')) {
                     $table->foreignId('forwarded_from_id')->nullable()->after('priority')->constrained('chat_messages')->nullOnDelete();
                 }
             });
@@ -42,13 +43,13 @@ return new class extends Migration {
 
         if (Schema::hasTable('chat_message_attachments')) {
             Schema::table('chat_message_attachments', function (Blueprint $table) {
-                if (!Schema::hasColumn('chat_message_attachments', 'scan_status')) {
+                if (! Schema::hasColumn('chat_message_attachments', 'scan_status')) {
                     $table->string('scan_status', 20)->default('pending')->after('dimensione_file');
                 }
-                if (!Schema::hasColumn('chat_message_attachments', 'scan_note')) {
+                if (! Schema::hasColumn('chat_message_attachments', 'scan_note')) {
                     $table->string('scan_note')->nullable()->after('scan_status');
                 }
-                if (!Schema::hasColumn('chat_message_attachments', 'is_blocked')) {
+                if (! Schema::hasColumn('chat_message_attachments', 'is_blocked')) {
                     $table->boolean('is_blocked')->default(false)->after('scan_note');
                 }
             });

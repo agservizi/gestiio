@@ -3,28 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class CafPatronato extends Model
 {
+    protected $table = 'caf_patronato';
 
-    protected $table = "caf_patronato";
+    public const NOME_SINGOLARE = 'pratica caf patronato';
 
-    public const NOME_SINGOLARE = "pratica caf patronato";
-    public const NOME_PLURALE = "pratiche caf patronato";
+    public const NOME_PLURALE = 'pratiche caf patronato';
 
     protected $casts = [
-        'data' => 'datetime'
+        'data' => 'datetime',
     ];
-
 
     public const ESITI = [
         'ko' => '#eb3662',
         'ok' => '#4dc682',
-        'in-lavorazione' => '#009EF7'
+        'in-lavorazione' => '#009EF7',
     ];
 
     /**
@@ -50,9 +47,8 @@ class CafPatronato extends Model
 
     public static function puoModificare()
     {
-        return !Auth::user()->hasPermissionTo('supervisore');
+        return ! Auth::user()->hasPermissionTo('supervisore');
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -69,9 +65,10 @@ class CafPatronato extends Model
     {
         return $this->hasMany(AllegatoCafPatronato::class, 'caf_patronato_id');
     }
+
     public function allegatiPerCliente()
     {
-        return $this->hasMany(AllegatoCafPatronato::class, 'caf_patronato_id')->where('per_cliente',1);
+        return $this->hasMany(AllegatoCafPatronato::class, 'caf_patronato_id')->where('per_cliente', 1);
     }
 
     public function caricatoDa()
@@ -91,9 +88,8 @@ class CafPatronato extends Model
 
     public function tipo()
     {
-        return $this->hasOne(TipoCafPatronato::class,'id','tipo_caf_patronato_id');
+        return $this->hasOne(TipoCafPatronato::class, 'id', 'tipo_caf_patronato_id');
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -108,7 +104,7 @@ class CafPatronato extends Model
     */
     public function nominativo()
     {
-        return $this->cognome . ' ' . $this->nome;
+        return $this->cognome.' '.$this->nome;
     }
 
     public function tipoProdottoBlade()
@@ -118,18 +114,19 @@ class CafPatronato extends Model
 
     public function labelPagato()
     {
-        if ($this->pagato) return "<span class='badge badge-success' >Pagato</span>";
+        if ($this->pagato) {
+            return "<span class='badge badge-success' >Pagato</span>";
+        }
     }
 
     public function bulletEsitoFinale()
     {
         if ($this->esito_finale) {
 
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:' . self::ESITI[$this->esito_finale] . ';"></span>';
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.self::ESITI[$this->esito_finale].';"></span>';
         }
 
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -141,6 +138,4 @@ class CafPatronato extends Model
     {
         return str_replace('App\Models\\', '', $this->prodotto_type);
     }
-
-
 }

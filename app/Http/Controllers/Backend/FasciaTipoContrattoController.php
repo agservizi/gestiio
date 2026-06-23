@@ -4,23 +4,25 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\DatiRitorno;
+use App\Models\FasciaListinoTipoContratto;
 use App\Models\ProduzioneOperatore;
 use App\Models\TipoContratto;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\FasciaListinoTipoContratto;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+
 use function App\getInputNumero;
 
 class FasciaTipoContrattoController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -34,7 +36,7 @@ class FasciaTipoContrattoController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -43,7 +45,7 @@ class FasciaTipoContrattoController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -53,7 +55,7 @@ class FasciaTipoContrattoController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -64,36 +66,34 @@ class FasciaTipoContrattoController extends Controller
                 'html' => base64_encode(view('Backend.FasciaListinoTipoContratto.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.FasciaListinoTipoContratto.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\FasciaListinoTipoContratto::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.FasciaListinoTipoContratto::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\FasciaListinoTipoContratto::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.FasciaListinoTipoContratto::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /** NOOOOOOO
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\FasciaListinoTipoContratto::query();
+        $queryBuilder = FasciaListinoTipoContratto::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -102,48 +102,40 @@ class FasciaTipoContrattoController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
-
-
-
-
-
-
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($listinoId, $tipoContrattoId)
     {
 
-        $tipoContratto=TipoContratto::find($tipoContrattoId);
+        $tipoContratto = TipoContratto::find($tipoContrattoId);
+
         return view('Backend.FasciaListinoTipoContratto.edit', [
             'controller' => get_class($this),
             'titoloPagina' => 'Modifica fasce '.$tipoContratto->nome,
             'agenteId' => $listinoId,
             'tipoContrattoId' => $tipoContrattoId,
-            'records' => FasciaListinoTipoContratto::where('listino_id', $listinoId)->where('tipo_contratto_id', $tipoContrattoId)->get()
+            'records' => FasciaListinoTipoContratto::where('listino_id', $listinoId)->where('tipo_contratto_id', $tipoContrattoId)->get(),
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $listinoId, $tipoContrattoId)
     {
         $datiCambiati = false;
         $datiCambiati = $datiCambiati || $this->sincronizzaSoglieOrdini($listinoId, $tipoContrattoId, $request->input('fasce'));
-
 
         if ($datiCambiati) {
             $this->impostaA($listinoId, $tipoContrattoId);
@@ -155,27 +147,27 @@ class FasciaTipoContrattoController extends Controller
             $produzione->ricalcola();
         }
 
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $datiRitorno->chiudiDialog(true);
+
         return $datiRitorno->getArray();
     }
 
-
     /**
-     * @param FasciaListinoTipoContratto $model
-     * @param Request $request
+     * @param  FasciaListinoTipoContratto  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'mandato_id' => '',
             'da_contratti' => '',
@@ -193,6 +185,7 @@ class FasciaTipoContrattoController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -206,13 +199,11 @@ class FasciaTipoContrattoController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\FasciaListinoTipoContratto::get();
+        return FasciaListinoTipoContratto::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'mandato_id' => ['required'],
@@ -226,11 +217,10 @@ class FasciaTipoContrattoController extends Controller
         return $rules;
     }
 
-
     /**
-     * @param int $gruppoId
-     * @param array $voci
-     * @return boolean
+     * @param  int  $gruppoId
+     * @param  array  $voci
+     * @return bool
      */
     protected function sincronizzaSoglieOrdini($listinoId, $tipoContrattoId, $voci)
     {
@@ -243,14 +233,16 @@ class FasciaTipoContrattoController extends Controller
         $arrayVociVarianteEsistenti = $esistenti->pluck('id')->toArray();
         $arrayVociVariante = [];
         foreach ($voci as $voce) {
-            if ($voce['da_contratti'] == null) continue;
+            if ($voce['da_contratti'] == null) {
+                continue;
+            }
             if (isset($voce['id'])) {
-                //Esistente
+                // Esistente
                 $arrayVociVariante[] = $voce['id'];
                 $voceVariante = $esistenti[$voce['id']];
             } else {
-                //Nuova
-                $voceVariante = new FasciaListinoTipoContratto();
+                // Nuova
+                $voceVariante = new FasciaListinoTipoContratto;
                 $voceVariante->listino_id = $listinoId;
                 $voceVariante->tipo_contratto_id = $tipoContrattoId;
             }
@@ -267,12 +259,13 @@ class FasciaTipoContrattoController extends Controller
             FasciaListinoTipoContratto::destroy($arrayEliminare);
             $datiCambiati = true;
         }
+
         return $datiCambiati;
     }
 
     public function impostaA($listinoId, $tipoContrattoId)
     {
-        //Ordino per a_ordini
+        // Ordino per a_ordini
         $soglie = FasciaListinoTipoContratto::query()
             ->where('listino_id', $listinoId)
             ->where('tipo_contratto_id', $tipoContrattoId)
@@ -281,7 +274,7 @@ class FasciaTipoContrattoController extends Controller
         $conteggio = 0;
         foreach ($soglie as $soglia) {
             if ($conteggio == 0) {
-                //ultimo record
+                // ultimo record
                 $soglia->a_contratti = null;
 
             } else {
@@ -297,7 +290,7 @@ class FasciaTipoContrattoController extends Controller
 
     public function impostaImportoSogliePrecedenti($listinoId, $tipoContrattoId)
     {
-        //Ordino per a_ordini
+        // Ordino per a_ordini
         $soglie = $soglie = FasciaListinoTipoContratto::query()
             ->where('listino_id', $listinoId)
             ->where('tipo_contratto_id', $tipoContrattoId)
@@ -309,11 +302,11 @@ class FasciaTipoContrattoController extends Controller
         foreach ($soglie as $soglia) {
 
             if ($conteggio == 0) {
-                //ultimo record
+                // ultimo record
                 $soglia->importo_soglie_precedenti = 0;
                 $numeroOrdini = $soglia->a_contratti;
                 $importoOld = $numeroOrdini * $soglia->importo_per_contratto;
-                //echo 'conteggio:' . $conteggio . ' importocumulo:' . $importoCumulo . '<br>';
+                // echo 'conteggio:' . $conteggio . ' importocumulo:' . $importoCumulo . '<br>';
 
             } else {
                 $soglia->importo_soglie_precedenti = $importoOld;
@@ -323,8 +316,7 @@ class FasciaTipoContrattoController extends Controller
 
                 $importoOld += $importoQuestiOrdini;
 
-                //echo 'conteggio:' . $conteggio . ' $numeroOrdini:' . $numeroOrdini . ' importocumulo:' . $importoCumulo . ' importo_soglie_precedenti:' . $soglia->importo_soglie_precedenti . '<br>';
-
+                // echo 'conteggio:' . $conteggio . ' $numeroOrdini:' . $numeroOrdini . ' importocumulo:' . $importoCumulo . ' importo_soglie_precedenti:' . $soglia->importo_soglie_precedenti . '<br>';
 
             }
             $soglia->save();
@@ -333,6 +325,4 @@ class FasciaTipoContrattoController extends Controller
         }
 
     }
-
-
 }

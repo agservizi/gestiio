@@ -2,23 +2,20 @@
 
 namespace App\Http\Funzioni;
 
-use App\Models\Agente;
 use App\Models\FasciaListinoTipoContratto;
-use App\Models\User;
 
 trait FunzioniCalcoloProvvigioni
 {
-    static $logCalcolo = [];
+    public static $logCalcolo = [];
 
     protected static function determinaSogliaContrattiTelefonia($conteggioContratti, $listinoId, $tipoContrattoid)
     {
         if ($conteggioContratti == 0) {
             return null;
         }
-        if (!$listinoId) {
+        if (! $listinoId) {
             return null;
         }
-
 
         $f = FasciaListinoTipoContratto::query()
             ->where('listino_id', $listinoId)
@@ -33,9 +30,9 @@ trait FunzioniCalcoloProvvigioni
             ->first();
 
         if ($f) {
-            self::aggiornaLog(__FUNCTION__, $conteggioContratti . " contratti, trovata fascia da " . $f->da_contratti . ' a ' . $f->a_contratti . ' bonus ' . $f->importo_bonus);
+            self::aggiornaLog(__FUNCTION__, $conteggioContratti.' contratti, trovata fascia da '.$f->da_contratti.' a '.$f->a_contratti.' bonus '.$f->importo_bonus);
         } else {
-            self::aggiornaLog(__FUNCTION__, $conteggioContratti . ' contratti, fascia non trovata');
+            self::aggiornaLog(__FUNCTION__, $conteggioContratti.' contratti, fascia non trovata');
         }
 
         return $f;
@@ -43,9 +40,7 @@ trait FunzioniCalcoloProvvigioni
 
     public static function aggiornaLog($funzione, $testo)
     {
-        self::$logCalcolo[] = $funzione . ': ' . $testo . '|';
+        self::$logCalcolo[] = $funzione.': '.$testo.'|';
 
     }
-
-
 }

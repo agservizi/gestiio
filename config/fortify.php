@@ -135,7 +135,7 @@ return [
         Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
-        //https://www.youtube.com/watch?v=X0ebWjcQ-uc
+        // https://www.youtube.com/watch?v=X0ebWjcQ-uc
         Features::updateProfileInformation(),
         Features::updatePasswords(),
         Features::twoFactorAuthentication(['confirmPassword' => true, 'window' => 3]),

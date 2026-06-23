@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -22,7 +23,6 @@ return new class extends Migration {
             $table->boolean('abilitato')->index();
 
         });
-
 
         Schema::create('tab_esiti_visure', function (Blueprint $table) {
             $table->string('id')->primary();
@@ -50,7 +50,6 @@ return new class extends Migration {
             $table->text('note')->nullable();
             $table->string('uid')->index();
 
-
             $table->string('esito_finale')->nullable()->index();
             $table->char('mese_pagamento', 7)->nullable()->index();
             $table->string('motivo_ko')->nullable();
@@ -60,7 +59,6 @@ return new class extends Migration {
             $table->decimal('prezzo_pratica');
 
         });
-
 
         Schema::create('visure_allegati', function (Blueprint $table) {
             $table->id();
@@ -74,7 +72,6 @@ return new class extends Migration {
             $table->string('thumbnail')->nullable();
 
         });
-
 
     }
 

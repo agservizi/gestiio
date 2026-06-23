@@ -44,7 +44,7 @@ class ContrattoEnergiaMagicLink extends Model
 
     public function isUsable(): bool
     {
-        return !$this->used_at && !$this->isExpired();
+        return ! $this->used_at && ! $this->isExpired();
     }
 
     public function markUsed(?string $ip = null): void
@@ -88,7 +88,7 @@ class ContrattoEnergiaMagicLink extends Model
             ->where('purpose', self::PURPOSE_RICHIESTA_DOCUMENTI)
             ->first();
 
-        if (!$record || !$record->isUsable()) {
+        if (! $record || ! $record->isUsable()) {
             return null;
         }
 

@@ -16,12 +16,13 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class ContrattoEnergiaDocumentiController extends Controller
 {
     private const TEMPLATE_FILENAME_PREFIX = 'Dichiarazione relativa al titolo di occupazione';
+
     private const DESTINATARIO_ADMIN_DOCUMENTI = 'ag.servizi16@gmail.com';
 
     public function downloadTemplate(): BinaryFileResponse
     {
         $path = $this->resolveTemplatePath();
-        abort_if(!$path, 404, 'Documento non disponibile');
+        abort_if(! $path, 404, 'Documento non disponibile');
 
         return response()->download($path);
     }
@@ -33,7 +34,7 @@ class ContrattoEnergiaDocumentiController extends Controller
             ->where('purpose', ContrattoEnergiaMagicLink::PURPOSE_RICHIESTA_DOCUMENTI)
             ->first();
 
-        if (!$record) {
+        if (! $record) {
             abort(404);
         }
 
@@ -58,7 +59,7 @@ class ContrattoEnergiaDocumentiController extends Controller
     public function store(Request $request, string $token)
     {
         $record = ContrattoEnergiaMagicLink::findUsableByPlainToken($token);
-        if (!$record) {
+        if (! $record) {
             return redirect()
                 ->route('frontend.contratto-energia.magic.show', ['token' => $token])
                 ->withErrors(['Il link non è più valido. Richiedi un nuovo invio documenti.']);
@@ -85,14 +86,14 @@ class ContrattoEnergiaDocumentiController extends Controller
 
         foreach ($uploadedFiles as $filePath) {
             $ext = strtolower((string) $filePath->extension());
-            $savedName = Str::ulid() . '.' . $ext;
+            $savedName = Str::ulid().'.'.$ext;
             $filePath->storeAs($cartella, $savedName);
 
-            $allegato = new AllegatoContrattoEnergia();
+            $allegato = new AllegatoContrattoEnergia;
             $allegato->contratto_energia_id = $contratto->id;
             $allegato->uid = null;
-            $allegato->path_filename = $cartella . '/' . $savedName;
-            $allegato->filename_originale = 'VOLTURA_SUBENTRO_FIRMATO__' . $filePath->getClientOriginalName();
+            $allegato->path_filename = $cartella.'/'.$savedName;
+            $allegato->filename_originale = 'VOLTURA_SUBENTRO_FIRMATO__'.$filePath->getClientOriginalName();
             $allegato->mime_type = $filePath->getMimeType();
             $allegato->dimensione_file = $filePath->getSize();
             $content = file_get_contents($filePath->getRealPath());
@@ -102,14 +103,14 @@ class ContrattoEnergiaDocumentiController extends Controller
         }
 
         $contratto->link_attivazione_gestore = trim((string) $request->input('link_attivazione_gestore'));
-        $contratto->note = trim((string) $contratto->note . "\n[" . now()->format('d/m/Y H:i') . "] Documenti voltura/subentro firmati caricati dal cliente via magic-link: " . $savedFiles . ' allegato/i.');
+        $contratto->note = trim((string) $contratto->note."\n[".now()->format('d/m/Y H:i').'] Documenti voltura/subentro firmati caricati dal cliente via magic-link: '.$savedFiles.' allegato/i.');
         $contratto->save();
 
         $record->markUsed($request->ip());
 
         Notifica::notificaAdAdmin(
             'Documento cliente ricevuto',
-            'Contratto energia #' . $contratto->id . ' (' . $contratto->nominativo() . ') - caricamento documenti voltura/subentro firmati completato da magic-link: ' . $savedFiles . ' allegato/i.'
+            'Contratto energia #'.$contratto->id.' ('.$contratto->nominativo().') - caricamento documenti voltura/subentro firmati completato da magic-link: '.$savedFiles.' allegato/i.'
         );
         Notification::route('mail', self::DESTINATARIO_ADMIN_DOCUMENTI)
             ->notify(new NotificaAdminDocumentiContrattoEnergiaRicevuti($contratto, $savedFiles));

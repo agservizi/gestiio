@@ -26,13 +26,15 @@ class BackfillGestoriEnergiaLoghiDb extends Command
 
         $records = GestoreContrattoEnergia::query()->orderBy('id')->get();
         foreach ($records as $record) {
-            if (!$record->logo) {
+            if (! $record->logo) {
                 $skipped++;
+
                 continue;
             }
 
-            if (!$force && $record->logo_contenuto_base64) {
+            if (! $force && $record->logo_contenuto_base64) {
                 $skipped++;
+
                 continue;
             }
 
@@ -41,13 +43,14 @@ class BackfillGestoriEnergiaLoghiDb extends Command
 
             if (Storage::disk('public')->exists($relativePath)) {
                 $content = Storage::disk('public')->get($relativePath);
-            } elseif (Storage::exists('/' . $relativePath)) {
-                $content = Storage::get('/' . $relativePath);
+            } elseif (Storage::exists('/'.$relativePath)) {
+                $content = Storage::get('/'.$relativePath);
             }
 
             if ($content === null || $content === '') {
                 $missing++;
                 $this->warn("File logo non trovato per gestore #{$record->id}: {$relativePath}");
+
                 continue;
             }
 
@@ -56,7 +59,7 @@ class BackfillGestoriEnergiaLoghiDb extends Command
             $updated++;
             $this->line("Aggiorno #{$record->id} {$record->nome} ({$relativePath})");
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $record->logo_contenuto_base64 = base64_encode($content);
                 $record->logo_mime_type = $mime;
                 $record->save();
@@ -77,6 +80,7 @@ class BackfillGestoriEnergiaLoghiDb extends Command
         }
 
         $ext = Str::lower(pathinfo($relativePath, PATHINFO_EXTENSION));
+
         return match ($ext) {
             'png' => 'image/png',
             'gif' => 'image/gif',

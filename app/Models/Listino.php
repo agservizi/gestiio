@@ -5,16 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Listino extends Model
 {
     use HasFactory;
 
-    protected $table = "listini";
+    protected $table = 'listini';
 
-    public const NOME_SINGOLARE = "listino";
-    public const NOME_PLURALE = "listini";
+    public const NOME_SINGOLARE = 'listino';
+
+    public const NOME_PLURALE = 'listini';
 
     /*
     |--------------------------------------------------------------------------

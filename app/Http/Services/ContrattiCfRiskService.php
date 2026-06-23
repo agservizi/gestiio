@@ -7,6 +7,7 @@ use App\Models\Setting;
 class ContrattiCfRiskService
 {
     public const DOMAIN_TELEFONIA = 'telefonia';
+
     public const DOMAIN_ENERGIA = 'energia';
 
     private const STATUS_LABELS = [
@@ -48,7 +49,7 @@ class ContrattiCfRiskService
             return self::STATUS_LABELS[$status] ?? $status;
         }, $statuses));
 
-        $blocked = $enabled && !empty($statuses);
+        $blocked = $enabled && ! empty($statuses);
 
         return [
             'domain' => $domain,
@@ -59,7 +60,7 @@ class ContrattiCfRiskService
             'statuses' => $statuses,
             'labels' => $labels,
             'message' => $blocked
-                ? 'Codice fiscale bloccato: ' . implode(', ', $labels) . '.'
+                ? 'Codice fiscale bloccato: '.implode(', ', $labels).'.'
                 : null,
         ];
     }
@@ -67,7 +68,7 @@ class ContrattiCfRiskService
     public function isEnabled(string $domain = self::DOMAIN_TELEFONIA): bool
     {
         $domain = $this->normalizeDomain($domain);
-        $domainKey = 'blocco_contratti_' . $domain . '_verifica_cf_attivo';
+        $domainKey = 'blocco_contratti_'.$domain.'_verifica_cf_attivo';
         $val = Setting::get($domainKey, null);
         if ($val === null || $val === '') {
             $val = Setting::get('blocco_contratti_verifica_cf_attivo', '0');
@@ -91,13 +92,13 @@ class ContrattiCfRiskService
         );
 
         $morositaByGestore = $this->parsePerGestore(
-            (string) Setting::get('blocco_contratti_' . $domain . '_cf_morosita_per_gestore', '')
+            (string) Setting::get('blocco_contratti_'.$domain.'_cf_morosita_per_gestore', '')
         );
         $blacklistByGestore = $this->parsePerGestore(
-            (string) Setting::get('blocco_contratti_' . $domain . '_cf_blacklist_per_gestore', '')
+            (string) Setting::get('blocco_contratti_'.$domain.'_cf_blacklist_per_gestore', '')
         );
         $creditCheckByGestore = $this->parsePerGestore(
-            (string) Setting::get('blocco_contratti_' . $domain . '_cf_credit_check_per_gestore', '')
+            (string) Setting::get('blocco_contratti_'.$domain.'_cf_credit_check_per_gestore', '')
         );
 
         return [
@@ -109,7 +110,7 @@ class ContrattiCfRiskService
 
     private function settingForDomain(string $domain, string $suffix, string $legacyKey): string
     {
-        $domainKey = 'blocco_contratti_' . $domain . '_' . $suffix;
+        $domainKey = 'blocco_contratti_'.$domain.'_'.$suffix;
         $value = Setting::get($domainKey, null);
 
         if ($value === null || $value === '') {
@@ -132,6 +133,7 @@ class ContrattiCfRiskService
     private function normalizeCodiceFiscale(?string $cf): string
     {
         $value = strtoupper(trim((string) $cf));
+
         return preg_replace('/[^A-Z0-9]/', '', $value) ?: '';
     }
 
@@ -147,7 +149,7 @@ class ContrattiCfRiskService
             }
 
             $parts = preg_split('/\s*[:=|;]\s*/', $line, 2);
-            if (!$parts || count($parts) < 1) {
+            if (! $parts || count($parts) < 1) {
                 continue;
             }
 
@@ -174,7 +176,7 @@ class ContrattiCfRiskService
 
     private function normalizeGestoreId(?int $gestoreId): ?int
     {
-        if (!$gestoreId || $gestoreId < 1) {
+        if (! $gestoreId || $gestoreId < 1) {
             return null;
         }
 

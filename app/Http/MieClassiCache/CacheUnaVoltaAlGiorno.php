@@ -6,8 +6,6 @@ use App\Http\MieClassi\InAutomatico;
 use App\Http\MieClassi\PuliziaDatabase;
 use App\Http\Services\FatturaProformaService;
 use App\Models\EsecuzioneAutomatica;
-use App\Models\RegistroLogin;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +13,6 @@ use Illuminate\Support\Facades\Log;
 class CacheUnaVoltaAlGiorno
 {
     protected static $cacheKey = 'CacheUnaVoltaAlGiorno';
-
 
     public static function get()
     {
@@ -25,7 +22,6 @@ class CacheUnaVoltaAlGiorno
             return self::creaCache();
         }
     }
-
 
     public static function forget()
     {
@@ -37,12 +33,10 @@ class CacheUnaVoltaAlGiorno
     {
         $start = microtime(true);
 
-        //Run script
+        // Run script
         self::run();
 
-
         $esecuzione = EsecuzioneAutomatica::first();
-
 
         $mese = now()->month;
         if ($esecuzione->una_volta_al_mese !== $mese) {
@@ -50,7 +44,7 @@ class CacheUnaVoltaAlGiorno
             $esecuzione->una_volta_al_mese = $mese;
             $esecuzione->save();
         }
-        Log::debug('Creata cache ' . self::$cacheKey . ' in ' . number_format(microtime(true) - $start, 3));
+        Log::debug('Creata cache '.self::$cacheKey.' in '.number_format(microtime(true) - $start, 3));
         Cache::put(self::$cacheKey, Carbon::now(), Carbon::now()->endOfDay());
 
         if (env('APP_ENV') == 'production') {
@@ -60,9 +54,7 @@ class CacheUnaVoltaAlGiorno
 
         return true;
 
-
     }
-
 
     protected static function run()
     {
@@ -75,12 +67,10 @@ class CacheUnaVoltaAlGiorno
 
     }
 
-
     protected static function runUnaVoltaAlMese($mese)
     {
         self::creaProforma($mese);
     }
-
 
     protected static function creaProforma($mese)
     {
@@ -91,5 +81,4 @@ class CacheUnaVoltaAlGiorno
         $proformaService->creaFattureProformaTutti();
 
     }
-
 }

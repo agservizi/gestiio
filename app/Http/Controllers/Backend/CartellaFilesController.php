@@ -32,8 +32,8 @@ class CartellaFilesController extends Controller
         $canUploadFiles = $this->canUploadFiles();
         $canDeleteFiles = $this->canDeleteFiles();
         $cartella = $cartellaId ? CartellaFiles::find($cartellaId) : null;
-        abort_if($cartellaId && !$cartella, 404, 'Questa cartella non esiste');
-        abort_if($cartella && !$this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
+        abort_if($cartellaId && ! $cartella, 404, 'Questa cartella non esiste');
+        abort_if($cartella && ! $this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
 
         $categorieDocumentali = File::query()
             ->whereNotNull('categoria_documentale')
@@ -47,10 +47,10 @@ class CartellaFilesController extends Controller
             ->limit(12)
             ->get();
 
-        [$cartelleQb, $filesQb, $cartellePrev] = $this->buildDocumentQueries($request, (int)$cartellaId, $cartella);
+        [$cartelleQb, $filesQb, $cartellePrev] = $this->buildDocumentQueries($request, (int) $cartellaId, $cartella);
         $cartelle = $cartelleQb->withCount('files')->get();
         $files = $filesQb->get();
-        $stats = $this->buildStats((int)$cartellaId, $cartelle, $files, $cartella);
+        $stats = $this->buildStats((int) $cartellaId, $cartelle, $files, $cartella);
 
         if ($request->ajax()) {
             return [
@@ -58,22 +58,22 @@ class CartellaFilesController extends Controller
                     'cartelle' => $cartelle,
                     'files' => $files,
                     'controller' => $nomeClasse,
-                    'cartellaId' => (int)$cartellaId,
+                    'cartellaId' => (int) $cartellaId,
                     'cartellePrev' => $cartellePrev,
                     'canManageFolders' => $canManageFolders,
                     'canDeleteFiles' => $canDeleteFiles,
                     'canUploadFiles' => $canUploadFiles,
                     'stats' => $stats,
-                ])->render())
+                ])->render()),
             ];
         }
 
         return view('Backend.CartellaFiles.index_new', [
-            'cartellaId' => (int)$cartellaId,
+            'cartellaId' => (int) $cartellaId,
             'files' => $files,
             'cartelle' => $cartelle,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . CartellaFiles::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.CartellaFiles::NOME_PLURALE,
             'ordinamenti' => null,
             'filtro' => 'tutti',
             'conFiltro' => $this->conFiltro,
@@ -107,12 +107,12 @@ class CartellaFilesController extends Controller
 
     protected function applicaFiltriCartelleNellaCartella(Request $request, int $cartellaId = 0, ?CartellaFiles $cartella = null)
     {
-        if (!$cartellaId) {
+        if (! $cartellaId) {
             $queryBuilder = CartellaFiles::whereIsRoot();
         } else {
             $cartella = $cartella ?: CartellaFiles::find($cartellaId);
-            abort_if(!$cartella, 404, 'Questa cartella non esiste');
-            abort_if(!$this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
+            abort_if(! $cartella, 404, 'Questa cartella non esiste');
+            abort_if(! $this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
             $queryBuilder = CartellaFiles::whereDescendantOf($cartella)->where('parent_id', $cartella->id);
         }
 
@@ -128,13 +128,13 @@ class CartellaFilesController extends Controller
 
     protected function applicaFiltriTermineCartelle($queryBuilder, Request $request)
     {
-        $term = trim((string)$request->input('cerca'));
+        $term = trim((string) $request->input('cerca'));
         if ($term !== '') {
             foreach (preg_split('/\s+/', $term) as $t) {
                 if ($t === '') {
                     continue;
                 }
-                $queryBuilder->where('nome', 'like', '%' . $t . '%');
+                $queryBuilder->where('nome', 'like', '%'.$t.'%');
             }
         }
 
@@ -149,12 +149,12 @@ class CartellaFilesController extends Controller
 
         $visibleFolderIds = $this->visibleFolderIdsForCurrentUser();
 
-        if (!$isGlobalSearch) {
+        if (! $isGlobalSearch) {
             $cartella = $cartellaId ? ($cartella ?: CartellaFiles::find($cartellaId)) : null;
-            if ($cartellaId && !$cartella) {
+            if ($cartellaId && ! $cartella) {
                 abort(404, 'Questa cartella non esiste');
             }
-            if ($cartella && !$this->folderVisibleToCurrentUser($cartella)) {
+            if ($cartella && ! $this->folderVisibleToCurrentUser($cartella)) {
                 abort(403, 'Cartella non disponibile');
             }
             $queryBuilder->where('cartella_id', $cartellaId ?: null);
@@ -167,30 +167,30 @@ class CartellaFilesController extends Controller
             });
         }
 
-        $term = trim((string)$request->input('cerca'));
+        $term = trim((string) $request->input('cerca'));
         if ($term !== '') {
             foreach (preg_split('/\s+/', $term) as $t) {
                 if ($t === '') {
                     continue;
                 }
                 $queryBuilder->where(function ($q) use ($t) {
-                    $q->where('filename_originale', 'like', '%' . $t . '%')
-                        ->orWhere('ocr_testo', 'like', '%' . $t . '%');
+                    $q->where('filename_originale', 'like', '%'.$t.'%')
+                        ->orWhere('ocr_testo', 'like', '%'.$t.'%');
                 });
             }
         }
 
-        $tipoFile = trim((string)$request->input('tipo_file'));
+        $tipoFile = trim((string) $request->input('tipo_file'));
         if ($tipoFile !== '') {
             $queryBuilder->where('tipo_file', $tipoFile);
         }
 
-        $categoriaDocumentale = trim((string)$request->input('categoria_documentale'));
+        $categoriaDocumentale = trim((string) $request->input('categoria_documentale'));
         if ($categoriaDocumentale !== '') {
             $queryBuilder->where('categoria_documentale', $categoriaDocumentale);
         }
 
-        $tagDocumentale = trim((string)$request->input('tag_documentale'));
+        $tagDocumentale = trim((string) $request->input('tag_documentale'));
         if ($tagDocumentale !== '') {
             $queryBuilder->whereJsonContains('tags_documentali', mb_strtolower($tagDocumentale));
         }
@@ -202,7 +202,7 @@ class CartellaFilesController extends Controller
             $queryBuilder->whereDate('created_at', '<=', $request->input('data_a'));
         }
 
-        $scadenza = (string)$request->input('scadenza', '');
+        $scadenza = (string) $request->input('scadenza', '');
         if ($scadenza === 'scaduti') {
             $queryBuilder->whereNotNull('expires_at')->where('expires_at', '<', now());
         } elseif ($scadenza === 'prossimi') {
@@ -224,7 +224,8 @@ class CartellaFilesController extends Controller
     public function create($cartellaId)
     {
         abort_unless($this->canManageFolders(), 403);
-        $record = new CartellaFiles();
+        $record = new CartellaFiles;
+
         return view('Backend.CartellaFiles.edit', [
             'record' => $record,
             'titoloPagina' => 'Nuova cartella',
@@ -237,14 +238,14 @@ class CartellaFilesController extends Controller
     public function store(Request $request, $cartellaId)
     {
         abort_unless($this->canManageFolders(), 403);
-        $cartellaId = (int)$cartellaId === 0 ? null : (int)$cartellaId;
+        $cartellaId = (int) $cartellaId === 0 ? null : (int) $cartellaId;
         $request->validate($this->rules(null));
-        $record = new CartellaFiles();
+        $record = new CartellaFiles;
         $record->parent_id = $cartellaId;
         $this->salvaDati($record, $request);
         CartellaFiles::fixTree();
 
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $datiRitorno->redirect(action([CartellaFilesController::class, 'index'], $cartellaId));
 
         return $datiRitorno->getArray();
@@ -255,11 +256,11 @@ class CartellaFilesController extends Controller
         abort_unless($this->canViewDocumenti(), 403);
         if (request()->ajax()) {
             $cartella = $id > 0 ? CartellaFiles::find($id) : null;
-            abort_if($id > 0 && !$cartella, 404, 'Questa cartella non esiste');
-            abort_if($cartella && !$this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
+            abort_if($id > 0 && ! $cartella, 404, 'Questa cartella non esiste');
+            abort_if($cartella && ! $this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
 
-            [$cartelleQb, $filesQb, $cartellePrev] = $this->buildDocumentQueries($request, (int)$id, $cartella);
-            $datiRitorno = new DatiRitorno();
+            [$cartelleQb, $filesQb, $cartellePrev] = $this->buildDocumentQueries($request, (int) $id, $cartella);
+            $datiRitorno = new DatiRitorno;
             $cartelle = $cartelleQb->withCount('files')->get();
             $files = $filesQb->get();
             $html = view('Backend.CartellaFiles.elenchi', [
@@ -271,20 +272,21 @@ class CartellaFilesController extends Controller
                 'canManageFolders' => $this->canManageFolders(),
                 'canDeleteFiles' => $this->canDeleteFiles(),
                 'canUploadFiles' => $this->canUploadFiles(),
-                'stats' => $this->buildStats((int)($id ?: 0), $cartelle, $files, $cartella),
+                'stats' => $this->buildStats((int) ($id ?: 0), $cartelle, $files, $cartella),
             ]);
+
             return $datiRitorno->oggettoReload('aa', $html)->id($id)->getArray();
         }
 
         $record = CartellaFiles::find($id);
-        abort_if(!$record, 404, 'Questa cartella non esiste');
-        abort_if(!$this->folderVisibleToCurrentUser($record), 403, 'Cartella non disponibile');
+        abort_if(! $record, 404, 'Questa cartella non esiste');
+        abort_if(! $this->folderVisibleToCurrentUser($record), 403, 'Cartella non disponibile');
 
         return view('Backend.CartellaFiles.show', [
             'record' => $record,
             'controller' => CartellaFilesController::class,
             'titoloPagina' => CartellaFiles::NOME_SINGOLARE,
-            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco ' . CartellaFiles::NOME_PLURALE]
+            'breadcrumbs' => [action([CartellaFilesController::class, 'index']) => 'Torna a elenco '.CartellaFiles::NOME_PLURALE],
         ]);
     }
 
@@ -292,7 +294,7 @@ class CartellaFilesController extends Controller
     {
         abort_unless($this->canManageFolders(), 403);
         $record = CartellaFiles::withCount('files')->withCount('descendants')->find($id);
-        abort_if(!$record, 404, 'Questa cartella non esiste');
+        abort_if(! $record, 404, 'Questa cartella non esiste');
 
         if ($record->files_count || $record->descendants_count) {
             $eliminabile = 'Non eliminabile perchè non vuota';
@@ -303,10 +305,10 @@ class CartellaFilesController extends Controller
         return view('Backend.CartellaFiles.edit', [
             'record' => $record,
             'controller' => CartellaFilesController::class,
-            'titoloPagina' => 'Modifica ' . CartellaFiles::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.CartellaFiles::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
             'action' => 'edit',
-            'cartellaId' => $cartellaId
+            'cartellaId' => $cartellaId,
         ]);
     }
 
@@ -315,11 +317,11 @@ class CartellaFilesController extends Controller
         abort_unless($this->canManageFolders(), 403);
 
         $record = CartellaFiles::find($id);
-        abort_if(!$record, 404, 'Questa ' . CartellaFiles::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.CartellaFiles::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
 
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $datiRitorno->redirect(action([CartellaFilesController::class, 'index'], $cartellaId));
 
         return $datiRitorno->getArray();
@@ -329,7 +331,7 @@ class CartellaFilesController extends Controller
     {
         abort_unless($this->canManageFolders(), 403);
         $record = CartellaFiles::find($id);
-        abort_if(!$record, 404, 'Questa cartella non esiste');
+        abort_if(! $record, 404, 'Questa cartella non esiste');
 
         $record->delete();
 
@@ -351,21 +353,21 @@ class CartellaFilesController extends Controller
         ]);
 
         if ($request->file('file')) {
-            if ((int)$cartellaId > 0) {
-                $cartella = CartellaFiles::find((int)$cartellaId);
-                abort_if(!$cartella, 404, 'Questa cartella non esiste');
-                abort_if(!$this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
+            if ((int) $cartellaId > 0) {
+                $cartella = CartellaFiles::find((int) $cartellaId);
+                abort_if(! $cartella, 404, 'Questa cartella non esiste');
+                abort_if(! $this->folderVisibleToCurrentUser($cartella), 403, 'Cartella non disponibile');
             }
 
-            $file = new File();
+            $file = new File;
             $filePath = $request->file('file');
             $estensione = $filePath->extension();
-            $fileName = Str::ulid() . '.' . $estensione;
-            $storageFolder = trim((string)config('configurazione.file_manager.cartella'), '/');
+            $fileName = Str::ulid().'.'.$estensione;
+            $storageFolder = trim((string) config('configurazione.file_manager.cartella'), '/');
             $filePath->storeAs($storageFolder, $fileName);
 
-            $storedPath = $storageFolder . '/' . $fileName;
-            $file->cartella_id = (int)$cartellaId ?: null;
+            $storedPath = $storageFolder.'/'.$fileName;
+            $file->cartella_id = (int) $cartellaId ?: null;
             $file->path_filename = $storedPath;
             $file->filename_originale = $filePath->getClientOriginalName();
             $file->dimensione_file = $filePath->getSize();
@@ -379,7 +381,7 @@ class CartellaFilesController extends Controller
             $this->registraAudit('upload', $file, [
                 'categoria_documentale' => $file->categoria_documentale,
                 'tags_documentali' => $file->tags_documentali,
-                'ocr_len' => mb_strlen((string)$file->ocr_testo),
+                'ocr_len' => mb_strlen((string) $file->ocr_testo),
             ]);
 
             return response()->json([
@@ -404,18 +406,18 @@ class CartellaFilesController extends Controller
         ]);
 
         $record = File::find($id);
-        abort_if(!$record, 404, 'Questo file non esiste');
-        abort_if(!$this->canAccessFile($record), 403, 'File non disponibile');
+        abort_if(! $record, 404, 'Questo file non esiste');
+        abort_if(! $this->canAccessFile($record), 403, 'File non disponibile');
 
         $this->storeCurrentVersionSnapshot($record);
 
         $filePath = $request->file('file');
         $estensione = $filePath->extension();
-        $fileName = Str::ulid() . '.' . $estensione;
-        $storageFolder = trim((string)config('configurazione.file_manager.cartella'), '/');
+        $fileName = Str::ulid().'.'.$estensione;
+        $storageFolder = trim((string) config('configurazione.file_manager.cartella'), '/');
         $filePath->storeAs($storageFolder, $fileName);
 
-        $record->path_filename = $storageFolder . '/' . $fileName;
+        $record->path_filename = $storageFolder.'/'.$fileName;
         $record->filename_originale = $filePath->getClientOriginalName();
         $record->dimensione_file = $filePath->getSize();
         $record->categoria_documentale = $request->input('categoria_documentale', $record->categoria_documentale);
@@ -423,7 +425,7 @@ class CartellaFilesController extends Controller
             ? $this->parseTags($request->input('tags_documentali'))
             : $record->tags_documentali;
         $record->ocr_testo = $this->extractSearchableText($record->path_filename, $record->filename_originale);
-        $record->versione = ((int)$record->versione) + 1;
+        $record->versione = ((int) $record->versione) + 1;
         $record->save();
 
         $this->registraAudit('upload_version', $record, [
@@ -438,8 +440,8 @@ class CartellaFilesController extends Controller
         abort_unless($this->canUploadFiles(), 403);
 
         $record = File::find($id);
-        abort_if(!$record, 404, 'Questo file non esiste');
-        abort_if(!$this->canAccessFile($record), 403, 'File non disponibile');
+        abort_if(! $record, 404, 'Questo file non esiste');
+        abort_if(! $this->canAccessFile($record), 403, 'File non disponibile');
 
         $version = FileVersion::where('file_id', $record->id)
             ->where(function ($q) use ($versionId) {
@@ -447,7 +449,7 @@ class CartellaFilesController extends Controller
             })
             ->orderByDesc('id')
             ->first();
-        abort_if(!$version, 404, 'Versione non trovata');
+        abort_if(! $version, 404, 'Versione non trovata');
 
         $this->storeCurrentVersionSnapshot($record);
 
@@ -458,7 +460,7 @@ class CartellaFilesController extends Controller
         $record->categoria_documentale = $version->categoria_documentale;
         $record->tags_documentali = $version->tags_documentali;
         $record->ocr_testo = $version->ocr_testo;
-        $record->versione = ((int)$record->versione) + 1;
+        $record->versione = ((int) $record->versione) + 1;
         $record->save();
 
         $this->registraAudit('rollback_version', $record, [
@@ -479,12 +481,12 @@ class CartellaFilesController extends Controller
         ]);
 
         $record = File::find($request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        abort_if(! $record, 404, 'File non trovato');
 
-        $targetId = $request->filled('target_cartella_id') ? (int)$request->input('target_cartella_id') : null;
+        $targetId = $request->filled('target_cartella_id') ? (int) $request->input('target_cartella_id') : null;
         if ($targetId) {
             $targetFolder = CartellaFiles::find($targetId);
-            abort_if(!$targetFolder, 404, 'Cartella destinazione non trovata');
+            abort_if(! $targetFolder, 404, 'Cartella destinazione non trovata');
         }
 
         $oldCartella = $record->cartella_id;
@@ -508,17 +510,17 @@ class CartellaFilesController extends Controller
             'target_parent_id' => ['nullable', 'integer', 'exists:files_cartelle,id'],
         ]);
 
-        $folder = CartellaFiles::find((int)$request->input('id'));
-        abort_if(!$folder, 404, 'Cartella non trovata');
+        $folder = CartellaFiles::find((int) $request->input('id'));
+        abort_if(! $folder, 404, 'Cartella non trovata');
 
-        $targetId = $request->filled('target_parent_id') ? (int)$request->input('target_parent_id') : null;
-        if ($targetId === (int)$folder->id) {
+        $targetId = $request->filled('target_parent_id') ? (int) $request->input('target_parent_id') : null;
+        if ($targetId === (int) $folder->id) {
             return response()->json(['success' => false, 'message' => 'La cartella non può essere spostata su se stessa'], 422);
         }
 
         if ($targetId) {
             $target = CartellaFiles::find($targetId);
-            abort_if(!$target, 404, 'Cartella destinazione non trovata');
+            abort_if(! $target, 404, 'Cartella destinazione non trovata');
             abort_if($target->isDescendantOf($folder), 422, 'Destinazione non valida: cartella figlia');
         }
 
@@ -529,7 +531,7 @@ class CartellaFilesController extends Controller
 
         $this->registraAudit('move_folder', null, [
             'cartella_id' => $folder->id,
-            'filename_originale' => '[cartella] ' . $folder->nome,
+            'filename_originale' => '[cartella] '.$folder->nome,
             'from_parent_id' => $oldParent,
             'to_parent_id' => $targetId,
         ]);
@@ -546,11 +548,11 @@ class CartellaFilesController extends Controller
             'filename_originale' => ['required', 'string', 'max:255'],
         ]);
 
-        $record = File::find((int)$request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        $record = File::find((int) $request->input('id'));
+        abort_if(! $record, 404, 'File non trovato');
 
         $oldName = $record->filename_originale;
-        $record->filename_originale = trim((string)$request->input('filename_originale'));
+        $record->filename_originale = trim((string) $request->input('filename_originale'));
         $record->save();
 
         $this->registraAudit('rename_file', $record, [
@@ -570,8 +572,8 @@ class CartellaFilesController extends Controller
             'expires_at' => ['nullable', 'date'],
         ]);
 
-        $record = File::find((int)$request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        $record = File::find((int) $request->input('id'));
+        abort_if(! $record, 404, 'File non trovato');
 
         $record->expires_at = $request->filled('expires_at') ? $request->input('expires_at') : null;
         $record->save();
@@ -593,10 +595,10 @@ class CartellaFilesController extends Controller
         ]);
 
         $folder = CartellaFiles::find($id);
-        abort_if(!$folder, 404, 'Cartella non trovata');
+        abort_if(! $folder, 404, 'Cartella non trovata');
 
         $ruoli = collect($request->input('ruoli', []))
-            ->map(fn($r) => trim((string)$r))
+            ->map(fn ($r) => trim((string) $r))
             ->filter()
             ->unique()
             ->values()
@@ -607,7 +609,7 @@ class CartellaFilesController extends Controller
 
         $this->registraAudit('set_folder_visibility', null, [
             'cartella_id' => $folder->id,
-            'filename_originale' => '[cartella] ' . $folder->nome,
+            'filename_originale' => '[cartella] '.$folder->nome,
             'visibilita_ruoli' => $folder->visibilita_ruoli,
         ]);
 
@@ -619,9 +621,9 @@ class CartellaFilesController extends Controller
         abort_unless($this->canViewDocumenti(), 403);
 
         $record = File::find($id);
-        abort_if(!$record, 404, 'File non trovato');
-        abort_if(!$this->canAccessFile($record), 403, 'File non disponibile');
-        abort_if(!Storage::exists($record->path_filename), 404, 'File non disponibile sul disco');
+        abort_if(! $record, 404, 'File non trovato');
+        abort_if(! $this->canAccessFile($record), 403, 'File non disponibile');
+        abort_if(! Storage::exists($record->path_filename), 404, 'File non disponibile sul disco');
 
         $path = Storage::path($record->path_filename);
         $mimeType = Storage::mimeType($record->path_filename) ?: 'application/octet-stream';
@@ -629,7 +631,7 @@ class CartellaFilesController extends Controller
         $previewable = Str::startsWith($mimeType, 'image/')
             || Str::contains($mimeType, ['pdf', 'text/plain', 'text/csv', 'application/json']);
 
-        if (!$previewable) {
+        if (! $previewable) {
             return response()->download($path, $record->filename_originale);
         }
 
@@ -637,7 +639,7 @@ class CartellaFilesController extends Controller
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
-            'Content-Disposition' => 'inline; filename="' . addslashes($record->filename_originale) . '"',
+            'Content-Disposition' => 'inline; filename="'.addslashes($record->filename_originale).'"',
         ]);
     }
 
@@ -647,7 +649,7 @@ class CartellaFilesController extends Controller
 
         $id = $request->input('id');
         $record = File::find($id);
-        if (!$record) {
+        if (! $record) {
             abort(404, 'Questo file non esiste.');
         }
 
@@ -662,8 +664,9 @@ class CartellaFilesController extends Controller
         $record->delete();
         $this->registraAudit('delete', null, $auditPayload);
 
-        $datiRitorno = new DatiRitorno();
-        return $datiRitorno->rimuoviOggetto('#file_' . $id)->getArray();
+        $datiRitorno = new DatiRitorno;
+
+        return $datiRitorno->rimuoviOggetto('#file_'.$id)->getArray();
     }
 
     public function download($id)
@@ -671,8 +674,8 @@ class CartellaFilesController extends Controller
         abort_unless($this->canViewDocumenti(), 403);
 
         $record = File::find($id);
-        abort_if(!$record, 404, 'File non trovato');
-        abort_if(!$this->canAccessFile($record), 403, 'File non disponibile');
+        abort_if(! $record, 404, 'File non trovato');
+        abort_if(! $this->canAccessFile($record), 403, 'File non disponibile');
 
         $this->registraAudit('download', $record);
 
@@ -688,25 +691,25 @@ class CartellaFilesController extends Controller
             'file_ids.*' => ['integer', 'exists:files,id'],
         ]);
 
-        $fileIds = collect($request->input('file_ids', []))->map(fn($id) => (int)$id)->unique()->values();
-        $files = File::whereIn('id', $fileIds)->orderBy('filename_originale')->get()->filter(fn($f) => $this->canAccessFile($f));
+        $fileIds = collect($request->input('file_ids', []))->map(fn ($id) => (int) $id)->unique()->values();
+        $files = File::whereIn('id', $fileIds)->orderBy('filename_originale')->get()->filter(fn ($f) => $this->canAccessFile($f));
         abort_if($files->isEmpty(), 404, 'Nessun file valido selezionato');
 
         $tmpDir = storage_path('app/tmp');
-        if (!is_dir($tmpDir)) {
+        if (! is_dir($tmpDir)) {
             @mkdir($tmpDir, 0755, true);
         }
 
-        $downloadName = 'documenti-' . now()->format('Ymd-His') . '.zip';
-        $zipPath = $tmpDir . '/' . Str::ulid() . '.zip';
+        $downloadName = 'documenti-'.now()->format('Ymd-His').'.zip';
+        $zipPath = $tmpDir.'/'.Str::ulid().'.zip';
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         abort_if($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true, 500, 'Impossibile creare ZIP');
 
         $usedNames = [];
         $aggiunti = 0;
         foreach ($files as $file) {
-            if (!Storage::exists($file->path_filename)) {
+            if (! Storage::exists($file->path_filename)) {
                 continue;
             }
 
@@ -716,7 +719,7 @@ class CartellaFilesController extends Controller
             while (isset($usedNames[$nomeFinale])) {
                 $filename = pathinfo($nomeBase, PATHINFO_FILENAME);
                 $extension = pathinfo($nomeBase, PATHINFO_EXTENSION);
-                $nomeFinale = $extension ? ($filename . '-' . $i . '.' . $extension) : ($filename . '-' . $i);
+                $nomeFinale = $extension ? ($filename.'-'.$i.'.'.$extension) : ($filename.'-'.$i);
                 $i++;
             }
 
@@ -749,65 +752,66 @@ class CartellaFilesController extends Controller
             'max_downloads' => ['nullable', 'integer', 'min:1', 'max:10000'],
         ]);
 
-        $fileId = $request->filled('file_id') ? (int)$request->input('file_id') : null;
-        $cartellaId = $request->filled('cartella_id') ? (int)$request->input('cartella_id') : null;
-        abort_if(!$fileId && !$cartellaId, 422, 'Devi indicare file_id o cartella_id');
+        $fileId = $request->filled('file_id') ? (int) $request->input('file_id') : null;
+        $cartellaId = $request->filled('cartella_id') ? (int) $request->input('cartella_id') : null;
+        abort_if(! $fileId && ! $cartellaId, 422, 'Devi indicare file_id o cartella_id');
 
-        $share = new FileShareLink();
+        $share = new FileShareLink;
         $share->token = Str::random(64);
         $share->file_id = $fileId;
         $share->cartella_id = $cartellaId;
         $share->created_by = Auth::id();
         $share->expires_at = $request->filled('expires_at') ? $request->input('expires_at') : now()->addDays(7);
-        $share->max_downloads = $request->filled('max_downloads') ? (int)$request->input('max_downloads') : null;
-        $share->password_hash = $request->filled('password') ? Hash::make((string)$request->input('password')) : null;
+        $share->max_downloads = $request->filled('max_downloads') ? (int) $request->input('max_downloads') : null;
+        $share->password_hash = $request->filled('password') ? Hash::make((string) $request->input('password')) : null;
         $share->is_active = true;
         $share->save();
 
         $this->registraAudit('create_share_link', null, [
             'file_id' => $fileId,
             'cartella_id' => $cartellaId,
-            'filename_originale' => '[share] ' . ($fileId ? ('file#' . $fileId) : ('cartella#' . $cartellaId)),
+            'filename_originale' => '[share] '.($fileId ? ('file#'.$fileId) : ('cartella#'.$cartellaId)),
             'share_link_id' => $share->id,
         ]);
 
         return response()->json([
             'success' => true,
             'token' => $share->token,
-            'url' => url('/documenti/condivisi/' . $share->token),
+            'url' => url('/documenti/condivisi/'.$share->token),
         ]);
     }
 
     public function sharedDownload(Request $request, $token)
     {
         $share = FileShareLink::where('token', $token)->first();
-        abort_if(!$share, 404, 'Link non valido');
-        abort_if(!$share->is_active, 410, 'Link non più attivo');
+        abort_if(! $share, 404, 'Link non valido');
+        abort_if(! $share->is_active, 410, 'Link non più attivo');
         abort_if($share->isExpired(), 410, 'Link scaduto');
         abort_if($share->isLimitReached(), 429, 'Limite download raggiunto');
 
         if ($share->password_hash) {
-            $password = (string)$request->input('password', '');
-            if ($password === '' || !Hash::check($password, $share->password_hash)) {
+            $password = (string) $request->input('password', '');
+            if ($password === '' || ! Hash::check($password, $share->password_hash)) {
                 return response('<html><body><form method="GET"><input type="password" name="password" placeholder="Password"/><button type="submit">Apri</button></form></body></html>', 401);
             }
         }
 
-        $share->download_count = ((int)$share->download_count) + 1;
+        $share->download_count = ((int) $share->download_count) + 1;
         $share->last_access_at = now();
         $share->save();
 
         if ($share->file_id) {
             $record = File::find($share->file_id);
-            abort_if(!$record, 404, 'File non più disponibile');
+            abort_if(! $record, 404, 'File non più disponibile');
             $path = Storage::path($record->path_filename);
+
             return response()->download($path, $record->filename_originale);
         }
 
         $folder = CartellaFiles::find($share->cartella_id);
-        abort_if(!$folder, 404, 'Cartella non più disponibile');
+        abort_if(! $folder, 404, 'Cartella non più disponibile');
 
-        [$zipPath, $downloadName] = $this->buildFolderZip($folder, 'cartella-condivisa-' . $folder->id);
+        [$zipPath, $downloadName] = $this->buildFolderZip($folder, 'cartella-condivisa-'.$folder->id);
 
         return response()->download($zipPath, $downloadName, ['Content-Type' => 'application/zip'])->deleteFileAfterSend(true);
     }
@@ -819,13 +823,13 @@ class CartellaFilesController extends Controller
         $query = FileAuditLog::query()->with(['utente', 'cartella']);
 
         if ($request->filled('azione')) {
-            $query->where('azione', (string)$request->input('azione'));
+            $query->where('azione', (string) $request->input('azione'));
         }
         if ($request->filled('user_id')) {
-            $query->where('user_id', (int)$request->input('user_id'));
+            $query->where('user_id', (int) $request->input('user_id'));
         }
         if ($request->filled('cartella_id')) {
-            $query->where('cartella_id', (int)$request->input('cartella_id'));
+            $query->where('cartella_id', (int) $request->input('cartella_id'));
         }
         if ($request->filled('data_da')) {
             $query->whereDate('created_at', '>=', $request->input('data_da'));
@@ -836,21 +840,21 @@ class CartellaFilesController extends Controller
 
         $rows = $query->orderByDesc('created_at')->limit(10000)->get();
 
-        $filename = 'audit-documenti-' . now()->format('Ymd-His') . '.csv';
+        $filename = 'audit-documenti-'.now()->format('Ymd-His').'.csv';
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         return response()->stream(function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputs($out, "\xEF\xBB\xBF");
+            fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, ['quando', 'utente', 'azione', 'file', 'cartella_id', 'meta']);
 
             foreach ($rows as $row) {
                 fputcsv($out, [
                     $row->created_at?->format('Y-m-d H:i:s'),
-                    $row->utente?->name ?? ('user#' . ($row->user_id ?? '-')),
+                    $row->utente?->name ?? ('user#'.($row->user_id ?? '-')),
                     $row->azione,
                     $row->filename_originale,
                     $row->cartella_id,
@@ -876,6 +880,7 @@ class CartellaFilesController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -900,7 +905,7 @@ class CartellaFilesController extends Controller
     {
         $cartelleQb = $this->applicaFiltriCartelleNellaCartella($request, $cartellaId, $cartella);
         $filesQb = $this->applicaFiltriFiles($request, $cartellaId, $cartella);
-        $cartellePrev = $cartellaId ? CartellaFiles::ancestorsAndSelf($cartellaId)->filter(fn($c) => $this->folderVisibleToCurrentUser($c)) : collect();
+        $cartellePrev = $cartellaId ? CartellaFiles::ancestorsAndSelf($cartellaId)->filter(fn ($c) => $this->folderVisibleToCurrentUser($c)) : collect();
 
         return [$cartelleQb, $filesQb, $cartellePrev];
     }
@@ -911,7 +916,7 @@ class CartellaFilesController extends Controller
             'cartella' => $cartellaId > 0 ? ($cartella?->nome ?? 'Root') : 'Root',
             'conteggio_cartelle' => $cartelle->count(),
             'conteggio_file' => $files->count(),
-            'dimensione_totale' => \App\humanFileSize((int)$files->sum('dimensione_file')),
+            'dimensione_totale' => \App\humanFileSize((int) $files->sum('dimensione_file')),
         ];
     }
 
@@ -937,13 +942,13 @@ class CartellaFilesController extends Controller
 
     protected function parseTags(?string $rawTags): array
     {
-        if (!$rawTags) {
+        if (! $rawTags) {
             return [];
         }
 
         return collect(explode(',', $rawTags))
-            ->map(fn($tag) => mb_strtolower(trim((string)$tag)))
-            ->filter(fn($tag) => $tag !== '')
+            ->map(fn ($tag) => mb_strtolower(trim((string) $tag)))
+            ->filter(fn ($tag) => $tag !== '')
             ->unique()
             ->take(15)
             ->values()
@@ -953,25 +958,26 @@ class CartellaFilesController extends Controller
     protected function extractSearchableText(string $storedPath, string $originalFilename): ?string
     {
         $extension = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION));
-        if (!in_array($extension, ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md'], true)) {
+        if (! in_array($extension, ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md'], true)) {
             return null;
         }
 
-        if (!Storage::exists($storedPath)) {
+        if (! Storage::exists($storedPath)) {
             return null;
         }
 
-        $content = (string)Storage::get($storedPath);
+        $content = (string) Storage::get($storedPath);
         $content = strip_tags($content);
         $content = preg_replace('/\s+/', ' ', $content ?? '');
-        return Str::limit(trim((string)$content), 20000, '');
+
+        return Str::limit(trim((string) $content), 20000, '');
     }
 
     protected function storeCurrentVersionSnapshot(File $file): void
     {
         FileVersion::create([
             'file_id' => $file->id,
-            'versione' => (int)($file->versione ?: 1),
+            'versione' => (int) ($file->versione ?: 1),
             'filename_originale' => $file->filename_originale,
             'path_filename' => $file->path_filename,
             'dimensione_file' => $file->dimensione_file,
@@ -1001,16 +1007,16 @@ class CartellaFilesController extends Controller
 
     protected function canAccessFile(File $file): bool
     {
-        if (!$this->canViewDocumenti()) {
+        if (! $this->canViewDocumenti()) {
             return false;
         }
 
-        if (!$file->cartella_id) {
+        if (! $file->cartella_id) {
             return true;
         }
 
         $folder = CartellaFiles::find($file->cartella_id);
-        if (!$folder) {
+        if (! $folder) {
             return false;
         }
 
@@ -1020,19 +1026,20 @@ class CartellaFilesController extends Controller
     protected function currentUserRoles(): array
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return [];
         }
 
         $roles = [];
         foreach (['admin', 'agente', 'operatore', 'supervisore'] as $role) {
-            if (method_exists($user, 'hasRole') && (bool)call_user_func([$user, 'hasRole'], $role)) {
+            if (method_exists($user, 'hasRole') && (bool) call_user_func([$user, 'hasRole'], $role)) {
                 $roles[] = $role;
+
                 continue;
             }
             if (method_exists($user, 'hasPermissionTo')) {
                 try {
-                    if ((bool)call_user_func([$user, 'hasPermissionTo'], $role)) {
+                    if ((bool) call_user_func([$user, 'hasPermissionTo'], $role)) {
                         $roles[] = $role;
                     }
                 } catch (\Throwable $e) {
@@ -1045,7 +1052,7 @@ class CartellaFilesController extends Controller
 
     protected function folderVisibleToCurrentUser(?CartellaFiles $folder): bool
     {
-        if (!$folder) {
+        if (! $folder) {
             return true;
         }
 
@@ -1054,7 +1061,7 @@ class CartellaFilesController extends Controller
         }
 
         $allowedRoles = $folder->visibilita_ruoli;
-        if (!is_array($allowedRoles) || !count($allowedRoles)) {
+        if (! is_array($allowedRoles) || ! count($allowedRoles)) {
             return true;
         }
 
@@ -1066,9 +1073,9 @@ class CartellaFilesController extends Controller
         $folders = CartellaFiles::query()->select(['id', 'visibilita_ruoli'])->get();
 
         return $folders
-            ->filter(fn($f) => $this->folderVisibleToCurrentUser($f))
+            ->filter(fn ($f) => $this->folderVisibleToCurrentUser($f))
             ->pluck('id')
-            ->map(fn($id) => (int)$id)
+            ->map(fn ($id) => (int) $id)
             ->values()
             ->all();
     }
@@ -1078,49 +1085,50 @@ class CartellaFilesController extends Controller
         $options = [0 => 'Root'];
         $folders = CartellaFiles::query()->orderBy('nome')->get();
         foreach ($folders as $folder) {
-            if (!$this->folderVisibleToCurrentUser($folder)) {
+            if (! $this->folderVisibleToCurrentUser($folder)) {
                 continue;
             }
-            $options[(int)$folder->id] = '#' . $folder->id . ' - ' . $folder->nome;
+            $options[(int) $folder->id] = '#'.$folder->id.' - '.$folder->nome;
         }
+
         return $options;
     }
 
     protected function buildFolderZip(CartellaFiles $folder, string $prefix = 'documenti-folder'): array
     {
         $tmpDir = storage_path('app/tmp');
-        if (!is_dir($tmpDir)) {
+        if (! is_dir($tmpDir)) {
             @mkdir($tmpDir, 0755, true);
         }
 
-        $downloadName = $prefix . '-' . now()->format('Ymd-His') . '.zip';
-        $zipPath = $tmpDir . '/' . Str::ulid() . '.zip';
+        $downloadName = $prefix.'-'.now()->format('Ymd-His').'.zip';
+        $zipPath = $tmpDir.'/'.Str::ulid().'.zip';
 
-        $folderIds = CartellaFiles::descendantsAndSelf($folder->id)->pluck('id')->map(fn($id) => (int)$id)->all();
+        $folderIds = CartellaFiles::descendantsAndSelf($folder->id)->pluck('id')->map(fn ($id) => (int) $id)->all();
         $files = File::whereIn('cartella_id', $folderIds)->orderBy('filename_originale')->get();
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         abort_if($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true, 500, 'Impossibile creare ZIP');
 
         $usedNames = [];
         foreach ($files as $file) {
-            if (!Storage::exists($file->path_filename)) {
+            if (! Storage::exists($file->path_filename)) {
                 continue;
             }
 
             $relativeFolder = '';
             if ($file->cartella_id) {
                 $f = CartellaFiles::find($file->cartella_id);
-                $relativeFolder = $f ? ($f->nome . '/') : '';
+                $relativeFolder = $f ? ($f->nome.'/') : '';
             }
 
-            $entry = $relativeFolder . $file->filename_originale;
+            $entry = $relativeFolder.$file->filename_originale;
             $i = 1;
             $safeEntry = $entry;
             while (isset($usedNames[$safeEntry])) {
                 $filename = pathinfo($entry, PATHINFO_FILENAME);
                 $extension = pathinfo($entry, PATHINFO_EXTENSION);
-                $safeEntry = $extension ? ($filename . '-' . $i . '.' . $extension) : ($filename . '-' . $i);
+                $safeEntry = $extension ? ($filename.'-'.$i.'.'.$extension) : ($filename.'-'.$i);
                 $i++;
             }
 
@@ -1136,7 +1144,7 @@ class CartellaFilesController extends Controller
     protected function currentUserHasAnyPermission(array $permissions): bool
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 

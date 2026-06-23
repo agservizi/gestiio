@@ -2,8 +2,4 @@
 
 namespace App\Http;
 
-
-class HelperForBlade
-{
-
-}
+class HelperForBlade {}

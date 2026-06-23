@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Services\InpostService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,7 @@ class SpedizioneInpost extends Model
     protected $table = 'inpost_spedizioni';
 
     public const NOME_SINGOLARE = 'spedizione InPost';
+
     public const NOME_PLURALE = 'spedizioni InPost';
 
     protected $casts = [
@@ -31,7 +33,7 @@ class SpedizioneInpost extends Model
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
             /** @var User|null $authUser */
             $authUser = Auth::user();
-            if (!$authUser) {
+            if (! $authUser) {
                 return;
             }
 
@@ -64,13 +66,13 @@ class SpedizioneInpost extends Model
 
     public function tracking(): ?string
     {
-        if (!$this->tracking_number) {
+        if (! $this->tracking_number) {
             return null;
         }
 
-        $url = app(\App\Http\Services\InpostService::class)->trackingUrl($this->tracking_number);
+        $url = app(InpostService::class)->trackingUrl($this->tracking_number);
 
-        return "<a href='{$url}' target='_blank'>" . e($this->tracking_number) . '</a>';
+        return "<a href='{$url}' target='_blank'>".e($this->tracking_number).'</a>';
     }
 
     public function trackingStatus(): ?string
@@ -97,7 +99,7 @@ class SpedizioneInpost extends Model
     public function trackingStatusBadge(): string
     {
         $status = $this->trackingStatus();
-        if (!$status) {
+        if (! $status) {
             return "<span class='badge badge-light'>-</span>";
         }
 
@@ -112,13 +114,13 @@ class SpedizioneInpost extends Model
             $class = 'badge-light-warning';
         }
 
-        return "<span class='badge {$class}'>" . e($status) . '</span>';
+        return "<span class='badge {$class}'>".e($status).'</span>';
     }
 
     public function trackingUpdatedAtLabel(): ?string
     {
         $value = data_get($this->response, 'trackingUpdatedAt');
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
@@ -132,7 +134,7 @@ class SpedizioneInpost extends Model
     public function trackingTimelineHtml(): ?string
     {
         $events = data_get($this->response, 'trackingResponse.events', []);
-        if (!is_array($events) || !count($events)) {
+        if (! is_array($events) || ! count($events)) {
             return null;
         }
 
@@ -140,10 +142,10 @@ class SpedizioneInpost extends Model
             $label = data_get($event, 'description') ?: data_get($event, 'eventCode') ?: 'Evento';
             $date = data_get($event, 'timestamp') ?: data_get($event, 'date');
 
-            return "<li class='list-group-item d-flex justify-content-between align-items-start'><span>" . e($label) . "</span><span class='text-muted small ms-3'>" . e((string) $date) . '</span></li>';
+            return "<li class='list-group-item d-flex justify-content-between align-items-start'><span>".e($label)."</span><span class='text-muted small ms-3'>".e((string) $date).'</span></li>';
         })->all();
 
-        return count($items) ? "<ul class='list-group'>" . implode('', $items) . '</ul>' : null;
+        return count($items) ? "<ul class='list-group'>".implode('', $items).'</ul>' : null;
     }
 
     public function packageTypeLabel(): ?string

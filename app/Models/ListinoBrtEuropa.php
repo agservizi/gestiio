@@ -9,10 +9,11 @@ class ListinoBrtEuropa extends Model
 {
     use HasFactory;
 
-    protected $table = "brt_listino_europa";
+    protected $table = 'brt_listino_europa';
 
-    public const NOME_SINGOLARE = "listinobrteuropa";
-    public const NOME_PLURALE = "listinobrteurope";
+    public const NOME_SINGOLARE = 'listinobrteuropa';
+
+    public const NOME_PLURALE = 'listinobrteurope';
 
     /*
     |--------------------------------------------------------------------------
@@ -38,7 +39,6 @@ class ListinoBrtEuropa extends Model
     |--------------------------------------------------------------------------
     */
 
-
     public static function trovaTariffa($peso, $tipo)
     {
         $record = self::where('da_peso', '<=', $peso)->where('a_peso', '>=', $peso)->where('tipo', $tipo)->first();
@@ -49,15 +49,17 @@ class ListinoBrtEuropa extends Model
         return null;
     }
 
-    public function calcolaPrezzo( $gruppo)
+    public function calcolaPrezzo($gruppo)
     {
         $tariffa = $this->prendiTariffa($gruppo);
+
         return $tariffa;
     }
 
     protected function prendiTariffa($gruppo)
     {
-        $campo = 'gruppo_' . $gruppo;
+        $campo = 'gruppo_'.$gruppo;
+
         return $this->$campo;
     }
 }

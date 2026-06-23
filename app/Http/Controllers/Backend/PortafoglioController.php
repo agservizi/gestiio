@@ -3,21 +3,21 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\MovimentoPortafoglio;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\MovimentoPortafoglio;
 use Illuminate\Support\Facades\DB;
 
 class PortafoglioController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function index(Request $request)
     {
@@ -33,7 +33,7 @@ class PortafoglioController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -42,7 +42,7 @@ class PortafoglioController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -52,7 +52,7 @@ class PortafoglioController extends Controller
             $authUser->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -63,11 +63,10 @@ class PortafoglioController extends Controller
                 'html' => base64_encode(view('Backend.Portafoglio.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
             ];
 
         }
-
 
         return view('Backend.Portafoglio.index', [
             'records' => $records,
@@ -77,22 +76,21 @@ class PortafoglioController extends Controller
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Carica ' . \App\Models\MovimentoPortafoglio::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Carica '.MovimentoPortafoglio::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\MovimentoPortafoglio::query();
+        $queryBuilder = MovimentoPortafoglio::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -101,27 +99,27 @@ class PortafoglioController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function create()
     {
-        $record = new MovimentoPortafoglio();
+        $record = new MovimentoPortafoglio;
         /** @var User $authUser */
         $authUser = Auth::user();
         $intent = $authUser->createSetupIntent([
-            'payment_method_types' => ['card']
+            'payment_method_types' => ['card'],
         ]);
+
         return view('Backend.Portafoglio.edit', [
             'record' => $record,
-            'titoloPagina' => 'Carica ' . MovimentoPortafoglio::NOME_SINGOLARE,
+            'titoloPagina' => 'Carica '.MovimentoPortafoglio::NOME_SINGOLARE,
             'controller' => get_class($this),
             'breadcrumbs' => [action([PortafoglioController::class, 'index']) => 'Torna a elenco movimenti'],
             'intent' => $intent,
@@ -133,32 +131,33 @@ class PortafoglioController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new MovimentoPortafoglio();
+        $record = new MovimentoPortafoglio;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
         $record = MovimentoPortafoglio::find($id);
-        abort_if(!$record, 404, 'Questo portafoglio non esiste');
+        abort_if(! $record, 404, 'Questo portafoglio non esiste');
+
         return view('Backend.Portafoglio.show', [
             'record' => $record,
             'controller' => PortafoglioController::class,
             'titoloPagina' => MovimentoPortafoglio::NOME_SINGOLARE,
-            'breadcrumbs' => [action([PortafoglioController::class, 'index']) => 'Torna a elenco ' . MovimentoPortafoglio::NOME_PLURALE]
+            'breadcrumbs' => [action([PortafoglioController::class, 'index']) => 'Torna a elenco '.MovimentoPortafoglio::NOME_PLURALE],
 
         ]);
     }
@@ -166,24 +165,25 @@ class PortafoglioController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         $record = MovimentoPortafoglio::find($id);
-        abort_if(!$record, 404, 'Questo portafoglio non esiste');
+        abort_if(! $record, 404, 'Questo portafoglio non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.Portafoglio.edit', [
             'record' => $record,
             'controller' => PortafoglioController::class,
-            'titoloPagina' => 'Modifica ' . MovimentoPortafoglio::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.MovimentoPortafoglio::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([PortafoglioController::class, 'index']) => 'Torna a elenco ' . MovimentoPortafoglio::NOME_PLURALE]
+            'breadcrumbs' => [action([PortafoglioController::class, 'index']) => 'Torna a elenco '.MovimentoPortafoglio::NOME_PLURALE],
 
         ]);
     }
@@ -191,32 +191,31 @@ class PortafoglioController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $record = MovimentoPortafoglio::find($id);
-        abort_if(!$record, 404, 'Questo ' . MovimentoPortafoglio::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.MovimentoPortafoglio::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function destroy($id)
     {
         $record = MovimentoPortafoglio::find($id);
-        abort_if(!$record, 404, 'Questo portafoglio non esiste');
+        abort_if(! $record, 404, 'Questo portafoglio non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -225,20 +224,20 @@ class PortafoglioController extends Controller
     }
 
     /**
-     * @param MovimentoPortafoglio $model
-     * @param Request $request
+     * @param  MovimentoPortafoglio  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'agente_id' => '',
             'importo' => 'app\getInputNumero',
@@ -253,6 +252,7 @@ class PortafoglioController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -266,13 +266,11 @@ class PortafoglioController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\MovimentoPortafoglio::get();
+        return MovimentoPortafoglio::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'agente_id' => ['required'],
@@ -282,5 +280,4 @@ class PortafoglioController extends Controller
 
         return $rules;
     }
-
 }

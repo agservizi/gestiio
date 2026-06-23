@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 return new class extends Migration
 {
@@ -13,9 +13,9 @@ return new class extends Migration
      */
     public function up()
     {
-        \Spatie\Permission\Models\Permission::create(['name' => 'operatore']);
+        Permission::create(['name' => 'operatore']);
 
-        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /**

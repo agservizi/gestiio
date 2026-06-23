@@ -5,25 +5,25 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\ContrattoTelefonia;
 use App\Models\EsitoSegnalazione;
-use App\Models\EsitoTelefonia;
+use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\NotificaAdminSegnalazione;
-use App\Notifications\NotificaAgenteCambioEsitoContratto;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Segnalazione;
+use App\Rules\PartitaIvaRule;
+use App\Rules\TelefonoRule;
 use DB;
-use function App\getInputCheckbox;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class SegnalazioneController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -37,7 +37,7 @@ class SegnalazioneController extends Controller
 
             'nominativo' => ['testo' => 'Nome azienda', 'filtro' => function ($q) {
                 return $q->orderBy('nome_azienda');
-            }]
+            }],
 
         ];
 
@@ -46,7 +46,7 @@ class SegnalazioneController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -56,11 +56,10 @@ class SegnalazioneController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
-
 
         $puoCambiareStato = Segnalazione::determinaPuoCambiareStato();
         if ($request->ajax()) {
@@ -69,39 +68,36 @@ class SegnalazioneController extends Controller
                 'html' => base64_encode(view('Backend.Segnalazione.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                    'puoCambiareStato' => $puoCambiareStato
-                ]))
+                    'puoCambiareStato' => $puoCambiareStato,
+                ])),
             ];
 
         }
 
-
         return view('Backend.Segnalazione.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Segnalazione::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Segnalazione::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuova ' . \App\Models\Segnalazione::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuova '.Segnalazione::NOME_SINGOLARE,
             'testoCerca' => 'Cerca in nome azienda',
-            'puoCambiareStato' => $puoCambiareStato
-
+            'puoCambiareStato' => $puoCambiareStato,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Segnalazione::query()
+        $queryBuilder = Segnalazione::query()
             ->with('esito:id,nome,colore_hex')
             ->with('agente');
         $term = $request->input('cerca');
@@ -112,27 +108,27 @@ class SegnalazioneController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new Segnalazione();
+        $record = new Segnalazione;
         if (Auth::user()->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         }
+
         return view('Backend.Segnalazione.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Segnalazione::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Segnalazione::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([SegnalazioneController::class, 'index']) => 'Torna a elenco ' . Segnalazione::NOME_PLURALE]
+            'breadcrumbs' => [action([SegnalazioneController::class, 'index']) => 'Torna a elenco '.Segnalazione::NOME_PLURALE],
 
         ]);
     }
@@ -140,13 +136,12 @@ class SegnalazioneController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new Segnalazione();
+        $record = new Segnalazione;
         $record->esito_id = 'in-gestione';
         $this->salvaDati($record, $request);
 
@@ -162,18 +157,19 @@ class SegnalazioneController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = Segnalazione::find($id);
-        abort_if(!$record, 404, 'Questa segnalazione non esiste');
+        abort_if(! $record, 404, 'Questa segnalazione non esiste');
+
         return view('Backend.Segnalazione.show', [
             'record' => $record,
             'controller' => SegnalazioneController::class,
             'titoloPagina' => Segnalazione::NOME_SINGOLARE,
-            'breadcrumbs' => [action([SegnalazioneController::class, 'index']) => 'Torna a elenco ' . Segnalazione::NOME_PLURALE]
+            'breadcrumbs' => [action([SegnalazioneController::class, 'index']) => 'Torna a elenco '.Segnalazione::NOME_PLURALE],
 
         ]);
     }
@@ -181,22 +177,22 @@ class SegnalazioneController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = Segnalazione::find($id);
-        abort_if(!$record, 404, 'Questa segnalazione non esiste');
+        abort_if(! $record, 404, 'Questa segnalazione non esiste');
 
         $eliminabile = Auth::user()->hasPermissionTo('admin');
 
         return view('Backend.Segnalazione.edit', [
             'record' => $record,
             'controller' => SegnalazioneController::class,
-            'titoloPagina' => 'Modifica ' . Segnalazione::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Segnalazione::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([SegnalazioneController::class, 'index']) => 'Torna a elenco ' . Segnalazione::NOME_PLURALE]
+            'breadcrumbs' => [action([SegnalazioneController::class, 'index']) => 'Torna a elenco '.Segnalazione::NOME_PLURALE],
 
         ]);
     }
@@ -204,32 +200,31 @@ class SegnalazioneController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = Segnalazione::find($id);
-        abort_if(!$record, 404, 'Questa ' . Segnalazione::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.Segnalazione::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = Segnalazione::find($id);
-        abort_if(!$record, 404, 'Questa segnalazione non esiste');
+        abort_if(! $record, 404, 'Questa segnalazione non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -240,7 +235,7 @@ class SegnalazioneController extends Controller
     public function aggiornaStato(Request $request, $id)
     {
         $contratto = Segnalazione::find($id);
-        abort_if(!$contratto, 404, 'Questa segnalazione non esiste');
+        abort_if(! $contratto, 404, 'Questa segnalazione non esiste');
 
         $esitoPrima = $contratto->esito_id;
 
@@ -248,19 +243,15 @@ class SegnalazioneController extends Controller
         $contratto->esito_id = $esito->id;
         $contratto->save();
 
-
         $records = collect([$contratto]);
-
 
         if ($esitoPrima == 'bozza') {
             $this->inviaNotifiche($contratto);
         }
 
-
         if ($contratto->wasChanged(['esito_id'])) {
             $esito = EsitoSegnalazione::find($contratto->esito_id);
         }
-
 
         return ['success' => true, 'id' => $id,
             'html' => base64_encode(view('Backend.Segnalazione.tbody', [
@@ -269,26 +260,25 @@ class SegnalazioneController extends Controller
                 'puoModificare' => ContrattoTelefonia::determinaPuoModificare(),
                 'puoCreare' => ContrattoTelefonia::determinaPuoCreare(),
                 'puoCambiareStato' => ContrattoTelefonia::determinaPuoCambiareStato(),
-            ]))
+            ])),
         ];
     }
 
-
     /**
-     * @param Segnalazione $model
-     * @param Request $request
+     * @param  Segnalazione  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->caricato_da_user_id = Auth::id();
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'agente_id' => '',
             'nome_azienda' => '',
@@ -314,6 +304,7 @@ class SegnalazioneController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -327,22 +318,20 @@ class SegnalazioneController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Segnalazione::get();
+        return Segnalazione::get();
     }
-
 
     protected function rules($id = null)
     {
 
-
         $rules = [
             'agente_id' => ['required'],
             'nome_azienda' => ['required', 'max:255'],
-            'partita_iva' => ['required', new \App\Rules\PartitaIvaRule()],
+            'partita_iva' => ['required', new PartitaIvaRule],
             'indirizzo' => ['nullable', 'max:255'],
             'citta' => ['nullable', 'max:255'],
             'cap' => ['nullable'],
-            'telefono' => ['required', new \App\Rules\TelefonoRule()],
+            'telefono' => ['required', new TelefonoRule],
             'nome_referente' => ['required', 'max:255'],
             'cognome_referente' => ['required', 'max:255'],
             'email_referente' => ['required', 'max:255'],
@@ -354,5 +343,4 @@ class SegnalazioneController extends Controller
 
         return $rules;
     }
-
 }

@@ -45,14 +45,14 @@ class UserNotificationPreferences
             return $default;
         }
 
-        return (bool)$value;
+        return (bool) $value;
     }
 
     protected static function extractTicket(Notification $notification): ?Ticket
     {
         try {
             $ref = new \ReflectionObject($notification);
-            if (!$ref->hasProperty('ticket')) {
+            if (! $ref->hasProperty('ticket')) {
                 return null;
             }
 

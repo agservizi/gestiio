@@ -11,15 +11,16 @@ class Visura extends Model
 {
     use HasFactory;
 
-    protected $table = "visure";
+    protected $table = 'visure';
 
-    public const NOME_SINGOLARE = "visura";
-    public const NOME_PLURALE = "visure";
+    public const NOME_SINGOLARE = 'visura';
+
+    public const NOME_PLURALE = 'visure';
 
     public const ESITI = [
         'ko' => '#eb3662',
         'ok' => '#4dc682',
-        'in-lavorazione' => '#009EF7'
+        'in-lavorazione' => '#009EF7',
     ];
 
     protected $casts = [
@@ -45,7 +46,6 @@ class Visura extends Model
         });
 
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -83,8 +83,6 @@ class Visura extends Model
         return $this->hasOne(TipoVisura::class, 'id', 'tipo_visura_id');
     }
 
-
-
     /*
     |--------------------------------------------------------------------------
     | SCOPE
@@ -101,21 +99,20 @@ class Visura extends Model
     {
         if ($this->esito_finale) {
 
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:' . self::ESITI[$this->esito_finale] . ';"></span>';
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.self::ESITI[$this->esito_finale].';"></span>';
         }
 
     }
 
     public function nominativo()
     {
-        return $this->ragione_sociale ?? ($this->cognome . ' ' . $this->nome);
+        return $this->ragione_sociale ?? ($this->cognome.' '.$this->nome);
     }
 
     public function hasOpenApiMapping(): bool
     {
         return (bool) ($this->openapi_hash_visura ?: optional($this->tipo)->openapi_hash_visura);
     }
-
 
     /*
     |--------------------------------------------------------------------------

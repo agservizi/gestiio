@@ -3,17 +3,19 @@
 namespace App\Models;
 
 use Cviebrock\EloquentSluggable\Sluggable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EsitoSegnalazione extends Model
 {
     use Sluggable;
-    public $incrementing = false;
-    protected $table="tab_esiti_segnalazioni";
 
-    public const NOME_SINGOLARE = "esito segnalazione";
-    public const NOME_PLURALE = "esiti segnalazione";
+    public $incrementing = false;
+
+    protected $table = 'tab_esiti_segnalazioni';
+
+    public const NOME_SINGOLARE = 'esito segnalazione';
+
+    public const NOME_PLURALE = 'esiti segnalazione';
 
     /*
     |--------------------------------------------------------------------------
@@ -38,7 +40,6 @@ class EsitoSegnalazione extends Model
         return "<span class='badge' style='background-color: {$this->colore_hex}'>{$this->nome}</span>";
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ALTRO
@@ -48,8 +49,8 @@ class EsitoSegnalazione extends Model
     {
         return [
             'id' => [
-                'source' => 'nome'
-            ]
+                'source' => 'nome',
+            ],
         ];
     }
 }

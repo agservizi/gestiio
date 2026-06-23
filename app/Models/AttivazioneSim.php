@@ -6,16 +6,16 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class AttivazioneSim extends Model
 {
     use HasFactory;
 
-    protected $table = "attivazioni_sim";
+    protected $table = 'attivazioni_sim';
 
-    public const NOME_SINGOLARE = "attivazione sim";
-    public const NOME_PLURALE = "attivazioni sim";
+    public const NOME_SINGOLARE = 'attivazione sim';
+
+    public const NOME_PLURALE = 'attivazioni sim';
 
     protected $casts = [
         'data' => 'datetime',
@@ -25,7 +25,7 @@ class AttivazioneSim extends Model
     public const ESITI = [
         'ko' => '#eb3662',
         'ok' => '#4dc682',
-        'in-lavorazione' => '#009EF7'
+        'in-lavorazione' => '#009EF7',
     ];
 
     /**
@@ -42,10 +42,7 @@ class AttivazioneSim extends Model
             }
         });
 
-
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -72,7 +69,6 @@ class AttivazioneSim extends Model
     {
         return $this->hasOne(Comune::class, 'id', 'citta');
     }
-
 
     public function esito()
     {
@@ -103,19 +99,21 @@ class AttivazioneSim extends Model
 
     public function nominativo()
     {
-        return $this->cognome . ' ' . $this->nome;
+        return $this->cognome.' '.$this->nome;
     }
 
     public function labelPagato()
     {
-        if ($this->pagato) return "<span class='badge badge-success' >Pagato</span>";
+        if ($this->pagato) {
+            return "<span class='badge badge-success' >Pagato</span>";
+        }
     }
 
     public function bulletEsitoFinale()
     {
         if ($this->esito_finale) {
 
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:' . self::ESITI[$this->esito_finale] . ';"></span>';
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.self::ESITI[$this->esito_finale].';"></span>';
         }
 
     }
@@ -125,8 +123,5 @@ class AttivazioneSim extends Model
     | ALTRO
     |--------------------------------------------------------------------------
     */
-
-
-
 
 }

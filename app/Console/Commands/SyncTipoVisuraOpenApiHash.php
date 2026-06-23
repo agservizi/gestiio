@@ -17,11 +17,12 @@ class SyncTipoVisuraOpenApiHash extends Command
         $dryRun = (bool) $this->option('dry-run');
         $force = (bool) $this->option('force');
 
-        $service = new OpenApiVisureService();
+        $service = new OpenApiVisureService;
         $elenco = $service->elencoVisure();
 
-        if (!$elenco) {
+        if (! $elenco) {
             $this->error($service->message ?: 'Nessuna visura ricevuta da OpenAPI.');
+
             return self::FAILURE;
         }
 
@@ -33,12 +34,14 @@ class SyncTipoVisuraOpenApiHash extends Command
                 $this->line(json_encode($preview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
             $this->error('Elenco OpenAPI ricevuto ma non interpretabile (nome/hash mancanti).');
+
             return self::FAILURE;
         }
 
         $records = TipoVisura::query()->orderBy('id')->get();
         if ($records->isEmpty()) {
             $this->warn('Nessun tipo visura trovato.');
+
             return self::SUCCESS;
         }
 
@@ -48,16 +51,18 @@ class SyncTipoVisuraOpenApiHash extends Command
 
         foreach ($records as $record) {
             $current = trim((string) $record->openapi_hash_visura);
-            if ($current !== '' && !$force) {
+            if ($current !== '' && ! $force) {
                 $skipped++;
                 $this->line("SKIP #{$record->id} {$record->nome} (hash gia presente)");
+
                 continue;
             }
 
             $match = $this->matchHashByNome((string) $record->nome, $indicizzato);
-            if (!$match) {
+            if (! $match) {
                 $notMatched++;
                 $this->warn("NO MATCH #{$record->id} {$record->nome}");
+
                 continue;
             }
 
@@ -68,13 +73,13 @@ class SyncTipoVisuraOpenApiHash extends Command
             $record->openapi_hash_visura = $hash;
             $updated++;
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $record->save();
             }
         }
 
         $this->newLine();
-        $this->line("Totali: " . $records->count());
+        $this->line('Totali: '.$records->count());
         $this->line("Aggiornati: {$updated}");
         $this->line("Saltati (gia valorizzati): {$skipped}");
         $this->line("Senza match: {$notMatched}");
@@ -91,7 +96,7 @@ class SyncTipoVisuraOpenApiHash extends Command
         $out = [];
         $nodes = $this->flattenNodes($elenco);
         foreach ($nodes as $item) {
-            if (!is_array($item) || empty($item)) {
+            if (! is_array($item) || empty($item)) {
                 continue;
             }
 
@@ -128,7 +133,7 @@ class SyncTipoVisuraOpenApiHash extends Command
         }
 
         foreach ($item as $key => $value) {
-            if (!is_string($value) || trim($value) === '') {
+            if (! is_string($value) || trim($value) === '') {
                 continue;
             }
             $k = mb_strtolower((string) $key, 'UTF-8');
@@ -151,7 +156,7 @@ class SyncTipoVisuraOpenApiHash extends Command
         }
 
         foreach ($item as $key => $value) {
-            if (!is_string($value) || trim($value) === '') {
+            if (! is_string($value) || trim($value) === '') {
                 continue;
             }
             $k = mb_strtolower((string) $key, 'UTF-8');
@@ -171,9 +176,9 @@ class SyncTipoVisuraOpenApiHash extends Command
         $stack = [$payload];
         $nodes = [];
 
-        while (!empty($stack)) {
+        while (! empty($stack)) {
             $current = array_pop($stack);
-            if (!is_array($current)) {
+            if (! is_array($current)) {
                 continue;
             }
 
@@ -213,7 +218,7 @@ class SyncTipoVisuraOpenApiHash extends Command
     }
 
     /**
-     * @param array<int, array{name:string, normalized:string, hash:string}> $openApiList
+     * @param  array<int, array{name:string, normalized:string, hash:string}>  $openApiList
      */
     protected function matchHashByNome(string $tipoVisuraNome, array $openApiList): ?array
     {
@@ -298,7 +303,7 @@ class SyncTipoVisuraOpenApiHash extends Command
 
     protected function normalizeWithSynonyms(string $value): string
     {
-        $value = ' ' . $value . ' ';
+        $value = ' '.$value.' ';
         $replacements = [
             ' catastale ' => ' catasto ',
             ' centrale rischi ' => ' crif ',

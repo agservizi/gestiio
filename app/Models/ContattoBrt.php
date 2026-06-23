@@ -12,10 +12,11 @@ class ContattoBrt extends Model
 {
     use HasFactory;
 
-    protected $table = "brt_contatti";
+    protected $table = 'brt_contatti';
 
-    public const NOME_SINGOLARE = "preferito";
-    public const NOME_PLURALE = "preferiti";
+    public const NOME_SINGOLARE = 'preferito';
+
+    public const NOME_PLURALE = 'preferiti';
 
     /**
      * The "booted" method of the model.

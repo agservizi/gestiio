@@ -3,11 +3,8 @@
 namespace App\Models;
 
 use App\Http\MieClassiCache\CacheGestoriDashboard;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -15,11 +12,11 @@ class Gestore extends Model
 {
     use HasFactory;
 
-    protected $table = "tab_gestori";
+    protected $table = 'tab_gestori';
 
-    public const NOME_SINGOLARE = "gestore";
-    public const NOME_PLURALE = "gestori";
+    public const NOME_SINGOLARE = 'gestore';
 
+    public const NOME_PLURALE = 'gestori';
 
     /**
      * The "booted" method of the model.
@@ -34,7 +31,6 @@ class Gestore extends Model
         });
 
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -73,7 +69,6 @@ class Gestore extends Model
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ALTRO
@@ -82,15 +77,15 @@ class Gestore extends Model
 
     public function immagineLogo()
     {
-        if (!$this->logo) {
+        if (! $this->logo) {
             return '/images/logo-placeholder.png';
         }
 
         $relativePath = ltrim((string) $this->logo, '/');
 
         // Migra al volo eventuali file salvati sul disk legacy.
-        if (!Storage::disk('public')->exists($relativePath) && Storage::exists('/' . $relativePath)) {
-            $contenuto = Storage::get('/' . $relativePath);
+        if (! Storage::disk('public')->exists($relativePath) && Storage::exists('/'.$relativePath)) {
+            $contenuto = Storage::get('/'.$relativePath);
             if ($contenuto !== null) {
                 Storage::disk('public')->put($relativePath, $contenuto);
             }
@@ -98,7 +93,7 @@ class Gestore extends Model
 
         $publicStoragePath = public_path('storage');
         if (is_link($publicStoragePath) || is_dir($publicStoragePath)) {
-            return '/storage/' . $relativePath;
+            return '/storage/'.$relativePath;
         }
 
         if (Storage::disk('public')->exists($relativePath)) {
@@ -111,10 +106,10 @@ class Gestore extends Model
                 default => 'image/jpeg',
             };
             $contenuto = Storage::disk('public')->get($relativePath);
-            return 'data:' . $mime . ';base64,' . base64_encode($contenuto);
+
+            return 'data:'.$mime.';base64,'.base64_encode($contenuto);
         }
 
         return '/images/logo-placeholder.png';
     }
-
 }

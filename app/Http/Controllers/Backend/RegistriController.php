@@ -2,28 +2,34 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Http\Controllers\Controller;
+use App\Models\AllegatoCafPatronato;
+use App\Models\AllegatoContratto;
+use App\Models\AllegatoContrattoEnergia;
+use App\Models\AllegatoServizio;
 use App\Models\Licenza;
 use App\Models\RegistroEmail;
 use App\Models\RegistroLogin;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Spatie\Backup\BackupDestination\Backup;
 use Spatie\Backup\Helpers\Format;
 use Spatie\Backup\Tasks\Monitor\BackupDestinationStatus;
 use Spatie\Backup\Tasks\Monitor\BackupDestinationStatusFactory;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RegistriController extends Controller
 {
-
-
     /**
      * Display a listing of the resource.
      *
-    * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View|\Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse
+     * @return Factory|View|BinaryFileResponse|StreamedResponse
      */
     public function index(Request $request, $cosa)
     {
@@ -41,7 +47,7 @@ class RegistriController extends Controller
                     $disk = (string) $request->input('disk', $backupDisks[0] ?? 'local');
                     abort_unless(in_array($disk, $backupDisks, true), 404);
 
-                    $filePath = ltrim((string)$request->input('scarica'), '/');
+                    $filePath = ltrim((string) $request->input('scarica'), '/');
                     abort_unless(str_starts_with($filePath, 'backup-database/'), 404);
                     abort_unless(Storage::disk($disk)->exists($filePath), 404);
 
@@ -56,15 +62,17 @@ class RegistriController extends Controller
                 if ($request->has('esegui')) {
                     Artisan::call('backup:run --only-db --disable-notifications');
                 }
+
                 return $this->backupDatabase();
 
             case 'elenco_licenze':
                 return view('Backend.Registri.indexLicenze')->with(['records' => Licenza::orderBy('nome')->get()]);
-                
+
             case 'email':
                 if ($request->has('email_id')) {
                     return $this->showEmail($request);
                 }
+
                 return $this->registroEmail($request);
 
             case 'info-sito':
@@ -76,22 +84,20 @@ class RegistriController extends Controller
 
     }
 
-
     protected function showEmail($request)
     {
         $record = RegistroEmail::find($request->input('email_id'));
-        abort_if(!$record, 404, 'Questa email non esiste');
+        abort_if(! $record, 404, 'Questa email non esiste');
 
         return view('Backend.Registri.showEmail', [
             'record' => $record,
             'minW' => 'mw-850px',
             'titoloPagina' => 'Dettaglio email',
             'breadcrumbs' => [
-                action([\App\Http\Controllers\Backend\RegistriController::class, 'index'], ['cosa' => 'email']) => 'Ritorna a email inviate',]
+                action([RegistriController::class, 'index'], ['cosa' => 'email']) => 'Ritorna a email inviate', ],
         ]);
 
     }
-
 
     protected function registroLogin($request)
     {
@@ -121,7 +127,7 @@ class RegistriController extends Controller
             'records' => $records,
             'filtro' => $filtro,
             'controller' => OperatoreController::class,
-            'titoloPagina' => 'Elenco login'
+            'titoloPagina' => 'Elenco login',
         ]);
 
     }
@@ -139,7 +145,7 @@ class RegistriController extends Controller
             }
         }
 
-        $modulo = (string)$request->input('modulo', '');
+        $modulo = (string) $request->input('modulo', '');
         if ($modulo !== '') {
             if ($modulo === 'telefonia') {
                 $recordsQB->where(function ($q) {
@@ -183,25 +189,24 @@ class RegistriController extends Controller
     protected function infoSito($request)
     {
 
-        $stat['allegati_telefonia'] = \App\Models\AllegatoContratto::sum('dimensione_file');
-        $stat['allegati_energia'] = \App\Models\AllegatoContrattoEnergia::sum('dimensione_file');
+        $stat['allegati_telefonia'] = AllegatoContratto::sum('dimensione_file');
+        $stat['allegati_energia'] = AllegatoContrattoEnergia::sum('dimensione_file');
         $stat['allegati_servizi_finanziari'] = 0;
-        $stat['allegati_caf_patronato'] = \App\Models\AllegatoCafPatronato::sum('dimensione_file');
+        $stat['allegati_caf_patronato'] = AllegatoCafPatronato::sum('dimensione_file');
         $stat['allegati_attivazioni_sim'] = 0;
-        $stat['allegati_visure'] =\App\Models\AllegatoServizio::where('allegato_type', 'App\Models\Visura')->sum('dimensione_file');
+        $stat['allegati_visure'] = AllegatoServizio::where('allegato_type', 'App\Models\Visura')->sum('dimensione_file');
 
         return view('Backend.Registri.infoSito', [
             'titoloPagina' => 'Info varie',
-            'stat' => $stat
+            'stat' => $stat,
         ]);
-
 
     }
 
     protected function backupDatabase()
     {
         $statuses = BackupDestinationStatusFactory::createForMonitorConfig(config('backup.monitor_backups'));
-        list($headers, $rows) = $this->displayOverview($statuses);
+        [$headers, $rows] = $this->displayOverview($statuses);
 
         $backupName = (string) config('backup.backup.name', 'backup-database');
         $backupDisks = (array) config('backup.backup.destination.disks', ['local']);
@@ -228,9 +233,8 @@ class RegistriController extends Controller
             'headers' => $headers,
             'rows' => $rows,
             'titoloPagina' => 'Registro backup database',
-            'files' => $files
+            'files' => $files,
         ]);
-
 
     }
 
@@ -241,7 +245,6 @@ class RegistriController extends Controller
         $rows = $backupDestinationStatuses->map(function (BackupDestinationStatus $backupDestinationStatus) {
             return $this->convertToRow($backupDestinationStatus);
         });
-
 
         return [$headers, $rows];
     }
@@ -260,14 +263,14 @@ class RegistriController extends Controller
             'usedStorage' => Format::humanReadableSize($destination->usedStorage()),
         ];
 
-        if (!$destination->isReachable()) {
+        if (! $destination->isReachable()) {
             foreach (['amount', 'newest', 'usedStorage'] as $propertyName) {
                 $row[$propertyName] = '/';
             }
         }
 
         if ($backupDestinationStatus->getHealthCheckFailure() !== null) {
-            $row['disk'] = '<error>' . $row['disk'] . '</error>';
+            $row['disk'] = '<error>'.$row['disk'].'</error>';
         }
 
         return $row;
@@ -284,6 +287,4 @@ class RegistriController extends Controller
     {
         return $date->diffForHumans();
     }
-
-
 }

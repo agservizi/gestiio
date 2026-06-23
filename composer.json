@@ -36,11 +36,16 @@
   },
   "require-dev": {
     "barryvdh/laravel-debugbar": "^3.16",
+    "captainhook/captainhook": "*",
     "fakerphp/faker": "^1.9.1",
+    "laravel/pint": "^1.29",
     "laravel/sail": "^1.0.1",
     "mockery/mockery": "^1.4.4",
     "nunomaduro/collision": "^6.1",
+    "nunomaduro/larastan": "*",
     "orangehill/iseed": "^3.0",
+    "phpstan/extension-installer": "*",
+    "phpstan/phpstan": "*",
     "phpunit/phpunit": "^9.5.10",
     "spatie/laravel-ignition": "^1.0"
   },

@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Http;
 class FornitoriLuceProvider
 {
     private const CACHE_KEY = 'fornitori_luce_italia_from_gme';
+
     private const CACHE_TTL_SECONDS = 86400;
+
     private const SOURCE_URL = 'https://www.mercatoelettrico.org/it-it/Home/Accesso-ai-Mercati/Elettricita/PiattaformaContiEnergia/ElencoOperatoriPCE';
 
     public static function list(): array
@@ -41,7 +43,7 @@ class FornitoriLuceProvider
                 ])
                 ->get(self::SOURCE_URL);
 
-            if (!$response->ok()) {
+            if (! $response->ok()) {
                 return [];
             }
 
@@ -104,12 +106,12 @@ class FornitoriLuceProvider
 
     private static function isValidList($items): bool
     {
-        if (!is_array($items) || count($items) < 10) {
+        if (! is_array($items) || count($items) < 10) {
             return false;
         }
 
         foreach ($items as $key => $value) {
-            if (!is_string($key) || !is_string($value)) {
+            if (! is_string($key) || ! is_string($value)) {
                 return false;
             }
             if (self::sanitizeName($value) === '') {

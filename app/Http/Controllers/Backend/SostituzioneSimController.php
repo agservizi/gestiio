@@ -5,20 +5,21 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\DatiRitorno;
 use App\Models\AttivazioneSim;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\SostituzioneSim;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class SostituzioneSimController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -32,7 +33,7 @@ class SostituzioneSimController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -41,7 +42,7 @@ class SostituzioneSimController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -51,7 +52,7 @@ class SostituzioneSimController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -62,44 +63,42 @@ class SostituzioneSimController extends Controller
                 'html' => base64_encode(view('Backend.SostituzioneSim.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.SostituzioneSim.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\SostituzioneSim::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.SostituzioneSim::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\SostituzioneSim::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.SostituzioneSim::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
 
         return view('Backend.SostituzioneSim.index', [
             'records' => $this->queryBuilderIndex(),
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . \App\Models\SostituzioneSim::NOME_PLURALE,
-            'testoNuovo' => 'Nuovo ' . \App\Models\SostituzioneSim::NOME_SINGOLARE,
-            'testoCerca' => null
+            'titoloPagina' => 'Elenco '.SostituzioneSim::NOME_PLURALE,
+            'testoNuovo' => 'Nuovo '.SostituzioneSim::NOME_SINGOLARE,
+            'testoCerca' => null,
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\SostituzioneSim::query();
+        $queryBuilder = SostituzioneSim::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -108,23 +107,21 @@ class SostituzioneSimController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new SostituzioneSim();
+        $record = new SostituzioneSim;
         $this->salvaDati($record, $request);
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $datiRitorno->chiudiDialog(true)->redirect(action([AttivazioneSimController::class, 'show'], $record->attivazione_sim_id));
 
         return $datiRitorno->getArray();
@@ -132,28 +129,28 @@ class SostituzioneSimController extends Controller
         return $this->backToIndex();
     }
 
-
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = SostituzioneSim::find($id);
-        abort_if(!$record, 404, 'Questo sostituzionesim non esiste');
+        abort_if(! $record, 404, 'Questo sostituzionesim non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.SostituzioneSim.edit', [
             'record' => $record,
             'controller' => SostituzioneSimController::class,
-            'titoloPagina' => 'Modifica ' . SostituzioneSim::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.SostituzioneSim::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([SostituzioneSimController::class, 'index']) => 'Torna a elenco ' . SostituzioneSim::NOME_PLURALE]
+            'breadcrumbs' => [action([SostituzioneSimController::class, 'index']) => 'Torna a elenco '.SostituzioneSim::NOME_PLURALE],
 
         ]);
     }
@@ -161,32 +158,31 @@ class SostituzioneSimController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = SostituzioneSim::find($id);
-        abort_if(!$record, 404, 'Questo ' . SostituzioneSim::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.SostituzioneSim::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = SostituzioneSim::find($id);
-        abort_if(!$record, 404, 'Questo sostituzionesim non esiste');
+        abort_if(! $record, 404, 'Questo sostituzionesim non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -195,14 +191,14 @@ class SostituzioneSimController extends Controller
     }
 
     /**
-     * @param SostituzioneSim $model
-     * @param Request $request
+     * @param  SostituzioneSim  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
@@ -212,7 +208,7 @@ class SostituzioneSimController extends Controller
             $model->importo = 5;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'attivazione_sim_id' => '',
             'motivazione' => '',
@@ -244,13 +240,11 @@ class SostituzioneSimController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\SostituzioneSim::get();
+        return SostituzioneSim::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'attivazione_sim_id' => ['required'],
@@ -260,5 +254,4 @@ class SostituzioneSimController extends Controller
 
         return $rules;
     }
-
 }

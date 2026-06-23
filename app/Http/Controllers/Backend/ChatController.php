@@ -11,8 +11,8 @@ use App\Models\ChatMessageAudit;
 use App\Models\ChatMessageFavorite;
 use App\Models\ChatMessageMention;
 use App\Models\ChatMessagePin;
-use App\Models\ChatPushSubscription;
 use App\Models\ChatMessageReaction;
+use App\Models\ChatPushSubscription;
 use App\Models\ChatQuickTemplate;
 use App\Models\ChatThread;
 use App\Models\ChatThreadUser;
@@ -28,8 +28,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ChatController extends Controller
 {
@@ -47,14 +47,14 @@ class ChatController extends Controller
 
         if ($threadId) {
             $threadAttivo = $threads->firstWhere('id', $threadId);
-            if ($threadAttivo && isset($threadAttivo->can_chat) && !$threadAttivo->can_chat) {
+            if ($threadAttivo && isset($threadAttivo->can_chat) && ! $threadAttivo->can_chat) {
                 $threadAttivo = null;
             }
         }
 
-        if (!$threadAttivo) {
+        if (! $threadAttivo) {
             $threadAttivo = $threads->first(function (ChatThread $thread) {
-                return !isset($thread->can_chat) || (bool) $thread->can_chat;
+                return ! isset($thread->can_chat) || (bool) $thread->can_chat;
             });
         }
 
@@ -116,8 +116,8 @@ class ChatController extends Controller
 
         $thread = $this->trovaThreadDueUtenti($authUser->id, $destinatario->id);
 
-        if (!$thread) {
-            $thread = new ChatThread();
+        if (! $thread) {
+            $thread = new ChatThread;
             $thread->created_by = $authUser->id;
             $thread->save();
 
@@ -174,7 +174,7 @@ class ChatController extends Controller
         /** @var User $authUser */
         $authUser = Auth::user();
         $messaggio = $attachment->messaggio;
-        abort_if(!$messaggio, 404);
+        abort_if(! $messaggio, 404);
 
         $threadId = (int) $messaggio->thread_id;
         $this->ensureThreadAccesso($threadId, (int) $authUser->id);
@@ -186,7 +186,7 @@ class ChatController extends Controller
 
         $relativePath = ltrim((string) $attachment->path_filename, '/');
         abort_if($relativePath === '', 404);
-        if (!Storage::disk('public')->exists($relativePath)) {
+        if (! Storage::disk('public')->exists($relativePath)) {
             Log::warning('Chat attachment file missing on disk', [
                 'attachment_id' => (int) $attachment->id,
                 'message_id' => (int) $messaggio->id,
@@ -197,7 +197,7 @@ class ChatController extends Controller
             abort(404);
         }
 
-        $absolutePath = storage_path('app/public/' . $relativePath);
+        $absolutePath = storage_path('app/public/'.$relativePath);
         $download = $request->boolean('download');
 
         if ($download) {
@@ -205,7 +205,7 @@ class ChatController extends Controller
         }
 
         return response()->file($absolutePath, [
-            'Content-Disposition' => 'inline; filename="' . addslashes((string) $attachment->filename_originale) . '"',
+            'Content-Disposition' => 'inline; filename="'.addslashes((string) $attachment->filename_originale).'"',
         ]);
     }
 
@@ -243,20 +243,20 @@ class ChatController extends Controller
         foreach ($partecipazioniDestinatari as $partecipazioneDestinatario) {
             $queryNonLettiPreEsistenti = ChatMessage::query()
                 ->where('thread_id', $thread->id)
-                ->where('user_id', '<>', (int)$partecipazioneDestinatario->user_id);
+                ->where('user_id', '<>', (int) $partecipazioneDestinatario->user_id);
 
             if ($partecipazioneDestinatario->last_read_at) {
                 $queryNonLettiPreEsistenti->where('created_at', '>', $partecipazioneDestinatario->last_read_at);
             }
 
-            if (!$queryNonLettiPreEsistenti->exists()) {
-                $destinatariEmailPrimoNonLetto[] = (int)$partecipazioneDestinatario->user_id;
+            if (! $queryNonLettiPreEsistenti->exists()) {
+                $destinatariEmailPrimoNonLetto[] = (int) $partecipazioneDestinatario->user_id;
             }
         }
 
         $estensioniBloccate = ['php', 'phtml', 'phar', 'exe', 'bat', 'cmd', 'sh', 'js', 'jar', 'com', 'scr', 'msi'];
         foreach ($allegati as $allegato) {
-            if (!$allegato) {
+            if (! $allegato) {
                 continue;
             }
 
@@ -264,12 +264,12 @@ class ChatController extends Controller
             if (in_array($ext, $estensioniBloccate, true)) {
                 return response()->json([
                     'ok' => false,
-                    'message' => 'Tipo file non consentito: ' . $ext,
+                    'message' => 'Tipo file non consentito: '.$ext,
                 ], 422);
             }
         }
 
-        $messaggio = new ChatMessage();
+        $messaggio = new ChatMessage;
         $messaggio->thread_id = $thread->id;
         $messaggio->user_id = $authUser->id;
         $messaggio->messaggio = $testoMessaggio;
@@ -281,7 +281,7 @@ class ChatController extends Controller
         $messaggio->load('mittente');
 
         foreach ($allegati as $allegato) {
-            if (!$allegato) {
+            if (! $allegato) {
                 continue;
             }
 
@@ -289,13 +289,13 @@ class ChatController extends Controller
             if (in_array($ext, $estensioniBloccate, true)) {
                 return response()->json([
                     'ok' => false,
-                    'message' => 'Tipo file non consentito: ' . $ext,
+                    'message' => 'Tipo file non consentito: '.$ext,
                 ], 422);
             }
 
             $path = $allegato->store('chat-allegati', 'public');
 
-            $recordAllegato = new ChatMessageAttachment();
+            $recordAllegato = new ChatMessageAttachment;
             $recordAllegato->message_id = $messaggio->id;
             $recordAllegato->filename_originale = $allegato->getClientOriginalName();
             $recordAllegato->path_filename = $path;
@@ -314,7 +314,7 @@ class ChatController extends Controller
 
         broadcast(new ChatMessageSent($messaggio))->toOthers();
 
-        if (!empty($destinatariEmailPrimoNonLetto)) {
+        if (! empty($destinatariEmailPrimoNonLetto)) {
             User::query()
                 ->whereIn('id', $destinatariEmailPrimoNonLetto)
                 ->get()
@@ -342,12 +342,12 @@ class ChatController extends Controller
                 : 'Chat interna';
 
             SendChatWebPushNotification::dispatch($destinatarioId, [
-                'title' => $authUser->nominativo() . ' · Chat interna',
+                'title' => $authUser->nominativo().' · Chat interna',
                 'body' => Str::limit(strip_tags((string) ($messaggio->messaggio ?: '📎 Nuovo allegato in chat')), 120),
-                'url' => url('/backend/chat-interna?thread=' . $thread->id),
+                'url' => url('/backend/chat-interna?thread='.$thread->id),
                 'thread_id' => (int) $thread->id,
                 'message_id' => (int) $messaggio->id,
-                'tag' => 'chat-thread-' . $thread->id,
+                'tag' => 'chat-thread-'.$thread->id,
                 'icon' => url('/images/logo_small_icon_only.png'),
                 'badge' => url('/images/logo_small_icon_only.png'),
                 'thread_name' => $threadName,
@@ -490,7 +490,7 @@ class ChatController extends Controller
 
         $thread->partecipanti()->detach($authUser->id);
 
-        if (!$thread->partecipanti()->exists()) {
+        if (! $thread->partecipanti()->exists()) {
             $thread->delete();
         }
 
@@ -538,6 +538,7 @@ class ChatController extends Controller
 
         if ($existing) {
             $existing->delete();
+
             return response()->json(['ok' => true, 'pinned' => false]);
         }
 
@@ -562,6 +563,7 @@ class ChatController extends Controller
 
         if ($existing) {
             $existing->delete();
+
             return response()->json(['ok' => true, 'favorite' => false]);
         }
 
@@ -652,7 +654,7 @@ class ChatController extends Controller
 
         foreach ($sorgente as $origine) {
             $testoMittente = $origine->mittente?->nominativo() ?? 'Utente';
-            $contenuto = "[Inoltrato da {$testoMittente}]\n" . (string) $origine->messaggio;
+            $contenuto = "[Inoltrato da {$testoMittente}]\n".(string) $origine->messaggio;
 
             ChatMessage::query()->create([
                 'thread_id' => $targetThreadId,
@@ -703,7 +705,7 @@ class ChatController extends Controller
     {
         return response()->json([
             'publicKey' => (string) config('services.webpush.vapid.public_key'),
-            'configured' => !empty(config('services.webpush.vapid.public_key')),
+            'configured' => ! empty(config('services.webpush.vapid.public_key')),
         ]);
     }
 
@@ -774,7 +776,7 @@ class ChatController extends Controller
                 return $this->mentionTagForUser($utente) === $tag;
             });
 
-        if (!$destinatario) {
+        if (! $destinatario) {
             return response()->json([
                 'ok' => false,
                 'message' => 'Utente menzionato non trovato o non disponibile',
@@ -783,8 +785,8 @@ class ChatController extends Controller
 
         $thread = $this->trovaThreadDueUtenti($authUser->id, $destinatario->id);
 
-        if (!$thread) {
-            $thread = new ChatThread();
+        if (! $thread) {
+            $thread = new ChatThread;
             $thread->created_by = $authUser->id;
             $thread->save();
 
@@ -893,7 +895,7 @@ class ChatController extends Controller
         $bSupervisore = $utenteB->hasPermissionTo('supervisore');
 
         $isAgenteSupervisorePair = ($aAgente && $bSupervisore) || ($aSupervisore && $bAgente);
-        if (!$isAgenteSupervisorePair) {
+        if (! $isAgenteSupervisorePair) {
             return false;
         }
 
@@ -1000,7 +1002,7 @@ class ChatController extends Controller
             ->pluck('user_id');
 
         foreach ($partecipanti as $participantId) {
-            $typingName = Cache::get($this->typingCacheKey($threadId, (int)$participantId));
+            $typingName = Cache::get($this->typingCacheKey($threadId, (int) $participantId));
             if ($typingName) {
                 return [
                     'active' => true,
@@ -1017,11 +1019,11 @@ class ChatController extends Controller
 
     protected function typingCacheKey(int $threadId, int $userId): string
     {
-        return 'chat_typing_' . $threadId . '_' . $userId;
+        return 'chat_typing_'.$threadId.'_'.$userId;
     }
 
     /* ------------------------------------------------------------------ */
-    /*  REAZIONE EMOJI                                                     */
+    /*  REAZIONE EMOJI */
     /* ------------------------------------------------------------------ */
 
     public function toggleReaction(Request $request, ChatMessage $message): JsonResponse
@@ -1030,7 +1032,7 @@ class ChatController extends Controller
         $authUser = Auth::user();
         $this->ensureThreadAccesso($message->thread_id, $authUser->id);
 
-        if (!$this->haReactionsTable()) {
+        if (! $this->haReactionsTable()) {
             return response()->json(['ok' => false, 'error' => 'Funzionalità non ancora disponibile. Eseguire la migrazione.'], 422);
         }
 
@@ -1060,7 +1062,7 @@ class ChatController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
-    /*  RICERCA MESSAGGI                                                   */
+    /*  RICERCA MESSAGGI */
     /* ------------------------------------------------------------------ */
 
     public function search(Request $request): JsonResponse
@@ -1103,7 +1105,7 @@ class ChatController extends Controller
             ->limit(50);
 
         if ($q !== '') {
-            $query->where('messaggio', 'LIKE', '%' . $q . '%');
+            $query->where('messaggio', 'LIKE', '%'.$q.'%');
         }
 
         if ($threadId) {
@@ -1157,21 +1159,21 @@ class ChatController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
-    /*  ONLINE STATUS                                                      */
+    /*  ONLINE STATUS */
     /* ------------------------------------------------------------------ */
 
     protected function aggiornaStatoOnline(int $userId): void
     {
-        Cache::put('chat_online_' . $userId, true, now()->addSeconds(60));
+        Cache::put('chat_online_'.$userId, true, now()->addSeconds(60));
     }
 
     protected function isOnline(int $userId): bool
     {
-        return (bool) Cache::get('chat_online_' . $userId, false);
+        return (bool) Cache::get('chat_online_'.$userId, false);
     }
 
     /* ------------------------------------------------------------------ */
-    /*  READ RECEIPT HELPER                                                */
+    /*  READ RECEIPT HELPER */
     /* ------------------------------------------------------------------ */
 
     protected function altroLastReadAt(int $threadId, int $currentUserId): ?string
@@ -1210,7 +1212,7 @@ class ChatController extends Controller
         // Carica reazioni e reply solo se la migrazione è stata eseguita
         if ($this->haReactionsTable()) {
             $query->with('reazioni')
-                  ->with('replyTo.mittente:id,nome,cognome');
+                ->with('replyTo.mittente:id,nome,cognome');
         }
 
         return $query->latest('id')
@@ -1232,7 +1234,7 @@ class ChatController extends Controller
     {
         static $cache = [];
 
-        if (!array_key_exists($table, $cache)) {
+        if (! array_key_exists($table, $cache)) {
             $cache[$table] = Schema::hasTable($table);
         }
 
@@ -1242,9 +1244,9 @@ class ChatController extends Controller
     protected function haColonna(string $table, string $column): bool
     {
         static $cache = [];
-        $key = $table . '.' . $column;
+        $key = $table.'.'.$column;
 
-        if (!array_key_exists($key, $cache)) {
+        if (! array_key_exists($key, $cache)) {
             $cache[$key] = Schema::hasTable($table) && Schema::hasColumn($table, $column);
         }
 
@@ -1253,7 +1255,7 @@ class ChatController extends Controller
 
     protected function segnaComeConsegnato(int $threadId, int $currentUserId): void
     {
-        if (!$this->haColonna('chat_messages', 'delivered_at')) {
+        if (! $this->haColonna('chat_messages', 'delivered_at')) {
             return;
         }
 
@@ -1266,7 +1268,7 @@ class ChatController extends Controller
 
     protected function threadSilenziatoPerUtente(int $threadId, int $userId): bool
     {
-        if (!$this->haColonna('chat_thread_users', 'muted_until')) {
+        if (! $this->haColonna('chat_thread_users', 'muted_until')) {
             return false;
         }
 
@@ -1280,7 +1282,7 @@ class ChatController extends Controller
 
     protected function quickTemplatesData(int $userId)
     {
-        if (!$this->haTabella('chat_quick_templates')) {
+        if (! $this->haTabella('chat_quick_templates')) {
             return collect();
         }
 
@@ -1300,7 +1302,7 @@ class ChatController extends Controller
 
     protected function messaggiPinnatiThread(int $threadId)
     {
-        if (!$this->haTabella('chat_message_pins')) {
+        if (! $this->haTabella('chat_message_pins')) {
             return collect();
         }
 
@@ -1334,7 +1336,7 @@ class ChatController extends Controller
             ->with('mittente:id,nome,cognome')
             ->first();
 
-        if (!$message) {
+        if (! $message) {
             return null;
         }
 
@@ -1354,7 +1356,7 @@ class ChatController extends Controller
 
     protected function registraMenzioni(ChatMessage $messaggio): void
     {
-        if (!$this->haTabella('chat_message_mentions')) {
+        if (! $this->haTabella('chat_message_mentions')) {
             return;
         }
 
@@ -1393,7 +1395,7 @@ class ChatController extends Controller
                 'mentioned_user_id' => $utenteMenzionato->id,
             ]);
 
-            if (!$this->threadSilenziatoPerUtente($messaggio->thread_id, (int) $utenteMenzionato->id)) {
+            if (! $this->threadSilenziatoPerUtente($messaggio->thread_id, (int) $utenteMenzionato->id)) {
                 $utenteMenzionato->notify(new NotificaPrimoMessaggioChatInterna($messaggio));
             }
         }

@@ -6,6 +6,7 @@ use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Throwable;
 
@@ -25,7 +26,7 @@ class EmailLogger
     {
         try {
             $message = $event->message;
-            if (!$message instanceof Email) {
+            if (! $message instanceof Email) {
                 return;
             }
 
@@ -50,32 +51,32 @@ class EmailLogger
                 'to' => Str::limit($this->formatAddressField($message->getTo()), 250, ''),
                 'cc' => Str::limit($this->formatAddressField($message->getCc()), 250, ''),
                 'bcc' => Str::limit($this->formatAddressField($message->getBcc()), 250, ''),
-                'subject' => Str::limit((string)($message->getSubject() ?? '(senza oggetto)'), 250, ''),
-                'body' => base64_encode(gzcompress((string)$body, 9)),
+                'subject' => Str::limit((string) ($message->getSubject() ?? '(senza oggetto)'), 250, ''),
+                'body' => base64_encode(gzcompress((string) $body, 9)),
                 'attachments' => implode(', ', $allegati),
             ]);
         } catch (Throwable $e) {
             Log::warning('EmailLogger: impossibile salvare su registro_email', [
                 'errore' => $e->getMessage(),
             ]);
+
             return;
         }
     }
 
     /**
-     * @param iterable<\Symfony\Component\Mime\Address>|null $addresses
-     * @return string
+     * @param  iterable<Address>|null  $addresses
      */
     protected function formatAddressField($addresses): string
     {
-        if (!is_iterable($addresses)) {
+        if (! is_iterable($addresses)) {
             return '';
         }
 
         $strings = [];
         foreach ($addresses as $address) {
             if (method_exists($address, 'getAddress')) {
-                $mailboxStr = (string)$address->getAddress();
+                $mailboxStr = (string) $address->getAddress();
                 if ($mailboxStr !== '') {
                     $strings[] = $mailboxStr;
                 }
@@ -84,5 +85,4 @@ class EmailLogger
 
         return implode(', ', $strings);
     }
-
 }

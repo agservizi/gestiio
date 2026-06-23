@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\NotificaNuovoTicketAdAdmin;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -32,7 +33,7 @@ class TicketController extends Controller
 
     public function index()
     {
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $records */
+        /** @var LengthAwarePaginator $records */
         $records = $this->ticketsQuery()
             ->with('messaggi')
             ->latest('id')
@@ -50,17 +51,17 @@ class TicketController extends Controller
     {
         $this->authorize('create', Ticket::class);
 
-        $record = new Ticket();
+        $record = new Ticket;
         $uploadUid = (string) Str::ulid();
         $this->rememberUploadUid($uploadUid);
 
         return view('Frontend.Ticket.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Ticket::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Ticket::NOME_SINGOLARE,
             'controller' => static::class,
             'contratti' => $this->contrattiForSelect(),
             'uploadUid' => $uploadUid,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . Ticket::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.Ticket::NOME_PLURALE],
         ]);
     }
 
@@ -71,7 +72,7 @@ class TicketController extends Controller
         $request->validate($this->rules(null));
         $this->validateOwnedContratto((int) $request->input('contratto_id'));
 
-        $record = new Ticket();
+        $record = new Ticket;
         $this->salvaDati($record, $request);
         $this->forgetUploadUid($request->input('uid'));
 
@@ -82,12 +83,12 @@ class TicketController extends Controller
         ]);
 
         dispatch(function () use ($record) {
-            Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">' . $record->oggetto . '</span> da cliente <span class="fw-bold">' . $this->currentUser()->nominativo() . '</span>');
+            Notifica::notificaAdAdmin('Nuovo ticket', '<span class="fw-bold">'.$record->oggetto.'</span> da cliente <span class="fw-bold">'.$this->currentUser()->nominativo().'</span>');
 
             User::find(2)?->notify(new NotificaNuovoTicketAdAdmin($record));
         })->afterResponse();
 
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $datiRitorno->success(true)
             ->chiudiDialog(true)
             ->oggettoReload('kt_help', view('Frontend.AreaUtente.elencoTickets', $this->ticketWidgetPayload()));
@@ -114,8 +115,8 @@ class TicketController extends Controller
             'record' => $record,
             'controller' => self::class,
             'uploadUid' => $uploadUid,
-            'titoloPagina' => 'Visualizzazione ' . ucfirst(Ticket::NOME_SINGOLARE),
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . Ticket::NOME_PLURALE],
+            'titoloPagina' => 'Visualizzazione '.ucfirst(Ticket::NOME_SINGOLARE),
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.Ticket::NOME_PLURALE],
         ]);
     }
 
@@ -129,9 +130,9 @@ class TicketController extends Controller
             'controller' => self::class,
             'contratti' => $this->contrattiForSelect(),
             'uploadUid' => old('uid', $record->uid),
-            'titoloPagina' => 'Modifica ' . Ticket::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Ticket::NOME_SINGOLARE,
             'eliminabile' => false,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . Ticket::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.Ticket::NOME_PLURALE],
         ]);
     }
 
@@ -145,11 +146,11 @@ class TicketController extends Controller
         $record = $this->resolveOwnedTicket((int) $id);
         $this->authorize('update', $record);
 
-        if (!$this->canUseUploadUid($request->input('uid')) && $request->input('uid') !== $record->uid) {
+        if (! $this->canUseUploadUid($request->input('uid')) && $request->input('uid') !== $record->uid) {
             throw ValidationException::withMessages(['uid' => 'Sessione allegati non valida. Riprova.']);
         }
 
-        $messaggio = new MessaggioTicket();
+        $messaggio = new MessaggioTicket;
         $messaggio->ticket_id = $record->id;
         $messaggio->user_id = Auth::id();
         $messaggio->messaggio = $request->input('messaggio');
@@ -170,7 +171,7 @@ class TicketController extends Controller
             'user_id' => Auth::id(),
         ]);
 
-        $datiRitorno = new DatiRitorno();
+        $datiRitorno = new DatiRitorno;
         $datiRitorno->success(true)
             ->chiudiDialog(true)
             ->oggettoReload('kt_help', view('Frontend.AreaUtente.elencoTickets', $this->ticketWidgetPayload()));
@@ -180,7 +181,7 @@ class TicketController extends Controller
 
     protected function salvaDati(Ticket $model, Request $request): Ticket
     {
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->stato = 'aperto';
@@ -211,7 +212,7 @@ class TicketController extends Controller
 
         $model->save();
 
-        $messaggio = new MessaggioTicket();
+        $messaggio = new MessaggioTicket;
         $messaggio->ticket_id = $model->id;
         $messaggio->user_id = Auth::id();
         $messaggio->messaggio = $request->input('messaggio');
@@ -244,18 +245,18 @@ class TicketController extends Controller
         ]);
 
         $uid = $request->input('uid');
-        if (!$this->canUseUploadUid($uid)) {
+        if (! $this->canUseUploadUid($uid)) {
             return response()->json(['success' => false, 'message' => 'Sessione allegati non valida'], 422);
         }
 
-        $file = new AllegatoMessaggioTicket();
+        $file = new AllegatoMessaggioTicket;
         $filePath = $request->file('file');
         $estensione = $filePath->extension();
-        $fileName = Str::ulid() . '.' . $estensione;
+        $fileName = Str::ulid().'.'.$estensione;
         $cartella = config('configurazione.allegati_ticket.cartella');
 
         $request->file('file')->storeAs($cartella, $fileName);
-        $file->path_filename = $cartella . '/' . $fileName;
+        $file->path_filename = $cartella.'/'.$fileName;
         $file->filename_originale = $filePath->getClientOriginalName();
         $file->mime_type = $filePath->getMimeType();
         $contenuto = file_get_contents($filePath->getRealPath());
@@ -276,11 +277,11 @@ class TicketController extends Controller
     public function downloadAllegato($messaggioId, $allegatoId)
     {
         $record = AllegatoMessaggioTicket::find($allegatoId);
-        abort_if(!$record, 404, 'Questo allegato non esiste');
+        abort_if(! $record, 404, 'Questo allegato non esiste');
         abort_if((int) $record->messaggio_id !== (int) $messaggioId, 404, 'Questo allegato non esiste');
 
         $messaggio = MessaggioTicket::with('ticket')->find($messaggioId);
-        abort_if(!$messaggio || !$messaggio->ticket || (int) $messaggio->ticket->user_id !== (int) Auth::id(), 403, 'Allegato non disponibile');
+        abort_if(! $messaggio || ! $messaggio->ticket || (int) $messaggio->ticket->user_id !== (int) Auth::id(), 403, 'Allegato non disponibile');
 
         Log::info('frontend_ticket_attachment_downloaded', [
             'attachment_id' => $record->id,
@@ -293,7 +294,7 @@ class TicketController extends Controller
             if ($contenuto !== false) {
                 return response($contenuto, 200, [
                     'Content-Type' => $record->mime_type ?: 'application/octet-stream',
-                    'Content-Disposition' => 'attachment; filename="' . addslashes($record->filename_originale) . '"',
+                    'Content-Disposition' => 'attachment; filename="'.addslashes($record->filename_originale).'"',
                 ]);
             }
         }
@@ -304,7 +305,7 @@ class TicketController extends Controller
     public function deleteAllegato(Request $request)
     {
         $record = AllegatoMessaggioTicket::find($request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        abort_if(! $record, 404, 'File non trovato');
 
         $owned = false;
         if ($record->messaggio_id) {
@@ -314,7 +315,7 @@ class TicketController extends Controller
             $owned = $record->uid && $this->canUseUploadUid($record->uid);
         }
 
-        abort_if(!$owned, 403, 'Operazione non consentita');
+        abort_if(! $owned, 403, 'Operazione non consentita');
 
         Log::info('frontend_ticket_attachment_deleted', [
             'attachment_id' => $record->id,
@@ -341,7 +342,7 @@ class TicketController extends Controller
         }
 
         $record = $query->find($id);
-        abort_if(!$record, 404, 'Questo ticket non esiste');
+        abort_if(! $record, 404, 'Questo ticket non esiste');
 
         return $record;
     }
@@ -349,7 +350,7 @@ class TicketController extends Controller
     protected function validateOwnedContratto(int $contrattoId): void
     {
         $found = ContrattoTelefonia::delCliente()->whereKey($contrattoId)->exists();
-        if (!$found) {
+        if (! $found) {
             throw ValidationException::withMessages(['contratto_id' => 'Contratto non valido per il tuo account']);
         }
     }
@@ -363,7 +364,7 @@ class TicketController extends Controller
 
     protected function forgetUploadUid(?string $uid): void
     {
-        if (!$uid) {
+        if (! $uid) {
             return;
         }
 

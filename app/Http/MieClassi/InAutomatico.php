@@ -4,7 +4,6 @@ namespace App\Http\MieClassi;
 
 use App\Models\ContrattoTelefonia;
 use App\Models\Notifica;
-use App\Models\User;
 use App\Notifications\NotificaScadenzaContrattoTelefonia;
 use App\Notifications\NotificaSollecitoGestoreTelefonia;
 use Illuminate\Support\Facades\Notification;
@@ -31,7 +30,6 @@ class InAutomatico
             Notification::route('mail', $email)->notify(new NotificaSollecitoGestoreTelefonia($record->id));
         }
 
-
     }
 
     public static function inviaNotificheScadenzaContrattiTelefonia()
@@ -44,12 +42,11 @@ class InAutomatico
             ->whereNull('reminder_inviato')
             ->get();
         foreach ($records as $record) {
-            Notifica::notificaAdAdmin('Scadenza contratto telefonia', 'Il contratto ' . $record->tipoContratto->nome . ' di ' . $record->nominativo() . ' scadrà il ' . $record->data_reminder->addDays(20)->format('d/m/Y'));
+            Notifica::notificaAdAdmin('Scadenza contratto telefonia', 'Il contratto '.$record->tipoContratto->nome.' di '.$record->nominativo().' scadrà il '.$record->data_reminder->addDays(20)->format('d/m/Y'));
             Notification::route('mail', $record->email)->notify(new NotificaScadenzaContrattoTelefonia($record->id));
             $record->reminder_inviato = now();
             $record->save();
         }
-
 
     }
 }

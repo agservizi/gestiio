@@ -2,10 +2,8 @@
 
 namespace App\Notifications;
 
-use App\Models\ContrattoTelefonia;
 use App\Models\ContrattoEnergia;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
@@ -17,7 +15,7 @@ class NotificaAgenteCambioEsitoContrattoEnergia extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param ContrattoEnergia $contratto
+     * @param  ContrattoEnergia  $contratto
      */
     public function __construct(protected $contratto)
     {
@@ -27,7 +25,7 @@ class NotificaAgenteCambioEsitoContrattoEnergia extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -38,22 +36,22 @@ class NotificaAgenteCambioEsitoContrattoEnergia extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         return (new MailMessage)
             ->subject('Contratto energia aggiornato')
-            ->line('Il contratto di ' . $this->contratto->nominativo())
+            ->line('Il contratto di '.$this->contratto->nominativo())
             ->line('è stato aggiornato a: ')
-            ->line(new HtmlString('<strong>' . $this->contratto->esito->nome . '</strong>'));
+            ->line(new HtmlString('<strong>'.$this->contratto->esito->nome.'</strong>'));
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

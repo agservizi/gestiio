@@ -2,29 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProdottoTimWifi extends Model
 {
-    protected $table="prodotto_tim_wifi";
+    protected $table = 'prodotto_tim_wifi';
 
     protected $primaryKey = 'contratto_id';
 
-    public const NOME_SINGOLARE = "prodottotimwifi";
-    public const NOME_PLURALE = "";
+    public const NOME_SINGOLARE = 'prodottotimwifi';
 
-    protected $casts=[
-        'offerta_scelta'=>'array',
-        'opzione_inclusa'=>'array',
-        'firmatario_data_emissione'=>'date',
-        'firmatario_data_scadenza'=>'date',
+    public const NOME_PLURALE = '';
+
+    protected $casts = [
+        'offerta_scelta' => 'array',
+        'opzione_inclusa' => 'array',
+        'firmatario_data_emissione' => 'date',
+        'firmatario_data_scadenza' => 'date',
     ];
 
     public const TIPO_LINEA = [
         'ATTIVAZIONE NUOVA LINEA FISSA' => 'ATTIVAZIONE NUOVA LINEA FISSA',
         'ATTIVAZIONE LINEA FISSA PER PASSAGGIO DA ALTRO OPERATORE' => 'ATTIVAZIONE LINEA FISSA PER PASSAGGIO DA ALTRO OPERATORE',
     ];
+
     public const OFFERTA = [
         'TIM WiFi Power FIBRA' => 'TIM WiFi Power FIBRA',
         'TIM WiFi Power MEGA FTTCF' => 'TIM WiFi Power MEGA FTTCF',
@@ -47,12 +48,11 @@ class ProdottoTimWifi extends Model
         'TIM HUB+ in unica soluzione' => 'TIM HUB+ in unica soluzione',
     ];
 
-
-    public const OFFERTA_SCELTA=[
-        'TIMVISION con Disney+'=>'TIMVISION con Disney+',
-        'TIMVISION con Netflix'=>'TIMVISION con Netflix',
-        'TIMVISION Intrattenimento'=>'TIMVISION Intrattenimento',
-        'Opzione + 5G Power'=>'Opzione + 5G Power',
+    public const OFFERTA_SCELTA = [
+        'TIMVISION con Disney+' => 'TIMVISION con Disney+',
+        'TIMVISION con Netflix' => 'TIMVISION con Netflix',
+        'TIMVISION Intrattenimento' => 'TIMVISION Intrattenimento',
+        'Opzione + 5G Power' => 'Opzione + 5G Power',
     ];
 
     /*

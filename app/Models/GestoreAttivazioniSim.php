@@ -3,20 +3,15 @@
 namespace App\Models;
 
 use App\Http\MieClassiCache\CacheGestoriDashboard;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class GestoreAttivazioniSim extends Model
 {
+    protected $table = 'tab_gestori_attivazioni_sim';
 
-    protected $table = "tab_gestori_attivazioni_sim";
+    public const NOME_SINGOLARE = 'gestore attivazione sim';
 
-    public const NOME_SINGOLARE = "gestore attivazione sim";
-    public const NOME_PLURALE = "gestori attivazioni sim";
-
+    public const NOME_PLURALE = 'gestori attivazioni sim';
 
     /**
      * The "booted" method of the model.
@@ -32,13 +27,11 @@ class GestoreAttivazioniSim extends Model
 
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI
     |--------------------------------------------------------------------------
     */
-
 
     /*
     |--------------------------------------------------------------------------
@@ -61,7 +54,6 @@ class GestoreAttivazioniSim extends Model
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ALTRO
@@ -70,7 +62,6 @@ class GestoreAttivazioniSim extends Model
 
     public function immagineLogo()
     {
-        return $this->logo ? ('/storage' . $this->logo) : '/images/logo-placeholder.png';
+        return $this->logo ? ('/storage'.$this->logo) : '/images/logo-placeholder.png';
     }
-
 }

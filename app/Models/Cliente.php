@@ -9,10 +9,11 @@ class Cliente extends Model
 {
     use HasFactory;
 
-    protected $table = "clienti";
+    protected $table = 'clienti';
 
-    public const NOME_SINGOLARE = "cliente";
-    public const NOME_PLURALE = "clienti";
+    public const NOME_SINGOLARE = 'cliente';
+
+    public const NOME_PLURALE = 'clienti';
 
     /*
     |--------------------------------------------------------------------------
@@ -30,8 +31,6 @@ class Cliente extends Model
         return $this->hasOne(User::class, 'id', 'user_id');
     }
 
-
-
     /*
     |--------------------------------------------------------------------------
     | SCOPE
@@ -46,12 +45,12 @@ class Cliente extends Model
 
     public function nominativo()
     {
-        return $this->cognome . ' ' . $this->nome;
+        return $this->cognome.' '.$this->nome;
     }
 
     public function denominazione()
     {
-        return $this->ragione_sociale ?: ($this->cognome . ' ' . $this->nome);
+        return $this->ragione_sociale ?: ($this->cognome.' '.$this->nome);
     }
 
     /*

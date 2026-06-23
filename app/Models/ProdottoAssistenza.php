@@ -9,10 +9,11 @@ class ProdottoAssistenza extends Model
 {
     use HasFactory;
 
-    protected $table = "prodotti_assistenza";
+    protected $table = 'prodotti_assistenza';
 
-    public const NOME_SINGOLARE = "prodotto assistenza";
-    public const NOME_PLURALE = "prodotti assistenze";
+    public const NOME_SINGOLARE = 'prodotto assistenza';
+
+    public const NOME_PLURALE = 'prodotti assistenze';
 
     /*
     |--------------------------------------------------------------------------
@@ -36,7 +37,7 @@ class ProdottoAssistenza extends Model
         if ($id) {
             $record = self::find($id);
             if ($record) {
-                return '<option value="' . $record->id . '">' . $record->nome . '</option>';
+                return '<option value="'.$record->id.'">'.$record->nome.'</option>';
             }
         }
     }

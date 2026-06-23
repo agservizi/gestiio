@@ -3,10 +3,9 @@
 namespace App\Notifications;
 
 use App\Http\Controllers\Backend\TicketsController;
-use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use App\Models\Ticket;
+use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -18,7 +17,7 @@ class NotificaNuovoTicketAdAdmin extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param Ticket $ticket
+     * @param  Ticket  $ticket
      */
     public function __construct(protected $ticket)
     {
@@ -28,7 +27,7 @@ class NotificaNuovoTicketAdAdmin extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -39,14 +38,14 @@ class NotificaNuovoTicketAdAdmin extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         $email = (new MailMessage)
             ->subject('Nuovo ticket su Gestiio')
-            ->line('Oggetto: ' . $this->ticket->oggetto)
+            ->line('Oggetto: '.$this->ticket->oggetto)
             ->action('Vedi tickets', action([TicketsController::class, 'show'], $this->ticket->id));
 
         return $this->applyPersonalizedSender($email, $this->ticket->utente);
@@ -55,7 +54,7 @@ class NotificaNuovoTicketAdAdmin extends Notification
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

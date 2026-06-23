@@ -4,21 +4,22 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Gestore;
-use App\Models\TipoContratto;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Listino;
+use App\Models\TipoContratto;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class ListinoController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -32,7 +33,7 @@ class ListinoController extends Controller
 
             'nome' => ['testo' => 'Nome', 'filtro' => function ($q) {
                 return $q->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -41,7 +42,7 @@ class ListinoController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -51,7 +52,7 @@ class ListinoController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -61,34 +62,33 @@ class ListinoController extends Controller
                 'html' => base64_encode(view('Backend.Listino.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
         }
-
 
         return view('Backend.Listino.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Listino::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Listino::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\Listino::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.Listino::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Listino::query();
+        $queryBuilder = Listino::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -97,25 +97,25 @@ class ListinoController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new Listino();
+        $record = new Listino;
         $record->attivo = 1;
+
         return view('Backend.Listino.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Listino::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Listino::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([ListinoController::class, 'index']) => 'Torna a elenco ' . Listino::NOME_PLURALE]
+            'breadcrumbs' => [action([ListinoController::class, 'index']) => 'Torna a elenco '.Listino::NOME_PLURALE],
 
         ]);
     }
@@ -123,27 +123,27 @@ class ListinoController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new Listino();
+        $record = new Listino;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = Listino::find($id);
-        abort_if(!$record, 404, 'Questo listino non esiste');
+        abort_if(! $record, 404, 'Questo listino non esiste');
         $records = TipoContratto::with('gestore')
             ->whereHas('gestore', function ($q) {
                 $q->where('attivo', 1);
@@ -157,7 +157,7 @@ class ListinoController extends Controller
             'records' => $records,
             'controller' => ListinoController::class,
             'titoloPagina' => Listino::NOME_SINGOLARE,
-            'breadcrumbs' => [action([ListinoController::class, 'index']) => 'Torna a elenco ' . Listino::NOME_PLURALE]
+            'breadcrumbs' => [action([ListinoController::class, 'index']) => 'Torna a elenco '.Listino::NOME_PLURALE],
 
         ]);
     }
@@ -165,24 +165,25 @@ class ListinoController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = Listino::withCount('agenti')->find($id);
-        abort_if(!$record, 404, 'Questo listino non esiste');
+        abort_if(! $record, 404, 'Questo listino non esiste');
         if ($record->agenti_count) {
             $eliminabile = 'Non eliminabile perchè usato da '.$record->agenti_count.' agenti';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.Listino.edit', [
             'record' => $record,
             'controller' => ListinoController::class,
-            'titoloPagina' => 'Modifica ' . Listino::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Listino::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ListinoController::class, 'index']) => 'Torna a elenco ' . Listino::NOME_PLURALE]
+            'breadcrumbs' => [action([ListinoController::class, 'index']) => 'Torna a elenco '.Listino::NOME_PLURALE],
 
         ]);
     }
@@ -190,32 +191,31 @@ class ListinoController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = Listino::find($id);
-        abort_if(!$record, 404, 'Questo ' . Listino::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.Listino::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = Listino::find($id);
-        abort_if(!$record, 404, 'Questo listino non esiste');
+        abort_if(! $record, 404, 'Questo listino non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -224,20 +224,20 @@ class ListinoController extends Controller
     }
 
     /**
-     * @param Listino $model
-     * @param Request $request
+     * @param  Listino  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->prodotto = 'contratto-telefonia';
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'attivo' => 'app\getInputCheckbox',
@@ -251,6 +251,7 @@ class ListinoController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -264,13 +265,11 @@ class ListinoController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Listino::get();
+        return Listino::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -279,5 +278,4 @@ class ListinoController extends Controller
 
         return $rules;
     }
-
 }

@@ -15,7 +15,7 @@ class NotificaCafPatronatoAdAdmin extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param CafPatronato $cafPatronato
+     * @param  CafPatronato  $cafPatronato
      */
     public function __construct(protected $cafPatronato)
     {
@@ -25,7 +25,7 @@ class NotificaCafPatronatoAdAdmin extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -36,8 +36,8 @@ class NotificaCafPatronatoAdAdmin extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
@@ -50,8 +50,8 @@ class NotificaCafPatronatoAdAdmin extends Notification
 
         $email = (new MailMessage)
             ->from($fromAddress, $fromName)
-            ->subject('Richiesta ' . $this->cafPatronato->tipo->nome . ' per ' . $this->cafPatronato->nominativo())
-            ->line('Nominativo cliente: ' . $this->cafPatronato->nominativo())
+            ->subject('Richiesta '.$this->cafPatronato->tipo->nome.' per '.$this->cafPatronato->nominativo())
+            ->line('Nominativo cliente: '.$this->cafPatronato->nominativo())
             ->salutation(new HtmlString('Saluti,<br>'.$this->cafPatronato->agente->nominativo()));
 
         if ($agente?->email) {
@@ -64,7 +64,7 @@ class NotificaCafPatronatoAdAdmin extends Notification
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

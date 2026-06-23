@@ -2,6 +2,14 @@
 
 namespace App\Console;
 
+use App\Console\Commands\BackfillAllegatiDbContent;
+use App\Console\Commands\BackfillGestoriEnergiaCategorie;
+use App\Console\Commands\BackfillGestoriEnergiaLoghiDb;
+use App\Console\Commands\CreateDemoAgente;
+use App\Console\Commands\DocumentiScadenzeReminder;
+use App\Console\Commands\PollOpenApiVisure;
+use App\Console\Commands\SyncTipoVisuraOpenApiHash;
+use App\Console\Commands\TicketsAuditIntegrity;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -13,20 +21,19 @@ class Kernel extends ConsoleKernel
      * @var array<int, class-string>
      */
     protected $commands = [
-        \App\Console\Commands\BackfillAllegatiDbContent::class,
-        \App\Console\Commands\BackfillGestoriEnergiaCategorie::class,
-        \App\Console\Commands\BackfillGestoriEnergiaLoghiDb::class,
-        \App\Console\Commands\CreateDemoAgente::class,
-        \App\Console\Commands\DocumentiScadenzeReminder::class,
-        \App\Console\Commands\PollOpenApiVisure::class,
-        \App\Console\Commands\SyncTipoVisuraOpenApiHash::class,
-        \App\Console\Commands\TicketsAuditIntegrity::class,
+        BackfillAllegatiDbContent::class,
+        BackfillGestoriEnergiaCategorie::class,
+        BackfillGestoriEnergiaLoghiDb::class,
+        CreateDemoAgente::class,
+        DocumentiScadenzeReminder::class,
+        PollOpenApiVisure::class,
+        SyncTipoVisuraOpenApiHash::class,
+        TicketsAuditIntegrity::class,
     ];
 
     /**
      * Define the application's command schedule.
      *
-     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
      * @return void
      */
     protected function schedule(Schedule $schedule)

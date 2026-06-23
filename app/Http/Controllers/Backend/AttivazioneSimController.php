@@ -4,9 +4,8 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\AllegatoAttivazioneSim;
-use App\Models\CafPatronato;
+use App\Models\AttivazioneSim;
 use App\Models\EsitoAttivazioneSim;
-use App\Models\EsitoCafPatronato;
 use App\Models\Gestore;
 use App\Models\GestoreAttivazioniSim;
 use App\Models\Notifica;
@@ -15,16 +14,15 @@ use App\Models\TabMotivoKo;
 use App\Models\User;
 use App\Notifications\NotificaAttivazioneSimAdAdmin;
 use App\Notifications\NotificaAttivazioneSimCambioEsitoAdAgente;
-use App\Notifications\NotificaCafPatronato;
-use App\Notifications\NotificaCafPatronatoAdAdmin;
-use App\Notifications\NotificaCafPatronatoCambioEsitoAdAgente;
-use App\Notifications\NotificaGenericaGestore;
 use App\Notifications\NotificaGenericaGestoreAttivazioneSim;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\AttivazioneSim;
+use App\Rules\CodiceFiscaleRule;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
 
@@ -32,11 +30,10 @@ class AttivazioneSimController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -50,7 +47,7 @@ class AttivazioneSimController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -59,7 +56,7 @@ class AttivazioneSimController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -69,14 +66,13 @@ class AttivazioneSimController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
 
         $puoModificare = $this->determinaPuoModificare();
         $puoCambiareStato = $this->determinaPuoCambiareStato();
-
 
         if ($request->ajax()) {
 
@@ -87,39 +83,36 @@ class AttivazioneSimController extends Controller
                     'puoModificare' => $puoModificare,
                     'puoCambiareStato' => $puoCambiareStato,
 
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.AttivazioneSim.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\AttivazioneSim::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.AttivazioneSim::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuova ' . \App\Models\AttivazioneSim::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuova '.AttivazioneSim::NOME_SINGOLARE,
             'testoCerca' => 'Cerca in nominativo, codice fiscale',
             'puoModificare' => $puoModificare,
             'puoCambiareStato' => $puoCambiareStato,
 
-
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\AttivazioneSim::query()
+        $queryBuilder = AttivazioneSim::query()
             ->with(['comune' => function ($q) {
                 $q->select('id', 'comune', 'targa');
             }])
@@ -142,28 +135,27 @@ class AttivazioneSimController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create($servizio = null)
     {
-        if (!$servizio) {
+        if (! $servizio) {
             return view('Backend.AttivazioneSim.create', [
-                'record' => new AttivazioneSim(),
+                'record' => new AttivazioneSim,
                 'titoloPagina' => 'Nuova attivazione',
                 'controller' => get_class($this),
-                'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco ' . AttivazioneSim::NOME_PLURALE]
+                'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco '.AttivazioneSim::NOME_PLURALE],
             ]);
         }
 
-        $record = new AttivazioneSim();
+        $record = new AttivazioneSim;
         $record->data = today();
         $record->uid = Str::ulid();
         $record->gestore_id = $servizio;
@@ -173,31 +165,29 @@ class AttivazioneSimController extends Controller
 
         return view('Backend.AttivazioneSim.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuova ' . AttivazioneSim::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuova '.AttivazioneSim::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco ' . AttivazioneSim::NOME_PLURALE],
-            'nomeGestore' => GestoreAttivazioniSim::find($record->gestore_id)->nome
+            'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco '.AttivazioneSim::NOME_PLURALE],
+            'nomeGestore' => GestoreAttivazioniSim::find($record->gestore_id)->nome,
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new AttivazioneSim();
+        $record = new AttivazioneSim;
         $this->salvaDati($record, $request);
-
 
         $this->inviaNotifiche($record);
 
         if (Auth::user()->hasPermissionTo('agente')) {
             $gestore = GestoreAttivazioniSim::find($record->gestore_id);
-            Notifica::notificaAdAdmin('Nuova ' . AttivazioneSim::NOME_SINGOLARE, '<span class="fw-bold">' . $gestore->nome . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
+            Notifica::notificaAdAdmin('Nuova '.AttivazioneSim::NOME_SINGOLARE, '<span class="fw-bold">'.$gestore->nome.'</span> caricato da <span class="fw-bold">'.$record->agente->nominativo().'</span> per il cliente <span class="fw-bold">'.$record->nominativo().'</span>');
         }
 
         return $this->backToIndex();
@@ -206,20 +196,21 @@ class AttivazioneSimController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = AttivazioneSim::find($id);
-        abort_if(!$record, 404, 'Questa attivazione sim non esiste');
+        abort_if(! $record, 404, 'Questa attivazione sim non esiste');
+
         return view('Backend.AttivazioneSim.show', [
             'record' => $record,
             'controller' => AttivazioneSimController::class,
             'titoloPagina' => ucfirst(AttivazioneSim::NOME_SINGOLARE),
-            'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco ' . AttivazioneSim::NOME_PLURALE],
+            'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco '.AttivazioneSim::NOME_PLURALE],
             'sostituzioni' => SostituzioneSim::where('attivazione_sim_id', $id)->with('agente:id,ragione_sociale')->get(),
-            'nomeGestore' => GestoreAttivazioniSim::find($record->gestore_id)->nome
+            'nomeGestore' => GestoreAttivazioniSim::find($record->gestore_id)->nome,
 
         ]);
     }
@@ -227,24 +218,25 @@ class AttivazioneSimController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = AttivazioneSim::find($id);
-        abort_if(!$record, 404, 'Questa attivazionesim non esiste');
+        abort_if(! $record, 404, 'Questa attivazionesim non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.AttivazioneSim.edit', [
             'record' => $record,
             'controller' => AttivazioneSimController::class,
-            'titoloPagina' => 'Modifica ' . AttivazioneSim::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.AttivazioneSim::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco ' . AttivazioneSim::NOME_PLURALE],
+            'breadcrumbs' => [action([AttivazioneSimController::class, 'index']) => 'Torna a elenco '.AttivazioneSim::NOME_PLURALE],
             'nomeGestore' => GestoreAttivazioniSim::find($record->gestore_id)->nome,
         ]);
     }
@@ -252,32 +244,31 @@ class AttivazioneSimController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = AttivazioneSim::find($id);
-        abort_if(!$record, 404, 'Questa ' . AttivazioneSim::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.AttivazioneSim::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = AttivazioneSim::find($id);
-        abort_if(!$record, 404, 'Questa attivazionesim non esiste');
+        abort_if(! $record, 404, 'Questa attivazionesim non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -285,11 +276,10 @@ class AttivazioneSimController extends Controller
         ];
     }
 
-
     public function aggiornaStato(Request $request, $id)
     {
         $attivazioneSims = AttivazioneSim::withCount('allegati')->find($id);
-        abort_if(!$attivazioneSims, 404, 'Questo servizio non esiste');
+        abort_if(! $attivazioneSims, 404, 'Questo servizio non esiste');
 
         $esitoPrima = $attivazioneSims->esito_id;
 
@@ -316,7 +306,6 @@ class AttivazioneSimController extends Controller
         }
         $records = collect([$attivazioneSims]);
 
-
         if ($attivazioneSims->wasChanged(['esito_id'])) {
             $esito = EsitoAttivazioneSim::find($attivazioneSims->esito_id);
             if ($esito->notifica_mail) {
@@ -330,18 +319,16 @@ class AttivazioneSimController extends Controller
 
             }
             if (Auth::user()->hasPermissionTo('supervisore')) {
-                Notifica::notificaAdAdmin('Cambio esito attivazione', 'Esito per l\'attivazione sim ' . $attivazioneSims->nominativo() . ' modificato a ' . $esito->nome);
+                Notifica::notificaAdAdmin('Cambio esito attivazione', 'Esito per l\'attivazione sim '.$attivazioneSims->nominativo().' modificato a '.$esito->nome);
             }
 
         }
-
 
         if ($request->input('aggiorna') == 'dash') {
             $view = 'Backend.Dashboard.admin.servizi';
         } else {
             $view = 'Backend.AttivazioneSim.tbody';
         }
-
 
         return ['success' => true, 'id' => $id,
             'html' => base64_encode(view($view, [
@@ -350,31 +337,30 @@ class AttivazioneSimController extends Controller
                 'puoModificare' => $this->determinaPuoModificare(),
                 'puoCambiareStato' => $this->determinaPuoCambiareStato(),
 
-            ]))
+            ])),
         ];
     }
-
 
     public function downloadAllegato($attivazioneId, $allegatoId)
     {
         $record = AllegatoAttivazioneSim::find($allegatoId);
-        abort_if(!$record, 404, 'Questo allegato non esiste');
+        abort_if(! $record, 404, 'Questo allegato non esiste');
         abort_if($record->attivazioni_sim_id != $attivazioneId, 404, 'Questo allegato non esiste');
+
         return response()->download(\Storage::path($record->path_filename), $record->filename_originale);
     }
 
-
     public function uploadAllegato(Request $request)
     {
-        $file = new AllegatoAttivazioneSim();
+        $file = new AllegatoAttivazioneSim;
 
         if ($request->file('file')) {
             $filePath = $request->file('file');
             $estensione = $filePath->extension();
-            $fileName = Str::ulid() . '.' . $estensione;
+            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.allegati_attivazioni_sim.cartella');
             $request->file('file')->storeAs($cartella, $fileName);
-            $file->path_filename = $cartella . '/' . $fileName;
+            $file->path_filename = $cartella.'/'.$fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
             $file->uid = $request->input('uid');
             $file->dimensione_file = $filePath->getSize();
@@ -393,31 +379,31 @@ class AttivazioneSimController extends Controller
     public function deleteAllegato(Request $request)
     {
         $record = AllegatoAttivazioneSim::find($request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        abort_if(! $record, 404, 'File non trovato');
         \Log::debug(__FUNCTION__, $record->toArray());
 
-        \Log::debug('elimino AllegatoAttivazioneSim' . $record->path_filename);
+        \Log::debug('elimino AllegatoAttivazioneSim'.$record->path_filename);
         $record->delete();
+
         return $record->path_filename;
     }
 
-
     /**
-     * @param AttivazioneSim $model
-     * @param Request $request
+     * @param  AttivazioneSim  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
             $model->esito_id = 'in-gestione';
             $model->caricato_da_user_id = Auth::id();
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'agente_id' => '',
@@ -456,7 +442,6 @@ class AttivazioneSimController extends Controller
 
         $model->save();
 
-
         AllegatoAttivazioneSim::where('uid', $model->uid)->whereNull('attivazioni_sim_id')->update(['attivazioni_sim_id' => $model->id, 'uid' => null]);
 
         return $model;
@@ -472,13 +457,11 @@ class AttivazioneSimController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\AttivazioneSim::get();
+        return AttivazioneSim::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'data' => ['required'],
@@ -488,7 +471,7 @@ class AttivazioneSimController extends Controller
             'cognome' => ['required', 'max:255'],
             'email' => ['required', 'max:255'],
             'cellulare' => ['required', 'max:255'],
-            'codice_fiscale' => ['required', new \App\Rules\CodiceFiscaleRule()],
+            'codice_fiscale' => ['required', new CodiceFiscaleRule],
             'cliente_id' => ['nullable'],
             'indirizzo' => ['nullable', 'max:255'],
             'citta' => ['nullable', 'max:255'],
@@ -499,7 +482,7 @@ class AttivazioneSimController extends Controller
             'tipo_documento' => ['required', 'max:255'],
             'numero_documento' => ['required', 'max:255'],
             'data_scadenza' => ['required'],
-            'mnp' => ['required_if:portabilita,1']
+            'mnp' => ['required_if:portabilita,1'],
         ];
 
         return $rules;
@@ -518,48 +501,43 @@ class AttivazioneSimController extends Controller
     }
 
     /**
-     * @param AttivazioneSim $attivazioneSim
+     * @param  AttivazioneSim  $attivazioneSim
      * @return void
      */
     public function inviaNotifiche($attivazioneSim)
     {
 
-
         // $this->creaUtente($cafPatronato);
 
-        //Notifica ad agente
+        // Notifica ad agente
         dispatch(function () use ($attivazioneSim) {
             $user = $attivazioneSim->agente;
             try {
                 $user->notify(new NotificaAttivazioneSimAdAdmin($attivazioneSim));
             } catch (\Exception $exception) {
                 report($exception);
-                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il servizio finanziario di ' . $attivazioneSim->nominativo() . ': ' . $exception->getMessage(), 'error');
+                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il servizio finanziario di '.$attivazioneSim->nominativo().': '.$exception->getMessage(), 'error');
             }
         })->afterResponse();
 
-
-        //Notifiche al gestore
+        // Notifiche al gestore
 
         if ($attivazioneSim->gestore->email_notifica_a_gestore) {
 
             dispatch(function () use ($attivazioneSim) {
                 foreach (explode(';', $attivazioneSim->gestore->email_notifica_a_gestore) as $email) {
-                    $user = new User();
+                    $user = new User;
                     $user->email = trim($email);
                     try {
                         $user->notify(new NotificaGenericaGestoreAttivazioneSim($attivazioneSim));
                     } catch (\Exception $exception) {
                         report($exception);
-                        Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per attivazione sim di ' . $attivazioneSim->nominativo() . ': ' . $exception->getMessage(), 'error');
+                        Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per attivazione sim di '.$attivazioneSim->nominativo().': '.$exception->getMessage(), 'error');
                     }
                 }
             })->afterResponse();
 
         }
 
-
     }
-
-
 }

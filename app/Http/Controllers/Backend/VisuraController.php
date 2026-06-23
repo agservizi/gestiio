@@ -8,27 +8,28 @@ use App\Http\Funzioni\VisuraCameraleService;
 use App\Http\MieClassi\AlertMessage;
 use App\Http\Services\OpenApiCatastoService;
 use App\Http\Services\OpenApiVisureService;
-use App\Models\AllegatoCafPatronato;
 use App\Models\AllegatoServizio;
 use App\Models\AllegatoVisura;
-use App\Models\CafPatronato;
 use App\Models\EsitoVisura;
 use App\Models\MovimentoPortafoglio;
 use App\Models\Notifica;
 use App\Models\TabMotivoKo;
 use App\Models\TipoVisura;
 use App\Models\User;
+use App\Models\Visura;
 use App\Notifications\NotificaVisuraCambioEsitoAdAgente;
+use App\Rules\PartitaIvaRule;
 use App\Support\VisuraAttachmentMailer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use SoapClient;
-use App\Models\Visura;
 use Illuminate\Support\Str;
+use SoapClient;
+
 use function App\getInputCheckbox;
 use function App\getInputToUpper;
 use function App\importo;
@@ -45,11 +46,10 @@ class VisuraController extends Controller
         return $user;
     }
 
-
     /**
      * Display a listing of the resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function index(Request $request)
     {
@@ -63,7 +63,7 @@ class VisuraController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -72,7 +72,7 @@ class VisuraController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -82,7 +82,7 @@ class VisuraController extends Controller
             $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $totali = [
@@ -106,11 +106,10 @@ class VisuraController extends Controller
                     'controller' => $nomeClasse,
                     'puoModificare' => $puoModificare,
                     'puoModificareEsito' => $puoModificareEsito,
-                ])->render())
-                ,
+                ])->render()),
                 'kpi' => base64_encode(view('Backend.Visura._kpi', [
                     'totali' => $totali,
-                ])->render())
+                ])->render()),
             ];
 
         }
@@ -126,36 +125,33 @@ class VisuraController extends Controller
                 ->get(['id', 'nome', 'cognome']);
         }
 
-
         return view('Backend.Visura.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Visura::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Visura::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuova ' . \App\Models\Visura::NOME_SINGOLARE,
+            'testoNuovo' => 'Nuova '.Visura::NOME_SINGOLARE,
             'testoCerca' => 'Cerca in nominativo, P.IVA/CF, agente',
             'puoModificare' => $puoModificare,
             'puoModificareEsito' => $puoModificareEsito,
             'agentiFiltro' => $agentiFiltro,
             'totali' => $totali,
 
-
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Visura::query()
+        $queryBuilder = Visura::query()
             ->with('esito')
             ->with('agente')
             ->with('tipo:id,nome,openapi_hash_visura')
@@ -219,23 +215,22 @@ class VisuraController extends Controller
         return $queryBuilder;
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
-        * @return mixed
+     * @return mixed
      */
     public function create($servizio = null)
     {
 
-        if (!$servizio) {
+        if (! $servizio) {
             return view('Backend.Visura.create', [
-                'record' => new Visura(),
+                'record' => new Visura,
                 'titoloPagina' => 'Nuova visura',
                 'controller' => get_class($this),
             ]);
         }
-        $record = new Visura();
+        $record = new Visura;
         $record->data = today();
         $record->uid = Str::ulid();
 
@@ -253,9 +248,9 @@ class VisuraController extends Controller
 
         return view('Backend.Visura.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuova ' . $tipoServizio->nome,
+            'titoloPagina' => 'Nuova '.$tipoServizio->nome,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco ' . Visura::NOME_PLURALE],
+            'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco '.Visura::NOME_PLURALE],
             'tipoServizio' => $tipoServizio,
             'isCatastale' => $isCatastale,
             'catastoData' => $catastoData,
@@ -297,7 +292,7 @@ class VisuraController extends Controller
                 $partitaIva = $this->extractPartitaIvaFromAziendaResult($arr);
                 $viesValid = null;
                 if ($checkVies && $partitaIva !== '') {
-                    if (!array_key_exists($partitaIva, $viesCache)) {
+                    if (! array_key_exists($partitaIva, $viesCache)) {
                         $viesCache[$partitaIva] = $this->verifyPartitaIvaViaVies($partitaIva);
                     }
                     $viesValid = $viesCache[$partitaIva];
@@ -402,7 +397,7 @@ class VisuraController extends Controller
 
     protected function eseguiRicercaAziendaConFallback(string $denominazioneInput, $provinciaId): array
     {
-        $service = new VisuraCameraleService();
+        $service = new VisuraCameraleService;
         $results = [];
         $lastMessage = null;
         $denominazioni = $this->denominazioniRicercaAzienda($denominazioneInput);
@@ -420,14 +415,16 @@ class VisuraController extends Controller
                 ]);
 
                 $response = $service->impresa($legacyRequest);
-                if (!$response || !isset($response->data)) {
+                if (! $response || ! isset($response->data)) {
                     $lastMessage = $service->message ?: $lastMessage;
+
                     continue;
                 }
 
                 $dataItems = $this->normalizeAziendaSearchDataItems($response->data);
                 if (empty($dataItems)) {
                     $lastMessage = $service->message ?: $lastMessage;
+
                     continue;
                 }
 
@@ -438,8 +435,8 @@ class VisuraController extends Controller
                     $fallbackKey = md5(json_encode($row));
                     $key = md5(strtolower(
                         trim((string) $denominazione)
-                        . '|'
-                        . $comune
+                        .'|'
+                        .$comune
                     ));
                     if (trim((string) $denominazione) === '' && $comune === '') {
                         $key = $fallbackKey;
@@ -447,7 +444,7 @@ class VisuraController extends Controller
                     $results[$key] = $item;
                 }
 
-                if (!empty($results)) {
+                if (! empty($results)) {
                     return [array_values($results), $lastMessage];
                 }
             }
@@ -468,7 +465,7 @@ class VisuraController extends Controller
 
         if (is_object($data)) {
             $arr = json_decode(json_encode($data), true);
-            if (!is_array($arr)) {
+            if (! is_array($arr)) {
                 return [];
             }
 
@@ -502,7 +499,7 @@ class VisuraController extends Controller
         }
 
         foreach (array_keys($arr) as $key) {
-            if (!(is_int($key) || (is_string($key) && ctype_digit($key)))) {
+            if (! (is_int($key) || (is_string($key) && ctype_digit($key)))) {
                 return false;
             }
         }
@@ -556,6 +553,7 @@ class VisuraController extends Controller
     {
         $upper = strtoupper(trim($value));
         $upper = preg_replace('/[^A-Z0-9]+/', ' ', $upper) ?: '';
+
         return trim(preg_replace('/\s+/', ' ', $upper) ?: '');
     }
 
@@ -580,7 +578,7 @@ class VisuraController extends Controller
         ];
 
         foreach ($candidateKeys as $key) {
-            if (!array_key_exists($key, $flat)) {
+            if (! array_key_exists($key, $flat)) {
                 continue;
             }
             $normalized = preg_replace('/\D+/', '', (string) $flat[$key]);
@@ -591,11 +589,11 @@ class VisuraController extends Controller
 
         foreach ($flat as $key => $value) {
             if (
-                !str_contains($key, 'partita')
-                && !str_contains($key, 'piva')
-                && !str_contains($key, 'vat')
-                && !str_contains($key, 'cfpiva')
-                && !str_contains($key, 'codicefiscale')
+                ! str_contains($key, 'partita')
+                && ! str_contains($key, 'piva')
+                && ! str_contains($key, 'vat')
+                && ! str_contains($key, 'cfpiva')
+                && ! str_contains($key, 'codicefiscale')
                 && $key !== 'cf'
             ) {
                 continue;
@@ -614,10 +612,11 @@ class VisuraController extends Controller
         $flat = [];
         foreach ($data as $key => $value) {
             $normalizedKey = preg_replace('/[^a-z0-9_]+/', '', strtolower((string) $key));
-            $composed = trim($prefix . '_' . $normalizedKey, '_');
+            $composed = trim($prefix.'_'.$normalizedKey, '_');
 
             if (is_array($value)) {
                 $flat = array_merge($flat, $this->flattenArrayForLookup($value, $composed));
+
                 continue;
             }
 
@@ -632,7 +631,7 @@ class VisuraController extends Controller
 
     protected function verifyPartitaIvaViaVies(string $partitaIva): ?bool
     {
-        if (!preg_match('/^\d{11}$/', $partitaIva)) {
+        if (! preg_match('/^\d{11}$/', $partitaIva)) {
             return null;
         }
 
@@ -655,8 +654,7 @@ class VisuraController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-        * @return mixed
+     * @return mixed
      */
     public function store(Request $request)
     {
@@ -669,12 +667,12 @@ class VisuraController extends Controller
 
         try {
             $tipoServizio = TipoVisura::find($servizio);
-            if (!$tipoServizio) {
+            if (! $tipoServizio) {
                 throw new \RuntimeException('Tipo visura non trovato');
             }
 
             $agente = User::query()->with('agente')->find((int) $request->input('agente_id'));
-            if (!$agente || !$agente->agente) {
+            if (! $agente || ! $agente->agente) {
                 throw new \RuntimeException('Agente non trovato per questa visura');
             }
             $prezzo = (float) $tipoServizio->prezzo_agente;
@@ -690,7 +688,7 @@ class VisuraController extends Controller
                 }
             }
 
-            $record = new Visura();
+            $record = new Visura;
             $record->esito_id = 'in-gestione';
             $record->prezzo_pratica = $prezzo;
             $record->tipo_visura_id = $tipoServizio->id;
@@ -715,17 +713,17 @@ class VisuraController extends Controller
                     $this->processaOpenApiAutomatico($record);
                 } catch (\Throwable $openApiException) {
                     if ($this->isOpenApiCreditoTokenIssue($openApiException->getMessage())) {
-                        throw new \RuntimeException('__OPENAPI_CREDITO_BLOCCO__' . $openApiException->getMessage());
+                        throw new \RuntimeException('__OPENAPI_CREDITO_BLOCCO__'.$openApiException->getMessage());
                     }
                     throw $openApiException;
                 }
             }
 
-            $movimento = new MovimentoPortafoglio();
+            $movimento = new MovimentoPortafoglio;
             $movimento->agente_id = (int) $agente->id;
             $movimento->importo = -$tipoServizio->prezzo_agente;
             $movimento->descrizione = ($fallbackBackoffice ? 'Visura backoffice ' : 'Visura ')
-                . $tipoServizio->nome . ' per ' . ($record->partita_iva ?? $record->codice_fiscale);
+                .$tipoServizio->nome.' per '.($record->partita_iva ?? $record->codice_fiscale);
             $movimento->prodotto_id = $record->id;
             $movimento->prodotto_type = get_class($record);
             $movimento->portafoglio = $fallbackBackoffice
@@ -757,14 +755,13 @@ class VisuraController extends Controller
             return $response;
         }
 
-        $alertMessage = new AlertMessage();
+        $alertMessage = new AlertMessage;
         $walletText = $fallbackBackoffice ? 'portafoglio servizi' : 'portafoglio visure';
         $azioneText = $fallbackBackoffice ? 'inviata al backoffice' : 'creata';
         $alertMessage
-            ->messaggio('Ti è stato scalato l\'importo di ' . importo($tipoServizio->prezzo_agente) . ' dal ' . $walletText . ' per la visura ' . $tipoServizio->nome . ' ' . $azioneText, 'primary')
+            ->messaggio('Ti è stato scalato l\'importo di '.importo($tipoServizio->prezzo_agente).' dal '.$walletText.' per la visura '.$tipoServizio->nome.' '.$azioneText, 'primary')
             ->titolo('Portafoglio aggiornato', 'primary')
             ->flash();
-
 
         return $this->backToIndex();
     }
@@ -772,18 +769,19 @@ class VisuraController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function show($id)
     {
         $record = Visura::find($id);
-        abort_if(!$record, 404, 'Questa visura non esiste');
+        abort_if(! $record, 404, 'Questa visura non esiste');
+
         return view('Backend.Visura.show', [
             'record' => $record,
             'controller' => VisuraController::class,
             'titoloPagina' => Visura::NOME_SINGOLARE,
-            'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco ' . Visura::NOME_PLURALE]
+            'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco '.Visura::NOME_PLURALE],
 
         ]);
     }
@@ -791,13 +789,13 @@ class VisuraController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function edit($id)
     {
         $record = Visura::find($id);
-        abort_if(!$record, 404, 'Questa visura non esiste');
+        abort_if(! $record, 404, 'Questa visura non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
@@ -814,13 +812,12 @@ class VisuraController extends Controller
         return view('Backend.Visura.edit', [
             'record' => $record,
             'controller' => VisuraController::class,
-            'titoloPagina' => 'Modifica ' . $record->tipo->nome,
+            'titoloPagina' => 'Modifica '.$record->tipo->nome,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco ' . Visura::NOME_PLURALE],
+            'breadcrumbs' => [action([VisuraController::class, 'index']) => 'Torna a elenco '.Visura::NOME_PLURALE],
             'tipoServizio' => $record->tipo,
             'isCatastale' => $isCatastale,
             'catastoData' => $catastoData,
-
 
         ]);
     }
@@ -828,36 +825,35 @@ class VisuraController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function update(Request $request, $id)
     {
         $record = Visura::find($id);
-        abort_if(!$record, 404, 'Questa ' . Visura::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questa '.Visura::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id, $request));
         if ($record->tipo->tipo_visura == 'azienda') {
             $this->salvaDatiAzienda($record, $request);
         } else {
             $this->salvaDatiPrivato($record, $request);
         }
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-        * @return mixed
+     * @param  int  $id
+     * @return mixed
      */
     public function destroy($id)
     {
         $record = Visura::find($id);
-        abort_if(!$record, 404, 'Questa visura non esiste');
+        abort_if(! $record, 404, 'Questa visura non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -865,18 +861,17 @@ class VisuraController extends Controller
         ];
     }
 
-
     public function uploadAllegato(Request $request)
     {
-        $file = new AllegatoVisura();
+        $file = new AllegatoVisura;
 
         if ($request->file('file')) {
             $filePath = $request->file('file');
             $estensione = $filePath->extension();
-            $fileName = Str::ulid() . '.' . $estensione;
+            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.allegati_visure.cartella');
             $request->file('file')->storeAs($cartella, $fileName);
-            $file->path_filename = $cartella . '/' . $fileName;
+            $file->path_filename = $cartella.'/'.$fileName;
             $file->filename_originale = $filePath->getClientOriginalName();
             $file->mime_type = $filePath->getMimeType();
             $contenuto = file_get_contents($filePath->getRealPath());
@@ -897,18 +892,19 @@ class VisuraController extends Controller
     public function deleteAllegato(Request $request)
     {
         $record = AllegatoVisura::find($request->input('id'));
-        abort_if(!$record, 404, 'File non trovato');
+        abort_if(! $record, 404, 'File non trovato');
         Log::debug(__FUNCTION__, $record->toArray());
 
-        Log::debug('elimino allegato cliente' . $record->path_filename);
+        Log::debug('elimino allegato cliente'.$record->path_filename);
         $record->delete();
+
         return $record->path_filename;
     }
 
     public function aggiornaStato(Request $request, $id)
     {
         $visura = Visura::withCount('allegati')->withCount('allegatiPerCliente')->find($id);
-        abort_if(!$visura, 404, 'Questo servizio non esiste');
+        abort_if(! $visura, 404, 'Questo servizio non esiste');
 
         $esitoPrima = $visura->esito_id;
 
@@ -935,7 +931,6 @@ class VisuraController extends Controller
         }
         $records = collect([$visura]);
 
-
         if ($visura->wasChanged(['esito_id'])) {
             $esito = EsitoVisura::find($visura->esito_id);
             if ($esito->notifica_mail) {
@@ -950,11 +945,10 @@ class VisuraController extends Controller
 
             }
             if ($this->currentUser()->hasPermissionTo('supervisore')) {
-                Notifica::notificaAdAdmin('Cambio esito pratica', 'Esito per la pratica ' . $visura->nominativo() . ' modificato a ' . $esito->nome);
+                Notifica::notificaAdAdmin('Cambio esito pratica', 'Esito per la pratica '.$visura->nominativo().' modificato a '.$esito->nome);
             }
 
         }
-
 
         if ($request->input('aggiorna') == 'dash') {
             $view = 'Backend.Dashboard.admin.servizi';
@@ -969,26 +963,25 @@ class VisuraController extends Controller
                 'puoModificare' => $this->puoModificare(),
                 'puoModificareEsito' => $this->puoModificareEsito(),
 
-            ])->render())
+            ])->render()),
         ];
     }
 
-
     /**
-     * @param Visura $model
-     * @param Request $request
+     * @param  Visura  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiAzienda($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'agente_id' => '',
@@ -1013,24 +1006,25 @@ class VisuraController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
     /**
-     * @param Visura $model
-     * @param Request $request
+     * @param  Visura  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiPrivato($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'agente_id' => '',
@@ -1060,13 +1054,14 @@ class VisuraController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
     public function richiediOpenApi(int $id)
     {
         $record = Visura::with('tipo')->find($id);
-        abort_if(!$record, 404, 'Questa visura non esiste');
+        abort_if(! $record, 404, 'Questa visura non esiste');
 
         if ($record->openapi_request_id) {
             return ['success' => false, 'message' => 'Richiesta automatica già presente'];
@@ -1084,8 +1079,8 @@ class VisuraController extends Controller
     public function sincronizzaOpenApi(int $id)
     {
         $record = Visura::with('tipo')->find($id);
-        abort_if(!$record, 404, 'Questa visura non esiste');
-        abort_if(!$record->openapi_request_id, 422, 'Richiesta automatica non presente');
+        abort_if(! $record, 404, 'Questa visura non esiste');
+        abort_if(! $record->openapi_request_id, 422, 'Richiesta automatica non presente');
 
         $provider = $this->resolveOpenApiProvider($record);
         $service = $provider === 'catasto'
@@ -1094,7 +1089,7 @@ class VisuraController extends Controller
         $statusData = $provider === 'catasto'
             ? $service->statoVisuraCatastale($record->openapi_request_id)
             : $service->statoRichiesta($record->openapi_request_id);
-        if (!$statusData) {
+        if (! $statusData) {
             return ['success' => false, 'message' => $this->userFacingOpenApiMessage($service->message, 'Errore sincronizzazione richiesta automatica')];
         }
 
@@ -1106,8 +1101,8 @@ class VisuraController extends Controller
     public function scaricaDocumentoOpenApi(int $id)
     {
         $record = Visura::with('tipo')->find($id);
-        abort_if(!$record, 404, 'Questa visura non esiste');
-        abort_if(!$record->openapi_request_id, 422, 'Richiesta automatica non presente');
+        abort_if(! $record, 404, 'Questa visura non esiste');
+        abort_if(! $record->openapi_request_id, 422, 'Richiesta automatica non presente');
 
         $provider = $this->resolveOpenApiProvider($record);
         $service = $provider === 'catasto'
@@ -1116,14 +1111,14 @@ class VisuraController extends Controller
         $document = $provider === 'catasto'
             ? $service->scaricaDocumentoVisuraCatastale($record->openapi_request_id)
             : $service->scaricaDocumento($record->openapi_request_id);
-        if (!$document) {
+        if (! $document) {
             return redirect()->back()->withErrors([
                 'openapi' => $this->userFacingOpenApiMessage($service->message, 'Documento non disponibile'),
             ]);
         }
 
         $saved = $this->salvaDocumentoOpenApiSuAllegati($record, $document);
-        if (!$saved) {
+        if (! $saved) {
             return redirect()->back()->withErrors([
                 'openapi' => 'Documento non disponibile',
             ]);
@@ -1140,7 +1135,7 @@ class VisuraController extends Controller
 
     protected function avviaRichiestaOpenApi(Visura $record, TipoVisura $tipoServizio): void
     {
-        if (!Schema::hasColumn('visure', 'openapi_hash_visura')) {
+        if (! Schema::hasColumn('visure', 'openapi_hash_visura')) {
             return;
         }
 
@@ -1148,7 +1143,7 @@ class VisuraController extends Controller
         if ($hash !== '') {
             $service = $this->buildVisureServiceForRecord($record);
             $responseData = $service->creaRichiesta($hash, $this->payloadOpenApi($record));
-            if (!$responseData) {
+            if (! $responseData) {
                 throw new \RuntimeException($this->userFacingOpenApiMessage($service->message, 'Impossibile creare la richiesta automatica'));
             }
 
@@ -1161,13 +1156,14 @@ class VisuraController extends Controller
             $record->openapi_response = $responseData;
             $record->openapi_last_sync_at = now();
             $record->save();
+
             return;
         }
 
         if ($this->isCatastaleType($tipoServizio)) {
             $service = $this->buildCatastoServiceForRecord($record);
             $responseData = $service->creaVisuraCatastale($this->payloadCatasto($record, $tipoServizio));
-            if (!$responseData) {
+            if (! $responseData) {
                 throw new \RuntimeException($this->userFacingOpenApiMessage($service->message, 'Impossibile creare la richiesta automatica'));
             }
 
@@ -1185,7 +1181,7 @@ class VisuraController extends Controller
 
     protected function salvaStatoOpenApi(Visura $record, array $statusData): void
     {
-        if (!Schema::hasColumn('visure', 'openapi_hash_visura')) {
+        if (! Schema::hasColumn('visure', 'openapi_hash_visura')) {
             return;
         }
 
@@ -1213,13 +1209,13 @@ class VisuraController extends Controller
             'internal_id' => $record->id,
             'internal_uid' => $record->uid,
         ], function ($value) {
-            return !is_null($value) && $value !== '';
+            return ! is_null($value) && $value !== '';
         });
     }
 
     protected function processaOpenApiAutomatico(Visura $record): void
     {
-        if (!$record->openapi_request_id) {
+        if (! $record->openapi_request_id) {
             return;
         }
 
@@ -1243,14 +1239,14 @@ class VisuraController extends Controller
                 || str_contains($stato, 'ready')
                 || str_contains($stato, 'dispon');
 
-            if (!$isReady) {
+            if (! $isReady) {
                 return;
             }
 
             $document = $provider === 'catasto'
                 ? $service->scaricaDocumentoVisuraCatastale($record->openapi_request_id)
                 : $service->scaricaDocumento($record->openapi_request_id);
-            if (!$document) {
+            if (! $document) {
                 return;
             }
 
@@ -1270,14 +1266,14 @@ class VisuraController extends Controller
             return null;
         }
 
-        $fileName = (string) ($document['nome'] ?? ('visura_' . $record->id . '.pdf'));
+        $fileName = (string) ($document['nome'] ?? ('visura_'.$record->id.'.pdf'));
         $mimeType = (string) ($document['mime_type'] ?? $document['content_type'] ?? 'application/octet-stream');
 
         $path = ltrim(config('configurazione.allegati_visure.cartella'), '/')
-            . '/' . Str::ulid() . '-' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
+            .'/'.Str::ulid().'-'.preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
         Storage::put($path, $content);
 
-        $allegato = new AllegatoServizio();
+        $allegato = new AllegatoServizio;
         $allegato->uid = $record->uid;
         $allegato->filename_originale = $fileName;
         $allegato->path_filename = $path;
@@ -1318,6 +1314,7 @@ class VisuraController extends Controller
         }
 
         $decoded = base64_decode($base64, true);
+
         return $decoded === false ? $base64 : $decoded;
     }
 
@@ -1336,9 +1333,10 @@ class VisuraController extends Controller
 
     protected function isCatastaleType(?TipoVisura $tipo): bool
     {
-        if (!$tipo) {
+        if (! $tipo) {
             return false;
         }
+
         return str_contains(strtolower((string) $tipo->nome), 'catast');
     }
 
@@ -1368,12 +1366,12 @@ class VisuraController extends Controller
             ];
 
             return array_filter($payload, function ($value) {
-                return !is_null($value) && $value !== '';
+                return ! is_null($value) && $value !== '';
             });
         }
 
         // Variante immobile: id_immobile (preferita) o dati catastali.
-        if (!empty($noteData['id_immobile'])) {
+        if (! empty($noteData['id_immobile'])) {
             $payload = [
                 'entita' => 'immobile',
                 'id_immobile' => $noteData['id_immobile'],
@@ -1382,7 +1380,7 @@ class VisuraController extends Controller
             ];
 
             return array_filter($payload, function ($value) {
-                return !is_null($value) && $value !== '';
+                return ! is_null($value) && $value !== '';
             });
         }
 
@@ -1402,7 +1400,7 @@ class VisuraController extends Controller
         ];
 
         return array_filter($payload, function ($value) {
-            return !is_null($value) && $value !== '';
+            return ! is_null($value) && $value !== '';
         });
     }
 
@@ -1420,7 +1418,7 @@ class VisuraController extends Controller
 
         $data = [];
         foreach (preg_split('/\\r\\n|\\r|\\n/', $note) as $line) {
-            if (!str_contains($line, ':')) {
+            if (! str_contains($line, ':')) {
                 continue;
             }
             [$key, $value] = array_map('trim', explode(':', $line, 2));
@@ -1435,25 +1433,27 @@ class VisuraController extends Controller
     protected function buildVisureServiceForRecord(Visura $record): OpenApiVisureService
     {
         $token = $this->getAgenteOpenApiToken($record, 'visure');
-        if (!$token) {
+        if (! $token) {
             throw new \RuntimeException('Servizio automatico non disponibile per questo agente');
         }
+
         return new OpenApiVisureService($token);
     }
 
     protected function buildCatastoServiceForRecord(Visura $record): OpenApiCatastoService
     {
         $token = $this->getAgenteOpenApiToken($record, 'catasto');
-        if (!$token) {
+        if (! $token) {
             throw new \RuntimeException('Servizio automatico non disponibile per questo agente');
         }
+
         return new OpenApiCatastoService($token);
     }
 
     protected function getAgenteOpenApiToken(Visura $record, string $tipo): ?string
     {
         $agente = User::query()->with('agente')->find($record->agente_id);
-        if (!$agente || !$agente->agente) {
+        if (! $agente || ! $agente->agente) {
             return null;
         }
 
@@ -1524,7 +1524,7 @@ class VisuraController extends Controller
     protected function extractCatastoDataFromNote(string $note): array
     {
         $data = $this->parseStructuredNote($note);
-        $noteLibera = (string) ($data['note_libera'] ?? (!str_starts_with(trim($note), '{') ? $note : ''));
+        $noteLibera = (string) ($data['note_libera'] ?? (! str_starts_with(trim($note), '{') ? $note : ''));
 
         return [$data, $noteLibera];
     }
@@ -1532,12 +1532,14 @@ class VisuraController extends Controller
     protected function isCatastaleRequest(Request $request): bool
     {
         $tipo = TipoVisura::find($request->input('tipo_visura_id'));
+
         return $this->isCatastaleType($tipo);
     }
 
     protected function defaultCatastoEntita(?TipoVisura $tipo): string
     {
         $nome = strtolower((string) optional($tipo)->nome);
+
         return str_contains($nome, 'soggetto') ? 'soggetto' : 'immobile';
     }
 
@@ -1581,18 +1583,16 @@ class VisuraController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Visura::get();
+        return Visura::get();
     }
-
 
     protected function rules($id = null, ?Request $request = null)
     {
 
-
         $rules = [
             'data' => ['required'],
             'agente_id' => ['required'],
-            'partita_iva' => ['nullable', new \App\Rules\PartitaIvaRule()],
+            'partita_iva' => ['nullable', new PartitaIvaRule],
             'ragione_sociale' => ['nullable', 'max:255'],
             'citta' => ['nullable', 'max:255'],
             'note' => ['nullable'],
@@ -1605,7 +1605,7 @@ class VisuraController extends Controller
 
         if ($request && $this->isCatastaleRequest($request)) {
             $entita = $request->input('catasto_entita');
-            if (!$entita) {
+            if (! $entita) {
                 $tipo = TipoVisura::find($request->input('tipo_visura_id'));
                 $entita = $this->defaultCatastoEntita($tipo);
             }
@@ -1634,8 +1634,6 @@ class VisuraController extends Controller
 
     protected function puoModificare()
     {
-        return !$this->currentUser()->hasPermissionTo('supervisore');
+        return ! $this->currentUser()->hasPermissionTo('supervisore');
     }
-
-
 }

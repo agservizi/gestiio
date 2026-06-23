@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use App\Models\AttivazioneSim;
-use App\Models\CafPatronato;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -16,7 +15,7 @@ class NotificaAttivazioneSimAdAdmin extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param AttivazioneSim $attivazioneSim
+     * @param  AttivazioneSim  $attivazioneSim
      */
     public function __construct(protected $attivazioneSim)
     {
@@ -26,7 +25,7 @@ class NotificaAttivazioneSimAdAdmin extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -37,14 +36,14 @@ class NotificaAttivazioneSimAdAdmin extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         $email = (new MailMessage)
-            ->subject('Richiesta attivazione sim per ' . $this->attivazioneSim->nominativo())
-            ->line('Nominativo cliente: ' . $this->attivazioneSim->nominativo())
+            ->subject('Richiesta attivazione sim per '.$this->attivazioneSim->nominativo())
+            ->line('Nominativo cliente: '.$this->attivazioneSim->nominativo())
             ->salutation(new HtmlString('Saluti,<br>Cavaliere Carmine'));
 
         return $email;
@@ -53,7 +52,7 @@ class NotificaAttivazioneSimAdAdmin extends Notification
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

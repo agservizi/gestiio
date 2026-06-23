@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\GestoreAttivazioniSim;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Gestore;
+use App\Models\GestoreAttivazioniSim;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
@@ -16,11 +18,10 @@ class GestoreAttivazioniController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -34,7 +35,7 @@ class GestoreAttivazioniController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -43,7 +44,7 @@ class GestoreAttivazioniController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -53,7 +54,7 @@ class GestoreAttivazioniController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -64,36 +65,34 @@ class GestoreAttivazioniController extends Controller
                 'html' => base64_encode(view('Backend.Gestore.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.Gestore.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\GestoreAttivazioniSim::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.GestoreAttivazioniSim::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\GestoreAttivazioniSim::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.GestoreAttivazioniSim::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\GestoreAttivazioniSim::query();
+        $queryBuilder = GestoreAttivazioniSim::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -102,24 +101,24 @@ class GestoreAttivazioniController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new GestoreAttivazioniSim();
+        $record = new GestoreAttivazioniSim;
+
         return view('Backend.Gestore.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . GestoreAttivazioniSim::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.GestoreAttivazioniSim::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([GestoreAttivazioniController::class, 'index']) => 'Torna a elenco ' . GestoreAttivazioniSim::NOME_PLURALE]
+            'breadcrumbs' => [action([GestoreAttivazioniController::class, 'index']) => 'Torna a elenco '.GestoreAttivazioniSim::NOME_PLURALE],
 
         ]);
     }
@@ -127,22 +126,22 @@ class GestoreAttivazioniController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new GestoreAttivazioniSim();
+        $record = new GestoreAttivazioniSim;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
@@ -152,24 +151,25 @@ class GestoreAttivazioniController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = GestoreAttivazioniSim::find($id);
-        abort_if(!$record, 404, 'Questo gestore non esiste');
+        abort_if(! $record, 404, 'Questo gestore non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente ha mandati';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.Gestore.edit', [
             'record' => $record,
             'controller' => GestoreAttivazioniController::class,
-            'titoloPagina' => 'Modifica ' . GestoreAttivazioniSim::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.GestoreAttivazioniSim::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([GestoreAttivazioniController::class, 'index']) => 'Torna a elenco ' . GestoreAttivazioniSim::NOME_PLURALE]
+            'breadcrumbs' => [action([GestoreAttivazioniController::class, 'index']) => 'Torna a elenco '.GestoreAttivazioniSim::NOME_PLURALE],
 
         ]);
     }
@@ -177,32 +177,31 @@ class GestoreAttivazioniController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = GestoreAttivazioniSim::find($id);
-        abort_if(!$record, 404, 'Questo ' . GestoreAttivazioniSim::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.GestoreAttivazioniSim::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = GestoreAttivazioniSim::find($id);
-        abort_if(!$record, 404, 'Questo gestore non esiste');
+        abort_if(! $record, 404, 'Questo gestore non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -211,21 +210,20 @@ class GestoreAttivazioniController extends Controller
     }
 
     /**
-     * @param Gestore $model
-     * @param Request $request
+     * @param  Gestore  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
@@ -249,7 +247,7 @@ class GestoreAttivazioniController extends Controller
         if ($request->file('logo')) {
             $tmpFile = $request->file('logo');
             $extensione = $tmpFile->extension();
-            $filename = hexdec(uniqid()) . '.' . $extensione;
+            $filename = hexdec(uniqid()).'.'.$extensione;
             if ($model->logo && \Storage::exists($model->logo)) {
                 \Storage::delete($model->logo);
             }
@@ -273,19 +271,17 @@ class GestoreAttivazioniController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\GestoreAttivazioniSim::get();
+        return GestoreAttivazioniSim::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
             'colore_hex' => ['nullable', 'max:255'],
             'attivo' => ['nullable'],
-            'email_notifica_a_gestore' => ['nullable']
+            'email_notifica_a_gestore' => ['nullable'],
         ];
 
         return $rules;
@@ -295,31 +291,29 @@ class GestoreAttivazioniController extends Controller
     {
 
         $cartella = config('configurazione.loghi.cartella');
-        if (!Storage::exists($cartella)) {
+        if (! Storage::exists($cartella)) {
             Storage::makeDirectory($cartella);
         }
 
-
         $img = Image::make($tmpFile);
         $dimensioni = config('configurazione.loghi.dimensioni');
-        //$img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
+        // $img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
         $img = $this->ridimensionaImmagine($img, $dimensioni['width'], $dimensioni['height'], $canvas, 'normale');
-        $img->save(Storage::path($cartella . '/' . $nomefile), 80);
+        $img->save(Storage::path($cartella.'/'.$nomefile), 80);
 
-
-        return $cartella . '/' . $nomefile;
+        return $cartella.'/'.$nomefile;
 
     }
 
     protected function ridimensionaImmagine($img, $width, $height, $canvas, $testoLog)
     {
-        //Resize immagine
+        // Resize immagine
         $img->resize($width, $height, function ($constraint) {
             $constraint->aspectRatio();
             $constraint->upsize();
         });
 
-        //Aggiusta rapporto immagine
+        // Aggiusta rapporto immagine
         Log::debug("Immagine $testoLog {$img->width()}x{$img->height()}");
         if ($canvas) {
 
@@ -334,6 +328,4 @@ class GestoreAttivazioniController extends Controller
         return $img;
 
     }
-
-
 }

@@ -4,7 +4,6 @@ namespace App\Notifications;
 
 use App\Models\AttivazioneSim;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
@@ -16,7 +15,7 @@ class NotificaAttivazioneSimCambioEsitoAdAgente extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param AttivazioneSim $attivazioneSim
+     * @param  AttivazioneSim  $attivazioneSim
      */
     public function __construct(protected $attivazioneSim)
     {
@@ -38,15 +37,15 @@ class NotificaAttivazioneSimCambioEsitoAdAgente extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         return (new MailMessage)
             ->subject('Attivazione sim aggiornata')
-                    ->line('L\'attivazione sim di '.$this->attivazioneSim->nominativo())
-                    ->line('è stata aggiornato a: ')
-                    ->line(new HtmlString('<strong>'.$this->attivazioneSim->esito->nome.'</strong>'));
+            ->line('L\'attivazione sim di '.$this->attivazioneSim->nominativo())
+            ->line('è stata aggiornato a: ')
+            ->line(new HtmlString('<strong>'.$this->attivazioneSim->esito->nome.'</strong>'));
     }
 
     /**

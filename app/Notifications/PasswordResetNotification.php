@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Carbon\Carbon;
-use DateTime;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Lang;
@@ -34,7 +33,7 @@ class PasswordResetNotification extends Notification
     /**
      * Create a notification instance.
      *
-     * @param string $token
+     * @param  string  $token
      * @return void
      */
     public function __construct($token)
@@ -45,7 +44,7 @@ class PasswordResetNotification extends Notification
     /**
      * Get the notification's channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array|string
      */
     public function via($notifiable)
@@ -56,8 +55,8 @@ class PasswordResetNotification extends Notification
     /**
      * Build the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
@@ -80,8 +79,8 @@ class PasswordResetNotification extends Notification
     /**
      * Get the reset password notification mail message for the given URL.
      *
-     * @param string $url
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  string  $url
+     * @return MailMessage
      */
     protected function buildMailMessage($url)
     {
@@ -92,14 +91,14 @@ class PasswordResetNotification extends Notification
             ->line('Stai ricevendo questa email per impostare la tua password utente su '.config('configurazione.tagTitle'))
             ->line('Cliccando su questo link potrai impostare la tua password personale.')
             ->action(Lang::get('Imposta la password'), $url)
-            ->line(Lang::get('Questo link scadrà ' . $tempo))
+            ->line(Lang::get('Questo link scadrà '.$tempo))
             ->line(Lang::get('Altrimenti non è richiesta alcuna ulteriore azione.'));
     }
 
     /**
      * Set a callback that should be used when creating the reset password button URL.
      *
-     * @param \Closure $callback
+     * @param  \Closure  $callback
      * @return void
      */
     public static function createUrlUsing($callback)
@@ -110,12 +109,11 @@ class PasswordResetNotification extends Notification
     /**
      * Set a callback that should be used when building the notification mail message.
      *
-     * @param \Closure $callback
+     * @param  \Closure  $callback
      * @return void
      */
     public static function toMailUsing($callback)
     {
         static::$toMailCallback = $callback;
     }
-
 }

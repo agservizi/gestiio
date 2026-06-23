@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\AllegatoContratto;
 use App\Models\AllegatoServizio;
 use App\Models\Cliente;
 use App\Models\EsitoServizioFinanziario;
 use App\Models\Notifica;
+use App\Models\ServizioFinanziario;
 use App\Models\ServizioMutuo;
 use App\Models\ServizioPolizza;
 use App\Models\ServizioPolizzaFacile;
@@ -23,12 +23,17 @@ use App\Notifications\NotificaEuroAnsa;
 use App\Notifications\NotificaPolizzaFacile;
 use App\Rules\CodiceFiscaleRule;
 use App\Rules\DataItalianaRule;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use App\Models\ServizioFinanziario;
+
 use function App\getInputCheckbox;
 use function App\getInputNumero;
 use function App\getInputToUpper;
@@ -41,14 +46,14 @@ class ServizioFinanziarioController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+
         return $user;
     }
-
 
     /**
      * Display a listing of the resource.
      *
-     * @return array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     * @return array|Application|Factory|View
      */
     public function index(Request $request)
     {
@@ -62,7 +67,7 @@ class ServizioFinanziarioController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
         ];
 
         $orderByUser = $this->currentUser()->getExtra($nomeClasse);
@@ -70,7 +75,7 @@ class ServizioFinanziarioController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -80,7 +85,7 @@ class ServizioFinanziarioController extends Controller
             $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -92,37 +97,36 @@ class ServizioFinanziarioController extends Controller
                 'html' => base64_encode(view('Backend.ServizioFinanziario.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                    'puoModificare' => $puoModificare
+                    'puoModificare' => $puoModificare,
 
-                ])->render())
+                ])->render()),
             ];
 
         }
 
-
         return view('Backend.ServizioFinanziario.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\ServizioFinanziario::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.ServizioFinanziario::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => 'Nuova segnalazione ',
             'testoCerca' => 'Cerca in nominativo, email, telefono',
-            'puoModificare' => $puoModificare
+            'puoModificare' => $puoModificare,
         ]);
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\ServizioFinanziario::query()
+        $queryBuilder = ServizioFinanziario::query()
             ->with('esito')
             ->with('agente')
             ->withCount('allegati');
@@ -135,43 +139,42 @@ class ServizioFinanziarioController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create($servizio = null)
     {
-        if (!$servizio) {
+        if (! $servizio) {
             return view('Backend.ServizioFinanziario.create', [
-                'record' => new ServizioFinanziario(),
+                'record' => new ServizioFinanziario,
                 'titoloPagina' => 'Nuova segnalazione',
                 'controller' => get_class($this),
-                'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . ServizioFinanziario::NOME_PLURALE]
+                'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco '.ServizioFinanziario::NOME_PLURALE],
             ]);
         }
 
-        $record = new ServizioFinanziario();
+        $record = new ServizioFinanziario;
         $record->data = now();
         $record->uid = Str::ulid();
 
-        $classeProdotto = 'App\Models\\' . $servizio;
+        $classeProdotto = 'App\Models\\'.$servizio;
         if ($this->currentUser()->hasPermissionTo('agente')) {
             $record->agente_id = Auth::id();
         }
 
         return view('Backend.ServizioFinanziario.edit', [
             'record' => $record,
-            'recordProdotto' => new $classeProdotto(),
-            'titoloPagina' => 'Nuova segnalazione ' . str_replace('Servizio', '', $servizio),
+            'recordProdotto' => new $classeProdotto,
+            'titoloPagina' => 'Nuova segnalazione '.str_replace('Servizio', '', $servizio),
             'controller' => get_class($this),
             'tipoServizio' => $servizio,
-            'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . ServizioFinanziario::NOME_PLURALE],
+            'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco '.ServizioFinanziario::NOME_PLURALE],
             'allegatoServizioType' => ServizioFinanziario::class,
 
         ]);
@@ -180,34 +183,30 @@ class ServizioFinanziarioController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $servizio = $request->input('tipo_servizio');
 
-        $funcRules = 'rules' . $servizio;
+        $funcRules = 'rules'.$servizio;
         $rules = array_merge($this->rules(), $this->$funcRules());
-
 
         $request->validate($rules);
 
-
-        $record = new ServizioFinanziario();
+        $record = new ServizioFinanziario;
         $record->esito_id = 'da-gestire';
         DB::beginTransaction();
         $this->salvaDati($record, $request);
 
-        $func = 'salvaDati' . $servizio;
-
+        $func = 'salvaDati'.$servizio;
 
         $this->$func($record, $request);
         DB::commit();
 
         $this->inviaNotifiche($record);
         if ($this->currentUser()->hasPermissionTo('agente')) {
-            Notifica::notificaAdAdmin('Nuovo servizio finanziario', '<span class="fw-bold">' . $record->tipoProdottoBlade() . '</span> caricato da <span class="fw-bold">' . $record->agente->nominativo() . '</span> per il cliente <span class="fw-bold">' . $record->nominativo() . '</span>');
+            Notifica::notificaAdAdmin('Nuovo servizio finanziario', '<span class="fw-bold">'.$record->tipoProdottoBlade().'</span> caricato da <span class="fw-bold">'.$record->agente->nominativo().'</span> per il cliente <span class="fw-bold">'.$record->nominativo().'</span>');
         }
 
         return $this->backToIndex();
@@ -216,18 +215,19 @@ class ServizioFinanziarioController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = ServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo servizio finanziario non esiste');
+        abort_if(! $record, 404, 'Questo servizio finanziario non esiste');
+
         return view('Backend.ServizioFinanziario.show', [
             'record' => $record,
             'controller' => ServizioFinanziarioController::class,
             'titoloPagina' => ServizioFinanziario::NOME_SINGOLARE,
-            'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . ServizioFinanziario::NOME_PLURALE]
+            'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco '.ServizioFinanziario::NOME_PLURALE],
 
         ]);
     }
@@ -235,28 +235,28 @@ class ServizioFinanziarioController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = ServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo servizio finanziario non esiste');
+        abort_if(! $record, 404, 'Questo servizio finanziario non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.ServizioFinanziario.edit', [
             'record' => $record,
             'recordProdotto' => $record->prodotto,
             'tipoServizio' => $record->tipoProdotto(),
             'controller' => ServizioFinanziarioController::class,
-            'titoloPagina' => 'Modifica segnalazione ' . $record->tipoProdottoBlade(),
+            'titoloPagina' => 'Modifica segnalazione '.$record->tipoProdottoBlade(),
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . ServizioFinanziario::NOME_PLURALE],
+            'breadcrumbs' => [action([ServizioFinanziarioController::class, 'index']) => 'Torna a elenco '.ServizioFinanziario::NOME_PLURALE],
             'allegatoServizioType' => ServizioFinanziario::class,
-
 
         ]);
     }
@@ -264,20 +264,19 @@ class ServizioFinanziarioController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = ServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo ' . ServizioFinanziario::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.ServizioFinanziario::NOME_SINGOLARE.' non esiste');
         $servizio = $record->tipoProdotto();
-        $funcRules = 'rules' . $servizio;
+        $funcRules = 'rules'.$servizio;
         $rules = array_merge($this->rules($id), $this->$funcRules($id));
         $request->validate($rules);
         $this->salvaDati($record, $request);
-        $func = 'salvaDati' . $record->tipoProdotto();
+        $func = 'salvaDati'.$record->tipoProdotto();
 
         $this->$func($record, $request, $record);
 
@@ -287,16 +286,15 @@ class ServizioFinanziarioController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = ServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo servizio finanziario non esiste');
+        abort_if(! $record, 404, 'Questo servizio finanziario non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -307,7 +305,7 @@ class ServizioFinanziarioController extends Controller
     public function aggiornaStato(Request $request, $id)
     {
         $servizioFinanziario = ServizioFinanziario::find($id);
-        abort_if(!$servizioFinanziario, 404, 'Questo servizio non esiste');
+        abort_if(! $servizioFinanziario, 404, 'Questo servizio non esiste');
 
         $esitoPrima = $servizioFinanziario->esito_id;
 
@@ -325,7 +323,6 @@ class ServizioFinanziarioController extends Controller
             $servizioFinanziario->provvigione_agenzia = getInputNumero($request->input('provvigione_agenzia')) ?? 0;
         }
 
-
         $servizioFinanziario->save();
 
         if ($servizioFinanziario->wasChanged('motivo_ko') && $motivoKoprima == null) {
@@ -342,7 +339,6 @@ class ServizioFinanziarioController extends Controller
         }
         $records = collect([$servizioFinanziario]);
 
-
         if ($servizioFinanziario->wasChanged(['esito_id'])) {
             $esito = EsitoServizioFinanziario::find($servizioFinanziario->esito_id);
             if ($esito->notifica_mail) {
@@ -357,7 +353,6 @@ class ServizioFinanziarioController extends Controller
 
         }
 
-
         if ($request->input('aggiorna') == 'dash') {
             $view = 'Backend.Dashboard.admin.servizi';
         } else {
@@ -368,23 +363,21 @@ class ServizioFinanziarioController extends Controller
             'html' => base64_encode(view($view, [
                 'records' => $records,
                 'controller' => ContrattoTelefoniaController::class,
-                'puoModificare' => $this->currentUser()->hasPermissionTo('admin')
-            ])->render())
+                'puoModificare' => $this->currentUser()->hasPermissionTo('admin'),
+            ])->render()),
         ];
     }
 
-
     /**
-     * @param ServizioFinanziario $servizioFinanziario
+     * @param  ServizioFinanziario  $servizioFinanziario
      * @return void
      */
     public function inviaNotifiche($servizioFinanziario)
     {
 
-
         $this->creaUtente($servizioFinanziario);
 
-        //Notifica ad agente
+        // Notifica ad agente
         dispatch(function () use ($servizioFinanziario) {
             $user = $servizioFinanziario->agente;
             try {
@@ -392,50 +385,49 @@ class ServizioFinanziarioController extends Controller
 
             } catch (\Exception $exception) {
                 report($exception);
-                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il servizio finanziario di ' . $servizioFinanziario->nominativo() . ': ' . $exception->getMessage(), 'error');
+                Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'ad agente per il servizio finanziario di '.$servizioFinanziario->nominativo().': '.$exception->getMessage(), 'error');
             }
 
         })->afterResponse();
 
-
-        //Notifica sky
+        // Notifica sky
         dispatch(function () use ($servizioFinanziario) {
 
             if ($servizioFinanziario->tipoProdotto() == 'ServizioPolizzaFacile') {
-                $user = new User();
+                $user = new User;
                 $user->email = 'micciosalvatore@hotmail.it';
                 try {
                     $user->notify(new NotificaPolizzaFacile($servizioFinanziario));
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il servizio finanziario di ' . $servizioFinanziario->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il servizio finanziario di '.$servizioFinanziario->nominativo().': '.$exception->getMessage(), 'error');
                 }
 
             } else {
-                $user = new User();
+                $user = new User;
                 $user->email = 'info@dovosrls.it';
                 try {
                     $user->notify(new NotificaEuroAnsa($servizioFinanziario));
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il servizio finanziario di ' . $servizioFinanziario->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il servizio finanziario di '.$servizioFinanziario->nominativo().': '.$exception->getMessage(), 'error');
                 }
 
             }
 
         })->afterResponse();
 
-        //Notifica noreply@gestiio.it
+        // Notifica noreply@gestiio.it
         if ($this->currentUser()->hasPermissionTo('agente')) {
             dispatch(function () use ($servizioFinanziario) {
-                $user = new User();
+                $user = new User;
                 $user->email = 'noreply@gestiio.it';
                 try {
                     $user->notify(new NotificaAdminServizioFinanziario($servizioFinanziario));
 
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a ' . $user->email . ' per il servizio finanziario di ' . $servizioFinanziario->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio della notifica', 'a '.$user->email.' per il servizio finanziario di '.$servizioFinanziario->nominativo().': '.$exception->getMessage(), 'error');
 
                 }
             })->afterResponse();
@@ -445,15 +437,14 @@ class ServizioFinanziarioController extends Controller
     }
 
     /**
-     * @param ServizioFinanziario $servizioFinanziario
      * @return int
      */
     protected function creaUtente(ServizioFinanziario $servizioFinanziario)
     {
 
         $user = User::where('email', $servizioFinanziario->email)->orWhere('telefono', $servizioFinanziario->cellulare)->first();
-        if (!$user) {
-            $user = new User();
+        if (! $user) {
+            $user = new User;
             $user->nome = $servizioFinanziario->nome;
             $user->cognome = $servizioFinanziario->cognome;
             $user->email = $servizioFinanziario->email;
@@ -463,45 +454,43 @@ class ServizioFinanziarioController extends Controller
             $user->save();
 
             dispatch(function () use ($servizioFinanziario, $password, $user) {
-                //Notifica a cliente
+                // Notifica a cliente
                 try {
                     $user->notify(new NotificaDatiAccessoClienteServizioFinanziario($servizioFinanziario, $password));
                     $user->invio_dati_accesso = now();
                     $user->save();
                 } catch (\Exception $exception) {
                     report($exception);
-                    Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a ' . $user->nominativo() . ': ' . $exception->getMessage(), 'error');
+                    Notifica::notificaAdAdmin('Errore nell\'invio dati accesso cliente', 'a '.$user->nominativo().': '.$exception->getMessage(), 'error');
 
                 }
             })->afterResponse();
 
         } else {
             dispatch(function () use ($servizioFinanziario, $user) {
-                //Notifica a cliente
+                // Notifica a cliente
                 $user->notify(new NotificaClienteServizioFinanziario($servizioFinanziario));
             })->afterResponse();
 
         }
 
-
     }
 
-
     /**
-     * @param ServizioFinanziario $model
-     * @param Request $request
+     * @param  ServizioFinanziario  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'data' => 'app\getInputData',
             'agente_id' => '',
@@ -521,11 +510,10 @@ class ServizioFinanziarioController extends Controller
             $model->$campo = $valore;
         }
 
-
-        if (!$model->cliente_id) {
+        if (! $model->cliente_id) {
             $cliente = Cliente::where('codice_fiscale', $model->codice_fiscale)->first();
-            if (!$cliente) {
-                $cliente = new Cliente();
+            if (! $cliente) {
+                $cliente = new Cliente;
             }
         } else {
             $cliente = Cliente::find($model->cliente_id);
@@ -533,20 +521,16 @@ class ServizioFinanziarioController extends Controller
 
         $model->cliente_id = $this->salvaDatiCliente($cliente, $model);
 
-
         $model->save();
 
-
         AllegatoServizio::where('uid', $model->uid)->update(['allegato_id' => $model->id, 'uid' => null]);
-
 
         return $model;
     }
 
-
     /**
-     * @param ServizioPrestito $model
-     * @param Request $request
+     * @param  ServizioPrestito  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiServizioPrestito($ordineModel, $request)
@@ -554,14 +538,13 @@ class ServizioFinanziarioController extends Controller
         $model = $ordineModel->prodotto;
         $nuovo = false;
 
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ServizioPrestito();
+            $model = new ServizioPrestito;
             $model->servizio_id = $ordineModel->id;
         }
 
-
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'importo_prestito' => 'app\getInputNumero',
             'durata_prestito' => '',
@@ -601,10 +584,9 @@ class ServizioFinanziarioController extends Controller
         return $model;
     }
 
-
     /**
-     * @param ServizioPolizza $model
-     * @param Request $request
+     * @param  ServizioPolizza  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiServizioPolizza($ordineModel, $request)
@@ -613,14 +595,14 @@ class ServizioFinanziarioController extends Controller
         $model = $ordineModel->prodotto;
         $nuovo = false;
 
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ServizioPolizza();
+            $model = new ServizioPolizza;
             $model->servizio_id = $ordineModel->id;
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'targa' => '',
             'data_di_nascita' => 'app\getInputData',
@@ -643,10 +625,9 @@ class ServizioFinanziarioController extends Controller
         return $model;
     }
 
-
     /**
-     * @param ServizioPolizzaFacile $model
-     * @param Request $request
+     * @param  ServizioPolizzaFacile  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiServizioPolizzaFacile($ordineModel, $request)
@@ -655,14 +636,14 @@ class ServizioFinanziarioController extends Controller
         $model = $ordineModel->prodotto;
         $nuovo = false;
 
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ServizioPolizzaFacile();
+            $model = new ServizioPolizzaFacile;
             $model->servizio_id = $ordineModel->id;
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'targa' => '',
             'data_di_nascita' => 'app\getInputData',
@@ -686,22 +667,21 @@ class ServizioFinanziarioController extends Controller
         return $model;
     }
 
-
     /**
-     * @param Cliente $model
-     * @param ServizioFinanziario $request
+     * @param  Cliente  $model
+     * @param  ServizioFinanziario  $request
      * @return mixed
      */
     protected function salvaDatiCliente($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'codice_fiscale' => 'strtoupper',
             'nome' => 'app\getInputUcwords',
@@ -715,13 +695,12 @@ class ServizioFinanziarioController extends Controller
         $model->telefono = $request->cellulare;
         $model->save();
 
-
         return $model->id;
     }
 
     /**
-     * @param ServizioMutuo $model
-     * @param Request $request
+     * @param  ServizioMutuo  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDatiServizioMutuo($ordineModel, $request)
@@ -730,14 +709,14 @@ class ServizioFinanziarioController extends Controller
         $model = $ordineModel->prodotto;
         $nuovo = false;
 
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ServizioMutuo();
+            $model = new ServizioMutuo;
             $model->servizio_id = $ordineModel->id;
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'finalita' => '',
             'tipo_di_tasso' => '',
@@ -769,7 +748,6 @@ class ServizioFinanziarioController extends Controller
         return $model;
     }
 
-
     protected function backToIndex()
     {
         return redirect()->action([get_class($this), 'index']);
@@ -780,13 +758,11 @@ class ServizioFinanziarioController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\ServizioFinanziario::get();
+        return ServizioFinanziario::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'data' => ['required'],
@@ -797,7 +773,7 @@ class ServizioFinanziarioController extends Controller
             'cellulare' => ['required', 'max:255'],
             'prodotto_id' => ['nullable'],
             'prodotto_type' => ['nullable', 'max:255'],
-            'codice_fiscale' => ['required', new CodiceFiscaleRule()],
+            'codice_fiscale' => ['required', new CodiceFiscaleRule],
         ];
 
         return $rules;
@@ -805,7 +781,6 @@ class ServizioFinanziarioController extends Controller
 
     protected function rulesServizioPrestito($id = null)
     {
-
 
         $rules = [
             'importo_prestito' => ['required'],
@@ -833,10 +808,9 @@ class ServizioFinanziarioController extends Controller
     protected function rulesServizioPolizza($id = null)
     {
 
-
         $rules = [
             'targa' => ['required', 'max:255'],
-            'data_di_nascita' => ['required', new DataItalianaRule()],
+            'data_di_nascita' => ['required', new DataItalianaRule],
         ];
 
         return $rules;
@@ -844,7 +818,6 @@ class ServizioFinanziarioController extends Controller
 
     protected function rulesServizioMutuo($id = null)
     {
-
 
         $rules = [
             'finalita' => ['required', 'max:255'],
@@ -866,14 +839,11 @@ class ServizioFinanziarioController extends Controller
     protected function rulesServizioPolizzaFacile($id = null)
     {
 
-
         $rules = [
             'targa' => ['required', 'max:255'],
-            'data_di_nascita' => ['required', new DataItalianaRule()],
+            'data_di_nascita' => ['required', new DataItalianaRule],
         ];
 
         return $rules;
     }
-
-
 }

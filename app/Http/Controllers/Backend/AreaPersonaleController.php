@@ -2,35 +2,27 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Http\Controllers\Controller;
 use App\Http\MieClassi\AlertMessage;
-use App\Models\Documento;
-use App\Models\DocumentoAcquistato;
-use App\Models\DownloadGratuiti;
 use App\Models\RegistroLogin;
 use App\Models\User;
-use App\Notifications\NotificaAccountEliminatoAAdmin;
-use App\Notifications\NotificaAccountEliminatoAUtente;
 use App\Rules\CodiceFiscaleRule;
-use App\Rules\ConfermaEliminaRule;
 use App\Rules\IbanRule;
 use App\Rules\PartitaIvaRule;
 use App\Rules\PasswordAttualeRule;
 use App\Rules\TelefonoRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Rules\Password;
-use App\Http\Controllers\Controller;
-use Storage;
+
 use function App\getInputTelefono;
 use function App\getInputUcwords;
 
 class AreaPersonaleController extends Controller
 {
-
     protected function currentUser(): User
     {
         /** @var User $user */
@@ -48,6 +40,7 @@ class AreaPersonaleController extends Controller
                 } else {
                     $this->currentUser()->setExtra(['darkMode' => true]);
                 }
+
                 return redirect()->back();
 
             case 'aside':
@@ -56,13 +49,14 @@ class AreaPersonaleController extends Controller
                 } else {
                     $this->currentUser()->setExtra(['aside' => 'off']);
                 }
+
                 return ['success' => true];
         }
     }
 
     public function show($cosa = null)
     {
-        if (!$this->currentUser()->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore'])) {
+        if (! $this->currentUser()->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore'])) {
             return redirect('/area-personale');
         }
 
@@ -86,17 +80,16 @@ class AreaPersonaleController extends Controller
                 Validator::make($request->input(), [
                     'nome' => ['required', 'string', 'max:255'],
                     'cognome' => ['required', 'string', 'max:255'],
-                    'telefono' => ['required', new TelefonoRule(), Rule::unique(User::class)->ignore(Auth::id())],
-                    'codice_fiscale' => ['nullable', new CodiceFiscaleRule()],
-                    'partita_iva' => ['nullable', new PartitaIvaRule()],
-                    'iban' => ['nullable', new IbanRule()]
+                    'telefono' => ['required', new TelefonoRule, Rule::unique(User::class)->ignore(Auth::id())],
+                    'codice_fiscale' => ['nullable', new CodiceFiscaleRule],
+                    'partita_iva' => ['nullable', new PartitaIvaRule],
+                    'iban' => ['nullable', new IbanRule],
                 ])->validate();
 
                 $this->updateDatiUtente($request);
-                $alert = new AlertMessage();
+                $alert = new AlertMessage;
                 $alert->messaggio('I tuoi dati sono stati aggiornati')->flash();
                 break;
-
 
             case 'dati-email':
                 Validator::make($request->input(), [
@@ -107,26 +100,26 @@ class AreaPersonaleController extends Controller
                         'max:255',
                         'confirmed',
                         Rule::unique(User::class)->ignore(Auth::id()),
-                    ]
+                    ],
                 ])->validate();
                 $this->updateEmail($request);
-                $alert = new AlertMessage();
-                $alert->messaggio('Il tuo indirizzo email è stato modificato in: ' . $request->input('email'))->titolo('Indirizzo email modificato')->flash();
+                $alert = new AlertMessage;
+                $alert->messaggio('Il tuo indirizzo email è stato modificato in: '.$request->input('email'))->titolo('Indirizzo email modificato')->flash();
                 break;
 
             case 'dati-password':
                 Validator::make($request->input(), [
-                    'password_attuale' => new PasswordAttualeRule(),
+                    'password_attuale' => new PasswordAttualeRule,
                     'password' => $this->passwordRules(),
                 ])->validate();
                 $this->updatePassword($request);
-                $alert = new AlertMessage();
+                $alert = new AlertMessage;
                 $alert->messaggio('La tua password è stata modificata ')->flash();
                 break;
 
             case 'preferenze-notifiche':
                 $this->updatePreferenzeNotifiche($request);
-                $alert = new AlertMessage();
+                $alert = new AlertMessage;
                 $alert->messaggio('Preferenze notifiche aggiornate')->flash();
                 break;
 
@@ -137,31 +130,26 @@ class AreaPersonaleController extends Controller
                     'formato_numeri_valuta' => ['required', Rule::in(['it_IT', 'en_US'])],
                 ])->validate();
                 $this->updatePreferenzeLocale($request);
-                $alert = new AlertMessage();
+                $alert = new AlertMessage;
                 $alert->messaggio('Preferenze locali aggiornate')->flash();
                 break;
 
             case 'sicurezza-sessioni':
                 Validator::make($request->input(), [
-                    'password_sessioni' => [new PasswordAttualeRule()],
+                    'password_sessioni' => [new PasswordAttualeRule],
                 ])->validate();
                 Auth::logoutOtherDevices($request->input('password_sessioni'));
-                $alert = new AlertMessage();
+                $alert = new AlertMessage;
                 $alert->messaggio('Tutte le altre sessioni sono state disconnesse')->flash();
                 break;
 
             case 'openapi-credenziali':
                 abort(403, 'Operazione consentita solo da gestione agenti admin');
 
-
-
         }
 
         return redirect()->back();
     }
-
-
-
 
     protected function updateDatiUtente($request)
     {
@@ -169,8 +157,8 @@ class AreaPersonaleController extends Controller
         $user->nome = getInputUcwords($request->input('nome'));
         $user->cognome = getInputUcwords($request->input('cognome'));
         $user->telefono = getInputTelefono($request->input('telefono'));
-        //$user->codice_fiscale = strtoupper($request->input('codice_fiscale'));
-        //$user->iban = $request->input('iban');
+        // $user->codice_fiscale = strtoupper($request->input('codice_fiscale'));
+        // $user->iban = $request->input('iban');
         $user->save();
 
     }
@@ -221,7 +209,7 @@ class AreaPersonaleController extends Controller
                 ->toArray(),
         ];
 
-        $filename = 'dati-utente-' . $user->id . '-' . now()->format('Ymd_His') . '.json';
+        $filename = 'dati-utente-'.$user->id.'-'.now()->format('Ymd_His').'.json';
 
         return response()->streamDownload(function () use ($payload) {
             echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -250,6 +238,4 @@ class AreaPersonaleController extends Controller
             'formato_numeri_valuta' => $request->input('formato_numeri_valuta'),
         ]);
     }
-
-
 }

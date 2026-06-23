@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\Listino;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -20,10 +22,10 @@ return new class extends Migration {
             $table->boolean('attivo')->index();
         });
 
-        $listino=new \App\Models\Listino();
-        $listino->nome='Listino 1';
-        $listino->attivo=1;
-        $listino->prodotto='contratto-telefonia';
+        $listino = new Listino;
+        $listino->nome = 'Listino 1';
+        $listino->attivo = 1;
+        $listino->prodotto = 'contratto-telefonia';
         $listino->save();
 
         Schema::create('listini_fasce_contratti', function (Blueprint $table) {
@@ -37,9 +39,6 @@ return new class extends Migration {
             $table->decimal('importo_bonus')->nullable();
             $table->decimal('importo_soglie_precedenti')->nullable();
         });
-
-
-
 
     }
 

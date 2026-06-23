@@ -5,7 +5,6 @@ namespace App\Notifications;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\URL;
 
@@ -21,7 +20,7 @@ class VerifyEmail extends Notification
     /**
      * Get the notification's channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array|string
      */
     public function via($notifiable)
@@ -32,19 +31,20 @@ class VerifyEmail extends Notification
     /**
      * Build the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
         $verificationUrl = $this->verificationUrl($notifiable);
-        session()->put('verificationUrl',$verificationUrl);
+        session()->put('verificationUrl', $verificationUrl);
         if (static::$toMailCallback) {
             return call_user_func(static::$toMailCallback, $notifiable, $verificationUrl);
         }
+
         return (new MailMessage)
             ->subject('Verifica indirizzo email')
-            ->greeting('Buongiorno ' . $notifiable->name)
+            ->greeting('Buongiorno '.$notifiable->name)
             ->line('Fai clic sul pulsante qui sotto per verificare il tuo indirizzo email.')
             ->action(
                 'Verifica indirizzo email',
@@ -57,7 +57,7 @@ class VerifyEmail extends Notification
     /**
      * Get the verification URL for the given notifiable.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return string
      */
     protected function verificationUrl($notifiable)
@@ -75,7 +75,7 @@ class VerifyEmail extends Notification
     /**
      * Set a callback that should be used when building the notification mail message.
      *
-     * @param \Closure $callback
+     * @param  \Closure  $callback
      * @return void
      */
     public static function toMailUsing($callback)

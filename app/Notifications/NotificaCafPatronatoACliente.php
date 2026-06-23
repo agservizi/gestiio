@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Models\AllegatoCafPatronato;
 use App\Models\CafPatronato;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +27,7 @@ class NotificaCafPatronatoACliente extends Notification
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -39,8 +38,8 @@ class NotificaCafPatronatoACliente extends Notification
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
@@ -53,8 +52,8 @@ class NotificaCafPatronatoACliente extends Notification
 
         $email = (new MailMessage)
             ->from($fromAddress, $fromName)
-            ->line('Le inviamo la sua pratica ' . $this->cafPatronato->tipo->nome)
-            ->subject('Invio pratica ' . $this->cafPatronato->tipo->nome)
+            ->line('Le inviamo la sua pratica '.$this->cafPatronato->tipo->nome)
+            ->subject('Invio pratica '.$this->cafPatronato->tipo->nome)
             ->salutation($agente?->nominativo() ?? config('mail.from.name'));
 
         if ($agente?->email) {
@@ -63,10 +62,11 @@ class NotificaCafPatronatoACliente extends Notification
 
         foreach (AllegatoCafPatronato::where('caf_patronato_id', $this->cafPatronato->id)->where('per_cliente', 1)->get() as $file) {
             $estensione = pathinfo($file->filename_originale ?: $file->path_filename, PATHINFO_EXTENSION);
-            $nomeAllegato = ucfirst(Str::slug($this->cafPatronato->tipo->nome)) . ($estensione ? '.' . $estensione : '');
+            $nomeAllegato = ucfirst(Str::slug($this->cafPatronato->tipo->nome)).($estensione ? '.'.$estensione : '');
 
             if ($file->path_filename && Storage::exists($file->path_filename)) {
                 $email->attach(Storage::path($file->path_filename), ['as' => $nomeAllegato]);
+
                 continue;
             }
 
@@ -86,7 +86,7 @@ class NotificaCafPatronatoACliente extends Notification
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

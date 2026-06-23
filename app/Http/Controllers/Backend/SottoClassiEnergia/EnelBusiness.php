@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers\Backend\SottoClassiEnergia;
 
-use App\Http\Controllers\Controller;
-
 use App\Models\Comune;
 use App\Models\ContrattoEnergia;
-use App\Models\GestoreContrattoEnergia;
 use App\Models\ProdottoEnergiaEnelBusiness;
+use App\Rules\IbanRule;
+use App\Rules\PartitaIvaRule;
+use App\Rules\PdrRule;
+use App\Rules\PodRule;
 use Illuminate\Http\Request;
+
 use function App\siNo;
 
 class EnelBusiness extends ProdottoEnergiaAbstract
 {
-
-
     /**
-     * @param EnelBusiness $model
-     * @param Request $request
+     * @param  EnelBusiness  $model
+     * @param  Request  $request
      * @return mixed
      */
     public function salvaDatiProdotto($contrattoEnergia, $request)
@@ -25,12 +25,12 @@ class EnelBusiness extends ProdottoEnergiaAbstract
 
         $model = $contrattoEnergia->prodotto;
         $nuovo = false;
-        if (!$model) {
+        if (! $model) {
             $nuovo = true;
-            $model = new ProdottoEnergiaEnelBusiness();
+            $model = new ProdottoEnergiaEnelBusiness;
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'indirizzo' => '',
             'citta' => '',
@@ -113,16 +113,14 @@ class EnelBusiness extends ProdottoEnergiaAbstract
         }
         $contrattoEnergia->denominazione = $request->input('denominazione');
         $contrattoEnergia->indirizzo_completo = Comune::find($model->comune_sede)?->comuneConTarga();
-        $contrattoEnergia->testo_ricerca = $contrattoEnergia->denominazione . '|' . $contrattoEnergia->codice_contratto . '|' . $model->partita_iva;
+        $contrattoEnergia->testo_ricerca = $contrattoEnergia->denominazione.'|'.$contrattoEnergia->codice_contratto.'|'.$model->partita_iva;
         $contrattoEnergia->save();
 
         return $model;
     }
 
-
     public function rulesProdotto($id = null)
     {
-
 
         $rules = [
             'indirizzo' => ['nullable', 'max:255'],
@@ -130,7 +128,7 @@ class EnelBusiness extends ProdottoEnergiaAbstract
             'cap' => ['nullable'],
             'scala' => ['nullable'],
             'interno' => ['nullable'],
-            'partita_iva' => ['nullable', new \App\Rules\PartitaIvaRule()],
+            'partita_iva' => ['nullable', new PartitaIvaRule],
             'forma_giuridica' => ['nullable', 'max:255'],
             'cellulare' => ['nullable', 'max:255'],
             'fax' => ['nullable', 'max:255'],
@@ -151,7 +149,7 @@ class EnelBusiness extends ProdottoEnergiaAbstract
             'data_fine_validita' => ['nullable'],
             'cig' => ['nullable', 'max:255'],
             'cup' => ['nullable', 'max:255'],
-            'pod' => ['nullable', new \App\Rules\PodRule()],
+            'pod' => ['nullable', new PodRule],
             'provenienza_mercato_libero' => ['nullable'],
             'uso_non_professionale_luce' => ['nullable'],
             'consumo_annuo_luce' => ['nullable', 'max:255'],
@@ -162,7 +160,7 @@ class EnelBusiness extends ProdottoEnergiaAbstract
             'nr_fornitura_luce' => ['nullable', 'max:255'],
             'cap_fornitura_luce' => ['nullable'],
             'comune_fornitura_luce' => ['nullable', 'max:255'],
-            'pdr' => ['nullable', new \App\Rules\PdrRule()],
+            'pdr' => ['nullable', new PdrRule],
             'uso_non_professionale_gas' => ['nullable'],
             'attuale_societa_gas' => ['nullable', 'max:255'],
             'profilo_consumo' => ['nullable', 'max:255'],
@@ -179,7 +177,7 @@ class EnelBusiness extends ProdottoEnergiaAbstract
             'codice_fiscale_titolare' => ['nullable', 'max:255'],
             'cognome_nome_sottoscrittore' => ['nullable', 'max:255'],
             'recapito_telefonico_titolare' => ['nullable', 'max:255'],
-            'iban' => ['nullable', new \App\Rules\IbanRule()],
+            'iban' => ['nullable', new IbanRule],
             'iban_sepa' => ['nullable', 'max:255'],
             'tipo_documento' => ['nullable', 'max:255'],
             'numero_documento' => ['nullable', 'max:255'],
@@ -191,103 +189,95 @@ class EnelBusiness extends ProdottoEnergiaAbstract
         return $rules;
     }
 
-
     public function determinaProvvigione(Request $request)
     {
         return $this->calcolaProvvigioneDaGestore($request, 4, true);
     }
 
-
     public function completaNotifica($email, $contratto)
     {
-        $email->line('Nome Cognome / Ragione sociale: ' . $contratto->denominazione);
-        $email->line('Forma giuridica: ' . $contratto->prodotto->forma_giuridica);
-        $email->line('Codice fiscale: ' . $contratto->codice_fiscale);
-        $email->line('Email: ' . $contratto->email);
-        $email->line('Telefono: ' . $contratto->telefono);
-        $email->line('Indirizzo: ' . $contratto->prodotto->indirizzo);
-        $email->line('Città: ' . Comune::find($contratto->prodotto->citta)?->comuneConTarga());
-        $email->line('Cap: ' . $contratto->prodotto->cap);
-
+        $email->line('Nome Cognome / Ragione sociale: '.$contratto->denominazione);
+        $email->line('Forma giuridica: '.$contratto->prodotto->forma_giuridica);
+        $email->line('Codice fiscale: '.$contratto->codice_fiscale);
+        $email->line('Email: '.$contratto->email);
+        $email->line('Telefono: '.$contratto->telefono);
+        $email->line('Indirizzo: '.$contratto->prodotto->indirizzo);
+        $email->line('Città: '.Comune::find($contratto->prodotto->citta)?->comuneConTarga());
+        $email->line('Cap: '.$contratto->prodotto->cap);
 
         $email->line('-REFERENTE/AMM.RE CONDOMINIO');
-        $email->line('Nome cognome: ' . $contratto->prodotto->nome_cognome_referente);
-        $email->line('Telefono: ' . $contratto->prodotto->telefono_referente);
-        $email->line('Codice fiscale: ' . $contratto->prodotto->codice_fiscale_referente);
+        $email->line('Nome cognome: '.$contratto->prodotto->nome_cognome_referente);
+        $email->line('Telefono: '.$contratto->prodotto->telefono_referente);
+        $email->line('Codice fiscale: '.$contratto->prodotto->codice_fiscale_referente);
         if ($contratto->prodotto->tipo_documento) {
-            $email->line('Tipo documento: ' . $contratto->prodotto->tipo_documento ? ContrattoEnergia::TIPI_DOCUMENTO[$contratto->prodotto->tipo_documento] : '');
-            $email->line('Numero documento: ' . $contratto->prodotto->numero_documento);
-            $email->line('Rilasciato da: ' . $contratto->prodotto->rilasciato_da);
-            $email->line('Data rilascio: ' . $contratto->prodotto->data_rilascio?->format('d/m/Y'));
-            $email->line('Data scadenza: ' . $contratto->prodotto->data_scadenza?->format('d/m/Y'));
+            $email->line('Tipo documento: '.$contratto->prodotto->tipo_documento ? ContrattoEnergia::TIPI_DOCUMENTO[$contratto->prodotto->tipo_documento] : '');
+            $email->line('Numero documento: '.$contratto->prodotto->numero_documento);
+            $email->line('Rilasciato da: '.$contratto->prodotto->rilasciato_da);
+            $email->line('Data rilascio: '.$contratto->prodotto->data_rilascio?->format('d/m/Y'));
+            $email->line('Data scadenza: '.$contratto->prodotto->data_scadenza?->format('d/m/Y'));
         }
         $email->line('-INDIRIZZO SEDE LEGALE');
 
-        $email->line('indirizzo_sede:' . siNo($contratto->prodotto->indirizzo_sede));
-        $email->line('nr_sede:' . $contratto->prodotto->nr_sede);
-        $email->line('cap_sede:' . $contratto->prodotto->cap_sede);
-        $email->line('comune_sede:' . Comune::find($contratto->prodotto->comune_sede)?->comuneConTarga());
+        $email->line('indirizzo_sede:'.siNo($contratto->prodotto->indirizzo_sede));
+        $email->line('nr_sede:'.$contratto->prodotto->nr_sede);
+        $email->line('cap_sede:'.$contratto->prodotto->cap_sede);
+        $email->line('comune_sede:'.Comune::find($contratto->prodotto->comune_sede)?->comuneConTarga());
 
         $email->line('--COMPLIARE SE DIVERSO DALLA SEDE DEL CLIENTE');
-        $email->line('c_o:' . siNo($contratto->prodotto->c_o));
-        $email->line('indirizzo_fatturazione:' . $contratto->prodotto->indirizzo_fatturazione);
-        $email->line('nr_fatturazione:' . $contratto->prodotto->nr_fatturazione);
-        $email->line('cap_fatturazione:' . $contratto->prodotto->cap_fatturazione);
-        $email->line('comune_fatturazione:' . Comune::find($contratto->prodotto->comune_fatturazione)?->comuneConTarga());
+        $email->line('c_o:'.siNo($contratto->prodotto->c_o));
+        $email->line('indirizzo_fatturazione:'.$contratto->prodotto->indirizzo_fatturazione);
+        $email->line('nr_fatturazione:'.$contratto->prodotto->nr_fatturazione);
+        $email->line('cap_fatturazione:'.$contratto->prodotto->cap_fatturazione);
+        $email->line('comune_fatturazione:'.Comune::find($contratto->prodotto->comune_fatturazione)?->comuneConTarga());
 
-        $email->line('codice_destinatario:' . $contratto->prodotto->codice_destinatario);
-        $email->line('data_inizio_validita:' . $contratto->prodotto->data_inizio_validita?->format('d/m/Y'));
-        $email->line('data_fine_validita:' . $contratto->prodotto->data_fine_validita?->format('d/m/Y'));
-        $email->line('cig:' . $contratto->prodotto->cig);
-        $email->line('cup:' . $contratto->prodotto->cup);
-
+        $email->line('codice_destinatario:'.$contratto->prodotto->codice_destinatario);
+        $email->line('data_inizio_validita:'.$contratto->prodotto->data_inizio_validita?->format('d/m/Y'));
+        $email->line('data_fine_validita:'.$contratto->prodotto->data_fine_validita?->format('d/m/Y'));
+        $email->line('cig:'.$contratto->prodotto->cig);
+        $email->line('cup:'.$contratto->prodotto->cup);
 
         $email->line('--ENERGIA ELETTRICA');
-        //DATI TECNICI ENERGIA ELETTRICA
-        $email->line('pod:' . $contratto->prodotto->pod);
-        $email->line('provenienza_mercato_libero:' . siNo($contratto->prodotto->provenienza_mercato_libero));
-        $email->line('uso_non_professionale_luce:' . siNo($contratto->prodotto->uso_non_professionale_luce));
-        $email->line('consumo_annuo_luce:' . $contratto->prodotto->consumo_annuo_luce);
-        $email->line('potenza_contrattuale:' . $contratto->prodotto->potenza_contrattuale);
-        $email->line('livello_tensione:' . $contratto->prodotto->livello_tensione);
-        $email->line('attuale_societa_luce:' . $contratto->prodotto->attuale_societa_luce);
-        $email->line('indirizzo_fornitura_luce:' . $contratto->prodotto->indirizzo_fornitura_luce);
-        $email->line('nr_fornitura_luce:' . $contratto->prodotto->nr_fornitura_luce);
-        $email->line('cap_fornitura_luce:' . $contratto->prodotto->cap_fornitura_luce);
-        $email->line('comune_fornitura_luce:' . Comune::find($contratto->prodotto->comune_fornitura_luce)?->comuneConTarga());
+        // DATI TECNICI ENERGIA ELETTRICA
+        $email->line('pod:'.$contratto->prodotto->pod);
+        $email->line('provenienza_mercato_libero:'.siNo($contratto->prodotto->provenienza_mercato_libero));
+        $email->line('uso_non_professionale_luce:'.siNo($contratto->prodotto->uso_non_professionale_luce));
+        $email->line('consumo_annuo_luce:'.$contratto->prodotto->consumo_annuo_luce);
+        $email->line('potenza_contrattuale:'.$contratto->prodotto->potenza_contrattuale);
+        $email->line('livello_tensione:'.$contratto->prodotto->livello_tensione);
+        $email->line('attuale_societa_luce:'.$contratto->prodotto->attuale_societa_luce);
+        $email->line('indirizzo_fornitura_luce:'.$contratto->prodotto->indirizzo_fornitura_luce);
+        $email->line('nr_fornitura_luce:'.$contratto->prodotto->nr_fornitura_luce);
+        $email->line('cap_fornitura_luce:'.$contratto->prodotto->cap_fornitura_luce);
+        $email->line('comune_fornitura_luce:'.Comune::find($contratto->prodotto->comune_fornitura_luce)?->comuneConTarga());
 
         $email->line('--GAS NATURALE');
-        //DATI TECNICI GAS NATURALE
-        $email->line('pdr:' . $contratto->prodotto->pdr);
-        $email->line('uso_non_professionale_gas:' . siNo($contratto->prodotto->uso_non_professionale_gas));
-        $email->line('attuale_societa_gas:' . $contratto->prodotto->attuale_societa_gas);
-        $email->line('profilo_consumo:' . ($contratto->prodotto->profilo_consumo ? ProdottoEnergiaEnelBusiness::PROFILI_CONSUMO[$contratto->prodotto->profilo_consumo] : null));
-        $email->line('posizione_contatore:' . siNo($contratto->prodotto->posizione_contatore));
-        $email->line('consumo_annuo:' . siNo($contratto->prodotto->consumo_annuo));
-        $email->line('matricola_contatore:' . siNo($contratto->prodotto->matricola_contatore));
-        $email->line('indirizzo_fornitura_gas:' . $contratto->prodotto->indirizzo_fornitura_gas);
-        $email->line('nr_fornitura_gas:' . $contratto->prodotto->nr_fornitura_gas);
-        $email->line('cap_fornitura_gas:' . $contratto->prodotto->cap_fornitura_gas);
-        $email->line('comune_fornitura_gas:' . Comune::find($contratto->prodotto->comune_fornitura_gas)?->comuneConTarga());
+        // DATI TECNICI GAS NATURALE
+        $email->line('pdr:'.$contratto->prodotto->pdr);
+        $email->line('uso_non_professionale_gas:'.siNo($contratto->prodotto->uso_non_professionale_gas));
+        $email->line('attuale_societa_gas:'.$contratto->prodotto->attuale_societa_gas);
+        $email->line('profilo_consumo:'.($contratto->prodotto->profilo_consumo ? ProdottoEnergiaEnelBusiness::PROFILI_CONSUMO[$contratto->prodotto->profilo_consumo] : null));
+        $email->line('posizione_contatore:'.siNo($contratto->prodotto->posizione_contatore));
+        $email->line('consumo_annuo:'.siNo($contratto->prodotto->consumo_annuo));
+        $email->line('matricola_contatore:'.siNo($contratto->prodotto->matricola_contatore));
+        $email->line('indirizzo_fornitura_gas:'.$contratto->prodotto->indirizzo_fornitura_gas);
+        $email->line('nr_fornitura_gas:'.$contratto->prodotto->nr_fornitura_gas);
+        $email->line('cap_fornitura_gas:'.$contratto->prodotto->cap_fornitura_gas);
+        $email->line('comune_fornitura_gas:'.Comune::find($contratto->prodotto->comune_fornitura_gas)?->comuneConTarga());
 
-        //MODALITÀ DI PAGAMENTO E SPEDIZIONE FATTURA
-        $email->line('modalita_pagamento:' . $contratto->prodotto->modalita_pagamento);
-        $email->line('invio_fattura:' . $contratto->prodotto->invio_fattura);
+        // MODALITÀ DI PAGAMENTO E SPEDIZIONE FATTURA
+        $email->line('modalita_pagamento:'.$contratto->prodotto->modalita_pagamento);
+        $email->line('invio_fattura:'.$contratto->prodotto->invio_fattura);
 
-
-        $email->line('titolare_cc:' . $contratto->prodotto->titolare_cc);
-        $email->line('codice_fiscale_titolare:' . $contratto->prodotto->codice_fiscale_titolare);
-        $email->line('cognome_nome_sottoscrittore:' . $contratto->prodotto->cognome_nome_sottoscrittore);
-        $email->line('recapito_telefonico_titolare:' . $contratto->prodotto->recapito_telefonico_titolare);
-        $email->line('iban:' . $contratto->prodotto->iban);
-        $email->line('iban_sepa:' . $contratto->prodotto->iban_sepa);
-        $email->line('iban_sepa:' . $contratto->prodotto->iban_sepa);
-        $email->line('voltura_ordinaria_contestuale:' . siNo($contratto->prodotto->voltura_ordinaria_contestuale));
-        $email->line('voltura_mortis_causa:' . siNo($contratto->prodotto->voltura_mortis_causa));
-        $email->line('Bolletta web:' . siNo($contratto->prodotto->bolletta_web));
-
+        $email->line('titolare_cc:'.$contratto->prodotto->titolare_cc);
+        $email->line('codice_fiscale_titolare:'.$contratto->prodotto->codice_fiscale_titolare);
+        $email->line('cognome_nome_sottoscrittore:'.$contratto->prodotto->cognome_nome_sottoscrittore);
+        $email->line('recapito_telefonico_titolare:'.$contratto->prodotto->recapito_telefonico_titolare);
+        $email->line('iban:'.$contratto->prodotto->iban);
+        $email->line('iban_sepa:'.$contratto->prodotto->iban_sepa);
+        $email->line('iban_sepa:'.$contratto->prodotto->iban_sepa);
+        $email->line('voltura_ordinaria_contestuale:'.siNo($contratto->prodotto->voltura_ordinaria_contestuale));
+        $email->line('voltura_mortis_causa:'.siNo($contratto->prodotto->voltura_mortis_causa));
+        $email->line('Bolletta web:'.siNo($contratto->prodotto->bolletta_web));
 
     }
-
-
 }

@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class ClienteAssistenza extends Model
 {
     use HasFactory;
-    protected $table="clienti_assistenza";
+
+    protected $table = 'clienti_assistenza';
+
     protected $fillable = [
         'nome',
         'cognome',
@@ -17,8 +19,9 @@ class ClienteAssistenza extends Model
         'telefono',
     ];
 
-    public const NOME_SINGOLARE = "cliente assistenza";
-    public const NOME_PLURALE = "clienti assistenza";
+    public const NOME_SINGOLARE = 'cliente assistenza';
+
+    public const NOME_PLURALE = 'clienti assistenza';
 
     /*
     |--------------------------------------------------------------------------
@@ -40,14 +43,15 @@ class ClienteAssistenza extends Model
 
     public function nominativo()
     {
-        return $this->cognome . ' ' . $this->nome;
+        return $this->cognome.' '.$this->nome;
     }
+
     public static function selected($id)
     {
         if ($id) {
             $record = self::find($id);
             if ($record) {
-                return '<option value="' . $record->id . '">' . $record->nominativo().' '.$record->codice_fiscale . '</option>';
+                return '<option value="'.$record->id.'">'.$record->nominativo().' '.$record->codice_fiscale.'</option>';
             }
         }
     }

@@ -4,16 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+
 use function App\getInputNumero;
 
 class Setting extends Model
 {
-    //https://qcode.in/save-laravel-app-settings-in-database/
+    // https://qcode.in/save-laravel-app-settings-in-database/
 
     use HasFactory;
 
-    protected $fillable=['name','val','type'];
+    protected $fillable = ['name', 'val', 'type'];
 
     /**
      * The "booting" method of the model.
@@ -28,23 +30,20 @@ class Setting extends Model
             self::flushCache();
         });
 
-        static::created(function() {
+        static::created(function () {
             self::flushCache();
         });
     }
 
-
     /**
      * Add a settings value
      *
-     * @param $key
-     * @param $val
-     * @param string $type
+     * @param  string  $type
      * @return bool
      */
     public static function add($key, $val, $type = 'string')
     {
-        if ( self::has($key) ) {
+        if (self::has($key)) {
             return self::set($key, $val, $type);
         }
 
@@ -54,14 +53,14 @@ class Setting extends Model
     /**
      * Get a settings value
      *
-     * @param $key
-     * @param null $default
+     * @param  null  $default
      * @return bool|int|mixed
      */
     public static function get($key, $default = null)
     {
-        if ( self::has($key) ) {
+        if (self::has($key)) {
             $setting = self::getAllSettings()->where('name', $key)->first();
+
             return self::castValue($setting->val, $setting->type);
         }
 
@@ -71,14 +70,12 @@ class Setting extends Model
     /**
      * Set a value for setting
      *
-     * @param $key
-     * @param $val
-     * @param string $type
+     * @param  string  $type
      * @return bool
      */
     public static function set($key, $val, $type = 'string')
     {
-        if ( $setting = self::getAllSettings()->where('name', $key)->first() ) {
+        if ($setting = self::getAllSettings()->where('name', $key)->first()) {
             return $setting->update([
                 'name' => $key,
                 'val' => $val,
@@ -91,12 +88,11 @@ class Setting extends Model
     /**
      * Remove a setting
      *
-     * @param $key
      * @return bool
      */
     public static function remove($key)
     {
-        if( self::has($key) ) {
+        if (self::has($key)) {
             return self::whereName($key)->delete();
         }
 
@@ -106,12 +102,11 @@ class Setting extends Model
     /**
      * Check if setting exists
      *
-     * @param $key
      * @return bool
      */
     public static function has($key)
     {
-        return (boolean) self::getAllSettings()->whereStrict('name', $key)->count();
+        return (bool) self::getAllSettings()->whereStrict('name', $key)->count();
     }
 
     /**
@@ -130,12 +125,11 @@ class Setting extends Model
     /**
      * Get the data type of a setting
      *
-     * @param $field
      * @return mixed
      */
     public static function getDataType($field)
     {
-        $type  = self::getDefinedSettingFields()
+        $type = self::getDefinedSettingFields()
             ->pluck('data', 'name')
             ->get($field);
 
@@ -145,7 +139,6 @@ class Setting extends Model
     /**
      * Get default value for a setting
      *
-     * @param $field
      * @return mixed
      */
     public static function getDefaultValueForField($field)
@@ -158,8 +151,6 @@ class Setting extends Model
     /**
      * Get default value from config if no value passed
      *
-     * @param $key
-     * @param $default
      * @return mixed
      */
     private static function getDefaultValue($key, $default)
@@ -170,7 +161,7 @@ class Setting extends Model
     /**
      * Get all the settings fields from config
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     private static function getDefinedSettingFields()
     {
@@ -180,8 +171,6 @@ class Setting extends Model
     /**
      * caste value into respective type
      *
-     * @param $val
-     * @param $castTo
      * @return bool|int
      */
     private static function castValue($val, $castTo)
@@ -203,9 +192,6 @@ class Setting extends Model
         }
     }
 
-
-
-
     /**
      * Get all the settings
      *
@@ -213,8 +199,8 @@ class Setting extends Model
      */
     public static function getAllSettings()
     {
-        //return self::all();
-        return Cache::rememberForever('settings.all', function() {
+        // return self::all();
+        return Cache::rememberForever('settings.all', function () {
             return self::all();
         });
     }
@@ -226,5 +212,4 @@ class Setting extends Model
     {
         Cache::forget('settings.all');
     }
-
 }

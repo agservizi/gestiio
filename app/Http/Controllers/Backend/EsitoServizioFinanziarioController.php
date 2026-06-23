@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\EsitoServizioFinanziario;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class EsitoServizioFinanziarioController extends Controller
 {
     protected $conFiltro = false;
 
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -30,7 +31,7 @@ class EsitoServizioFinanziarioController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -39,7 +40,7 @@ class EsitoServizioFinanziarioController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -49,7 +50,7 @@ class EsitoServizioFinanziarioController extends Controller
             Auth::user()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -60,44 +61,42 @@ class EsitoServizioFinanziarioController extends Controller
                 'html' => base64_encode(view('Backend.EsitoServizioFinanziario.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ]))
+                ])),
             ];
 
         }
 
-
         return view('Backend.EsitoServizioFinanziario.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoServizioFinanziario::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.EsitoServizioFinanziario::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\EsitoServizioFinanziario::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.EsitoServizioFinanziario::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
 
         return view('Backend.EsitoServizioFinanziario.index', [
             'records' => $this->queryBuilderIndex(),
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . \App\Models\EsitoServizioFinanziario::NOME_PLURALE,
-            'testoNuovo' => 'Nuovo ' . \App\Models\EsitoServizioFinanziario::NOME_SINGOLARE,
-            'testoCerca' => null
+            'titoloPagina' => 'Elenco '.EsitoServizioFinanziario::NOME_PLURALE,
+            'testoNuovo' => 'Nuovo '.EsitoServizioFinanziario::NOME_SINGOLARE,
+            'testoCerca' => null,
         ]);
-
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\EsitoServizioFinanziario::query();
+        $queryBuilder = EsitoServizioFinanziario::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -106,24 +105,24 @@ class EsitoServizioFinanziarioController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new EsitoServizioFinanziario();
+        $record = new EsitoServizioFinanziario;
+
         return view('Backend.EsitoServizioFinanziario.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . EsitoServizioFinanziario::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.EsitoServizioFinanziario::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([EsitoServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . EsitoServizioFinanziario::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoServizioFinanziarioController::class, 'index']) => 'Torna a elenco '.EsitoServizioFinanziario::NOME_PLURALE],
 
         ]);
     }
@@ -131,32 +130,33 @@ class EsitoServizioFinanziarioController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new EsitoServizioFinanziario();
+        $record = new EsitoServizioFinanziario;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
         $record = EsitoServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo esitoserviziofinanziario non esiste');
+        abort_if(! $record, 404, 'Questo esitoserviziofinanziario non esiste');
+
         return view('Backend.EsitoServizioFinanziario.show', [
             'record' => $record,
             'controller' => EsitoServizioFinanziarioController::class,
             'titoloPagina' => EsitoServizioFinanziario::NOME_SINGOLARE,
-            'breadcrumbs' => [action([EsitoServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . EsitoServizioFinanziario::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoServizioFinanziarioController::class, 'index']) => 'Torna a elenco '.EsitoServizioFinanziario::NOME_PLURALE],
 
         ]);
     }
@@ -164,24 +164,25 @@ class EsitoServizioFinanziarioController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = EsitoServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo esitoserviziofinanziario non esiste');
+        abort_if(! $record, 404, 'Questo esitoserviziofinanziario non esiste');
         if (false) {
             $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
+
         return view('Backend.EsitoServizioFinanziario.edit', [
             'record' => $record,
             'controller' => EsitoServizioFinanziarioController::class,
-            'titoloPagina' => 'Modifica ' . EsitoServizioFinanziario::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.EsitoServizioFinanziario::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([EsitoServizioFinanziarioController::class, 'index']) => 'Torna a elenco ' . EsitoServizioFinanziario::NOME_PLURALE]
+            'breadcrumbs' => [action([EsitoServizioFinanziarioController::class, 'index']) => 'Torna a elenco '.EsitoServizioFinanziario::NOME_PLURALE],
 
         ]);
     }
@@ -189,32 +190,31 @@ class EsitoServizioFinanziarioController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = EsitoServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo ' . EsitoServizioFinanziario::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.EsitoServizioFinanziario::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = EsitoServizioFinanziario::find($id);
-        abort_if(!$record, 404, 'Questo esitoserviziofinanziario non esiste');
+        abort_if(! $record, 404, 'Questo esitoserviziofinanziario non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -223,20 +223,20 @@ class EsitoServizioFinanziarioController extends Controller
     }
 
     /**
-     * @param EsitoServizioFinanziario $model
-     * @param Request $request
+     * @param  EsitoServizioFinanziario  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
@@ -254,6 +254,7 @@ class EsitoServizioFinanziarioController extends Controller
         }
 
         $model->save();
+
         return $model;
     }
 
@@ -267,13 +268,11 @@ class EsitoServizioFinanziarioController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\EsitoServizioFinanziario::get();
+        return EsitoServizioFinanziario::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
@@ -286,5 +285,4 @@ class EsitoServizioFinanziarioController extends Controller
 
         return $rules;
     }
-
 }

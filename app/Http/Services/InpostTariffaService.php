@@ -5,29 +5,32 @@ namespace App\Http\Services;
 use App\Models\ListinoInpost;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+
 use function App\applicaPercentuale;
 
 class InpostTariffaService
 {
     protected ?float $prezzo = null;
+
     protected ?string $testoTariffa = null;
+
     protected string|bool $error = false;
 
-    public function __construct(protected string $packageType, protected string $deliveryType)
-    {
-    }
+    public function __construct(protected string $packageType, protected string $deliveryType) {}
 
     public function calcola(): void
     {
         $tariffa = ListinoInpost::trovaTariffa($this->packageType);
-        if (!$tariffa) {
+        if (! $tariffa) {
             $this->error = 'Tariffa InPost non configurata per il package selezionato';
+
             return;
         }
 
         $prezzo = $tariffa->calcolaPrezzo($this->deliveryType);
         if ($prezzo === null) {
             $this->error = 'Prezzo InPost non configurato per la modalita di consegna selezionata';
+
             return;
         }
 

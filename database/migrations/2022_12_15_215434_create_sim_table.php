@@ -40,7 +40,6 @@ return new class extends Migration
             $table->boolean('includi_dati_contratto')->default(0);
         });
 
-
     }
 
     /**

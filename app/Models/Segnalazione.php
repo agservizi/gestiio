@@ -13,12 +13,13 @@ class Segnalazione extends Model
 {
     use HasFactory;
 
-    protected $table = "segnalazioni";
+    protected $table = 'segnalazioni';
 
-    public const NOME_SINGOLARE = "segnalazione";
-    public const NOME_PLURALE = "segnalazioni";
+    public const NOME_SINGOLARE = 'segnalazione';
 
-    public const SETTORI = array(
+    public const NOME_PLURALE = 'segnalazioni';
+
+    public const SETTORI = [
         'Agenzia di viaggio, tour operator' => 'Agenzia di viaggio, tour operator',
         'Alloggio e ristorazione' => 'Alloggio e ristorazione',
         'Manifattura' => 'Manifattura',
@@ -38,9 +39,9 @@ class Segnalazione extends Model
         'Trasporto e magazzinaggio' => 'Trasporto e magazzinaggio',
         'Vendita al dettaglio o all\'ingrosso' => 'Vendita al dettaglio o all\'ingrosso',
         'Altro' => 'Altro',
-    );
+    ];
 
-    public const NATURE_GIURIDICHE = array(
+    public const NATURE_GIURIDICHE = [
         'SPA' => 'SPA',
         'SRL' => 'SRL',
         'SAS' => 'SAS',
@@ -54,8 +55,7 @@ class Segnalazione extends Model
         'Ente Amministrazione Pubblica' => 'Ente Amministrazione Pubblica',
         'Associazione Cooperativa' => 'Associazione Cooperativa',
         'Studi Professionistici Associati' => 'Studi Professionistici Associati',
-    );
-
+    ];
 
     /**
      * The "booted" method of the model.
@@ -71,7 +71,6 @@ class Segnalazione extends Model
             }
         });
 
-
         self::saved(function ($model) {
             self::calcolaProduzione($model);
 
@@ -82,7 +81,6 @@ class Segnalazione extends Model
         });
 
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -129,13 +127,12 @@ class Segnalazione extends Model
 
     }
 
-
     protected static function calcolaProduzione(Segnalazione $record)
     {
 
         $mese = $record->created_at->month;
         $anno = $record->created_at->year;
-        Log::debug('calcolo segnalazioni in pagamento per $userId:' . $record->agente_id . ' $anno:' . $anno . ' $mese:' . $mese);
+        Log::debug('calcolo segnalazioni in pagamento per $userId:'.$record->agente_id.' $anno:'.$anno.' $mese:'.$mese);
 
         $dataInizio = Carbon::createFromDate($anno, $mese, 1);
         $dataFine = $dataInizio->copy()->endOfMonth();
@@ -154,12 +151,12 @@ class Segnalazione extends Model
         $p->save();
     }
 
-
     protected static function calcolaImporto(int $numeroSegnalazioni): float
     {
         if ($numeroSegnalazioni <= 2) {
             return $numeroSegnalazioni * 20;
         }
+
         return 40 + ($numeroSegnalazioni - 2) * 45;
     }
 }

@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         $tables = [
@@ -16,15 +17,15 @@ return new class extends Migration {
         ];
 
         foreach ($tables as $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (! Schema::hasTable($tableName)) {
                 continue;
             }
 
             Schema::table($tableName, function (Blueprint $table) use ($tableName) {
-                if (!Schema::hasColumn($tableName, 'file_contenuto_base64')) {
+                if (! Schema::hasColumn($tableName, 'file_contenuto_base64')) {
                     $table->longText('file_contenuto_base64')->nullable();
                 }
-                if (!Schema::hasColumn($tableName, 'mime_type')) {
+                if (! Schema::hasColumn($tableName, 'mime_type')) {
                     $table->string('mime_type', 120)->nullable();
                 }
             });
@@ -42,7 +43,7 @@ return new class extends Migration {
         ];
 
         foreach ($tables as $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (! Schema::hasTable($tableName)) {
                 continue;
             }
 

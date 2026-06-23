@@ -4,21 +4,17 @@ namespace App\Models;
 
 use App\Enums\TipiPortafoglioEnum;
 use App\Notifications\NotificaAdminMovimentoPortafoglio;
-use App\Notifications\NotificaAgenteCambioEsitoContratto;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class MovimentoPortafoglio extends Model
 {
+    protected $table = 'movimenti_portafoglio';
 
-    protected $table = "movimenti_portafoglio";
+    public const NOME_SINGOLARE = 'portafoglio';
 
-    public const NOME_SINGOLARE = "portafoglio";
-    public const NOME_PLURALE = "portafoglii";
-
+    public const NOME_PLURALE = 'portafoglii';
 
     /**
      * The "booted" method of the model.
@@ -44,14 +40,13 @@ class MovimentoPortafoglio extends Model
                     break;
 
                 case TipiPortafoglioEnum::VISURE->value:
-                    $model->importo_prima = (float)($agente->portafoglio_visure ?? 0);
-                    $agente->portafoglio_visure = (float)($agente->portafoglio_visure ?? 0) + $model->importo;
+                    $model->importo_prima = (float) ($agente->portafoglio_visure ?? 0);
+                    $agente->portafoglio_visure = (float) ($agente->portafoglio_visure ?? 0) + $model->importo;
                     $model->importo_dopo = $agente->portafoglio_visure;
                     break;
             }
 
             $agente->save();
-
 
             dispatch(function () use ($model) {
                 $userNotifica = User::find(2);
@@ -60,11 +55,9 @@ class MovimentoPortafoglio extends Model
 
         });
 
-
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
             $builder->where('agente_id', Auth::id());
         });
-
 
     }
     /*

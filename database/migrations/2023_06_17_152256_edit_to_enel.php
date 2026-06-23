@@ -23,8 +23,7 @@ return new class extends Migration
             $table->boolean('voltura_mortis_causa');
         });
 
-
-        //modalita_pagamento ah dimenticavo puoi mettere su entrambi enel ed enel business le spunte *Voltura ordinaria contestuale e voltura mortis causa*?
+        // modalita_pagamento ah dimenticavo puoi mettere su entrambi enel ed enel business le spunte *Voltura ordinaria contestuale e voltura mortis causa*?
     }
 
     /**

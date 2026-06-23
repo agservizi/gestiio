@@ -3,24 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+
 use function App\applicaIva;
 
 class FatturaProforma extends Model
 {
     protected $table = 'fatture_proforma';
 
-    public const NOME_SINGOLARE = "fattura proforma";
-    public const NOME_PLURALE = "fatture proforma";
+    public const NOME_SINGOLARE = 'fattura proforma';
 
+    public const NOME_PLURALE = 'fatture proforma';
 
     protected $casts = [
         'data' => 'date',
     ];
-
 
     /**
      * The "booted" method of the model.
@@ -47,9 +45,7 @@ class FatturaProforma extends Model
             }
         });
 
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -67,8 +63,6 @@ class FatturaProforma extends Model
         return $this->hasOne(IntestazioneFatturaProforma::class, 'id', 'intestazione_id');
     }
 
-
-
     /*
     |--------------------------------------------------------------------------
     | SCOPE
@@ -80,7 +74,6 @@ class FatturaProforma extends Model
     | PER BLADE
     |--------------------------------------------------------------------------
     */
-
 
     /*
     |--------------------------------------------------------------------------

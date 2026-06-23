@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Gestore;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -27,7 +29,7 @@ class GestoreController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -41,7 +43,7 @@ class GestoreController extends Controller
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
                 return $q->orderBy('cognome')->orderBy('nome');
-            }]
+            }],
 
         ];
 
@@ -50,7 +52,7 @@ class GestoreController extends Controller
 
         if ($orderByString) {
             $orderBy = $orderByString;
-        } else if ($orderByUser) {
+        } elseif ($orderByUser) {
             $orderBy = $orderByUser;
         } else {
             $orderBy = 'recente';
@@ -60,7 +62,7 @@ class GestoreController extends Controller
             $this->currentUser()->setExtra([$nomeClasse => $orderBy]);
         }
 
-        //Applico ordinamento
+        // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -71,35 +73,34 @@ class GestoreController extends Controller
                 'html' => base64_encode(view('Backend.Gestore.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
-                ])->render())
+                ])->render()),
             ];
 
         }
 
-
         return view('Backend.Gestore.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Gestore::NOME_PLURALE,
+            'titoloPagina' => 'Elenco '.Gestore::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\Gestore::NOME_SINGOLARE,
-            'testoCerca' => null
+            'testoNuovo' => 'Nuovo '.Gestore::NOME_SINGOLARE,
+            'testoCerca' => null,
 
         ]);
 
     }
 
     /**
-     * @param Request $request
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Request  $request
+     * @return Builder
      */
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Gestore::query();
+        $queryBuilder = Gestore::query();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -108,24 +109,24 @@ class GestoreController extends Controller
             }
         }
 
-        //$this->conFiltro = true;
+        // $this->conFiltro = true;
         return $queryBuilder;
     }
-
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
-        $record = new Gestore();
+        $record = new Gestore;
+
         return view('Backend.Gestore.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Gestore::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo '.Gestore::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([GestoreController::class, 'index']) => 'Torna a elenco ' . Gestore::NOME_PLURALE]
+            'breadcrumbs' => [action([GestoreController::class, 'index']) => 'Torna a elenco '.Gestore::NOME_PLURALE],
 
         ]);
     }
@@ -133,22 +134,22 @@ class GestoreController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new Gestore();
+        $record = new Gestore;
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function show($id)
     {
@@ -158,13 +159,13 @@ class GestoreController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function edit($id)
     {
         $record = Gestore::withCount('tipiContratto')->find($id);
-        abort_if(!$record, 404, 'Questo gestore non esiste');
+        abort_if(! $record, 404, 'Questo gestore non esiste');
         if ($record->tipi_contratto_count) {
             $eliminabile = 'Non eliminabile perchè ha tipi contratto';
         } else {
@@ -174,9 +175,9 @@ class GestoreController extends Controller
         return view('Backend.Gestore.edit', [
             'record' => $record,
             'controller' => GestoreController::class,
-            'titoloPagina' => 'Modifica ' . Gestore::NOME_SINGOLARE,
+            'titoloPagina' => 'Modifica '.Gestore::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([GestoreController::class, 'index']) => 'Torna a elenco ' . Gestore::NOME_PLURALE]
+            'breadcrumbs' => [action([GestoreController::class, 'index']) => 'Torna a elenco '.Gestore::NOME_PLURALE],
 
         ]);
     }
@@ -184,32 +185,31 @@ class GestoreController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $record = Gestore::find($id);
-        abort_if(!$record, 404, 'Questo ' . Gestore::NOME_SINGOLARE . ' non esiste');
+        abort_if(! $record, 404, 'Questo '.Gestore::NOME_SINGOLARE.' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
+
         return $this->backToIndex();
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Response
      */
     public function destroy($id)
     {
         $record = Gestore::find($id);
-        abort_if(!$record, 404, 'Questo gestore non esiste');
+        abort_if(! $record, 404, 'Questo gestore non esiste');
 
         $record->delete();
-
 
         return [
             'success' => true,
@@ -218,21 +218,20 @@ class GestoreController extends Controller
     }
 
     /**
-     * @param Gestore $model
-     * @param Request $request
+     * @param  Gestore  $model
+     * @param  Request  $request
      * @return mixed
      */
     protected function salvaDati($model, $request)
     {
 
-        $nuovo = !$model->id;
+        $nuovo = ! $model->id;
 
         if ($nuovo) {
 
         }
 
-
-        //Ciclo su campi
+        // Ciclo su campi
         $campi = [
             'nome' => 'app\getInputUcwords',
             'colore_hex' => '',
@@ -257,14 +256,14 @@ class GestoreController extends Controller
         if ($request->file('logo')) {
             $tmpFile = $request->file('logo');
             $extensione = $tmpFile->extension();
-            $filename = hexdec(uniqid()) . '.' . $extensione;
+            $filename = hexdec(uniqid()).'.'.$extensione;
             if ($model->logo) {
                 $oldPath = ltrim((string) $model->logo, '/');
                 if (Storage::disk('public')->exists($oldPath)) {
                     Storage::disk('public')->delete($oldPath);
                 }
-                if (Storage::exists('/' . $oldPath)) {
-                    Storage::delete('/' . $oldPath);
+                if (Storage::exists('/'.$oldPath)) {
+                    Storage::delete('/'.$oldPath);
                 }
             }
 
@@ -287,20 +286,18 @@ class GestoreController extends Controller
      */
     protected function queryBuilderIndexSemplice()
     {
-        return \App\Models\Gestore::get();
+        return Gestore::get();
     }
-
 
     protected function rules($id = null)
     {
-
 
         $rules = [
             'nome' => ['required', 'max:255'],
             'colore_hex' => ['nullable', 'max:255'],
             'attivo' => ['nullable'],
-            'email_notifica_a_gestore'=>['nullable'],
-            'email_notifica_sollecito'=>['nullable','email'],
+            'email_notifica_a_gestore' => ['nullable'],
+            'email_notifica_sollecito' => ['nullable', 'email'],
         ];
 
         return $rules;
@@ -311,32 +308,30 @@ class GestoreController extends Controller
 
         $cartella = ltrim((string) config('configurazione.loghi.cartella'), '/');
         $storagePublic = Storage::disk('public');
-        if (!$storagePublic->exists($cartella)) {
+        if (! $storagePublic->exists($cartella)) {
             $storagePublic->makeDirectory($cartella);
         }
 
-
         $img = Image::make($tmpFile);
         $dimensioni = config('configurazione.loghi.dimensioni');
-        //$img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
+        // $img->fit($dimensioni['width'], $dimensioni['height'], null, 'center');
         $img = $this->ridimensionaImmagine($img, $dimensioni['width'], $dimensioni['height'], $canvas, 'normale');
-        $absolutePath = storage_path('app/public/' . $cartella . '/' . $nomefile);
+        $absolutePath = storage_path('app/public/'.$cartella.'/'.$nomefile);
         $img->save($absolutePath, 80);
 
-
-        return '/' . $cartella . '/' . $nomefile;
+        return '/'.$cartella.'/'.$nomefile;
 
     }
 
     protected function ridimensionaImmagine($img, $width, $height, $canvas, $testoLog)
     {
-        //Resize immagine
+        // Resize immagine
         $img->resize($width, $height, function ($constraint) {
             $constraint->aspectRatio();
             $constraint->upsize();
         });
 
-        //Aggiusta rapporto immagine
+        // Aggiusta rapporto immagine
         Log::debug("Immagine $testoLog {$img->width()}x{$img->height()}");
         if ($canvas) {
 
@@ -351,6 +346,4 @@ class GestoreController extends Controller
         return $img;
 
     }
-
-
 }

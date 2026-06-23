@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,10 +13,11 @@ class Ticket extends Model
 {
     use HasFactory;
 
-    protected $table = "tickets";
+    protected $table = 'tickets';
 
-    public const NOME_SINGOLARE = "ticket";
-    public const NOME_PLURALE = "tickets";
+    public const NOME_SINGOLARE = 'ticket';
+
+    public const NOME_PLURALE = 'tickets';
 
     public const TIPI_TICKETS = [
         'supporto' => 'Supporto tecnico',
@@ -100,42 +100,42 @@ class Ticket extends Model
 
     public function classeServizio()
     {
-        return Str::of((string)$this->servizio_type)->afterLast('\\')->value();
+        return Str::of((string) $this->servizio_type)->afterLast('\\')->value();
     }
 
     public function uidTicket()
     {
-        return '#' . Str::substr((string)$this->uid, -6);
+        return '#'.Str::substr((string) $this->uid, -6);
     }
 
     public function labelStatoTicket(): string
     {
         $stato = self::STATI_TICKETS[$this->stato] ?? null;
-        if (!$stato) {
-            return '<span class="badge badge-light fw-bolder me-2">' . e((string)$this->stato) . '</span>';
+        if (! $stato) {
+            return '<span class="badge badge-light fw-bolder me-2">'.e((string) $this->stato).'</span>';
         }
 
-        return '<span class="badge badge-' . $stato['colore'] . ' fw-bolder me-2">' . $stato['testo'] . '</span>';
+        return '<span class="badge badge-'.$stato['colore'].' fw-bolder me-2">'.$stato['testo'].'</span>';
     }
 
     public function labelPrioritaTicket(): string
     {
         $priorita = self::PRIORITA_TICKETS[$this->priorita ?: 'media'] ?? null;
-        if (!$priorita) {
+        if (! $priorita) {
             return '<span class="badge badge-light fw-bolder">Media</span>';
         }
 
-        return '<span class="badge badge-light-' . $priorita['colore'] . ' fw-bolder">' . $priorita['testo'] . '</span>';
+        return '<span class="badge badge-light-'.$priorita['colore'].' fw-bolder">'.$priorita['testo'].'</span>';
     }
 
     public function labelBoxStatoTicket(): ?string
     {
         $stato = self::STATI_TICKETS[$this->stato] ?? null;
-        if (!$stato) {
+        if (! $stato) {
             return null;
         }
 
-        return '<div class="d-flex flex-center w-50px h-50px w-lg-75px h-lg-75px flex-shrink-0 rounded text-' . $stato['colore'] . ' bg-light-' . $stato['colore'] . ' fw-bolder">' . $stato['testo'] . '</div>';
+        return '<div class="d-flex flex-center w-50px h-50px w-lg-75px h-lg-75px flex-shrink-0 rounded text-'.$stato['colore'].' bg-light-'.$stato['colore'].' fw-bolder">'.$stato['testo'].'</div>';
     }
 
     public function isClosed(): bool
@@ -147,11 +147,11 @@ class Ticket extends Model
     {
         $now = now();
 
-        if (!$this->first_response_at && $this->first_response_due_at && $this->first_response_due_at->lt($now)) {
+        if (! $this->first_response_at && $this->first_response_due_at && $this->first_response_due_at->lt($now)) {
             return true;
         }
 
-        if (!$this->isClosed() && $this->resolution_due_at && $this->resolution_due_at->lt($now)) {
+        if (! $this->isClosed() && $this->resolution_due_at && $this->resolution_due_at->lt($now)) {
             return true;
         }
 
@@ -167,11 +167,11 @@ class Ticket extends Model
         $now = now();
         $thresholdMinutes = 120;
 
-        if (!$this->first_response_at && $this->first_response_due_at && $this->first_response_due_at->between($now, $now->copy()->addMinutes($thresholdMinutes))) {
+        if (! $this->first_response_at && $this->first_response_due_at && $this->first_response_due_at->between($now, $now->copy()->addMinutes($thresholdMinutes))) {
             return true;
         }
 
-        if (!$this->isClosed() && $this->resolution_due_at && $this->resolution_due_at->between($now, $now->copy()->addMinutes($thresholdMinutes))) {
+        if (! $this->isClosed() && $this->resolution_due_at && $this->resolution_due_at->between($now, $now->copy()->addMinutes($thresholdMinutes))) {
             return true;
         }
 
@@ -196,15 +196,15 @@ class Ticket extends Model
         $status = $this->slaStatus();
 
         if ($status['key'] === 'violato' && $this->resolution_due_at) {
-            return 'Scaduto ' . $this->resolution_due_at->diffForHumans();
+            return 'Scaduto '.$this->resolution_due_at->diffForHumans();
         }
 
-        if (!$this->isClosed() && $this->resolution_due_at) {
-            return 'Scadenza ' . $this->resolution_due_at->format('d/m/Y H:i');
+        if (! $this->isClosed() && $this->resolution_due_at) {
+            return 'Scadenza '.$this->resolution_due_at->format('d/m/Y H:i');
         }
 
         if ($this->resolved_at) {
-            return 'Risolto ' . $this->resolved_at->format('d/m/Y H:i');
+            return 'Risolto '.$this->resolved_at->format('d/m/Y H:i');
         }
 
         return 'SLA non disponibile';
@@ -230,13 +230,13 @@ class Ticket extends Model
         }
 
         $summaryParts = [
-            'Ticket ' . $this->uidTicket(),
-            $this->causaleTicket?->descrizione_causale ? 'causale ' . strtolower($this->causaleTicket->descrizione_causale) : null,
-            'priorita ' . ($this->priorita ?: 'media'),
-            $messageCount > 0 ? $messageCount . ' messaggi in thread' : null,
+            'Ticket '.$this->uidTicket(),
+            $this->causaleTicket?->descrizione_causale ? 'causale '.strtolower($this->causaleTicket->descrizione_causale) : null,
+            'priorita '.($this->priorita ?: 'media'),
+            $messageCount > 0 ? $messageCount.' messaggi in thread' : null,
         ];
 
-        $summary = collect($summaryParts)->filter()->implode(', ') . '.';
+        $summary = collect($summaryParts)->filter()->implode(', ').'.';
 
         $nextAction = match ($this->stato) {
             'nuovo', 'da_prendere' => 'Assegnare un owner e inviare la prima risposta.',

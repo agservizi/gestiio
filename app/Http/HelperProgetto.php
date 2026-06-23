@@ -2,7 +2,4 @@
 
 namespace App\Http;
 
-class HelperProgetto
-{
-
-}
+class HelperProgetto {}

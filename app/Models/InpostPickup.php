@@ -15,6 +15,7 @@ class InpostPickup extends Model
     protected $table = 'inpost_pickups';
 
     public const NOME_SINGOLARE = 'ritiro InPost';
+
     public const NOME_PLURALE = 'ritiri InPost';
 
     protected $casts = [
@@ -28,7 +29,7 @@ class InpostPickup extends Model
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
             /** @var User|null $authUser */
             $authUser = Auth::user();
-            if (!$authUser) {
+            if (! $authUser) {
                 return;
             }
 
@@ -62,13 +63,13 @@ class InpostPickup extends Model
 
         $label = $this->status ?: '-';
 
-        return "<span class='badge {$class}'>" . e($label) . '</span>';
+        return "<span class='badge {$class}'>".e($label).'</span>';
     }
 
     public function indirizzoCompleto(): string
     {
         return implode(', ', array_filter([
-            trim($this->street . ' ' . ($this->building_number ?: '')),
+            trim($this->street.' '.($this->building_number ?: '')),
             $this->post_code,
             $this->city,
         ]));

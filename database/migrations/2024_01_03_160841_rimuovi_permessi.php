@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Permission;
 
 return new class extends Migration
 {
@@ -13,9 +12,9 @@ return new class extends Migration
      */
     public function up()
     {
-        \Spatie\Permission\Models\Permission::where('name','vedi_spedizioni')->delete();
-        \Spatie\Permission\Models\Permission::where('name','vedi_caf_patronato')->delete();
-        \Spatie\Permission\Models\Permission::where('name','vedi_contratti')->delete();
+        Permission::where('name', 'vedi_spedizioni')->delete();
+        Permission::where('name', 'vedi_caf_patronato')->delete();
+        Permission::where('name', 'vedi_contratti')->delete();
     }
 
     /**

@@ -3,7 +3,6 @@
 namespace App\Rules;
 
 use Illuminate\Contracts\Validation\Rule;
-use function App\getInputNumero;
 
 class TelefonoRule implements Rule
 {
@@ -22,16 +21,17 @@ class TelefonoRule implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string $attribute
-     * @param mixed $value
+     * @param  string  $attribute
+     * @param  mixed  $value
      * @return bool
      */
     public function passes($attribute, $value)
     {
-        if (is_numeric(str_replace(' ','',$value))) {
+        if (is_numeric(str_replace(' ', '', $value))) {
             return true;
         } else {
-            $this->message = $attribute . ' deve essere un numero.';
+            $this->message = $attribute.' deve essere un numero.';
+
             return false;
         }
     }

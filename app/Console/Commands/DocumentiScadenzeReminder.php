@@ -14,8 +14,8 @@ class DocumentiScadenzeReminder extends Command
 
     public function handle(): int
     {
-        $giorni = max(1, (int)$this->option('giorni'));
-        $limit = max(1, (int)$this->option('limit'));
+        $giorni = max(1, (int) $this->option('giorni'));
+        $limit = max(1, (int) $this->option('limit'));
 
         $start = now();
         $end = now()->copy()->addDays($giorni);
@@ -33,6 +33,7 @@ class DocumentiScadenzeReminder extends Command
 
         if ($records->isEmpty()) {
             $this->info('Nessun documento da notificare.');
+
             return self::SUCCESS;
         }
 
@@ -47,7 +48,8 @@ class DocumentiScadenzeReminder extends Command
             $file->save();
         }
 
-        $this->info('Promemoria inviati: ' . $records->count());
+        $this->info('Promemoria inviati: '.$records->count());
+
         return self::SUCCESS;
     }
 }

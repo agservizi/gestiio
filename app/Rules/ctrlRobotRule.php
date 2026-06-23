@@ -7,6 +7,7 @@ use Illuminate\Contracts\Validation\Rule;
 class ctrlRobotRule implements Rule
 {
     protected $ctrl;
+
     /**
      * Create a new rule instance.
      *
@@ -14,7 +15,7 @@ class ctrlRobotRule implements Rule
      */
     public function __construct($ctrl)
     {
-        $this->ctrl=$ctrl;
+        $this->ctrl = $ctrl;
     }
 
     /**
@@ -28,6 +29,7 @@ class ctrlRobotRule implements Rule
     {
         $array = explode(', ', $this->ctrl);
         $max = max($array);
+
         return trim($value) == $max;
     }
 

@@ -9,11 +9,13 @@ use App\Http\Services\InpostTariffaService;
 use App\Models\MovimentoPortafoglio;
 use App\Models\SpedizioneInpost;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Validation\ValidationException;
+
 use function App\getInputNumero;
 
 class SpedizioneInpostController extends Controller
@@ -38,15 +40,15 @@ class SpedizioneInpostController extends Controller
         return view('Backend.SpedizioneInpost.index', [
             'records' => $records,
             'controller' => get_class($this),
-            'titoloPagina' => 'Elenco ' . SpedizioneInpost::NOME_PLURALE,
-            'testoNuovo' => 'Nuova ' . SpedizioneInpost::NOME_SINGOLARE,
+            'titoloPagina' => 'Elenco '.SpedizioneInpost::NOME_PLURALE,
+            'testoNuovo' => 'Nuova '.SpedizioneInpost::NOME_SINGOLARE,
             'testoCerca' => 'Cerca in destinatario, mittente, tracking',
         ]);
     }
 
     public function create()
     {
-        $record = new SpedizioneInpost();
+        $record = new SpedizioneInpost;
         $record->nazione_destinazione = 'IT';
         $record->delivery_type = 'point';
 
@@ -59,14 +61,14 @@ class SpedizioneInpostController extends Controller
             'record' => $record,
             'controller' => get_class($this),
             'titoloPagina' => 'Nuova spedizione InPost',
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . SpedizioneInpost::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.SpedizioneInpost::NOME_PLURALE],
         ]);
     }
 
     public function store(Request $request)
     {
         $request->validate($this->rules());
-        $record = new SpedizioneInpost();
+        $record = new SpedizioneInpost;
         $this->salvaDati($record, $request);
         $this->creaSpedizioneRemota($record);
 
@@ -76,37 +78,37 @@ class SpedizioneInpostController extends Controller
     public function show($id)
     {
         $record = SpedizioneInpost::with(['chiamate' => fn ($q) => $q->latest()])->find($id);
-        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(! $record, 404, 'Questa spedizione InPost non esiste');
 
         return view('Backend.SpedizioneInpost.show', [
             'record' => $record,
             'controller' => self::class,
             'titoloPagina' => SpedizioneInpost::NOME_SINGOLARE,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . SpedizioneInpost::NOME_PLURALE],
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.SpedizioneInpost::NOME_PLURALE],
         ]);
     }
 
     public function edit($id)
     {
         $record = SpedizioneInpost::find($id);
-        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(! $record, 404, 'Questa spedizione InPost non esiste');
 
         return view('Backend.SpedizioneInpost.edit', [
             'record' => $record,
             'controller' => self::class,
-            'titoloPagina' => 'Modifica ' . SpedizioneInpost::NOME_SINGOLARE,
-            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco ' . SpedizioneInpost::NOME_PLURALE],
+            'titoloPagina' => 'Modifica '.SpedizioneInpost::NOME_SINGOLARE,
+            'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco '.SpedizioneInpost::NOME_PLURALE],
         ]);
     }
 
     public function update(Request $request, $id)
     {
         $record = SpedizioneInpost::find($id);
-        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(! $record, 404, 'Questa spedizione InPost non esiste');
 
         $request->validate($this->rules());
         $this->salvaDati($record, $request);
-        if (!$record->shipment_uuid) {
+        if (! $record->shipment_uuid) {
             $this->creaSpedizioneRemota($record);
         }
 
@@ -116,7 +118,7 @@ class SpedizioneInpostController extends Controller
     public function destroy($id)
     {
         $record = SpedizioneInpost::find($id);
-        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(! $record, 404, 'Questa spedizione InPost non esiste');
         $record->delete();
 
         return [
@@ -128,7 +130,7 @@ class SpedizioneInpostController extends Controller
     public function trackingRefresh($id)
     {
         $record = SpedizioneInpost::find($id);
-        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(! $record, 404, 'Questa spedizione InPost non esiste');
 
         $result = $this->aggiornaTrackingRecord($record, true);
 
@@ -144,7 +146,7 @@ class SpedizioneInpostController extends Controller
     public function trackingRefreshBulk(Request $request)
     {
         $ids = $request->input('ids', []);
-        if (!is_array($ids) || !count($ids)) {
+        if (! is_array($ids) || ! count($ids)) {
             return ['success' => false, 'message' => 'Nessuna spedizione selezionata'];
         }
 
@@ -175,25 +177,25 @@ class SpedizioneInpostController extends Controller
     public function etichetta($id)
     {
         $record = SpedizioneInpost::find($id);
-        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(! $record, 404, 'Questa spedizione InPost non esiste');
 
-        $service = new InpostService();
+        $service = new InpostService;
         $label = $service->label($record);
-        abort_if(!$label, 404, 'Etichetta non disponibile');
+        abort_if(! $label, 404, 'Etichetta non disponibile');
 
         return Response::make($label['content'], 200, [
             'Content-Type' => $label['content_type'],
-            'Content-Disposition' => 'inline; filename="' . $label['filename'] . '"',
+            'Content-Disposition' => 'inline; filename="'.$label['filename'].'"',
         ]);
     }
 
     public function sync($id)
     {
         $record = SpedizioneInpost::find($id);
-        abort_if(!$record, 404, 'Questa spedizione InPost non esiste');
-        abort_if(!$record->shipment_uuid, 404, 'Shipment UUID non disponibile');
+        abort_if(! $record, 404, 'Questa spedizione InPost non esiste');
+        abort_if(! $record->shipment_uuid, 404, 'Shipment UUID non disponibile');
 
-        $service = new InpostService();
+        $service = new InpostService;
         $response = $service->getShipment($record->shipment_uuid, $record);
         $record->response = array_merge($record->response ?? [], ['shipmentRead' => $response]);
         $record->tracking_number = data_get($response, 'trackingNumber') ?: data_get($response, 'tracking.number') ?: $record->tracking_number;
@@ -220,12 +222,12 @@ class SpedizioneInpostController extends Controller
     protected function salvaDati(SpedizioneInpost $record, Request $request): void
     {
         DB::transaction(function () use ($record, $request) {
-            if (!$record->exists) {
+            if (! $record->exists) {
                 $record->caricato_da_user_id = Auth::id();
             }
 
             $altriDati = is_array($request->input('altri_dati')) ? $request->input('altri_dati') : [];
-            $packageType = (string)($altriDati['package_type'] ?? 'small');
+            $packageType = (string) ($altriDati['package_type'] ?? 'small');
             $datiColli = $this->normalizeDatiColli($request->input('dati_colli', []), $packageType);
 
             $campi = [
@@ -263,8 +265,8 @@ class SpedizioneInpostController extends Controller
             $record->volume_totale = getInputNumero($this->computeVolumeTotale($datiColli));
             $record->altri_dati = array_merge($altriDati, [
                 'package_type' => $packageType,
-                'package_reference' => trim((string)($altriDati['package_reference'] ?? '')),
-                'annotation' => trim((string)($altriDati['annotation'] ?? '')),
+                'package_reference' => trim((string) ($altriDati['package_reference'] ?? '')),
+                'annotation' => trim((string) ($altriDati['annotation'] ?? '')),
             ]);
 
             $service = new InpostTariffaService($packageType, (string) $record->delivery_type);
@@ -276,7 +278,7 @@ class SpedizioneInpostController extends Controller
             $record->tariffa = $service->getTestotariffa();
 
             $agente = User::find($record->agente_id);
-            if (!$record->scalato_portafoglio) {
+            if (! $record->scalato_portafoglio) {
                 $saldo = (float) ($agente?->portafoglio_spedizioni ?? 0);
                 if ($saldo < (float) $record->prezzo_spedizione) {
                     throw ValidationException::withMessages(['portafoglio' => 'Credito portafoglio spedizioni insufficiente']);
@@ -285,11 +287,11 @@ class SpedizioneInpostController extends Controller
 
             $record->save();
 
-            if (!$record->scalato_portafoglio) {
-                $movimento = new MovimentoPortafoglio();
+            if (! $record->scalato_portafoglio) {
+                $movimento = new MovimentoPortafoglio;
                 $movimento->agente_id = $record->agente_id;
                 $movimento->importo = -$record->prezzo_spedizione;
-                $movimento->descrizione = 'Spedizione InPost ' . $record->id;
+                $movimento->descrizione = 'Spedizione InPost '.$record->id;
                 $movimento->prodotto_id = $record->id;
                 $movimento->prodotto_type = get_class($record);
                 $movimento->portafoglio = TipiPortafoglioEnum::SPEDIZIONI->value;
@@ -303,7 +305,7 @@ class SpedizioneInpostController extends Controller
 
     protected function creaSpedizioneRemota(SpedizioneInpost $record): void
     {
-        $service = new InpostService();
+        $service = new InpostService;
         $record->request_payload = $service->buildShipmentPayload($record);
 
         $response = $service->shipment($record);
@@ -332,16 +334,16 @@ class SpedizioneInpostController extends Controller
 
     protected function aggiornaTrackingRecord(SpedizioneInpost $record, bool $force = false): array
     {
-        if (!$record->tracking_number) {
+        if (! $record->tracking_number) {
             return ['success' => false, 'message' => 'Tracking non disponibile'];
         }
 
-        if (!$force) {
+        if (! $force) {
             $updatedAt = data_get($record->response, 'trackingUpdatedAt');
             $staleMinutes = (int) config('services.inpost.tracking_stale_minutes', 120);
             if ($updatedAt) {
                 try {
-                    if (now()->diffInMinutes(\Carbon\Carbon::parse($updatedAt)) < $staleMinutes) {
+                    if (now()->diffInMinutes(Carbon::parse($updatedAt)) < $staleMinutes) {
                         return ['success' => true, 'message' => 'Tracking recente'];
                     }
                 } catch (\Throwable $e) {
@@ -349,7 +351,7 @@ class SpedizioneInpostController extends Controller
             }
         }
 
-        $service = new InpostService();
+        $service = new InpostService;
         $tracking = $service->tracking($record->tracking_number);
         $response = $record->response ?? [];
         $response['trackingResponse'] = $tracking;
@@ -397,7 +399,7 @@ class SpedizioneInpostController extends Controller
         $collo = $presets[$packageType] ?? $presets['small'];
 
         $pesoVolumetrico = (($collo['larghezza'] ?? 0) * ($collo['altezza'] ?? 0) * ($collo['profondita'] ?? 0)) / 4000;
-        $collo['peso_volumetrico'] = round((float)$pesoVolumetrico, 1);
+        $collo['peso_volumetrico'] = round((float) $pesoVolumetrico, 1);
 
         return [$collo];
     }
@@ -406,8 +408,8 @@ class SpedizioneInpostController extends Controller
     {
         $pesoTotale = 0;
         foreach ($datiColli as $collo) {
-            $pesoReale = (float)($collo['peso_reale'] ?? 0);
-            $pesoVolumetrico = (float)($collo['peso_volumetrico'] ?? 0);
+            $pesoReale = (float) ($collo['peso_reale'] ?? 0);
+            $pesoVolumetrico = (float) ($collo['peso_volumetrico'] ?? 0);
             $pesoTotale += max($pesoReale, $pesoVolumetrico);
         }
 
@@ -418,9 +420,9 @@ class SpedizioneInpostController extends Controller
     {
         $volumeTotale = 0;
         foreach ($datiColli as $collo) {
-            $larghezza = (float)($collo['larghezza'] ?? 0);
-            $altezza = (float)($collo['altezza'] ?? 0);
-            $profondita = (float)($collo['profondita'] ?? 0);
+            $larghezza = (float) ($collo['larghezza'] ?? 0);
+            $altezza = (float) ($collo['altezza'] ?? 0);
+            $profondita = (float) ($collo['profondita'] ?? 0);
             $volumeTotale += ($larghezza / 100) * ($altezza / 100) * ($profondita / 100);
         }
 

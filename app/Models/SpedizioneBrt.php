@@ -8,16 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class SpedizioneBrt extends Model
 {
     use HasFactory;
 
-    protected $table = "brt_spedizioni";
+    protected $table = 'brt_spedizioni';
 
-    public const NOME_SINGOLARE = "spedizione brt";
-    public const NOME_PLURALE = "spedizioni brt";
+    public const NOME_SINGOLARE = 'spedizione brt';
+
+    public const NOME_PLURALE = 'spedizioni brt';
 
     protected $casts = [
         'response' => 'array',
@@ -25,7 +25,6 @@ class SpedizioneBrt extends Model
         'dati_colli' => 'array',
         'altri_dati' => 'json',
     ];
-
 
     /**
      * The "booted" method of the model.
@@ -38,7 +37,7 @@ class SpedizioneBrt extends Model
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
             /** @var User|null $authUser */
             $authUser = Auth::user();
-            if (!$authUser) {
+            if (! $authUser) {
                 return;
             }
 
@@ -51,7 +50,6 @@ class SpedizioneBrt extends Model
 
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | RELAZIONI
@@ -62,7 +60,6 @@ class SpedizioneBrt extends Model
     {
         return $this->hasOne(User::class, 'id', 'agente_id');
     }
-
 
     public function chiamate(): MorphMany
     {
@@ -112,7 +109,6 @@ class SpedizioneBrt extends Model
             $esito = $this->response['createResponse']['executionMessage'];
             $severity = $esito['severity'];
 
-
             $classe = match ($severity) {
                 'ERROR' => 'danger',
                 'WARNING' => 'warning',
@@ -126,7 +122,7 @@ class SpedizioneBrt extends Model
 
     public function tracking()
     {
-        if (!($this->response['createResponse'] ?? false) || !($this->response['createResponse']['labels']['label'] ?? false)) {
+        if (! ($this->response['createResponse'] ?? false) || ! ($this->response['createResponse']['labels']['label'] ?? false)) {
             return null;
         }
 
@@ -135,14 +131,14 @@ class SpedizioneBrt extends Model
         foreach ($this->response['createResponse']['labels']['label'] as $label) {
             $trackingByParcelId = $label['trackingByParcelID'] ?? null;
             $parcelId = $label['parcelID'] ?? null;
-            if (!$trackingByParcelId) {
+            if (! $trackingByParcelId) {
                 continue;
             }
 
             $status = $parcelId ? $this->trackingStatusFromApi($trackingResponse[$parcelId] ?? []) : null;
             $text = $trackingByParcelId;
             if ($status) {
-                $text .= ' - ' . e($status);
+                $text .= ' - '.e($status);
             }
 
             $parcel[] = "<a href='https://www.mybrt.it/it/mybrt/my-parcels/incoming?parcelNumber={$trackingByParcelId}' target='_blank'>{$text}</a>";
@@ -154,12 +150,12 @@ class SpedizioneBrt extends Model
     public function trackingStatus(): ?string
     {
         $trackingResponse = $this->response['trackingResponse'] ?? [];
-        if (!is_array($trackingResponse) || !count($trackingResponse)) {
+        if (! is_array($trackingResponse) || ! count($trackingResponse)) {
             return null;
         }
 
         foreach ($trackingResponse as $apiResponse) {
-            if (!is_array($apiResponse)) {
+            if (! is_array($apiResponse)) {
                 continue;
             }
 
@@ -175,7 +171,7 @@ class SpedizioneBrt extends Model
     public function trackingStatusBadge(): string
     {
         $status = $this->trackingStatus();
-        if (!$status) {
+        if (! $status) {
             return "<span class='badge badge-light'>-</span>";
         }
 
@@ -190,13 +186,13 @@ class SpedizioneBrt extends Model
             $class = 'badge-light-warning';
         }
 
-        return "<span class='badge {$class}'>" . e($status) . '</span>';
+        return "<span class='badge {$class}'>".e($status).'</span>';
     }
 
     public function trackingUpdatedAtLabel(): ?string
     {
         $value = data_get($this->response, 'trackingUpdatedAt');
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
@@ -210,17 +206,17 @@ class SpedizioneBrt extends Model
     public function trackingTimelineHtml(): ?string
     {
         $trackingResponse = $this->response['trackingResponse'] ?? [];
-        if (!is_array($trackingResponse) || !count($trackingResponse)) {
+        if (! is_array($trackingResponse) || ! count($trackingResponse)) {
             return null;
         }
 
         foreach ($trackingResponse as $apiResponse) {
-            if (!is_array($apiResponse)) {
+            if (! is_array($apiResponse)) {
                 continue;
             }
 
             $events = $this->extractTrackingEvents($apiResponse);
-            if (!count($events)) {
+            if (! count($events)) {
                 continue;
             }
 
@@ -228,11 +224,11 @@ class SpedizioneBrt extends Model
             foreach ($events as $event) {
                 $date = $event['date'] ?: '-';
                 $description = $event['description'] ?: 'Evento tracking';
-                $items[] = "<li class='list-group-item d-flex justify-content-between align-items-start'><span>" . e($description) . "</span><span class='text-muted small ms-3'>" . e($date) . '</span></li>';
+                $items[] = "<li class='list-group-item d-flex justify-content-between align-items-start'><span>".e($description)."</span><span class='text-muted small ms-3'>".e($date).'</span></li>';
             }
 
             if (count($items)) {
-                return "<ul class='list-group'>" . implode('', $items) . '</ul>';
+                return "<ul class='list-group'>".implode('', $items).'</ul>';
             }
         }
 
@@ -264,12 +260,12 @@ class SpedizioneBrt extends Model
 
         foreach ($possibleEventPaths as $path) {
             $event = data_get($apiResponse, $path);
-            if (!is_array($event)) {
+            if (! is_array($event)) {
                 continue;
             }
 
             $first = isset($event[0]) ? $event[0] : $event;
-            if (!is_array($first)) {
+            if (! is_array($first)) {
                 continue;
             }
 
@@ -295,14 +291,14 @@ class SpedizioneBrt extends Model
 
         foreach ($possibleEventPaths as $path) {
             $events = data_get($apiResponse, $path);
-            if (!is_array($events)) {
+            if (! is_array($events)) {
                 continue;
             }
 
             $events = isset($events[0]) ? $events : [$events];
             $mapped = [];
             foreach ($events as $event) {
-                if (!is_array($event)) {
+                if (! is_array($event)) {
                     continue;
                 }
 
@@ -311,7 +307,7 @@ class SpedizioneBrt extends Model
                 $time = $event['ora'] ?? $event['time'] ?? $event['oraEvento'] ?? null;
 
                 if ($date && $time) {
-                    $date = trim($date . ' ' . $time);
+                    $date = trim($date.' '.$time);
                 }
 
                 $mapped[] = [

@@ -1,19 +1,15 @@
 <?php
 
-
 namespace App\Http;
 
-
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\URL;
-
 
 class HelperForMetronic
 {
-
     protected const CONTAINER = false;
 
     public const SIDEBAR = true;
+
     public const SIDEBAR_LIGHT_DARK = 'dark';
 
     public static function ktHeaderHeader()
@@ -28,11 +24,7 @@ class HelperForMetronic
       data-kt-app-toolbar-enabled="true" class="app-default"' : 'data-kt-app-layout="light-header" data-kt-app-header-fixed="true" data-kt-app-toolbar-enabled="true" class="app-default"';
     }
 
-
-    public static function breadCrumbs($arr)
-    {
-
-    }
+    public static function breadCrumbs($arr) {}
 
     public static function labelSegnalazione($risolto)
     {
@@ -60,7 +52,6 @@ class HelperForMetronic
 
     }
 
-
     public static function userLevel($small, $user = null)
     {
         if ($small) {
@@ -68,18 +59,15 @@ class HelperForMetronic
         } else {
             $small = '';
         }
-        if (!$user) {
+        if (! $user) {
             $user = Auth::user();
         }
         if ($user->hasPermissionTo('admin')) {
-            return '<span class="badge badge-light-info fw-bolder ' . $small . '">Admin</span>';
+            return '<span class="badge badge-light-info fw-bolder '.$small.'">Admin</span>';
         }
         if ($user->hasPermissionTo('agente')) {
-            return '<span class="badge badge-light-info fw-bolder ' . $small . '">Agente</span>';
+            return '<span class="badge badge-light-info fw-bolder '.$small.'">Agente</span>';
         }
 
-
     }
-
-
 }
