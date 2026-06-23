@@ -23,9 +23,9 @@
         $azioniRapide = $azioniRapide ?? collect();
         $produzioneConteggio = (int)($produzioneMese?->conteggio_ordini ?? 0);
         $produzioneInLavorazione = (int)($produzioneMese?->conteggio_ordini_in_lavorazione ?? 0);
-        $percentualeProduzione = \App\percentuale($produzioneInLavorazione, $produzioneConteggio);
+        $percentualeProduzione = percentuale($produzioneInLavorazione, $produzioneConteggio);
         $guadagno = \App\Models\GuadagnoAgenzia::firstOrNew(['mese' => $filtroMese, 'anno' => $filtroAnno]);
-        $percentualeUtile = \App\percentuale($guadagno->utile, $guadagno->entrate);
+        $percentualeUtile = percentuale($guadagno->utile, $guadagno->entrate);
         $ticketAperti = (int) data_get($conteggioTikets, 'aperto.conteggio', 0) + (int) data_get($conteggioTikets, 'in_lavorazione.conteggio', 0);
         $ticketChiusi = (int) data_get($conteggioTikets, 'chiuso.conteggio', 0);
         $chatDashboard = $chatDashboard ?? [

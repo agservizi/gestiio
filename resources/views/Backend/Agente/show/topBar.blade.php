@@ -265,7 +265,7 @@
                                             <!--end::Svg Icon-->
                                         @endif
                                         <div class="fs-2 fw-bold" data-kt-countup="true"
-                                             data-kt-countup-value="{{\App\percentuale($produzioneMese->conteggio_ordini_ok,$produzioneMese->conteggio_ordini,)}}"
+                                             data-kt-countup-value="{{percentuale($produzioneMese->conteggio_ordini_ok,$produzioneMese->conteggio_ordini)}}"
                                              data-kt-countup-prefix="%">0
                                         </div>
                                     </div>
