@@ -15,9 +15,9 @@
             <tr class="">
                 <td class="">{{number_format($record->da_peso,1,',','.')}}
                     - {{number_format($record->a_peso,1,',','.')}}</td>
-                <td class="text-end">{{\App\importo($record->home_delivery)}}</td>
-                <td class="text-end">{{\App\importo($record->brt_fermopoint)}}</td>
-                <td class="text-end">{{\App\importo($record->contrassegno)}}</td>
+                <td class="text-end">{{importo($record->home_delivery)}}</td>
+                <td class="text-end">{{importo($record->brt_fermopoint)}}</td>
+                <td class="text-end">{{importo($record->contrassegno)}}</td>
                 <td class="text-center">
                     @if($record->al_kg)
                         <i class="fas fa-check fs-3" style="color: #26C281;"></i>

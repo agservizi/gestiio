@@ -10,7 +10,7 @@
     @csrf
     <div class="row">
         <div class="col-md-12">
-            @include('Backend._inputs.inputRadioH',['campo'=>'importo','testo'=>'Importo','required'=>true,'help'=>'Per ogni transazione verrà applicata una commissione di €1,00','array' => [20=>\App\importo(20,true),50=>\App\importo(50,true),100=>\App\importo(100,true)]])
+            @include('Backend._inputs.inputRadioH',['campo'=>'importo','testo'=>'Importo','required'=>true,'help'=>'Per ogni transazione verrà applicata una commissione di €1,00','array' => [20=>importo(20,true),50=>importo(50,true),100=>importo(100,true)]])
         </div>
         <div class="col-md-12">
             @include('Backend._inputs.inputSelect2Enum',['campo'=>'portafoglio','testo'=>'Portafoglio','required'=>true,'cases'=>\App\Enums\TipiPortafoglioEnum::class])

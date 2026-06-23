@@ -17,7 +17,7 @@
             @endif
         </td>
         <td class="">{{$record->tipo}}</td>
-        <td class="text-end">{{\App\importo($record->prezzo)}}</td>
+        <td class="text-end">{{importo($record->prezzo)}}</td>
         <td>
             @if($record->richiesta_id)
                 {{$record->richiesta_id}}

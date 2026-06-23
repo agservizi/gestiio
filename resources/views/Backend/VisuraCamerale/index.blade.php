@@ -1,7 +1,7 @@
 @extends('Backend._layout._main')
 @section('toolbar')
     <div class="d-flex align-items-center py-1">
-        <span class="badge badge-danger p-2 fs-3">Speso questo mese {{\App\importo($spesaMensile,true)}}</span>
+        <span class="badge badge-danger p-2 fs-3">Speso questo mese {{importo($spesaMensile,true)}}</span>
 
         @isset($testoCerca)
             <div class="d-flex align-items-center position-relative me-4" data-bs-toggle="tooltip" data-bs-placement="bottom"

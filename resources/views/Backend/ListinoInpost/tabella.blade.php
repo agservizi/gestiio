@@ -22,8 +22,8 @@
                     @endphp
                     <span class="fw-bold text-dark">{{$label}}</span>
                 </td>
-                <td class="text-end"><span class="badge badge-light-warning fs-7 inpost-listino-badge">{{\App\importo($record->locker_point)}}</span></td>
-                <td class="text-end"><span class="badge badge-light-primary fs-7 inpost-listino-badge">{{\App\importo($record->home_delivery)}}</span></td>
+                <td class="text-end"><span class="badge badge-light-warning fs-7 inpost-listino-badge">{{importo($record->locker_point)}}</span></td>
+                <td class="text-end"><span class="badge badge-light-primary fs-7 inpost-listino-badge">{{importo($record->home_delivery)}}</span></td>
                 <td class="text-end text-nowrap">
                     <a class="btn btn-sm btn-light btn-active-light-primary inpost-listino-action" href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
                 </td>

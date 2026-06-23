@@ -18,9 +18,9 @@
                     {{\App\Enums\TipiPortafoglioEnum::tryFrom($record->portafoglio)?->testo()}}
                 </td>
                 <td> {{$record->descrizione}}</td>
-                <td class="text-end"> {{\App\importo($record->importo_prima)}}</td>
-                <td class="text-end"> {{\App\importo($record->importo)}}</td>
-                <td class="text-end"> {{\App\importo($record->importo_dopo)}}</td>
+                <td class="text-end"> {{importo($record->importo_prima)}}</td>
+                <td class="text-end"> {{importo($record->importo)}}</td>
+                <td class="text-end"> {{importo($record->importo_dopo)}}</td>
             </tr>
         @endforeach
         </tbody>

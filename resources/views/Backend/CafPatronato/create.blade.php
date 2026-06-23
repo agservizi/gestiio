@@ -23,8 +23,8 @@
             @foreach(\App\Models\TipoCafPatronato::orderBy('nome')->get() as $servizio)
                 <tr>
                     <td class="fw-semibold">{{$servizio->nome}}</td>
-                    <td class="text-end fw-bold">{{\App\importo($servizio->prezzo_cliente)}}</td>
-                    <td class="text-end text-muted">{{\App\importo($servizio->prezzo_agente)}}</td>
+                    <td class="text-end fw-bold">{{importo($servizio->prezzo_cliente)}}</td>
+                    <td class="text-end text-muted">{{importo($servizio->prezzo_agente)}}</td>
                     <td class="text-end">
                         @if($portafoglioServizi>=$servizio->prezzo_agente)
                         <a href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'create'],$servizio->id)}}"

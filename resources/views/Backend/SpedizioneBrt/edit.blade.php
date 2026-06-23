@@ -294,13 +294,13 @@
                     <div class="brt-summary-card">
                         <span class="brt-summary-label">Contrassegno</span>
                         <div id="contrassegno_dx" class="brt-summary-value">
-                            {{\App\importo($record->contrassegno,true)}}
+                            {{importo($record->contrassegno,true)}}
                         </div>
                     </div>
                     <div class="brt-summary-card mb-0">
                         <span class="brt-summary-label">Prezzo spedizione</span>
                         <div id="prezzo_dx" class="brt-summary-value">
-                            {{\App\importo($record->prezzo_spedizione,true)}}
+                            {{importo($record->prezzo_spedizione,true)}}
                         </div>
                     </div>
                 </div>

@@ -15,10 +15,10 @@
             <tr class="">
                 <td class="">{{number_format($record->da_peso,1,',','.')}}
                     - {{number_format($record->a_peso,1,',','.')}}</td>
-                <td class="text-end">{{\App\importo($record->gruppo_a)}}</td>
-                <td class="text-end">{{\App\importo($record->gruppo_b)}}</td>
-                <td class="text-end">{{\App\importo($record->gruppo_c)}}</td>
-                <td class="text-end">{{\App\importo($record->gruppo_d)}}</td>
+                <td class="text-end">{{importo($record->gruppo_a)}}</td>
+                <td class="text-end">{{importo($record->gruppo_b)}}</td>
+                <td class="text-end">{{importo($record->gruppo_c)}}</td>
+                <td class="text-end">{{importo($record->gruppo_d)}}</td>
 
                 <td class="text-end text-nowrap">
                     <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"

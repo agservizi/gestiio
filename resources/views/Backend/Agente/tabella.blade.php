@@ -33,10 +33,10 @@
                 </td>
                 @if(!Auth::user()->hasPermissionTo('supervisore'))
                     <td class="d-none d-lg-table-cell text-end">
-                        {!! \App\importo($record->agente?->portafoglio_servizi) !!}
+                        {!! importo($record->agente?->portafoglio_servizi) !!}
                     </td>
                     <td class="d-none d-lg-table-cell text-end">
-                        {!! \App\importo($record->agente?->portafoglio_spedizioni) !!}
+                        {!! importo($record->agente?->portafoglio_spedizioni) !!}
                     </td>
                 @endif
                 <td class="d-none d-lg-table-cell text-center">

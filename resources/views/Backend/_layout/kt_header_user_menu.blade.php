@@ -6,23 +6,23 @@
     <div class="d-flex align-items-center d-none d-md-inline-flex position-relative me-6">
         <div class="cursor-pointer" data-kt-menu-trigger="hover" data-kt-menu-attach="parent"
              data-kt-menu-placement="bottom-end" data-kt-menu-flip="bottom">
-            <span class="badge badge-danger p-2">Plafond {{\App\importo($saldoTotale,true)}}</span>
+            <span class="badge badge-danger p-2">Plafond {{importo($saldoTotale,true)}}</span>
         </div>
         <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-primary fw-semibold py-3 fs-7 w-275px"
              data-kt-menu="true">
             <div class="menu-item px-4 d-flex justify-content-between align-items-center">
                 <span class="text-gray-600">Portafoglio Servizi</span>
-                <span class="fw-bold fs-6 text-gray-800">{{\App\importo($saldoServizi,true)}}</span>
+                <span class="fw-bold fs-6 text-gray-800">{{importo($saldoServizi,true)}}</span>
             </div>
             <div class="separator my-2"></div>
             <div class="menu-item px-4 d-flex justify-content-between align-items-center">
                 <span class="text-gray-600">Portafoglio Spedizioni</span>
-                <span class="fw-bold fs-6 text-gray-800">{{\App\importo($saldoSpedizioni,true)}}</span>
+                <span class="fw-bold fs-6 text-gray-800">{{importo($saldoSpedizioni,true)}}</span>
             </div>
             <div class="separator my-2"></div>
             <div class="menu-item px-4 d-flex justify-content-between align-items-center">
                 <span class="text-gray-600">Portafoglio Visure</span>
-                <span class="fw-bold fs-6 text-gray-800">{{\App\importo($saldoVisure,true)}}</span>
+                <span class="fw-bold fs-6 text-gray-800">{{importo($saldoVisure,true)}}</span>
             </div>
         </div>
     </div>

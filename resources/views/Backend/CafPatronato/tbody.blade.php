@@ -23,7 +23,7 @@
             @endif
         </td>
         <td class="text-end">
-            {{\App\importo($record->prezzo_pratica)}}
+            {{importo($record->prezzo_pratica)}}
         </td>
 
 

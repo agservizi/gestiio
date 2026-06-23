@@ -24,10 +24,10 @@
                                 {{$record->da_contratti}}<br>
                             </td>
                             <td class="text-end">
-                                {!! \App\importo($record->importo_per_contratto) !!}
+                                {!! importo($record->importo_per_contratto) !!}
                             </td>
                             <td class="text-end">
-                                {!! \App\importo($record->importo_bonus) !!}
+                                {!! importo($record->importo_bonus) !!}
                             </td>
                         </tr>
                     @endforeach

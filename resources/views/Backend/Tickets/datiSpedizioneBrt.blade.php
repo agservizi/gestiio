@@ -43,7 +43,7 @@
                         <td class="">{{$record->tariffa}}</td>
                         <td class="">{{$record->numero_pacchi}}</td>
                         <td class="text-end">{{$record->peso_totale}}</td>
-                        <td class="">{{\App\importo($record->prezzo_spedizione)}}</td>
+                        <td class="">{{importo($record->prezzo_spedizione)}}</td>
                         <td>{!! $record->esitoBall() !!}</td>
                         <td>{!! $record->tracking() !!}</td>
                         <td>

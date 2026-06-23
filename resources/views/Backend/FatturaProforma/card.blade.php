@@ -99,7 +99,7 @@
                                         <!--begin::Subtotal-->
                                         <tr>
                                             <td colspan="2" class="text-end">Imponibile</td>
-                                            <td class="text-end">{{\App\importo($record->totale_imponibile)}}</td>
+                                            <td class="text-end">{{importo($record->totale_imponibile)}}</td>
                                         </tr>
                                         <!--end::Subtotal-->
                                         <!--begin::VAT-->
@@ -118,7 +118,7 @@
                                     <!--begin::Grand total-->
                                     <tr>
                                         <td colspan="2" class="fs-3 text-dark fw-bold text-end">Totale</td>
-                                        <td class="text-dark fs-3 fw-bolder text-end">{{\App\importo($record->totale_con_iva)}}</td>
+                                        <td class="text-dark fs-3 fw-bolder text-end">{{importo($record->totale_con_iva)}}</td>
                                     </tr>
                                     <!--end::Grand total-->
                                     </tbody>

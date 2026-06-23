@@ -58,7 +58,7 @@
                 <td class=""><span class="brt-pill">{{$record->tariffa ?: '-'}}</span></td>
                 <td class=""><span class="brt-pill">{{$record->numero_pacchi}}</span></td>
                 <td class="text-end">{{$record->peso_totale}}</td>
-                <td class=""><span class="brt-price-value">{{\App\importo($record->prezzo_spedizione)}}</span></td>
+                <td class=""><span class="brt-price-value">{{importo($record->prezzo_spedizione)}}</span></td>
                 <td>{!! $record->esitoBall() !!}</td>
                 <td class="tracking-cell"><div class="brt-tracking-stack"><span class="brt-tracking-code">{!! $record->tracking() ?: '-' !!}</span></div></td>
                 <td class="tracking-status-cell">{!! $record->trackingStatusBadge() !!}</td>

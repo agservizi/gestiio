@@ -20,8 +20,8 @@
             @foreach(\App\Models\TipoVisura::orderBy('nome')->get() as $servizio)
                 <tr>
                     <td>{{$servizio->nome}}</td>
-                    <td class="text-end">{{\App\importo($servizio->prezzo_cliente)}}</td>
-                    <td class="text-end">{{\App\importo($servizio->prezzo_agente)}}</td>
+                    <td class="text-end">{{importo($servizio->prezzo_cliente)}}</td>
+                    <td class="text-end">{{importo($servizio->prezzo_agente)}}</td>
                     <td class="text-end">
                         @if((float)(Auth::user()->agente->portafoglio_visure ?? 0) >= (float)$servizio->prezzo_agente)
                         <a href="{{action([\App\Http\Controllers\Backend\VisuraController::class,'create'],$servizio->id)}}"

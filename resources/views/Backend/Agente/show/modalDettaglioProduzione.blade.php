@@ -8,7 +8,7 @@
                 Contratti Telefonia
             </td>
             <td class="text-end fw-bolder">
-                {{\App\importo($record->importo_ordini)}}
+                {{importo($record->importo_ordini)}}
             </td>
         </tr>
         <tr>
@@ -16,7 +16,7 @@
                 Contratti Energia
             </td>
             <td class="text-end fw-bolder">
-                {{\App\importo($record->importo_contratti_energia)}}
+                {{importo($record->importo_contratti_energia)}}
             </td>
         </tr>
         </tbody>
