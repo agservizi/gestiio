@@ -13,6 +13,7 @@ use App\Models\ContrattoTelefonia;
 use App\Models\EsitoCafPatronato;
 use App\Models\EsitoVisura;
 use App\Models\File;
+use App\Models\AiSuggestion;
 use App\Models\ProduzioneOperatore;
 use App\Models\RegistroLogin;
 use App\Models\RichiestaAssistenza;
@@ -20,6 +21,7 @@ use App\Models\SpedizioneBrt;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Visura;
+use App\Services\AiAutomationService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
@@ -486,6 +488,29 @@ class DashboardController extends Controller
             }
         }
 
+        $aiSuggestions = Schema::hasTable('ai_suggestions')
+            ? AiSuggestion::query()
+                ->where('audience', 'admin')
+                ->where('status', 'new')
+                ->orderByRaw("FIELD(priority, 'critica', 'alta', 'media', 'bassa')")
+                ->orderByDesc('id')
+                ->limit(20)
+                ->get()
+                ->unique(fn ($suggestion) => $this->aiSuggestionDisplayKey($suggestion))
+                ->take(5)
+                ->values()
+            : collect();
+
+        if (Schema::hasTable('ai_events')) {
+            app(AiAutomationService::class)->dispatchOncePerWindow('admin_control_tower_opened', [
+                'ticket_aperti' => (int) ($kpiDashboard['ticket_aperti'] ?? 0),
+                'ticket_chiusi' => (int) ($conteggioTikets->get('chiuso')->conteggio ?? 0),
+                'produzione_conteggio' => (int) ($produzioneMese->conteggio ?? $produzioneMese->totale ?? 0),
+                'produzione_in_lavorazione' => (int) ($produzioneMese->in_lavorazione ?? 0),
+                'alert' => $alertDashboard,
+            ], Auth::user(), null, 'admin', 180);
+        }
+
         return view('Backend.Dashboard.showAdmin', [
             'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
@@ -503,6 +528,7 @@ class DashboardController extends Controller
             'alertDashboard' => $alertDashboard,
             'azioniRapide' => $azioniRapide,
             'chatDashboard' => $chatDashboard,
+            'aiSuggestions' => $aiSuggestions,
         ]);
 
     }
@@ -821,6 +847,45 @@ class DashboardController extends Controller
             ? ProduzioneOperatore::findByIdAnnoMese($id, $mesePrecedente->year, $mesePrecedente->month)
             : null;
 
+        $aiSuggestions = Schema::hasTable('ai_suggestions')
+            ? AiSuggestion::query()
+                ->where('user_id', Auth::id())
+                ->where('audience', 'agente')
+                ->where('status', 'new')
+                ->orderByRaw("FIELD(priority, 'critica', 'alta', 'media', 'bassa')")
+                ->orderByDesc('id')
+                ->limit(20)
+                ->get()
+                ->unique(fn ($suggestion) => $this->aiSuggestionDisplayKey($suggestion))
+                ->take(5)
+                ->values()
+            : collect();
+
+        if (Schema::hasTable('ai_events')) {
+            $queueTotale = $ticketDaPrendereInCarico->count() + $visureInAttesaDocumenti->count() + $cafInAttesaDocumenti->count() + $scadenzeOggi->count();
+            $walletAgente = Auth::user()->agente;
+            $automation = app(AiAutomationService::class);
+
+            $automation->dispatchOncePerWindow('agent_dashboard_opened', [
+                'queue_totale' => $queueTotale,
+                'hero_operativo' => $heroOperativo,
+                'monitor_operativo' => $monitorOperativo,
+                'wallet' => [
+                    'servizi' => (float) ($walletAgente->portafoglio_servizi ?? 0),
+                    'spedizioni' => (float) ($walletAgente->portafoglio_spedizioni ?? 0),
+                    'visure' => (float) ($walletAgente->portafoglio_visure ?? 0),
+                ],
+            ], Auth::user(), null, 'agente', 180);
+
+            if ($queueTotale > 0 || (int) $heroOperativo['pratiche_ferme'] > 0) {
+                $automation->dispatchOncePerWindow('agent_attention_required', [
+                    'queue_totale' => $queueTotale,
+                    'pratiche_ferme' => (int) $heroOperativo['pratiche_ferme'],
+                    'ticket_aperti_miei' => (int) $heroOperativo['ticket_aperti_miei'],
+                ], Auth::user(), null, 'agente', 240);
+            }
+        }
+
         return view('Backend.Dashboard.showAgente', [
             'titoloPagina' => $this->salutoDashboard(),
             'mainMenu' => 'dashboard',
@@ -837,9 +902,21 @@ class DashboardController extends Controller
             'scadenzeOggi' => $scadenzeOggi,
             'monitorOperativo' => $monitorOperativo,
             'timelineAttivita' => $timelineAttivita,
+            'aiSuggestions' => $aiSuggestions,
 
         ]);
 
+    }
+
+    protected function aiSuggestionDisplayKey(AiSuggestion $suggestion): string
+    {
+        return implode('|', [
+            $suggestion->user_id ?: 'global',
+            $suggestion->audience,
+            $suggestion->scope,
+            mb_strtolower(trim(preg_replace('/\s+/', ' ', (string) $suggestion->title))),
+            mb_strtolower(trim(preg_replace('/\s+/', ' ', (string) $suggestion->next_action))),
+        ]);
     }
 
     protected function datiTortaEsiti()

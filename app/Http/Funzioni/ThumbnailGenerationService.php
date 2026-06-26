@@ -10,6 +10,9 @@ class ThumbnailGenerationService
 {
     public function generate($pdfPath, string $tipoFile, $width, $height): ?string
     {
+        if (\Illuminate\Support\Str::startsWith((string) $pdfPath, \App\Http\Services\SensitiveFileService::PREFIX)) {
+            return null;
+        }
 
         if (! in_array($tipoFile, ['pdf', 'immagine'])) {
             return null;

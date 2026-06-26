@@ -1,0 +1,53 @@
+services:
+  app:
+    build:
+      context: .
+    container_name: gestiio-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8090:80"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://gestiio.agenziaplinio.it
+      SESSION_SECURE_COOKIE: "true"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: u427445037_gestiio
+      DB_USERNAME: u427445037_gestiio
+      DB_PASSWORD: Nightcoder88@
+      STRIPE_KEY: ${STRIPE_KEY}
+      STRIPE_PUBLIC_KEY: ${STRIPE_KEY}
+      STRIPE_SECRET: ${STRIPE_SECRET}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+    volumes:
+      - gestiio_storage:/var/www/html/storage
+
+  db:
+    image: mariadb:11.8
+    container_name: gestiio-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: u427445037_gestiio
+      MARIADB_USER: u427445037_gestiio
+      MARIADB_PASSWORD: Nightcoder88@
+      MARIADB_ROOT_PASSWORD: Nightcoder88@
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p$$MARIADB_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - gestiio_db:/var/lib/mysql
+
+volumes:
+  gestiio_db:
+  gestiio_storage:

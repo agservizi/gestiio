@@ -74,6 +74,7 @@
 </div>
 
 @include('Backend._layout.modal')
+@include('Backend._layout.gestiioAiWidget')
 @include('Backend._layout.partials.scrolltop')
 @include('Backend._layout.partials.scripts', ['includeSegnalaChat' => true, 'includeSidebarEvents' => true, 'includeSidebarToggle' => true])
 </body>

@@ -357,3 +357,5 @@ function meseStrPad($mese)
 {
     return str_pad($mese, 2, '0', STR_PAD_LEFT);
 }
+
+require_once __DIR__.'/helper_app_namespace.php';

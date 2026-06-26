@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Http\MieClassi\StripeKey;
 use App\Models\MovimentoPortafoglio;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Stripe\Exception\ApiErrorException;
+use Throwable;
 
 class PortafoglioController extends Controller
 {
@@ -113,9 +117,43 @@ class PortafoglioController extends Controller
         $record = new MovimentoPortafoglio;
         /** @var User $authUser */
         $authUser = Auth::user();
-        $intent = $authUser->createSetupIntent([
-            'payment_method_types' => ['card'],
-        ]);
+        $intent = null;
+        $stripeErrore = null;
+        $stripePublicKey = StripeKey::getPublicKey();
+
+        if ($stripePublicKey && StripeKey::getSecretKey()) {
+            try {
+                $authUser->createOrGetStripeCustomer();
+                $intent = $authUser->createSetupIntent([
+                    'payment_method_types' => ['card'],
+                ]);
+            } catch (ApiErrorException|Throwable $exception) {
+                if ($exception instanceof ApiErrorException && $this->stripeCustomerNonTrovato($exception)) {
+                    $this->resetStripeCustomer($authUser);
+
+                    try {
+                        $authUser->createOrGetStripeCustomer();
+                        $intent = $authUser->createSetupIntent([
+                            'payment_method_types' => ['card'],
+                        ]);
+                    } catch (ApiErrorException|Throwable $exception) {
+                        Log::warning('Ricarica portafoglio: Stripe non disponibile', [
+                            'user_id' => $authUser->id,
+                            'error' => $exception->getMessage(),
+                        ]);
+                        $stripeErrore = 'Ricarica con carta momentaneamente non disponibile. Usa il bonifico oppure aggiorna le credenziali Stripe.';
+                    }
+                } else {
+                    Log::warning('Ricarica portafoglio: Stripe non disponibile', [
+                        'user_id' => $authUser->id,
+                        'error' => $exception->getMessage(),
+                    ]);
+                    $stripeErrore = 'Ricarica con carta momentaneamente non disponibile. Usa il bonifico oppure aggiorna le credenziali Stripe.';
+                }
+            }
+        } else {
+            $stripeErrore = 'Ricarica con carta non configurata. Usa il bonifico oppure configura le credenziali Stripe.';
+        }
 
         return view('Backend.Portafoglio.edit', [
             'record' => $record,
@@ -123,7 +161,8 @@ class PortafoglioController extends Controller
             'controller' => get_class($this),
             'breadcrumbs' => [action([PortafoglioController::class, 'index']) => 'Torna a elenco movimenti'],
             'intent' => $intent,
-            'stripePublicKey' => config('cashier.key'),
+            'stripePublicKey' => $stripePublicKey,
+            'stripeErrore' => $stripeErrore,
 
         ]);
     }
@@ -279,5 +318,22 @@ class PortafoglioController extends Controller
         ];
 
         return $rules;
+    }
+
+    protected function stripeCustomerNonTrovato(ApiErrorException $exception): bool
+    {
+        $code = method_exists($exception, 'getStripeCode') ? $exception->getStripeCode() : null;
+
+        return $code === 'resource_missing'
+            || str_contains(strtolower($exception->getMessage()), 'no such customer');
+    }
+
+    protected function resetStripeCustomer(User $user): void
+    {
+        $user->forceFill([
+            'stripe_id' => null,
+            'pm_type' => null,
+            'pm_last_four' => null,
+        ])->save();
     }
 }

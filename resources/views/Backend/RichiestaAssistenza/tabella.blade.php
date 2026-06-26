@@ -4,6 +4,7 @@
         <tr class="fw-bolder fs-6 text-gray-800">
             <th class="">Cliente</th>
             <th class="">Prodotto assistenza</th>
+            <th class="">Operazione</th>
             <th class="">Nome utente</th>
             <th class="">Password</th>
             <th class="">PIN</th>
@@ -18,6 +19,14 @@
                 </td>
                 <td class="">
                     {{$record->prodotto->nome}}
+                </td>
+                <td class="">
+                    <div class="fw-bold">{{$record->tipoOperazioneLabel()}}</div>
+                    @if($record->economico_contabilizzato)
+                        <span class="badge badge-light-success">{{importo($record->importo_economico, true)}}</span>
+                    @else
+                        <span class="badge badge-light">Non contabilizzata</span>
+                    @endif
                 </td>
                 <td class="">{{$record->nome_utente}}</td>
                 <td class="">{{$record->password}}</td>

@@ -57,7 +57,7 @@ class File extends Model
 
         static::deleting(function ($model) {
             if (! Str::of($model->path_filename)->is('test*')) {
-                Storage::delete($model->path_filename);
+                app(\App\Http\Services\SensitiveFileService::class)->delete($model->path_filename);
             }
         });
     }

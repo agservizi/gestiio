@@ -2,9 +2,9 @@
 @section('toolbar')
     @if( $record->id>1)
         <div class="me-0">
-            <a href="#" class="btn btn-sm btn-flex bg-body btn-color-gray-700 btn-active-color-primary fw-bold"
-               data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end"
-               data-kt-menu-flip="top-end">Azioni
+            <button type="button" class="btn btn-sm btn-flex bg-body btn-color-gray-700 btn-active-color-primary fw-bold"
+                    data-kt-menu-trigger="click" data-kt-menu-attach="parent" data-kt-menu-placement="bottom-end"
+                    data-kt-menu-flip="top-end">Azioni
                 <!--begin::Svg Icon | path: icons/duotone/Navigation/Angle-down.svg-->
                 <span class="svg-icon svg-icon-5 m-0">
                 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px"
@@ -19,7 +19,7 @@
                 </svg>
             </span>
                 <!--end::Svg Icon-->
-            </a>
+            </button>
             <!--begin::Menu-->
             <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-200px py-4"
                  data-kt-menu="true">

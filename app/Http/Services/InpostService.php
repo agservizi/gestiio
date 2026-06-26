@@ -33,11 +33,27 @@ class InpostService
 
     protected string $locationEndpoint;
 
+    protected string $accountEndpoint;
+
+    protected string $depositsEndpoint;
+
     protected string $trackingEndpointTemplate;
 
     protected string $labelEndpointTemplate;
 
     protected string $shipmentReadEndpointTemplate;
+
+    protected string $returnReadEndpointTemplate;
+
+    protected string $pickupListEndpointTemplate;
+
+    protected string $pickupReadEndpointTemplate;
+
+    protected string $pickupCreateEndpointTemplate;
+
+    protected string $pickupCancelEndpointTemplate;
+
+    protected string $pickupCutoffEndpoint;
 
     protected string $defaultCountry;
 
@@ -64,9 +80,17 @@ class InpostService
         $this->scope = trim((string) config('services.inpost.scope', 'openid api:points:read api:shipments:read api:shipments:write api:tracking:read'));
         $this->organizationId = (string) config('services.inpost.organization_id');
         $this->locationEndpoint = (string) config('services.inpost.location_endpoint', '/location/v1/points');
+        $this->accountEndpoint = (string) config('services.inpost.account_endpoint', '/account/v1/organizations');
+        $this->depositsEndpoint = (string) config('services.inpost.deposits_endpoint', '/deposits/v1/organizations/{organizationId}/deposits');
         $this->trackingEndpointTemplate = (string) config('services.inpost.tracking_endpoint_template', '/tracking/v1/shipments/{trackingNumber}');
         $this->labelEndpointTemplate = (string) config('services.inpost.label_endpoint_template', '/shipping/v2/organizations/{organizationId}/shipments/{shipmentId}/label');
         $this->shipmentReadEndpointTemplate = (string) config('services.inpost.shipment_read_endpoint_template', '/shipping/v2/organizations/{organizationId}/shipments/{shipmentId}');
+        $this->returnReadEndpointTemplate = (string) config('services.inpost.return_read_endpoint_template', '/returns/v2/organizations/{organizationId}/returns/{returnId}');
+        $this->pickupListEndpointTemplate = (string) config('services.inpost.pickup_list_endpoint_template', '/pickups/v1/organizations/{organizationId}/one-time-pickups');
+        $this->pickupReadEndpointTemplate = (string) config('services.inpost.pickup_read_endpoint_template', '/pickups/v1/organizations/{organizationId}/one-time-pickups/{orderId}');
+        $this->pickupCreateEndpointTemplate = (string) config('services.inpost.pickup_create_endpoint_template', '/pickups/v1/organizations/{organizationId}/one-time-pickups');
+        $this->pickupCancelEndpointTemplate = (string) config('services.inpost.pickup_cancel_endpoint_template', '/pickups/v1/organizations/{organizationId}/one-time-pickups/{orderId}/cancel');
+        $this->pickupCutoffEndpoint = (string) config('services.inpost.pickup_cutoff_endpoint', '/pickups/v1/cutoff-time');
         $this->defaultCountry = strtoupper((string) config('services.inpost.default_country', 'IT'));
         $this->pointSearchLimit = max(1, (int) config('services.inpost.point_search_limit', 20));
         $this->itPointsBaseUrl = rtrim((string) config('services.inpost.it_points_base_url', 'https://api-shipx-it.easypack24.net'), '/');
@@ -210,6 +234,9 @@ class InpostService
         $url = $record->label_url ?: $this->extractLabelUrl($record->response ?? []);
         if ($url) {
             $raw = $this->requestRaw('get', $url, [], $record);
+            if (($raw['status'] ?? 200) >= 400) {
+                return null;
+            }
 
             return [
                 'content' => $raw['body'],
@@ -231,6 +258,9 @@ class InpostService
                 $record,
                 ['Accept' => $this->labelAcceptHeader()]
             );
+            if (($raw['status'] ?? 200) >= 400) {
+                return null;
+            }
 
             return [
                 'content' => $raw['body'],
@@ -245,6 +275,95 @@ class InpostService
     public function trackingUrl(string $trackingNumber): string
     {
         return $this->trackingPortalBaseUrl.'?number='.urlencode($trackingNumber);
+    }
+
+    public function account(): array
+    {
+        return $this->requestJson('get', $this->baseUrl.$this->replaceOrganization($this->accountEndpoint));
+    }
+
+    public function deposits(array $query = []): array
+    {
+        return $this->requestJson('get', $this->baseUrl.$this->replaceOrganization($this->depositsEndpoint), $query);
+    }
+
+    public function createDeposit(array $payload): array
+    {
+        return $this->requestJson('post', $this->baseUrl.$this->replaceOrganization($this->depositsEndpoint), $payload);
+    }
+
+    public function extractTrackingNumber(array $response): ?string
+    {
+        $paths = [
+            'trackingNumber',
+            'tracking.number',
+            'shipment.trackingNumber',
+            'shipment.tracking.number',
+            'parcels.0.trackingNumber',
+            'parcels.0.tracking.number',
+        ];
+
+        foreach ($paths as $path) {
+            $value = data_get($response, $path);
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    }
+
+    public function extractShipmentStatus(array $response): ?string
+    {
+        $paths = [
+            'status',
+            'currentStatus',
+            'shipment.status',
+            'shipment.currentStatus',
+            'trackingResponse.status',
+            'trackingResponse.currentStatus',
+            'eventCode',
+            'event.code',
+            'events.0.eventCode',
+        ];
+
+        foreach ($paths as $path) {
+            $value = data_get($response, $path);
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    }
+
+    public function extractStatusText(array $response): ?string
+    {
+        $paths = [
+            'message',
+            'description',
+            'statusDescription',
+            'eventDescription',
+            'event.description',
+            'events.0.description',
+            'error.message',
+            'errors.0.message',
+            'violations.0.message',
+        ];
+
+        foreach ($paths as $path) {
+            $value = data_get($response, $path);
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    }
+
+    public function extractLabelUrlFromResponse(array $response): ?string
+    {
+        return $this->extractLabelUrl($response);
     }
 
     public function createReturn(InpostReturn $record): array
@@ -272,17 +391,43 @@ class InpostService
 
     public function createPickup(InpostPickup $record): array
     {
-        $endpoint = '/pickups/v2/organizations/'.$this->organizationId.'/pickups';
+        $endpoint = $this->replaceOrganization($this->pickupCreateEndpointTemplate);
         $payload = $this->pickupPayload($record);
 
         return $this->requestJson('post', $this->baseUrl.$endpoint, $payload, $record);
     }
 
-    public function pickupCutoffTime(): array
+    public function pickups(array $query = []): array
     {
-        $endpoint = '/pickups/v2/organizations/'.$this->organizationId.'/pickups/cutoff-time';
+        return $this->requestJson('get', $this->baseUrl.$this->replaceOrganization($this->pickupListEndpointTemplate), $query);
+    }
 
-        return $this->requestJson('get', $this->baseUrl.$endpoint);
+    public function getPickup(string $orderId, ?InpostPickup $record = null): array
+    {
+        $endpoint = str_replace('{orderId}', urlencode($orderId), $this->replaceOrganization($this->pickupReadEndpointTemplate));
+
+        return $this->requestJson('get', $this->baseUrl.$endpoint, [], $record);
+    }
+
+    public function cancelPickup(InpostPickup $record): array
+    {
+        $endpoint = str_replace('{orderId}', urlencode((string) $record->remote_id), $this->replaceOrganization($this->pickupCancelEndpointTemplate));
+
+        return $this->requestJson('put', $this->baseUrl.$endpoint, [], $record);
+    }
+
+    public function pickupCutoffTime(array $query = []): array
+    {
+        $endpoint = $this->replaceOrganization($this->pickupCutoffEndpoint);
+
+        return $this->requestJson('get', $this->baseUrl.$endpoint, $query);
+    }
+
+    public function getReturn(string $returnId, ?InpostReturn $record = null): array
+    {
+        $endpoint = str_replace('{returnId}', urlencode($returnId), $this->replaceOrganization($this->returnReadEndpointTemplate));
+
+        return $this->requestJson('get', $this->baseUrl.$endpoint, [], $record);
     }
 
     protected function returnPayload(InpostReturn $record): array
@@ -318,6 +463,7 @@ class InpostService
                 'phone' => $record->contact_phone,
             ],
             'parcel_count' => (int) ($record->parcel_count ?: 1),
+            'reference' => $record->customer_reference ?: (string) $record->id,
         ];
 
         if ($record->note) {
@@ -451,10 +597,23 @@ class InpostService
 
         $json = $response->json();
         $log->status = $response->status();
-        $log->response = is_array($json) ? $json : ['raw' => $response->body()];
+        $body = is_array($json) ? $json : ['raw' => $response->body()];
+        $body['_http_status'] = $response->status();
+
+        if ($response->failed()) {
+            $body['error'] = $body['error'] ?? true;
+            $body['message'] = $body['message'] ?? $response->reason();
+        }
+
+        $log->response = $body;
         $log->save();
 
-        return is_array($json) ? $json : ['raw' => $response->body()];
+        return $body;
+    }
+
+    protected function replaceOrganization(string $path): string
+    {
+        return str_replace('{organizationId}', $this->organizationId, $path);
     }
 
     protected function requestRaw(string $method, string $url, array $payload = [], ?Model $record = null, array $headers = []): array

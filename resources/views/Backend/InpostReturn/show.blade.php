@@ -1,6 +1,9 @@
 @extends('Backend._layout._main')
 @section('toolbar')
     <div class="d-flex gap-2">
+        @if($record->remote_id)
+            <a class="btn btn-sm btn-primary" href="{{action([\App\Http\Controllers\Backend\InpostReturnController::class,'sync'],$record->id)}}">Sincronizza</a>
+        @endif
         @if($record->qrCodeUrl())
             <a class="btn btn-sm btn-light-primary" href="{{action([\App\Http\Controllers\Backend\InpostReturnController::class,'etichetta'],$record->id)}}" target="_blank">QR / Etichetta</a>
         @endif

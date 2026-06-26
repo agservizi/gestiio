@@ -137,6 +137,7 @@ class SpedizioneInpostController extends Controller
         return [
             'success' => $result['success'],
             'message' => $result['message'],
+            'esitoHtml' => $record->esitoBall(),
             'trackingHtml' => $record->tracking() ?: '-',
             'trackingStatusHtml' => $record->trackingStatusBadge(),
             'trackingUpdatedAt' => $record->trackingUpdatedAtLabel() ?: '-',
@@ -161,6 +162,7 @@ class SpedizioneInpostController extends Controller
             }
 
             $rows[$record->id] = [
+                'esitoHtml' => $record->esitoBall(),
                 'trackingHtml' => $record->tracking() ?: '-',
                 'trackingStatusHtml' => $record->trackingStatusBadge(),
                 'trackingUpdatedAt' => $record->trackingUpdatedAtLabel() ?: '-',
@@ -197,12 +199,10 @@ class SpedizioneInpostController extends Controller
 
         $service = new InpostService;
         $response = $service->getShipment($record->shipment_uuid, $record);
-        $record->response = array_merge($record->response ?? [], ['shipmentRead' => $response]);
-        $record->tracking_number = data_get($response, 'trackingNumber') ?: data_get($response, 'tracking.number') ?: $record->tracking_number;
-        $record->esito = data_get($response, 'status') ?: $record->esito;
+        $this->applicaRispostaRemota($record, $response, 'shipmentRead');
         $record->save();
 
-        return redirect()->back();
+        return redirect()->back()->with('success', 'Spedizione InPost sincronizzata.');
     }
 
     protected function applicaFiltri(Request $request)
@@ -222,6 +222,8 @@ class SpedizioneInpostController extends Controller
     protected function salvaDati(SpedizioneInpost $record, Request $request): void
     {
         DB::transaction(function () use ($record, $request) {
+            $authUser = Auth::user();
+
             if (! $record->exists) {
                 $record->caricato_da_user_id = Auth::id();
             }
@@ -257,6 +259,10 @@ class SpedizioneInpostController extends Controller
                     $valore = $funzione($valore);
                 }
                 $record->{$campo} = $valore;
+            }
+
+            if ($authUser instanceof User && $authUser->hasPermissionTo('agente')) {
+                $record->agente_id = $authUser->id;
             }
 
             $record->numero_pacchi = 1;
@@ -309,13 +315,7 @@ class SpedizioneInpostController extends Controller
         $record->request_payload = $service->buildShipmentPayload($record);
 
         $response = $service->shipment($record);
-        $record->response = array_merge($record->response ?? [], $response);
-        $record->labels = data_get($response, 'labels') ?: data_get($response, 'label');
-        $record->shipment_uuid = data_get($response, 'shipmentUuid') ?: data_get($response, 'uuid') ?: data_get($response, 'id') ?: $record->shipment_uuid;
-        $record->tracking_number = data_get($response, 'trackingNumber') ?: data_get($response, 'tracking.number') ?: $record->tracking_number;
-        $record->label_url = data_get($response, 'label.url') ?: data_get($response, 'labels.0.url') ?: $record->label_url;
-        $record->esito = data_get($response, 'status') ?: (data_get($response, 'error') ? 'ERROR' : 'CREATED');
-        $record->esito_testo = data_get($response, 'message') ?: data_get($response, 'error.message') ?: $record->esito;
+        $this->applicaRispostaRemota($record, $response, 'shipmentCreate');
         $record->save();
     }
 
@@ -357,9 +357,43 @@ class SpedizioneInpostController extends Controller
         $response['trackingResponse'] = $tracking;
         $response['trackingUpdatedAt'] = now()->toIso8601String();
         $record->response = $response;
+        $this->applicaTracking($record, $tracking);
         $record->saveQuietly();
 
+        if (data_get($tracking, 'error')) {
+            return ['success' => false, 'message' => data_get($tracking, 'message') ?: 'Tracking non aggiornato'];
+        }
+
         return ['success' => true, 'message' => 'Tracking aggiornato'];
+    }
+
+    protected function applicaRispostaRemota(SpedizioneInpost $record, array $response, string $key): void
+    {
+        $service = new InpostService;
+        $current = $record->response ?? [];
+        $current[$key] = $response;
+        $record->response = array_merge($current, $key === 'shipmentCreate' ? $response : []);
+        $record->labels = data_get($response, 'labels') ?: data_get($response, 'label') ?: $record->labels;
+        $record->shipment_uuid = data_get($response, 'shipmentUuid') ?: data_get($response, 'uuid') ?: data_get($response, 'id') ?: data_get($response, 'shipment.id') ?: $record->shipment_uuid;
+        $record->tracking_number = $service->extractTrackingNumber($response) ?: $record->tracking_number;
+        $record->label_url = $service->extractLabelUrlFromResponse($response) ?: $record->label_url;
+        $record->esito = $service->extractShipmentStatus($response) ?: (data_get($response, 'error') ? 'ERROR' : ($record->esito ?: 'CREATED'));
+        $record->esito_testo = $service->extractStatusText($response) ?: $record->esito_testo ?: $record->esito;
+    }
+
+    protected function applicaTracking(SpedizioneInpost $record, array $tracking): void
+    {
+        $service = new InpostService;
+        $status = $service->extractShipmentStatus($tracking);
+        $message = $service->extractStatusText($tracking);
+
+        if ($status) {
+            $record->esito = $status;
+        }
+
+        if ($message) {
+            $record->esito_testo = $message;
+        }
     }
 
     protected function rules(): array

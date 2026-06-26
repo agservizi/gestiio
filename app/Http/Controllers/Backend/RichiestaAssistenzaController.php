@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClienteAssistenza;
+use App\Models\GuadagnoAgenzia;
 use App\Models\ProdottoAssistenza;
 use App\Models\RichiestaAssistenza;
 use App\Models\User;
@@ -99,7 +100,7 @@ class RichiestaAssistenzaController extends Controller
     {
 
         $queryBuilder = RichiestaAssistenza::query()
-            ->select('id', 'cliente_id', 'prodotto_assistenza_id', 'created_at', 'nome_utente', 'password', 'pin')
+            ->select('id', 'cliente_id', 'prodotto_assistenza_id', 'tipo_operazione', 'importo_economico', 'economico_contabilizzato', 'created_at', 'nome_utente', 'password', 'pin')
             ->with('prodotto:id,nome')
             ->with('cliente:id,nome,cognome,email,codice_fiscale');
         $term = $request->input('cerca');
@@ -217,8 +218,11 @@ class RichiestaAssistenzaController extends Controller
     {
         $record = RichiestaAssistenza::find($id);
         abort_if(! $record, 404, 'Questa richiestaassistenza non esiste');
+        $anno = (int) $record->created_at->year;
+        $mese = (int) $record->created_at->month;
 
         $record->delete();
+        $this->ricalcolaEconomicoMese($anno, $mese);
 
         return response()->json([
             'success' => true,
@@ -324,6 +328,7 @@ class RichiestaAssistenzaController extends Controller
         // Ciclo su campi
         $campi = [
             'prodotto_assistenza_id' => '',
+            'tipo_operazione' => '',
             'nome_utente' => '',
             'password' => '',
             'pin' => '',
@@ -338,10 +343,23 @@ class RichiestaAssistenzaController extends Controller
 
         $this->salvaContattiClienteRapidi($request, $clienteId);
         $model->cliente_id = $clienteId;
+        $model->importo_economico = RichiestaAssistenza::importoPerTipoOperazione($model->tipo_operazione);
+        $model->economico_contabilizzato = true;
 
         $model->save();
+        $this->ricalcolaEconomicoMese((int) $model->created_at->year, (int) $model->created_at->month);
 
         return $model;
+    }
+
+    protected function ricalcolaEconomicoMese(int $anno, int $mese): void
+    {
+        $guadagno = GuadagnoAgenzia::firstOrNew([
+            'anno' => $anno,
+            'mese' => $mese,
+        ]);
+
+        $guadagno->calcolaGuadagnoServizi();
     }
 
     protected function salvaContattiClienteRapidi(Request $request, int $clienteId): void
@@ -477,6 +495,7 @@ class RichiestaAssistenzaController extends Controller
             'cliente_email_edit' => ['nullable', 'max:255'],
             'cliente_telefono_edit' => ['nullable', new TelefonoRule],
             'prodotto_assistenza_id' => ['required'],
+            'tipo_operazione' => ['required', 'in:'.implode(',', array_keys(RichiestaAssistenza::tipiOperazione()))],
             'nome_utente' => ['nullable', 'max:255'],
             'password' => ['nullable', 'max:255'],
             'pin' => ['nullable', 'max:255'],

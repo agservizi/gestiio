@@ -422,6 +422,7 @@
                             notify('error', 'Errore', res && res.message ? res.message : 'Errore tracking');
                             return;
                         }
+                        row.find('.esito-cell').html(res.esitoHtml || '');
                         row.find('.tracking-cell').html(res.trackingHtml || '-');
                         row.find('.tracking-status-cell').html(res.trackingStatusHtml || '<span class="badge badge-light">-</span>');
                         row.find('.tracking-updated-cell').text(res.trackingUpdatedAt || '-');
@@ -447,6 +448,7 @@
                             Object.keys(res.rows).forEach(function (id) {
                                 var row = $('tr[data-id="' + id + '"]');
                                 var rowData = res.rows[id] || {};
+                                row.find('.esito-cell').html(rowData.esitoHtml || '');
                                 row.find('.tracking-cell').html(rowData.trackingHtml || '-');
                                 row.find('.tracking-status-cell').html(rowData.trackingStatusHtml || '<span class="badge badge-light">-</span>');
                                 row.find('.tracking-updated-cell').text(rowData.trackingUpdatedAt || '-');

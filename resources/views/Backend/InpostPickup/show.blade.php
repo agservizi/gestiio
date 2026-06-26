@@ -1,5 +1,15 @@
 @extends('Backend._layout._main')
-@section('toolbar') @endsection
+@section('toolbar')
+    <div class="d-flex gap-2">
+        @if($record->remote_id)
+            <a class="btn btn-sm btn-primary" href="{{action([\App\Http\Controllers\Backend\InpostPickupController::class,'sync'],$record->id)}}">Sincronizza</a>
+            <form method="POST" action="{{action([\App\Http\Controllers\Backend\InpostPickupController::class,'cancel'],$record->id)}}">
+                @csrf
+                <button class="btn btn-sm btn-light-danger" type="submit">Annulla ritiro</button>
+            </form>
+        @endif
+    </div>
+@endsection
 
 @section('content')
     <div class="card">

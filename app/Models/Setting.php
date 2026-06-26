@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
-use function App\getInputNumero;
+use function getInputNumero;
 
 class Setting extends Model
 {

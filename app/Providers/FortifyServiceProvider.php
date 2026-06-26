@@ -16,7 +16,7 @@ use Laravel\Fortify\Contracts\LoginResponse;
 use Laravel\Fortify\Contracts\TwoFactorLoginResponse;
 use Laravel\Fortify\Fortify;
 
-use function App\getInputTelefono;
+use function getInputTelefono;
 
 class FortifyServiceProvider extends ServiceProvider
 {

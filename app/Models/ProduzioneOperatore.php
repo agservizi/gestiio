@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-use function App\meseStrPad;
+use function meseStrPad;
 
 class ProduzioneOperatore extends Model
 {

@@ -58,7 +58,7 @@
                 <td class="text-end">
                     <span class="inpost-metric-value">{{$record->peso_totale}}</span>
                 </td>
-                <td>{!! $record->esitoBall() !!}</td>
+                <td class="esito-cell">{!! $record->esitoBall() !!}</td>
                 <td class="tracking-cell">
                     <div class="inpost-tracking-stack">
                         <span class="inpost-tracking-code">{!! $record->tracking() ?: '-' !!}</span>

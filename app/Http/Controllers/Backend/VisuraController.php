@@ -228,6 +228,7 @@ class VisuraController extends Controller
                 'record' => new Visura,
                 'titoloPagina' => 'Nuova visura',
                 'controller' => get_class($this),
+                'serviziVisura' => TipoVisura::query()->orderBy('nome')->get(),
             ]);
         }
         $record = new Visura;
@@ -866,23 +867,23 @@ class VisuraController extends Controller
         $file = new AllegatoVisura;
 
         if ($request->file('file')) {
-            $filePath = $request->file('file');
-            $estensione = $filePath->extension();
-            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.allegati_visure.cartella');
-            $request->file('file')->storeAs($cartella, $fileName);
-            $file->path_filename = $cartella.'/'.$fileName;
-            $file->filename_originale = $filePath->getClientOriginalName();
-            $file->mime_type = $filePath->getMimeType();
-            $contenuto = file_get_contents($filePath->getRealPath());
-            $file->file_contenuto_base64 = $contenuto !== false ? base64_encode($contenuto) : null;
+            $stored = app(\App\Http\Services\SensitiveFileService::class)->store($request->file('file'), $cartella, [
+                'area' => 'visure',
+                'visura_id' => $request->input('visura_id'),
+                'per_cliente' => $request->input('per_cliente', 0),
+            ]);
+            $file->path_filename = $stored['path'];
+            $file->filename_originale = $stored['original_name'];
+            $file->mime_type = $stored['mime_type'];
+            $file->file_contenuto_base64 = $stored['base64'];
             $file->uid = $request->input('uid');
-            $file->dimensione_file = $filePath->getSize();
+            $file->dimensione_file = $stored['size'];
             $file->visura_id = $request->input('visura_id');
             $file->per_cliente = $request->input('per_cliente', 0);
             $file->save();
 
-            return response()->json(['success' => true, 'id' => $file->id, 'filename' => $fileName, 'thumbnail' => $file->urlThumbnail()]);
+            return response()->json(['success' => true, 'id' => $file->id, 'filename' => $stored['filename'], 'thumbnail' => $file->urlThumbnail()]);
 
         }
         abort(404, 'File non presente');

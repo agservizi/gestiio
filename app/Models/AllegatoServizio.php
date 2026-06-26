@@ -30,10 +30,10 @@ class AllegatoServizio extends Model
         });
 
         static::deleting(function ($model) {
-            \Storage::delete($model->path_filename);
+            app(\App\Http\Services\SensitiveFileService::class)->delete($model->path_filename);
             \Log::debug('deleting;');
             if ($model->thumbnail) {
-                \Storage::delete($model->thumbnail);
+                app(\App\Http\Services\SensitiveFileService::class)->delete($model->thumbnail);
             }
 
         });

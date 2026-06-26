@@ -8,7 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-use function App\importo;
+use function importo;
 
 class NotificaAdminMovimentoPortafoglio extends Notification
 {

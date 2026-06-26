@@ -93,12 +93,44 @@ class InpostPickupController extends Controller
         ];
     }
 
-    public function cutoffTime()
+    public function cutoffTime(Request $request)
     {
         $service = new InpostService;
-        $result = $service->pickupCutoffTime();
+        $result = $service->pickupCutoffTime(array_filter([
+            'postCode' => $request->input('post_code') ?: $request->input('postCode'),
+            'countryCode' => $request->input('country_code') ?: $request->input('countryCode', 'IT'),
+        ]));
 
         return ['success' => true, 'data' => $result];
+    }
+
+    public function sync($id)
+    {
+        $record = InpostPickup::find($id);
+        abort_if(! $record, 404, 'Questo ritiro InPost non esiste');
+        abort_if(! $record->remote_id, 404, 'ID remoto InPost non disponibile');
+
+        $service = new InpostService;
+        $response = $service->getPickup($record->remote_id, $record);
+        $this->applicaRispostaRemota($record, $response, 'pickupRead');
+        $record->save();
+
+        return redirect()->back()->with('success', 'Ritiro InPost sincronizzato.');
+    }
+
+    public function cancel($id)
+    {
+        $record = InpostPickup::find($id);
+        abort_if(! $record, 404, 'Questo ritiro InPost non esiste');
+        abort_if(! $record->remote_id, 404, 'ID remoto InPost non disponibile');
+
+        $service = new InpostService;
+        $response = $service->cancelPickup($record);
+        $this->applicaRispostaRemota($record, $response, 'pickupCancel');
+        $record->status = data_get($response, 'status') ?: (data_get($response, 'error') ? 'ERROR' : 'CANCELLED');
+        $record->save();
+
+        return redirect()->back()->with('success', 'Richiesta annullamento ritiro inviata a InPost.');
     }
 
     protected function applicaFiltri(Request $request)
@@ -145,10 +177,23 @@ class InpostPickupController extends Controller
         $service = new InpostService;
         $record->request_payload = $service->buildPickupPayload($record);
         $response = $service->createPickup($record);
-        $record->response = array_merge($record->response ?? [], $response);
-        $record->remote_id = data_get($response, 'id') ?: data_get($response, 'pickupId') ?: $record->remote_id;
-        $record->status = data_get($response, 'status') ?: (data_get($response, 'error') ? 'ERROR' : 'CREATED');
+        $this->applicaRispostaRemota($record, $response, 'pickupCreate');
         $record->save();
+    }
+
+    protected function applicaRispostaRemota(InpostPickup $record, array $response, string $key): void
+    {
+        $current = $record->response ?? [];
+        $current[$key] = $response;
+        $record->response = array_merge($current, $key === 'pickupCreate' ? $response : []);
+        $record->remote_id = data_get($response, 'id')
+            ?: data_get($response, 'pickupId')
+            ?: data_get($response, 'orderId')
+            ?: data_get($response, 'order.id')
+            ?: $record->remote_id;
+        $record->status = data_get($response, 'status')
+            ?: data_get($response, 'order.status')
+            ?: (data_get($response, 'error') ? 'ERROR' : ($record->status ?: 'CREATED'));
     }
 
     protected function validatePickupWindow(Request $request): void

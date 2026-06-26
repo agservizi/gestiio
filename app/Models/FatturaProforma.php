@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
-use function App\applicaIva;
+use function applicaIva;
 
 class FatturaProforma extends Model
 {

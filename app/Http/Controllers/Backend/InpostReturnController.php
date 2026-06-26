@@ -98,11 +98,26 @@ class InpostReturnController extends Controller
 
         $service = new InpostService;
         $raw = $service->requestRawPublic('get', $url, [], $record);
+        abort_if(($raw['status'] ?? 200) >= 400, 404, 'QR code non disponibile');
 
         return Response::make($raw['body'], 200, [
             'Content-Type' => $raw['content_type'] ?: 'application/pdf',
             'Content-Disposition' => 'inline; filename="inpost-return-'.$record->id.'.pdf"',
         ]);
+    }
+
+    public function sync($id)
+    {
+        $record = InpostReturn::find($id);
+        abort_if(! $record, 404, 'Questo reso InPost non esiste');
+        abort_if(! $record->remote_id, 404, 'ID remoto InPost non disponibile');
+
+        $service = new InpostService;
+        $response = $service->getReturn($record->remote_id, $record);
+        $this->applicaRispostaRemota($record, $response, 'returnRead');
+        $record->save();
+
+        return redirect()->back()->with('success', 'Reso InPost sincronizzato.');
     }
 
     protected function applicaFiltri(Request $request)
@@ -140,10 +155,23 @@ class InpostReturnController extends Controller
         $service = new InpostService;
         $record->request_payload = $service->buildReturnPayload($record);
         $response = $service->createReturn($record);
-        $record->response = array_merge($record->response ?? [], $response);
-        $record->remote_id = data_get($response, 'id') ?: data_get($response, 'shipmentId') ?: $record->remote_id;
-        $record->status = data_get($response, 'status') ?: (data_get($response, 'error') ? 'ERROR' : 'CREATED');
+        $this->applicaRispostaRemota($record, $response, 'returnCreate');
         $record->save();
+    }
+
+    protected function applicaRispostaRemota(InpostReturn $record, array $response, string $key): void
+    {
+        $current = $record->response ?? [];
+        $current[$key] = $response;
+        $record->response = array_merge($current, $key === 'returnCreate' ? $response : []);
+        $record->remote_id = data_get($response, 'id')
+            ?: data_get($response, 'returnId')
+            ?: data_get($response, 'shipmentId')
+            ?: data_get($response, 'return.id')
+            ?: $record->remote_id;
+        $record->status = data_get($response, 'status')
+            ?: data_get($response, 'return.status')
+            ?: (data_get($response, 'error') ? 'ERROR' : ($record->status ?: 'CREATED'));
     }
 
     protected function rules(): array

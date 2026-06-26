@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Backend\AgenteController;
+use App\Http\Controllers\Backend\AiAutomationController;
 use App\Http\Controllers\Backend\AjaxController;
 use App\Http\Controllers\Backend\AllegatoServizioController;
 use App\Http\Controllers\Backend\Autenticazione2faController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\Backend\GestoreAttivazioniController;
 use App\Http\Controllers\Backend\GestoreContrattoEnergiaController;
 use App\Http\Controllers\Backend\GestoreController;
 use App\Http\Controllers\Backend\InpostPickupController;
+use App\Http\Controllers\Backend\InpostConsoleController;
 use App\Http\Controllers\Backend\InpostReturnController;
 use App\Http\Controllers\Backend\ListinoBrtController;
 use App\Http\Controllers\Backend\ListinoBrtEuropaController;
@@ -62,7 +64,15 @@ Route::middleware(['auth', 'role_or_permission:admin|agente|supervisore|operator
 
 Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa']], function () {
     Route::get('/', [DashboardController::class, 'show']);
+    Route::get('/lavoro', [DashboardController::class, 'show']);
     Route::post('/dashboard/bulk-action', [DashboardController::class, 'bulkAction']);
+    Route::get('/ai-control-tower', [AiAutomationController::class, 'index']);
+    Route::post('/ai-control-tower/dashboard-review', [AiAutomationController::class, 'triggerDashboard']);
+    Route::post('/ai-control-tower/ask', [AiAutomationController::class, 'ask']);
+    Route::post('/gestiio-ai/chat', [AiAutomationController::class, 'chat']);
+    Route::post('/gestiio-ai/ricarica-plafond/intent', [PaymentController::class, 'prepareChatRicarica']);
+    Route::post('/gestiio-ai/ricarica-plafond/pay', [PaymentController::class, 'storePagamentoChat']);
+    Route::post('/ai-suggestion/{suggestion}/feedback', [AiAutomationController::class, 'feedback']);
 
     // Contratto
     Route::post('/allegato-contratto', [ContrattoTelefoniaController::class, 'uploadAllegato']);
@@ -129,7 +139,10 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::resource('inpost-return', InpostReturnController::class);
     Route::get('inpost-return/{id}/etichetta', [InpostReturnController::class, 'etichetta']);
     Route::post('inpost-pickup/cutoff-time', [InpostPickupController::class, 'cutoffTime']);
+    Route::get('inpost-pickup/{id}/sync', [InpostPickupController::class, 'sync']);
+    Route::post('inpost-pickup/{id}/cancel', [InpostPickupController::class, 'cancel']);
     Route::resource('inpost-pickup', InpostPickupController::class);
+    Route::get('inpost-return/{id}/sync', [InpostReturnController::class, 'sync']);
     Route::post('brt-orm', [BrtOrmController::class, 'store']);
     Route::delete('brt-orm/{reservationId}', [BrtOrmController::class, 'destroy']);
 
@@ -181,6 +194,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/pagamento/{servizio}', [PaymentController::class, 'pagamento']);
     Route::get('/pagamento/{servizio}/{result}', [PaymentController::class, 'response']);
     Route::post('/pagamento', [PaymentController::class, 'storePagamento']);
+    Route::post('/pagamento-bonifico-stripe', [PaymentController::class, 'storeBonificoStripe']);
     Route::get('/pagamento-success', [PaymentController::class, 'pagamentoSuccess']);
 
     // Tickets
@@ -289,6 +303,9 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::resource('brt-listino', ListinoBrtController::class);
     Route::resource('brt-listino-europa', ListinoBrtEuropaController::class);
     Route::resource('inpost-listino', ListinoInpostController::class);
+    Route::get('inpost-account', [InpostConsoleController::class, 'account']);
+    Route::get('inpost-deposits', [InpostConsoleController::class, 'deposits']);
+    Route::post('inpost-deposits', [InpostConsoleController::class, 'storeDeposit']);
 
     // Chiamate api
     Route::get('chiamata-api', [ChiamataApiController::class, 'index']);

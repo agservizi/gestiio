@@ -760,6 +760,24 @@
                                             <span class="menu-title">Listino InPost</span>
                                         </a>
                                     </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{action([\App\Http\Controllers\Backend\InpostConsoleController::class,'account'])}}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                            <span class="menu-title">Account InPost</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{action([\App\Http\Controllers\Backend\InpostConsoleController::class,'deposits'])}}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                            <span class="menu-title">Deposits InPost</span>
+                                        </a>
+                                    </div>
                                 </div>
                                 <!--end:Menu sub-->
                             </div>

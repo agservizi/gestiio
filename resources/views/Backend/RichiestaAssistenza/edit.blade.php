@@ -78,6 +78,22 @@
                         </div>
 
                         <div class="row">
+                            <div class="col-md-12">
+                                @include('Backend._inputs.inputRadioH',[
+                                    'campo'=>'tipo_operazione',
+                                    'testo'=>'Tipo richiesta',
+                                    'required'=>true,
+                                    'array'=>[
+                                        \App\Models\RichiestaAssistenza::TIPO_NUOVA_ATTIVAZIONE_SPID => 'Nuova attivazione SPID <span class="badge badge-light-success ms-2">&euro; 22,00</span>',
+                                        \App\Models\RichiestaAssistenza::TIPO_ASSISTENZA_SPID => 'Recupero / assistenza SPID già attivo <span class="badge badge-light-primary ms-2">&euro; 5,00</span>',
+                                        \App\Models\RichiestaAssistenza::TIPO_ASSISTENZA_GENERICA => 'Assistenza generica <span class="badge badge-light-primary ms-2">&euro; 5,00</span>',
+                                    ],
+                                    'help'=>'Questo campo decide l’importo che finirà in Economico mese.'
+                                ])
+                            </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6">
                                 @include('Backend._inputs.inputText',['campo'=>'nome_utente','testo'=>'Nome utente','autocomplete'=>'off'])
                             </div>

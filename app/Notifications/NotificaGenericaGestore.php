@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 
-use function App\siNo;
+use function siNo;
 
 class NotificaGenericaGestore extends Notification
 {

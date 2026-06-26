@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-use function App\meseStrPad;
+use function meseStrPad;
 
 class GuadagnoAgenzia extends Model
 {
@@ -45,7 +45,11 @@ class GuadagnoAgenzia extends Model
 
     public function calcolaGuadagnoServizi()
     {
-        $this->entrate_servizi = 0;
+        $this->entrate_servizi = RichiestaAssistenza::query()
+            ->whereYear('created_at', (int) $this->anno)
+            ->whereMonth('created_at', (int) $this->mese)
+            ->where('economico_contabilizzato', true)
+            ->sum('importo_economico');
         $this->uscite_servizi = 0;
         $this->save();
 
@@ -53,9 +57,15 @@ class GuadagnoAgenzia extends Model
 
     public static function calcolaGuadagnoMeseServizi($anno, $mese)
     {
+        $provvigioneAgenzia = RichiestaAssistenza::query()
+            ->whereYear('created_at', (int) $anno)
+            ->whereMonth('created_at', (int) $mese)
+            ->where('economico_contabilizzato', true)
+            ->sum('importo_economico');
+
         return (object) [
             'provvigione_agente' => 0,
-            'provvigione_agenzia' => 0,
+            'provvigione_agenzia' => $provvigioneAgenzia,
         ];
     }
 

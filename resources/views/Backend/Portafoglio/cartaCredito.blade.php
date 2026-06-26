@@ -1,9 +1,12 @@
-<h4>Ricarica con carta di credito</h4>
+<div class="recharge-method-head">
+    <div>
+        <h4>Ricarica con carta</h4>
+        <p>Pagamento immediato con carta tramite Stripe.</p>
+    </div>
+    <span class="badge badge-light-primary">Immediata</span>
+</div>
 @if(session('message'))
     <div class="alert alert-success" role="alert">{{ session('message') }}</div>
-@endif
-@if(session('error'))
-    <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
 @endif
 <form method="POST" action="{{action([\App\Http\Controllers\Backend\PaymentController::class,'storePagamento'])}}"
       class="card-form mt-3 mb-3">

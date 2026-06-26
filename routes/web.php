@@ -12,6 +12,9 @@ use App\Http\Controllers\LogOut;
 use App\Http\Controllers\PagineController;
 use App\Http\Controllers\RegistratiController;
 use App\Http\Controllers\TestController;
+use App\Http\Controllers\Webhook\N8nAiWebhookController;
+use App\Http\Controllers\Webhook\InpostWebhookController;
+use App\Http\Controllers\Webhook\StripeWebhookController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +46,9 @@ Route::get('/', function () {
 Route::get('select2front', [Select2::class, 'response']);
 
 Route::get('/logout', [LogOut::class, 'logOut']);
+Route::post('/webhook/stripe', [StripeWebhookController::class, 'handle']);
+Route::post('/webhook/inpost/tracking', [InpostWebhookController::class, 'handle'])->middleware('throttle:120,1');
+Route::post('/webhook/n8n/ai', [N8nAiWebhookController::class, 'handle'])->middleware('throttle:60,1');
 Route::post('/send-otp-email/{id}', [LogOut::class, 'sendOtpEmail']);
 
 Route::post('/register', [RegistratiController::class, 'post']);

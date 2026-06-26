@@ -4,7 +4,7 @@ namespace App\Rules;
 
 use Illuminate\Contracts\Validation\Rule;
 
-use function App\getInputNumero;
+use function getInputNumero;
 
 class NumeroItRule implements Rule
 {

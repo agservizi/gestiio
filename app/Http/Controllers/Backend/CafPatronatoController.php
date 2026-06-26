@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Enums\TipiPortafoglioEnum;
 use App\Http\Controllers\Controller;
+use App\Http\Services\SensitiveFileService;
 use App\Http\MieClassi\AlertMessage;
 use App\Models\AllegatoCafPatronato;
 use App\Models\CafPatronato;
@@ -508,7 +509,8 @@ class CafPatronatoController extends Controller
         $path = (string) $record->path_filename;
         abort_if($path === '', 404, 'Questo allegato non esiste');
 
-        if (! Storage::exists($path)) {
+        $sensitiveFiles = app(SensitiveFileService::class);
+        if (! $sensitiveFiles->exists($path)) {
             Log::warning('CAF allegato mancante su disco', [
                 'contratto_id' => (int) $contrattoId,
                 'allegato_id' => (int) $record->id,
@@ -518,7 +520,11 @@ class CafPatronatoController extends Controller
             abort(404, 'Allegato non disponibile');
         }
 
-        return response()->download(Storage::path($path), $record->filename_originale);
+        return $sensitiveFiles->download($path, (string) $record->filename_originale, [
+            'area' => 'caf_patronato',
+            'caf_patronato_id' => (int) $contrattoId,
+            'allegato_id' => (int) $record->id,
+        ]);
 
     }
 
@@ -590,7 +596,8 @@ class CafPatronatoController extends Controller
         $path = (string) $record->path_filename;
         abort_if($path === '', 404, 'Questo allegato non esiste');
 
-        if (! Storage::exists($path)) {
+        $sensitiveFiles = app(SensitiveFileService::class);
+        if (! $sensitiveFiles->exists($path)) {
             Log::warning('CAF allegato cliente mancante su disco', [
                 'contratto_id' => (int) $contrattoId,
                 'allegato_id' => (int) $record->id,
@@ -600,7 +607,11 @@ class CafPatronatoController extends Controller
             abort(404, 'Allegato non disponibile');
         }
 
-        return response()->download(Storage::path($path), $record->filename_originale);
+        return $sensitiveFiles->download($path, (string) $record->filename_originale, [
+            'area' => 'caf_patronato_cliente',
+            'caf_patronato_id' => (int) $contrattoId,
+            'allegato_id' => (int) $record->id,
+        ]);
 
     }
 
@@ -609,25 +620,25 @@ class CafPatronatoController extends Controller
         $file = new AllegatoCafPatronato;
 
         if ($request->file('file')) {
-            $filePath = $request->file('file');
-            $estensione = $filePath->extension();
-            $fileName = Str::ulid().'.'.$estensione;
             $cartella = config('configurazione.allegati_contratti.cartella');
-            $request->file('file')->storeAs($cartella, $fileName);
-            $file->path_filename = $cartella.'/'.$fileName;
-            $file->filename_originale = $filePath->getClientOriginalName();
-            $file->mime_type = $filePath->getMimeType();
-            $contenuto = file_get_contents($filePath->getRealPath());
-            $file->file_contenuto_base64 = $contenuto !== false ? base64_encode($contenuto) : null;
+            $stored = app(SensitiveFileService::class)->store($request->file('file'), $cartella, [
+                'area' => 'caf_patronato',
+                'caf_patronato_id' => $request->input('caf_patronato_id'),
+                'per_cliente' => $request->input('per_cliente', 0),
+            ]);
+            $file->path_filename = $stored['path'];
+            $file->filename_originale = $stored['original_name'];
+            $file->mime_type = $stored['mime_type'];
+            $file->file_contenuto_base64 = $stored['base64'];
             if ($request->input('uid') && $request->input('uid') !== 'undefined') {
                 $file->uid = $request->input('uid');
             }
-            $file->dimensione_file = $filePath->getSize();
+            $file->dimensione_file = $stored['size'];
             $file->caf_patronato_id = $request->input('caf_patronato_id');
             $file->per_cliente = $request->input('per_cliente', 0);
             $file->save();
 
-            return response()->json(['success' => true, 'id' => $file->id, 'filename' => $fileName, 'thumbnail' => $file->urlThumbnail()]);
+            return response()->json(['success' => true, 'id' => $file->id, 'filename' => $stored['filename'], 'thumbnail' => $file->urlThumbnail()]);
 
         }
         abort(404, 'File non presente');

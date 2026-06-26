@@ -6,7 +6,7 @@ use App\Models\ContrattoTelefonia;
 use App\Models\TipoContratto;
 use Illuminate\Contracts\Validation\Rule;
 
-use function App\getInputTelefono;
+use function getInputTelefono;
 
 class TelefonoContrattoRule implements Rule
 {

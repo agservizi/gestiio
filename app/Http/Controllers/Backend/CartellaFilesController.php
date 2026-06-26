@@ -360,20 +360,19 @@ class CartellaFilesController extends Controller
             }
 
             $file = new File;
-            $filePath = $request->file('file');
-            $estensione = $filePath->extension();
-            $fileName = Str::ulid().'.'.$estensione;
             $storageFolder = trim((string) config('configurazione.file_manager.cartella'), '/');
-            $filePath->storeAs($storageFolder, $fileName);
-
-            $storedPath = $storageFolder.'/'.$fileName;
+            $stored = app(\App\Http\Services\SensitiveFileService::class)->store($request->file('file'), $storageFolder, [
+                'area' => 'file_manager',
+                'cartella_id' => (int) $cartellaId ?: null,
+                'categoria_documentale' => $request->input('categoria_documentale'),
+            ]);
             $file->cartella_id = (int) $cartellaId ?: null;
-            $file->path_filename = $storedPath;
-            $file->filename_originale = $filePath->getClientOriginalName();
-            $file->dimensione_file = $filePath->getSize();
+            $file->path_filename = $stored['path'];
+            $file->filename_originale = $stored['original_name'];
+            $file->dimensione_file = $stored['size'];
             $file->categoria_documentale = $request->input('categoria_documentale');
             $file->tags_documentali = $this->parseTags($request->input('tags_documentali'));
-            $file->ocr_testo = $this->extractSearchableText($storedPath, $file->filename_originale);
+            $file->ocr_testo = $this->extractSearchableText($file->path_filename, $file->filename_originale);
             $file->expires_at = $request->filled('expires_at') ? $request->input('expires_at') : null;
             $file->versione = 1;
             $file->save();
@@ -387,7 +386,7 @@ class CartellaFilesController extends Controller
             return response()->json([
                 'success' => true,
                 'id' => $file->id,
-                'filename' => $fileName,
+                'filename' => $stored['filename'],
                 'versione' => $file->versione,
             ]);
         }
@@ -411,15 +410,16 @@ class CartellaFilesController extends Controller
 
         $this->storeCurrentVersionSnapshot($record);
 
-        $filePath = $request->file('file');
-        $estensione = $filePath->extension();
-        $fileName = Str::ulid().'.'.$estensione;
         $storageFolder = trim((string) config('configurazione.file_manager.cartella'), '/');
-        $filePath->storeAs($storageFolder, $fileName);
+        $stored = app(\App\Http\Services\SensitiveFileService::class)->store($request->file('file'), $storageFolder, [
+            'area' => 'file_manager_version',
+            'file_id' => $record->id,
+            'versione_precedente' => $record->versione,
+        ]);
 
-        $record->path_filename = $storageFolder.'/'.$fileName;
-        $record->filename_originale = $filePath->getClientOriginalName();
-        $record->dimensione_file = $filePath->getSize();
+        $record->path_filename = $stored['path'];
+        $record->filename_originale = $stored['original_name'];
+        $record->dimensione_file = $stored['size'];
         $record->categoria_documentale = $request->input('categoria_documentale', $record->categoria_documentale);
         $record->tags_documentali = $request->filled('tags_documentali')
             ? $this->parseTags($request->input('tags_documentali'))
@@ -623,10 +623,10 @@ class CartellaFilesController extends Controller
         $record = File::find($id);
         abort_if(! $record, 404, 'File non trovato');
         abort_if(! $this->canAccessFile($record), 403, 'File non disponibile');
-        abort_if(! Storage::exists($record->path_filename), 404, 'File non disponibile sul disco');
 
-        $path = Storage::path($record->path_filename);
-        $mimeType = Storage::mimeType($record->path_filename) ?: 'application/octet-stream';
+        $sensitiveFiles = app(\App\Http\Services\SensitiveFileService::class);
+        abort_if(! $sensitiveFiles->exists($record->path_filename), 404, 'File non disponibile sul disco');
+        $mimeType = $sensitiveFiles->mimeType((string) $record->path_filename);
 
         $previewable = Str::startsWith($mimeType, 'image/')
             || Str::contains($mimeType, ['pdf', 'text/plain', 'text/csv', 'application/json']);
@@ -637,9 +637,9 @@ class CartellaFilesController extends Controller
 
         $this->registraAudit('preview', $record);
 
-        return response()->file($path, [
-            'Content-Type' => $mimeType,
-            'Content-Disposition' => 'inline; filename="'.addslashes($record->filename_originale).'"',
+        return $sensitiveFiles->inline((string) $record->path_filename, (string) $record->filename_originale, [
+            'area' => 'file_manager',
+            'file_id' => $record->id,
         ]);
     }
 
@@ -679,7 +679,11 @@ class CartellaFilesController extends Controller
 
         $this->registraAudit('download', $record);
 
-        return response()->download(Storage::path($record->path_filename), $record->filename_originale);
+        return app(\App\Http\Services\SensitiveFileService::class)->download(
+            (string) $record->path_filename,
+            (string) $record->filename_originale,
+            ['area' => 'file_manager', 'file_id' => $record->id]
+        );
     }
 
     public function downloadMultiplo(Request $request)
@@ -709,7 +713,7 @@ class CartellaFilesController extends Controller
         $usedNames = [];
         $aggiunti = 0;
         foreach ($files as $file) {
-            if (! Storage::exists($file->path_filename)) {
+            if (! app(\App\Http\Services\SensitiveFileService::class)->exists($file->path_filename)) {
                 continue;
             }
 
@@ -724,7 +728,7 @@ class CartellaFilesController extends Controller
             }
 
             $usedNames[$nomeFinale] = true;
-            $zip->addFile(Storage::path($file->path_filename), $nomeFinale);
+            $zip->addFile(app(\App\Http\Services\SensitiveFileService::class)->absolutePath((string) $file->path_filename), $nomeFinale);
             $aggiunti++;
 
             $this->registraAudit('download_multiplo', $file, [
@@ -803,9 +807,11 @@ class CartellaFilesController extends Controller
         if ($share->file_id) {
             $record = File::find($share->file_id);
             abort_if(! $record, 404, 'File non più disponibile');
-            $path = Storage::path($record->path_filename);
-
-            return response()->download($path, $record->filename_originale);
+            return app(\App\Http\Services\SensitiveFileService::class)->download(
+                (string) $record->path_filename,
+                (string) $record->filename_originale,
+                ['area' => 'share_link', 'share_link_id' => $share->id, 'file_id' => $record->id]
+            );
         }
 
         $folder = CartellaFiles::find($share->cartella_id);
@@ -962,11 +968,12 @@ class CartellaFilesController extends Controller
             return null;
         }
 
-        if (! Storage::exists($storedPath)) {
+        $sensitiveFiles = app(\App\Http\Services\SensitiveFileService::class);
+        if (! $sensitiveFiles->exists($storedPath)) {
             return null;
         }
 
-        $content = (string) Storage::get($storedPath);
+        $content = (string) file_get_contents($sensitiveFiles->absolutePath($storedPath));
         $content = strip_tags($content);
         $content = preg_replace('/\s+/', ' ', $content ?? '');
 
@@ -1112,7 +1119,7 @@ class CartellaFilesController extends Controller
 
         $usedNames = [];
         foreach ($files as $file) {
-            if (! Storage::exists($file->path_filename)) {
+            if (! app(\App\Http\Services\SensitiveFileService::class)->exists($file->path_filename)) {
                 continue;
             }
 
@@ -1133,7 +1140,7 @@ class CartellaFilesController extends Controller
             }
 
             $usedNames[$safeEntry] = true;
-            $zip->addFile(Storage::path($file->path_filename), $safeEntry);
+            $zip->addFile(app(\App\Http\Services\SensitiveFileService::class)->absolutePath((string) $file->path_filename), $safeEntry);
         }
 
         $zip->close();
