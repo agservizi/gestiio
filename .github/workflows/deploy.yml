@@ -22,7 +22,7 @@ jobs:
         run: find app config database routes resources -name "*.php" -print0 | xargs -0 -n1 php -l
 
       - name: Package
-        run: tar --exclude='.git' --exclude='node_modules' --exclude='.env' -czf gestiio-release.tar.gz .
+        run: tar --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='gestiio-release.tar.gz' -czf gestiio-release.tar.gz .
 
       - name: Upload Release
         uses: appleboy/scp-action@v0.1.7
