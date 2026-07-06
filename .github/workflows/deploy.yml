@@ -22,7 +22,9 @@ jobs:
         run: find app config database routes resources -name "*.php" -print0 | xargs -0 -n1 php -l
 
       - name: Package
-        run: tar --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='gestiio-release.tar.gz' -czf gestiio-release.tar.gz .
+        run: |
+          mkdir -p .deploy-tmp
+          tar --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='.deploy-tmp' -czf .deploy-tmp/gestiio-release.tar.gz .
 
       - name: Upload Release
         uses: appleboy/scp-action@v0.1.7
@@ -30,8 +32,9 @@ jobs:
           host: ${{ secrets.NAS_HOST }}
           username: ${{ secrets.NAS_USER }}
           key: ${{ secrets.NAS_SSH_KEY }}
-          source: gestiio-release.tar.gz
+          source: .deploy-tmp/gestiio-release.tar.gz
           target: /tmp
+          strip_components: 1
 
       - name: Deploy With Rollback
         uses: appleboy/ssh-action@v1.2.0
