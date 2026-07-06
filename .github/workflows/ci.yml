@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  laravel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, intl, pdo_mysql, zip, bcmath, gd
+          coverage: none
+
+      - name: Validate Composer
+        run: composer validate --strict
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHP Syntax Check
+        run: find app config database routes resources -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Prepare Laravel
+        run: |
+          cp .env.example .env || true
+          php artisan key:generate --ansi || true
+          php artisan config:clear
+
+      - name: Route Smoke
+        run: php artisan route:list >/dev/null
+
+      - name: Tests
+        run: php artisan test

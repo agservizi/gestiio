@@ -52,7 +52,7 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="text-gray-800 fs-6">{!! $messaggio->messaggio !!}</div>
+                            <div class="text-gray-800 fs-6">{!! \Illuminate\Support\Str::of($messaggio->messaggio)->stripTags('<p><br><b><i><u><strong><em><ul><ol><li><a><span><div><h1><h2><h3><h4><h5><h6>') !!}</div>
                             @if($messaggio->allegati->count())
                                 <div class="mt-4 pt-4 border-top border-gray-200">
                                     <div class="text-muted fs-8 text-uppercase fw-bold mb-2">Allegati</div>
@@ -136,12 +136,14 @@
                     </form>
 
                     <div class="fv-row mt-8">
-                        <div class="dropzone" id="kt_dropzonejs_example_1">
+                        <div class="dropzone gestiio-dropzone" id="kt_dropzonejs_example_1">
                             <div class="dz-message needsclick">
-                                <i class="bi bi-file-earmark-arrow-up text-primary fs-3x"></i>
-                                <div class="ms-4">
-                                    <h3 class="fs-5 fw-bolder text-gray-900 mb-1">Trascina file o clicca per allegare</h3>
-                                    <span class="fs-7 fw-bold text-gray-400">Allega documenti, riscontri o screenshot utili alla risoluzione.</span>
+                                <span class="gestiio-dropzone-icon">
+                                    <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                                </span>
+                                <div>
+                                    <h3>Trascina i file qui o clicca per allegarli</h3>
+                                    <span>Documenti, riscontri o screenshot utili alla risoluzione.</span>
                                 </div>
                             </div>
                         </div>
@@ -235,6 +237,7 @@
     </div>
 @endsection
 
+@include('Backend._components.dropzoneUx')
 @push('customScript')
     <script src="/assets_backend/js-progetto/ckeditor5/build/ckeditor.js"></script>
     <script>
@@ -287,47 +290,17 @@
                 });
             });
 
-            var myDropzone = new Dropzone('#kt_dropzonejs_example_1', {
-                url: "{{action([\App\Http\Controllers\Frontend\TicketController::class,'uploadAllegato'])}}",
-                paramName: 'file',
+            initGestiioDropzone('#kt_dropzonejs_example_1', {
+                uploadUrl: "{{action([\App\Http\Controllers\Frontend\TicketController::class,'uploadAllegato'])}}",
+                deleteUrl: "{{ action([\App\Http\Controllers\Frontend\TicketController::class,'deleteAllegato']) }}",
+                csrfToken: "{{ csrf_token() }}",
                 maxFiles: 10,
                 maxFilesize: 20,
-                addRemoveLinks: true,
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                init: function () {
-                    thisDropzone = this;
-                    this.on('sending', function (file, xhr, formData) {
-                        formData.append('uid', $('#uid').val());
-                    });
-                    const esistenti = @json(\App\Models\AllegatoMessaggioTicket::perBlade($uid,null));
-                    if (esistenti) {
-                        $.each(esistenti, function (key, value) {
-                            var mockFile = {name: value.path_filename, size: value.dimensione_file, filename: value.path_filename, id: value.id};
-                            thisDropzone.emit('addedfile', mockFile);
-                            if (value.tipo_file === 'immagine') {
-                                thisDropzone.emit('thumbnail', mockFile, '/storage/' + value.path_filename);
-                            }
-                            thisDropzone.emit('complete', mockFile);
-                        });
+                existingFiles: @json(\App\Models\AllegatoMessaggioTicket::perBlade($uid,null)),
+                sendingData: {
+                    uid: function () {
+                        return $('#uid').val();
                     }
-                },
-                success: function (file, response) {
-                    file.filename = response.filename;
-                    file.id = response.id;
-                },
-                removedfile: function (file) {
-                    $.ajax({
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
-                        },
-                        type: 'DELETE',
-                        url: '{{ action([\App\Http\Controllers\Frontend\TicketController::class,'deleteAllegato']) }}',
-                        data: {id: file.id}
-                    });
-                    var fileRef;
-                    return (fileRef = file.previewElement) != null ? fileRef.parentNode.removeChild(file.previewElement) : void 0;
                 }
             });
         });

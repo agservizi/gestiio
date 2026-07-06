@@ -448,7 +448,7 @@ class ServizioFinanziarioController extends Controller
             $user->nome = $servizioFinanziario->nome;
             $user->cognome = $servizioFinanziario->cognome;
             $user->email = $servizioFinanziario->email;
-            $password = rand(11111111, 99999999);
+            $password = Str::random(16);
             $user->password = Hash::make($password);
             $user->telefono = $servizioFinanziario->cellulare;
             $user->save();

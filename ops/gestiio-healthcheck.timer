@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Gestiio production healthcheck every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=gestiio-healthcheck.service
+
+[Install]
+WantedBy=timers.target

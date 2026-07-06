@@ -1,5 +1,5 @@
 @extends('Backend._layout._main')
-@section('titolo','Registro login')
+@section('titolo','Registro licenze')
 @section('content')
     <div class="card">
         <div class="card-body">

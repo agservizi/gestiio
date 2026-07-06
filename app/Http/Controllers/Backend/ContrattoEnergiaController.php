@@ -565,13 +565,9 @@ class ContrattoEnergiaController extends Controller
      */
     public function show($id)
     {
-        $record = ContrattoEnergia::find($id);
+        $record = ContrattoEnergia::with(['gestore', 'agente:id,nome,cognome,alias', 'esito', 'prodotto', 'allegati'])->find($id);
         abort_if(! $record, 404, 'Questo ContrattoEnergia non esiste');
-        if (false) {
-            $eliminabile = 'Non eliminabile perchè presente in ...';
-        } else {
-            $eliminabile = true;
-        }
+        $eliminabile = true;
         $puoCreare = $this->currentUser()->hasAnyPermission(['admin', 'agente']);
 
         return view('Backend.ContrattoEnergia.show', [
@@ -798,9 +794,7 @@ class ContrattoEnergiaController extends Controller
         $record = ContrattoEnergia::find($id);
         abort_if(! $record, 404, 'Questo ContrattoEnergia non esiste');
 
-        foreach ($record->allegati as $allegato) {
-            $allegato->delete();
-        }
+        $record->allegati()->delete();
         $record->delete();
 
         return [
@@ -1194,7 +1188,7 @@ class ContrattoEnergiaController extends Controller
                 $user->nome = $cliente->nome;
                 $user->cognome = $cliente->cognome;
                 $user->email = $cliente->email;
-                $password = rand(11111111, 99999999);
+                $password = Str::random(16);
                 $user->password = Hash::make($password);
                 $user->telefono = $cliente->telefono;
                 $user->save();

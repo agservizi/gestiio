@@ -16,85 +16,49 @@
     </div>
 
     <div class="fv-row">
-        <div class="dropzone" id="kt_dropzonejs_example_1">
+        <div class="dropzone gestiio-dropzone" id="kt_dropzonejs_example_1">
             <div class="dz-message needsclick">
-                <i class="bi bi-file-earmark-arrow-up text-primary fs-3x"></i>
-
-                <div class="ms-4">
-                    <h3 class="fs-5 fw-bolder text-gray-900 mb-1">Trascina il file qui o clicca per selezionare i files</h3>
-                    <span class="fs-7 fw-bold text-gray-400">
-                                            <span>Qui puoi allegare i documenti relativi al contratto</span>
-
-                                        </span>
+                <span class="gestiio-dropzone-icon">
+                    <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                </span>
+                <div>
+                    <h3>Trascina i file qui o clicca per selezionarli</h3>
+                    <span>Carica documenti nella cartella selezionata con categoria, tag e scadenza.</span>
                 </div>
             </div>
         </div>
     </div>
-
+@endsection
+@include('Backend._components.dropzoneUx')
+@push('customScript')
     <script>
         var canDeleteFiles = @json($canDeleteFiles ?? false);
-        var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
-            url: "{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'upload'],$id)}}", // Set the url for your upload script location
-            paramName: "file", // The name that will be used to transfer the file
+        initGestiioDropzone("#kt_dropzonejs_example_1", {
+            uploadUrl: "{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'upload'],$id)}}",
+            deleteUrl: "{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'cancellaFile'])}}",
+            csrfToken: "{{ csrf_token() }}",
             maxFiles: 10,
-            maxFilesize: 50, // MB
+            maxFilesize: 50,
             addRemoveLinks: canDeleteFiles,
-            //acceptedFiles: "image/*",
-            headers: {
-                'X-CSRF-TOKEN': "{{ csrf_token() }}"
-            },
-            init: function () {
-                thisDropzone = this;
-                this.on("sending", function (file, xhr, formData) {
-                    formData.append("uid", $('#uid').val());
-                    formData.append("categoria_documentale", $('#categoria_documentale').val());
-                    formData.append("tags_documentali", $('#tags_documentali').val());
-                    formData.append("expires_at", $('#expires_at').val());
-                });
-
-            },
-            accept: function (file, done) {
-                if (file.name == "q") {
-                    done("Naha, you don't.");
-                } else {
-                    done();
+            sendingData: {
+                uid: function () {
+                    return $('#uid').val();
+                },
+                categoria_documentale: function () {
+                    return $('#categoria_documentale').val();
+                },
+                tags_documentali: function () {
+                    return $('#tags_documentali').val();
+                },
+                expires_at: function () {
+                    return $('#expires_at').val();
                 }
             },
-            success: function (file, response) {
-                file.filename = response.filename;
-                file.id = response.id;
-                console.dir(file);
-
-
+            onSuccess: function () {
                 reloadFiles();
-
-
             },
-            removedfile: function (file) {
-                if (!canDeleteFiles) {
-                    return;
-                }
-                console.dir(file);
-                var name = file.filename;
-                $.ajax({
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
-                    },
-                    type: 'DELETE',
-                    url: '{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'cancellaFile'])}}',
-                    data: {
-                        id: file.id
-                    },
-                    success: function (data) {
-                        reloadFiles();
-
-                    },
-                    error: function (e) {
-                    }
-                });
-                var fileRef;
-                return (fileRef = file.previewElement) != null ?
-                    fileRef.parentNode.removeChild(file.previewElement) : void 0;
+            onRemoved: function () {
+                reloadFiles();
             },
         });
 
@@ -109,7 +73,7 @@
 
                         $('#elenco-files').html(base64_decode(response.html));
                     } else {
-                        alert(response.message);
+                        gestiioToast('error', response.message || 'Impossibile aggiornare i file.');
                     }
 
                 }
@@ -118,4 +82,4 @@
         }
 
     </script>
-@endsection
+@endpush

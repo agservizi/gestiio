@@ -12,12 +12,16 @@ use App\Models\ContrattoEnergia;
 use App\Models\ContrattoTelefonia;
 use App\Models\EsitoCafPatronato;
 use App\Models\EsitoVisura;
+use App\Models\FileAuditLog;
 use App\Models\File;
 use App\Models\AiSuggestion;
+use App\Models\GuadagnoAgenzia;
+use App\Models\MovimentoPortafoglio;
 use App\Models\ProduzioneOperatore;
 use App\Models\RegistroLogin;
 use App\Models\RichiestaAssistenza;
 use App\Models\SpedizioneBrt;
+use App\Models\SpedizioneInpost;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Visura;
@@ -30,12 +34,27 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use robertogallea\LaravelCodiceFiscale\CodiceFiscale;
 
 use function App\mese;
 
 class DashboardController extends Controller
 {
+    protected ?array $tableExistsCache = null;
+
+    protected function tableExists(string $table): bool
+    {
+        if ($this->tableExistsCache === null) {
+            $this->tableExistsCache = [];
+            foreach (['chat_thread_users', 'chat_messages', 'ai_suggestions', 'ai_events', 'files_audit_logs', 'produzioni_operatori', 'users'] as $t) {
+                $this->tableExistsCache[$t] = Schema::hasTable($t);
+            }
+        }
+
+        return $this->tableExistsCache[$table] ?? Schema::hasTable($table);
+    }
+
     protected function salutoDashboard(): string
     {
         /** @var User|null $user */
@@ -82,7 +101,7 @@ class DashboardController extends Controller
 
     protected function produzioneDisponibile(): bool
     {
-        return Schema::hasTable('produzioni_operatori');
+        return $this->tableExists('produzioni_operatori');
     }
 
     public function show(Request $request)
@@ -321,7 +340,7 @@ class DashboardController extends Controller
             'nuovi_messaggi_oggi' => 0,
         ];
 
-        if (Schema::hasTable('chat_thread_users') && Schema::hasTable('chat_messages')) {
+        if ($this->tableExists('chat_thread_users') && $this->tableExists('chat_messages')) {
             $threadIds = ChatThreadUser::query()
                 ->where('user_id', $id)
                 ->pluck('thread_id');
@@ -441,6 +460,8 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
+        $controlRoomAdmin = $this->controlRoomAdmin((int) $filtroAnno, (int) $filtroMese, $guadagno = GuadagnoAgenzia::firstOrNew(['mese' => $filtroMese, 'anno' => $filtroAnno]));
+
         $azioniRapide = RichiestaAssistenza::query()
             ->with(['cliente:id,nome,cognome,codice_fiscale,email,telefono', 'prodotto:id,nome'])
             ->where(function ($q) {
@@ -466,7 +487,7 @@ class DashboardController extends Controller
             'nuovi_messaggi_oggi' => 0,
         ];
 
-        if (Schema::hasTable('chat_thread_users') && Schema::hasTable('chat_messages')) {
+        if ($this->tableExists('chat_thread_users') && $this->tableExists('chat_messages')) {
             $threadIds = ChatThreadUser::query()
                 ->where('user_id', $id)
                 ->pluck('thread_id');
@@ -488,7 +509,7 @@ class DashboardController extends Controller
             }
         }
 
-        $aiSuggestions = Schema::hasTable('ai_suggestions')
+        $aiSuggestions = $this->tableExists('ai_suggestions')
             ? AiSuggestion::query()
                 ->where('audience', 'admin')
                 ->where('status', 'new')
@@ -501,7 +522,7 @@ class DashboardController extends Controller
                 ->values()
             : collect();
 
-        if (Schema::hasTable('ai_events')) {
+        if ($this->tableExists('ai_events')) {
             app(AiAutomationService::class)->dispatchOncePerWindow('admin_control_tower_opened', [
                 'ticket_aperti' => (int) ($kpiDashboard['ticket_aperti'] ?? 0),
                 'ticket_chiusi' => (int) ($conteggioTikets->get('chiuso')->conteggio ?? 0),
@@ -526,11 +547,207 @@ class DashboardController extends Controller
             'filtroMese' => $filtroMese,
             'kpiDashboard' => $kpiDashboard,
             'alertDashboard' => $alertDashboard,
+            'controlRoomAdmin' => $controlRoomAdmin,
             'azioniRapide' => $azioniRapide,
             'chatDashboard' => $chatDashboard,
             'aiSuggestions' => $aiSuggestions,
         ]);
 
+    }
+
+    protected function controlRoomAdmin(int $anno, int $mese, GuadagnoAgenzia $guadagno): array
+    {
+        $startMonth = now()->setDate($anno, $mese, 1)->startOfMonth();
+        $endMonth = $startMonth->copy()->endOfMonth();
+
+        $count = function (string $model, ?callable $scope = null): int {
+            try {
+                $query = $model::query()->withoutGlobalScopes();
+                if ($scope) {
+                    $scope($query);
+                }
+
+                return (int) $query->count();
+            } catch (\Throwable $e) {
+                return 0;
+            }
+        };
+
+        $sum = function (string $model, string $column, ?callable $scope = null): float {
+            try {
+                $query = $model::query()->withoutGlobalScopes();
+                if ($scope) {
+                    $scope($query);
+                }
+
+                return (float) $query->sum($column);
+            } catch (\Throwable $e) {
+                return 0.0;
+            }
+        };
+
+        $code = [
+            [
+                'label' => 'CAF',
+                'count' => $count(CafPatronato::class, fn ($q) => $q->whereNull('esito_finale')),
+                'url' => action([CafPatronatoController::class, 'index']),
+                'tone' => 'primary',
+            ],
+            [
+                'label' => 'Visure',
+                'count' => $count(Visura::class, fn ($q) => $q->whereNull('esito_finale')),
+                'url' => action([VisuraController::class, 'index']),
+                'tone' => 'info',
+            ],
+            [
+                'label' => 'Spedizioni',
+                'count' => $count(SpedizioneBrt::class, fn ($q) => $q->whereBetween('created_at', [now()->subDays(30), now()]))
+                    + $count(SpedizioneInpost::class, fn ($q) => $q->whereBetween('created_at', [now()->subDays(30), now()])),
+                'url' => action([SpedizioneInpostController::class, 'index']),
+                'tone' => 'success',
+            ],
+            [
+                'label' => 'Assistenze',
+                'count' => $count(RichiestaAssistenza::class, fn ($q) => $q->whereBetween('created_at', [$startMonth, $endMonth])),
+                'url' => action([RichiestaAssistenzaController::class, 'index']),
+                'tone' => 'warning',
+            ],
+            [
+                'label' => 'Ticket',
+                'count' => $count(Ticket::class, fn ($q) => $q->where('stato', '<>', 'chiuso')),
+                'url' => action([TicketsController::class, 'index']),
+                'tone' => 'danger',
+            ],
+            [
+                'label' => 'Contratti',
+                'count' => $count(ContrattoTelefonia::class, fn ($q) => $q->whereBetween('data', [$startMonth, $endMonth]))
+                    + $count(ContrattoEnergia::class, fn ($q) => $q->whereBetween('data', [$startMonth, $endMonth])),
+                'url' => action([ContrattoTelefoniaController::class, 'index']),
+                'tone' => 'dark',
+            ],
+        ];
+
+        $alert = [
+            [
+                'label' => 'Pratiche ferme',
+                'count' => $count(CafPatronato::class, fn ($q) => $q->whereNull('esito_finale')->where('created_at', '<=', now()->subDays(5)))
+                    + $count(Visura::class, fn ($q) => $q->whereNull('esito_finale')->where('created_at', '<=', now()->subDays(5))),
+                'url' => action([CafPatronatoController::class, 'index']),
+                'severity' => 'danger',
+            ],
+            [
+                'label' => 'Errori spedizioni',
+                'count' => $count(SpedizioneBrt::class, fn ($q) => $q->where('response', 'like', '%ERROR%'))
+                    + $count(SpedizioneInpost::class, fn ($q) => $q->where(function ($query) {
+                        $query->where('esito', 'ERROR')->orWhere('response', 'like', '%ERROR%')->orWhere('response', 'like', '%FAILED%');
+                    })),
+                'url' => action([SpedizioneInpostController::class, 'index']),
+                'severity' => 'warning',
+            ],
+            [
+                'label' => 'Plafond bassi',
+                'count' => $count(User::class, fn ($q) => $q->whereHas('agente', function ($query) {
+                    $query->where('portafoglio_servizi', '<', 10)
+                        ->orWhere('portafoglio_spedizioni', '<', 10)
+                        ->orWhere('portafoglio_visure', '<', 10);
+                })),
+                'url' => action([AgenteController::class, 'index']),
+                'severity' => 'warning',
+            ],
+            [
+                'label' => 'Richieste non gestite',
+                'count' => $count(RichiestaAssistenza::class, fn ($q) => $q->where(function ($query) {
+                    $query->whereNull('nome_utente')->orWhere('nome_utente', '')
+                        ->orWhereNull('password')->orWhere('password', '')
+                        ->orWhereNull('pin')->orWhere('pin', '');
+                })),
+                'url' => action([RichiestaAssistenzaController::class, 'index']),
+                'severity' => 'danger',
+            ],
+        ];
+
+        $economico = [
+            'entrate' => (float) ($guadagno->entrate ?? 0),
+            'uscite' => (float) ($guadagno->uscite ?? 0),
+            'utile' => (float) ($guadagno->utile ?? 0),
+            'assistenze_5' => $sum(RichiestaAssistenza::class, 'importo_economico', fn ($q) => $q
+                ->whereBetween('created_at', [$startMonth, $endMonth])
+                ->where('economico_contabilizzato', true)),
+            'ricariche_plafond' => $sum(MovimentoPortafoglio::class, 'importo', fn ($q) => $q
+                ->where('importo', '>', 0)
+                ->whereBetween('created_at', [$startMonth, $endMonth])),
+            'produzione_agenti' => $count(ProduzioneOperatore::class, fn ($q) => $q->where('anno', $anno)->where('mese', $mese)),
+        ];
+
+        $audit = $this->tableExists('files_audit_logs')
+            ? FileAuditLog::query()
+                ->with('utente:id,nome,cognome')
+                ->latest('id')
+                ->limit(6)
+                ->get()
+            : collect();
+
+        return [
+            'code' => $code,
+            'alert' => $alert,
+            'economico' => $economico,
+            'audit' => $audit,
+            'azioni' => [
+                ['label' => 'Assegna pratica', 'url' => action([CafPatronatoController::class, 'index'])],
+                ['label' => 'Sollecita agente', 'url' => action([AgenteController::class, 'index'])],
+                ['label' => 'Chiudi ticket', 'url' => action([TicketsController::class, 'index'])],
+                ['label' => 'Ricarica plafond', 'url' => action([RicaricaPlafonController::class, 'show'])],
+                ['label' => 'Sposta plafond', 'url' => action([PortafoglioController::class, 'index'])],
+                ['label' => 'Genera proforma', 'url' => url('/backend/fattura-proforma')],
+            ],
+            'salute' => $this->systemHealthSnapshot(),
+        ];
+    }
+
+    protected function systemHealthSnapshot(): array
+    {
+        $backupFiles = collect();
+
+        try {
+            if (Storage::disk('local')->exists('backup-database')) {
+                $backupFiles = collect(Storage::disk('local')->allFiles('backup-database'))
+                    ->map(fn ($path) => [
+                        'path' => $path,
+                        'modified' => Storage::disk('local')->lastModified($path),
+                        'size' => Storage::disk('local')->size($path),
+                    ])
+                    ->sortByDesc('modified')
+                    ->values();
+            }
+        } catch (\Throwable $e) {
+            $backupFiles = collect();
+        }
+
+        $lastBackup = $backupFiles->first();
+        $lastBackupAt = $lastBackup ? Carbon::createFromTimestamp($lastBackup['modified']) : null;
+
+        return [
+            [
+                'label' => 'Database',
+                'value' => $this->tableExists('users') ? 'OK' : 'Da verificare',
+                'tone' => $this->tableExists('users') ? 'success' : 'danger',
+            ],
+            [
+                'label' => 'Ultimo backup app',
+                'value' => $lastBackupAt ? $lastBackupAt->diffForHumans() : 'Non trovato',
+                'tone' => $lastBackupAt && $lastBackupAt->greaterThan(now()->subDay()) ? 'success' : 'warning',
+            ],
+            [
+                'label' => 'Docker/NAS',
+                'value' => 'App attiva',
+                'tone' => 'success',
+            ],
+            [
+                'label' => 'Tunnel Cloudflare',
+                'value' => request()->isSecure() ? 'HTTPS attivo' : 'Da verificare',
+                'tone' => request()->isSecure() ? 'success' : 'warning',
+            ],
+        ];
     }
 
     /**
@@ -847,7 +1064,7 @@ class DashboardController extends Controller
             ? ProduzioneOperatore::findByIdAnnoMese($id, $mesePrecedente->year, $mesePrecedente->month)
             : null;
 
-        $aiSuggestions = Schema::hasTable('ai_suggestions')
+        $aiSuggestions = $this->tableExists('ai_suggestions')
             ? AiSuggestion::query()
                 ->where('user_id', Auth::id())
                 ->where('audience', 'agente')
@@ -861,7 +1078,7 @@ class DashboardController extends Controller
                 ->values()
             : collect();
 
-        if (Schema::hasTable('ai_events')) {
+        if ($this->tableExists('ai_events')) {
             $queueTotale = $ticketDaPrendereInCarico->count() + $visureInAttesaDocumenti->count() + $cafInAttesaDocumenti->count() + $scadenzeOggi->count();
             $walletAgente = Auth::user()->agente;
             $automation = app(AiAutomationService::class);

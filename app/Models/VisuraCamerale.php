@@ -46,17 +46,17 @@ class VisuraCamerale extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function cliente()
     {
-        return $this->hasOne(Cliente::class, 'id', 'cliente_id');
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
     public function contratto()
     {
-        return $this->hasOne(ContrattoTelefonia::class, 'id', 'contratto_id');
+        return $this->belongsTo(ContrattoTelefonia::class, 'contratto_id');
     }
 
     /*

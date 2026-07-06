@@ -58,7 +58,7 @@ class SpedizioneBrt extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function chiamate(): MorphMany
@@ -68,7 +68,7 @@ class SpedizioneBrt extends Model
 
     public function caricatoDa()
     {
-        return $this->hasOne(User::class, 'id', 'caricato_da_user_id');
+        return $this->belongsTo(User::class, 'caricato_da_user_id');
     }
 
     /*

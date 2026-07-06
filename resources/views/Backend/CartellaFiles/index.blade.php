@@ -49,6 +49,26 @@
     <script>
         var indexUrl = '{{action([$controller,'index'])}}';
 
+        function notificaCartella(type, message) {
+            if (window.gestiioToast) {
+                gestiioToast(type, message);
+                return;
+            }
+            if (window.toastr && typeof toastr[type] === 'function') {
+                toastr[type](message);
+                return;
+            }
+            Swal.fire({
+                text: message,
+                icon: type === 'error' ? 'error' : 'success',
+                buttonsStyling: false,
+                confirmButtonText: 'Ok',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+
         $(function () {
 
             const $filterSearch = $('#filter_search');
@@ -133,15 +153,15 @@
 
                             $('#elenco-files').html(base64_decode(response.html));
                         } else {
-                            alert(response.message);
+                            notificaCartella('error', response.message || 'Impossibile aprire la cartella.');
                         }
 
                     },
                     error: function (xhr, ajaxOptions, thrownError) {
-                        var err = eval("(" + xhr.responseText + ")");
+                        var err = xhr.responseJSON || {};
                         Swal.fire(
                             "Errore " + xhr.status,
-                            err.message,
+                            err.message || 'Impossibile aprire la cartella.',
                             "error"
                         )
                     }

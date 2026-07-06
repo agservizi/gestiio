@@ -6,7 +6,6 @@ use App\Models\Notifica;
 use App\Models\NotificaLettura;
 use App\Models\User;
 use App\Support\UserNotificationPreferences;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -48,6 +47,10 @@ class MenuNotifiche extends Component
         $this->notifiche = Notifica::query()
             ->whereDate('created_at', '>=', $authUser->created_at)
             ->where('destinatario', $destinatario)
+            ->where(function ($q) {
+                $q->whereNull('user_id')
+                    ->orWhere('user_id', Auth::id());
+            })
             ->orderByDesc('id')
             ->whereDoesntHave('letture', function ($q) {
                 $q->where('user_id', Auth::id());
@@ -81,6 +84,10 @@ class MenuNotifiche extends Component
         if ($this->conteggio < 6) {
             $this->notifiche = $this->notifiche->merge(Notifica::query()
                 ->where('destinatario', $destinatario)
+                ->where(function ($q) {
+                    $q->whereNull('user_id')
+                        ->orWhere('user_id', Auth::id());
+                })
                 ->orderByDesc('id')
                 ->whereHas('letture', function ($q) {
                     $q->where('user_id', Auth::id());
@@ -91,11 +98,6 @@ class MenuNotifiche extends Component
                 ->limit(6 - $this->conteggio)
                 ->get());
         }
-
-        dispatch(function () {
-            Artisan::call('queue:work --once');
-        })->afterResponse();
-
     }
 
     public function hydrate()

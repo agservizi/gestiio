@@ -1,0 +1,16 @@
+[Unit]
+Description=Start all Docker containers after NAS boot
+After=network-online.target docker.service DockerEngine.service
+Wants=network-online.target docker.service DockerEngine.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/Volume1/homes/Carmine/start-all-docker-containers.sh
+TimeoutStartSec=10min
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

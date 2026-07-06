@@ -1,2 +1,13 @@
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /backend/
+Disallow: /area-personale/
+Disallow: /area-utente/
+Disallow: /dati-utente/
+Disallow: /ticket/
+Disallow: /documenti/condivisi/
+Disallow: /webhook/
+Disallow: /select2
+Disallow: /select2front
+
+Sitemap: https://gestiio.agenziaplinio.it/sitemap.xml

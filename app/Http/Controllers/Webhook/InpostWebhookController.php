@@ -43,7 +43,7 @@ class InpostWebhookController extends Controller
     {
         $secret = (string) config('services.inpost.webhook_secret');
         if ($secret === '') {
-            return true;
+            return false;
         }
 
         $plainSecret = $request->header('X-Webhook-Secret');

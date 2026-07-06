@@ -139,9 +139,7 @@ class OpenApiCatastoService
         }
 
         return (string) (config('services.openapi.bearer_catasto')
-            ?: env('OPENAPI_BEARER_CATASTO')
-            ?: config('services.openapi.bearer_visure')
-            ?: env('OPENAPI_BEARER'));
+            ?: config('services.openapi.bearer_visure'));
     }
 
     protected function extractFilenameFromDisposition(string $disposition): ?string

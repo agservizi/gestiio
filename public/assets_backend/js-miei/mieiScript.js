@@ -5,9 +5,93 @@ $(function () {
         }
 
     });
+
+    $(document).ajaxError(function (event, xhr) {
+        if (xhr && (xhr.status === 401 || xhr.status === 419)) {
+            gestiioHandleAjaxError(xhr, 'Sessione scaduta.', true);
+        }
+    });
 });
 
 var urlSelect2 = '/select2';
+var gestiioSessionExpiredShown = false;
+
+function gestiioNotify(type, message, title) {
+    var icon = type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'success');
+
+    if (window.toastr && typeof toastr[type] === 'function') {
+        toastr[type](message, title || '');
+        return;
+    }
+
+    if (window.Swal) {
+        Swal.fire({
+            title: title || '',
+            text: message,
+            icon: icon,
+            buttonsStyling: false,
+            confirmButtonText: 'Ok',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
+}
+
+function gestiioAjaxMessage(xhr, fallback) {
+    var message = fallback || 'Operazione non riuscita.';
+
+    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+        return xhr.responseJSON.message;
+    }
+
+    if (xhr && xhr.responseText) {
+        try {
+            var parsed = JSON.parse(xhr.responseText);
+            if (parsed.message) {
+                return parsed.message;
+            }
+        } catch (e) {
+            if (xhr.status >= 500) {
+                return 'Errore server. Riprova tra poco o ricarica la pagina.';
+            }
+        }
+    }
+
+    return message;
+}
+
+function gestiioHandleAjaxError(xhr, fallback, silentForHandled) {
+    if (!xhr) {
+        gestiioNotify('error', fallback || 'Operazione non riuscita.');
+        return false;
+    }
+
+    if (xhr.gestiioHandled) {
+        return true;
+    }
+
+    if (xhr.status === 401 || xhr.status === 419) {
+        if (!gestiioSessionExpiredShown) {
+            xhr.gestiioHandled = true;
+            gestiioSessionExpiredShown = true;
+            $('.modal.show').modal('hide');
+            gestiioNotify('warning', 'Sessione scaduta. Verrai riportato al login per continuare.', 'Sessione scaduta');
+            setTimeout(function () {
+                window.location.href = '/login';
+            }, 1400);
+        }
+        return true;
+    }
+
+    if (silentForHandled && xhr.status === 422) {
+        return false;
+    }
+
+    xhr.gestiioHandled = true;
+    gestiioNotify('error', gestiioAjaxMessage(xhr, fallback));
+    return false;
+}
 
 function searchHandler() {
     const $filterSearch = $('#filter_search');
@@ -179,12 +263,7 @@ function elimina(url) {
                 }
             },
             error: function (xhr, ajaxOptions, thrownError) {
-                var err = eval("(" + xhr.responseText + ")");
-                Swal.fire(
-                    "Errore " + xhr.status,
-                    err.message,
-                    "error"
-                )
+                gestiioHandleAjaxError(xhr, 'Eliminazione non riuscita.');
             }
         });
 
@@ -206,8 +285,8 @@ function tabAjax() {
             $.get(loadurl, function (data) {
                 $(targ).html(data);
                 //window.livewire.rescan();
-            }).fail(function () {
-                alert('Errore nel caricamento dei contenuti'); // or whatever
+            }).fail(function (xhr) {
+                gestiioHandleAjaxError(xhr, 'Errore nel caricamento dei contenuti.');
             });
 
         } else {
@@ -255,9 +334,7 @@ function modalAjax() {
                 refreshUi(target);
             },
             error: function (xhr, ajaxOptions, thrownError) {
-                var err = eval("(" + xhr.responseText + ")");
-
-                alert(err.message);
+                gestiioHandleAjaxError(xhr, 'Errore nel caricamento del modal.');
             }
 
         });
@@ -291,21 +368,7 @@ function apriModal(url, targetName) {
             refreshUi(target);
         },
         error: function (xhr) {
-            var message = 'Errore nel caricamento del modal';
-
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                message = xhr.responseJSON.message;
-            } else if (xhr.responseText) {
-                try {
-                    var err = JSON.parse(xhr.responseText);
-                    if (err.message) {
-                        message = err.message;
-                    }
-                } catch (e) {
-                }
-            }
-
-            alert(message);
+            gestiioHandleAjaxError(xhr, 'Errore nel caricamento del modal.');
         }
     });
 }
@@ -337,12 +400,7 @@ function ajaxAzione(url) {
                 }
             },
             error: function (xhr, ajaxOptions, thrownError) {
-                var err = eval("(" + xhr.responseText + ")");
-                Swal.fire(
-                    "Errore " + xhr.status,
-                    err.message,
-                    "error"
-                )
+                gestiioHandleAjaxError(xhr, 'Operazione non riuscita.');
             }
         });
 
@@ -419,9 +477,6 @@ function formSubmit(obj) {
             dataType: 'json',
             success: function (resp) {
 
-                //todo: provare a gestire l'errore con
-                //jQuery("body").html(resp.responseText);
-
                 if (resp.success) {
                     cancellaErrori();
 
@@ -439,7 +494,7 @@ function formSubmit(obj) {
                         if (resp.oggettoReload !== '') {
                             var oggettoReload = $('#' + resp.oggettoReload);
                             if (oggettoReload.length === 0) {
-                                alert('L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
+                                gestiioNotify('error', 'L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
                             } else {
                                 oggettoReload.html(base64_decode(resp.html));
                             }
@@ -451,7 +506,7 @@ function formSubmit(obj) {
                         if (resp.oggettoReplace !== '') {
                             var oggettoReplace = $('#' + resp.oggettoReplace);
                             if (oggettoReplace.length === 0) {
-                                alert('L\'oggetto con ID=' + '#' + resp.oggettoReplace + ' non esiste');
+                                gestiioNotify('error', 'L\'oggetto con ID=' + '#' + resp.oggettoReplace + ' non esiste');
                             } else {
                                 oggettoReplace.replaceWith(base64_decode(resp.html));
                             }
@@ -485,7 +540,7 @@ function formSubmit(obj) {
 
                         }
                     } else {
-                        alert('Manca chiudiDialog');
+                        gestiioNotify('error', 'Manca chiudiDialog');
                     }
 
                     if (typeof resp.eseguiFunzione !== 'undefined') {
@@ -501,7 +556,7 @@ function formSubmit(obj) {
                     } else {
                         $("#submit").off('click');
 
-                        alert('Errore: '+resp.message);
+                        gestiioNotify('error', 'Errore: ' + resp.message);
                     }
                 }
             },
@@ -514,21 +569,13 @@ function formSubmit(obj) {
                 } else {
                     $("#submit").off('click');
 
-                    alert(resp.responseText);
+                    gestiioHandleAjaxError(resp, 'Salvataggio non riuscito.');
 
                 }
             }
         }
     )
     ;
-
-    /*            .done(function (response) {
-     //
-     })
-     .fail(function (jqXHR, json) {
-     //
-     alert('Ajax fail');
-     });*/
 
     function visualizzaErrori(errori) {
         console.log(errori);
@@ -547,7 +594,7 @@ function formSubmit(obj) {
                 txtList += '\n*' + value;
             });
             console.log(txtList);
-            alert('Si sono verificati degli errori:' + txtList);
+            gestiioNotify('error', 'Si sono verificati degli errori:' + txtList);
         }
 
 
@@ -597,7 +644,7 @@ function formDelete() {
                             if (resp.html !== '' || resp.oggettoReload !== '') {
                                 var oggettoReload = $('#' + resp.oggettoReload);
                                 if (oggettoReload.length === 0) {
-                                    alert('L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
+                                    gestiioNotify('error', 'L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
                                 } else {
                                     oggettoReload.html(base64_decode(resp.html));
                                 }
@@ -615,11 +662,11 @@ function formDelete() {
 
 
                     } else {
-                        alert(resp.message);
+                        gestiioNotify('error', resp.message || 'Eliminazione non riuscita.');
                     }
                 },
-                error: function () {
-                    jQuery("body").html(resp.responseText);
+                error: function (xhr) {
+                    gestiioHandleAjaxError(xhr, 'Eliminazione non riuscita.');
                 }
 
             });
@@ -723,8 +770,8 @@ function segnalaProblema() {
                     $('#kt_modal').modal('show');
 
                 },
-                error: function () {
-                    jQuery("body").html(resp.responseText);
+                error: function (xhr) {
+                    gestiioHandleAjaxError(xhr, 'Impossibile aprire la segnalazione.');
                 }
             });
         //document.body.appendChild(canvas);

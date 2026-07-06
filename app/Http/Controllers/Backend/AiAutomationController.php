@@ -7,6 +7,7 @@ use App\Models\AiAction;
 use App\Models\AiConversation;
 use App\Models\AiEvent;
 use App\Models\AiSuggestion;
+use App\Models\TipoCafPatronato;
 use App\Models\User;
 use App\Services\AiAutomationService;
 use Illuminate\Http\Request;
@@ -142,7 +143,7 @@ class AiAutomationController extends Controller
         $memory = $this->conversationMemory($user, $data['conversation_id'] ?? null, $data['history'] ?? []);
         $memory['workflow'] = $context['workflow'] ?? ($memory['workflow'] ?? null);
         $isRechargeRequest = $this->isRechargeRequest($data['prompt']);
-        $answer = $this->buildChatAnswer($data['prompt'], $area, $audience, $memory);
+        $answer = $this->buildChatAnswer($data['prompt'], $area, $audience, $memory, $context);
         $actions = $this->chatActions($area, $data['prompt'], $memory);
 
         $conversation = AiConversation::create([
@@ -219,7 +220,7 @@ class AiAutomationController extends Controller
         ]);
     }
 
-    protected function buildChatAnswer(string $prompt, array $area, string $audience, array $memory = []): string
+    protected function buildChatAnswer(string $prompt, array $area, string $audience, array $memory = [], array $context = []): string
     {
         $lower = Str::lower($prompt);
         $intent = $this->chatIntent($prompt, $memory);
@@ -238,6 +239,26 @@ class AiAutomationController extends Controller
 
         if (($memory['workflow'] ?? null) === 'recharge_plafond' && Str::contains($lower, ['20', '50', '100', 'servizi', 'spedizioni', 'visure'])) {
             return 'Perfetto. Usa il modulo di ricarica che ho aperto qui in chat: seleziona quel valore, scegli il portafoglio e conferma con la carta.';
+        }
+
+        if ($contextualAnswer = $this->buildContextualPageAnswer($prompt, $area, $context)) {
+            return $contextualAnswer;
+        }
+
+        if ($intent === 'search') {
+            return 'Ok. Dimmi nome, codice fiscale, partita IVA, email o numero pratica. Ti porto nella sezione giusta e mantengo il contesto della ricerca.';
+        }
+
+        if ($intent === 'blocked_case') {
+            return 'Controllo prima dati mancanti, allegati, esito e ultimo aggiornamento. Se mi dai ID pratica o cliente, ti dico cosa blocca la lavorazione e da dove ripartire.';
+        }
+
+        if ($intent === 'massive_action') {
+            if ($audience !== 'admin') {
+                return 'Le azioni massive sono riservate all’admin. Posso però aiutarti a filtrare gli elementi e aprire quelli da lavorare.';
+            }
+
+            return 'Posso preparare una lista controllata, ma prima serve scegliere filtro, elementi e azione. Nessuna modifica massiva parte senza una conferma esplicita.';
         }
 
         if (Str::contains($lower, ['messaggio', 'scrivi', 'risposta cliente'])) {
@@ -263,6 +284,145 @@ class AiAutomationController extends Controller
         return 'Sono su '.$area['label'].'. Posso aiutarti a '.$area['verb'].'. Dimmi l’obiettivo preciso e resto su questo filo finché non lo chiudiamo.';
     }
 
+    protected function buildContextualPageAnswer(string $prompt, array $area, array $context): ?string
+    {
+        $lower = Str::lower($prompt.' '.($context['title'] ?? '').' '.($context['heading'] ?? '').' '.($context['visible_text'] ?? ''));
+
+        $isExplainRequest = Str::contains($lower, [
+            'spiegami', 'spiega', 'cosa è', "cos'è", 'che cos', 'a cosa serve', 'documenti',
+            'allegare', 'serve', 'servono', 'come compilo', 'come si compila', 'cosa devo chiedere',
+            'checklist', 'questa pagina', 'questa pratica',
+        ]);
+
+        if (! $isExplainRequest) {
+            return null;
+        }
+
+        if ($area['key'] === 'caf-patronato') {
+            return $this->cafPatronatoContextAnswer($prompt, $context);
+        }
+
+        return match ($area['key']) {
+            'visura' => "Sei nella sezione Visure. Qui si richiedono documenti ufficiali come visure camerali, catastali, protesti o CRIF. Prima di creare la pratica verifica tipo visura, dati corretti del soggetto, codice fiscale o partita IVA, eventuali deleghe/documenti e portafoglio visure sufficiente. Se mi dici quale visura stai aprendo, ti preparo la checklist precisa.",
+            'spedizione-inpost' => "Sei nelle spedizioni InPost. Qui prepari o controlli spedizioni verso locker/punti InPost. Controlla sempre mittente, destinatario, telefono/email, dimensioni collo, locker o punto scelto, etichetta e tracking. Se una spedizione si blocca, guarda prima stato API, UUID spedizione, tracking e deposito.",
+            'spedizione-brt' => "Sei nelle spedizioni BRT. Qui gestisci spedizione, etichetta e tracking. Prima di confermare servono mittente, destinatario, indirizzo completo, CAP, telefono, peso/colli e servizio scelto. Se qualcosa non va, il primo controllo è su indirizzo, CAP e risposta del corriere.",
+            'richiesta-assistenza' => "Sei nelle Richieste assistenza. Qui gestisci assistenze SPID o recuperi. Chiedi sempre codice fiscale, documento, contatto, tipo richiesta e se è prima attivazione o recupero di uno SPID già attivo: questo cambia anche il conteggio economico.",
+            'cliente-assistenza' => "Sei nei Clienti assistenza. Qui trovi o crei l’anagrafica delle persone seguite per SPID e assistenze. Verifica codice fiscale, email, telefono, credenziali disponibili e storico richieste prima di aprire una nuova assistenza.",
+            'ticket' => "Sei nei Ticket. Qui si raccolgono problemi o richieste interne. Per lavorarlo bene servono oggetto chiaro, cliente/pratica collegata, priorità, stato e ultimo messaggio. La prossima azione è assegnare, rispondere o chiudere con esito chiaro.",
+            'contratto' => "Sei nei Contratti telefonia. Qui controlli offerte, dati cliente, documenti, stato gestore ed esito finale. Prima di inviare una pratica verifica anagrafica, codice fiscale/partita IVA, recapiti, prodotto scelto, allegati e consenso.",
+            'contratto-energia' => "Sei nei Contratti energia. Qui servono dati intestatario, POD/PDR, indirizzo fornitura, documento, codice fiscale, bolletta o dati tecnici e stato pratica. Se è voltura/subentro, controlla anche documenti firmati e link cliente.",
+            'documenti' => "Sei in Documenti. Qui si archiviano e consultano file sensibili. Apri solo ciò che serve, evita duplicati, controlla cartella corretta, nome file leggibile e presenza di documenti mancanti. Le operazioni vengono tracciate dall’audit.",
+            'agente' => "Sei negli Agenti. Qui controlli profilo, produzione, plafond, permessi e storico movimenti. Per capire un problema guarda prima ruolo, portafogli, pratiche recenti e movimenti collegati.",
+            'carica-plafond' => "Sei in Ricarica plafond agenti. Qui l’admin accredita portafoglio agli agenti. Controlla agente, importo, portafoglio corretto e descrizione: ogni movimento modifica subito il saldo.",
+            default => 'Sei su '.$area['label'].'. Posso spiegarti cosa fa questa pagina, quali dati controllare, quali documenti servono e qual è il prossimo passo operativo. Dimmi cosa vuoi capire e resto sul contesto corrente.',
+        };
+    }
+
+    protected function cafPatronatoContextAnswer(string $prompt, array $context): string
+    {
+        $service = $this->resolveCafServiceFromContext($context);
+        $knowledge = $this->cafKnowledge($service);
+        $lower = Str::lower($prompt);
+
+        if (Str::contains($lower, ['documenti', 'allegare', 'serve', 'servono', 'checklist', 'cosa devo chiedere'])) {
+            return $knowledge['documents'];
+        }
+
+        if (Str::contains($lower, ['come compilo', 'come si compila', 'prossimo passo', 'cosa faccio'])) {
+            return $knowledge['workflow'];
+        }
+
+        return $knowledge['explanation']."\n\n".$knowledge['documents']."\n\n".$knowledge['workflow'];
+    }
+
+    protected function resolveCafServiceFromContext(array $context): string
+    {
+        $haystack = Str::lower(implode(' ', array_filter([
+            $context['url'] ?? '',
+            $context['full_url'] ?? '',
+            $context['title'] ?? '',
+            $context['heading'] ?? '',
+            $context['visible_text'] ?? '',
+        ])));
+
+        if (preg_match('#caf-patronato/create/([0-9]+)#', (string) ($context['url'] ?? ''), $matches)) {
+            $tipo = TipoCafPatronato::query()->find((int) $matches[1]);
+            if ($tipo) {
+                return Str::lower((string) $tipo->nome);
+            }
+        }
+
+        foreach (array_keys($this->cafKnowledgeMap()) as $key) {
+            if (Str::contains($haystack, $key)) {
+                return $key;
+            }
+        }
+
+        return 'caf patronato';
+    }
+
+    protected function cafKnowledge(string $service): array
+    {
+        $service = Str::lower($service);
+        foreach ($this->cafKnowledgeMap() as $key => $knowledge) {
+            if (Str::contains($service, $key)) {
+                return $knowledge;
+            }
+        }
+
+        return [
+            'explanation' => 'CAF/Patronato raccoglie e lavora pratiche fiscali, previdenziali o assistenziali per il cliente. L’obiettivo è creare una pratica completa, con dati anagrafici corretti, allegati leggibili e stato aggiornato.',
+            'documents' => 'Documenti base da chiedere: documento identità, codice fiscale, recapiti, eventuale delega, documenti specifici della pratica e ogni allegato indicato nella pagina.',
+            'workflow' => 'Passi consigliati: identifica il servizio, compila anagrafica e contatti, allega documenti, salva la pratica, controlla il portafoglio scalato e aggiorna l’esito quando la lavorazione avanza.',
+        ];
+    }
+
+    protected function cafKnowledgeMap(): array
+    {
+        return [
+            '730' => [
+                'explanation' => 'Il 730 è la dichiarazione dei redditi usata soprattutto da lavoratori dipendenti e pensionati. Serve a dichiarare redditi, detrazioni e deduzioni, ottenendo eventuale rimborso o addebito direttamente in busta paga o pensione.',
+                'documents' => 'Per il 730 chiedi: documento e codice fiscale del dichiarante e familiari a carico, CU, dichiarazione anno precedente, F24, dati datore di lavoro/pensione, redditi esteri o assegni, visure/atti immobili, contratti affitto, spese mediche, mutuo, ristrutturazioni, scuola, assicurazioni, previdenza, erogazioni liberali e ogni ricevuta detraibile o deducibile.',
+                'workflow' => 'Per lavorarlo bene: verifica anno fiscale, datore che effettua il conguaglio, familiari a carico, redditi e immobili. Poi allega documenti ordinati per categoria e segnala nelle note ciò che manca.',
+            ],
+            'isee' => [
+                'explanation' => 'L’ISEE misura la situazione economica del nucleo familiare. Serve per bonus, agevolazioni, prestazioni sociali, università e molte pratiche assistenziali.',
+                'documents' => 'Per ISEE chiedi: documento e codice fiscale del dichiarante, codici fiscali del nucleo familiare, contratto affitto registrato se presente, certificazioni disabilità, saldo e giacenza media conti, libretti, carte, titoli, patrimonio mobiliare, immobili, mutuo residuo, veicoli, redditi e dati patrimoniali al periodo richiesto.',
+                'workflow' => 'Controlla prima composizione nucleo, residenza, presenza affitto/disabilità e patrimonio. Senza giacenze medie e saldi la pratica rischia di fermarsi.',
+            ],
+            'naspi' => [
+                'explanation' => 'La NASpI è l’indennità di disoccupazione per chi ha perso involontariamente il lavoro e possiede i requisiti contributivi.',
+                'documents' => 'Per NASpI chiedi: documento, codice fiscale, ultima busta paga, lettera licenziamento o fine contratto, IBAN intestato, recapiti, eventuali contratti recenti e dati del datore di lavoro.',
+                'workflow' => 'Verifica data cessazione lavoro, tipo cessazione, IBAN corretto e documenti completi. La tempestività conta: meglio aprirla appena il cliente ha i documenti.',
+            ],
+            'assegno unico' => [
+                'explanation' => 'L’Assegno Unico è il sostegno economico per figli a carico. L’importo dipende da nucleo, figli e ISEE.',
+                'documents' => 'Per Assegno Unico chiedi: documento e codice fiscale richiedente, codici fiscali dei figli, IBAN, ISEE se disponibile, eventuali certificazioni disabilità, dati dell’altro genitore se necessari.',
+                'workflow' => 'Controlla figli a carico, IBAN intestato o cointestato, ISEE aggiornato e presenza di disabilità. Senza ISEE l’importo può essere minimo.',
+            ],
+            'invalidita' => [
+                'explanation' => 'La pratica di invalidità civile/Legge 104/accompagnamento serve a richiedere riconoscimenti sanitari e benefici collegati alla condizione del cittadino.',
+                'documents' => 'Per invalidità chiedi: documento, codice fiscale, certificato medico introduttivo, documentazione sanitaria aggiornata, verbali precedenti, recapiti, eventuale delega e IBAN se richiesto dalla prestazione.',
+                'workflow' => 'Prima verifica certificato medico introduttivo e documenti sanitari. Poi allega tutto in modo leggibile e annota la richiesta precisa: invalidità, accompagnamento, 104 o collocamento mirato.',
+            ],
+            'assegno sociale' => [
+                'explanation' => 'L’Assegno Sociale è una prestazione economica per persone con requisiti di età, residenza e reddito basso.',
+                'documents' => 'Chiedi documento, codice fiscale, residenza, redditi, stato civile, permesso soggiorno se necessario, IBAN e documentazione reddituale/patrimoniale richiesta.',
+                'workflow' => 'Controlla requisiti anagrafici, residenza effettiva e redditi. Se mancano dati reddituali la pratica va sospesa in attesa integrazione.',
+            ],
+            'bonus asilo' => [
+                'explanation' => 'Il Bonus Asilo Nido è il contributo per rette di asili nido o supporto domiciliare in presenza di gravi patologie.',
+                'documents' => 'Chiedi documento, codice fiscale genitore e minore, ricevute rette, iscrizione/asilo, IBAN e ISEE minorenni se disponibile.',
+                'workflow' => 'Verifica intestazione ricevute, dati del minore e IBAN. Allegare ricevute chiare evita richieste di integrazione.',
+            ],
+            'contratto locazione' => [
+                'explanation' => 'La pratica di contratto di locazione riguarda registrazione, adempimenti successivi o gestione fiscale del contratto di affitto.',
+                'documents' => 'Chiedi documento e codice fiscale locatore/conduttore, contratto, dati immobile, rendita catastale, eventuali allegati, ricevute, opzione cedolare secca e adempimento richiesto.',
+                'workflow' => 'Controlla soggetti, immobile, date, canone, regime fiscale e tipo adempimento. Un errore su date o dati catastali blocca la lavorazione.',
+            ],
+        ];
+    }
+
     protected function chatActions(array $area, string $prompt, array $memory = []): array
     {
         $actions = [];
@@ -279,12 +439,23 @@ class AiAutomationController extends Controller
             $actions[] = ['label' => 'Apri ticket', 'url' => url('/backend/ticket')];
         }
 
-        if (Str::contains($lower, ['cliente', 'codice fiscale', 'telefono'])) {
+        if (Str::contains($lower, ['cliente', 'codice fiscale', 'telefono', 'partita iva', 'email', 'cerca', 'trova'])) {
             $actions[] = ['label' => 'Cerca cliente', 'url' => url('/backend/cliente')];
+            $actions[] = ['label' => 'Clienti assistenza', 'url' => url('/backend/cliente-assistenza')];
         }
 
         if (Str::contains($lower, ['spid', 'assistenza', 'recupero'])) {
             $actions[] = ['label' => 'Richieste assistenza', 'url' => url('/backend/richiesta-assistenza')];
+        }
+
+        if (Str::contains($lower, ['bloccata', 'bloccato', 'ferma', 'fermo', 'documenti mancanti'])) {
+            $actions[] = ['label' => 'CAF / Patronato', 'url' => url('/backend/caf-patronato')];
+            $actions[] = ['label' => 'Visure', 'url' => url('/backend/visura')];
+        }
+
+        if (Str::contains($lower, ['massiva', 'massivo', 'assegna tutto', 'chiudi tutti', 'sollecita'])) {
+            $actions[] = ['label' => 'Dashboard admin', 'url' => url('/backend/lavoro')];
+            $actions[] = ['label' => 'Agenti', 'url' => url('/backend/agente')];
         }
 
         return $actions;
@@ -361,6 +532,18 @@ class AiAutomationController extends Controller
             return 'recharge_plafond';
         }
 
+        if (Str::contains($lower, ['cerca', 'trova', 'cliente', 'codice fiscale', 'partita iva', 'email', 'telefono'])) {
+            return 'search';
+        }
+
+        if (Str::contains($lower, ['bloccata', 'bloccato', 'ferma', 'fermo', 'perché non va', 'perche non va', 'documenti mancanti'])) {
+            return 'blocked_case';
+        }
+
+        if (Str::contains($lower, ['massiva', 'massivo', 'assegna tutto', 'chiudi tutti', 'azioni massive', 'sollecita agenti'])) {
+            return 'massive_action';
+        }
+
         if (Str::contains($lower, ['messaggio', 'scrivi', 'risposta cliente'])) {
             return 'draft_message';
         }
@@ -383,6 +566,9 @@ class AiAutomationController extends Controller
             'draft_message' => 'Va bene. Mandami nome cliente e cosa vuoi comunicare, poi ti preparo un testo pronto da usare.',
             'next_action' => 'Ok. Restiamo su '.$area['label'].': parti dagli elementi fermi o con dati mancanti, poi chiudiamo una voce alla volta.',
             'open_or_create' => 'Perfetto. Dimmi quali dati hai già e ti indico il punto corretto da aprire.',
+            'search' => 'Perfetto. Mandami il dato da cercare e ti indico la sezione più adatta.',
+            'blocked_case' => 'Va bene. Mandami ID pratica o cliente e controllo dati mancanti, allegati, stato e prossima azione.',
+            'massive_action' => 'Ok. Prima preparo il filtro e il riepilogo. Applico modifiche massive solo dopo conferma admin.',
             default => 'Ok, continuo da qui. Dimmi il prossimo dettaglio e tengo il contesto della richiesta.',
         };
     }

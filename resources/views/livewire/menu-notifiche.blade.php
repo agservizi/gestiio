@@ -40,7 +40,7 @@
                             @endif
                     </div>
                     <div class="notification-title">
-                        {!! $record->titolo??$record->testo !!}
+                        {{ $record->titolo??$record->testo }}
                     </div>
                 </div>
                 <div class="notification-cta">

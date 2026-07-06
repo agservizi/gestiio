@@ -2,17 +2,25 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Enums\TipiPortafoglioEnum;
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\StripeKey;
+use App\Models\Agente;
 use App\Models\MovimentoPortafoglio;
+use App\Models\Notifica;
+use App\Models\RichiestaSpostamentoPortafoglio;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Stripe\Exception\ApiErrorException;
 use Throwable;
+use function App\getInputNumero;
+use function App\importo;
 
 class PortafoglioController extends Controller
 {
@@ -74,6 +82,9 @@ class PortafoglioController extends Controller
 
         return view('Backend.Portafoglio.index', [
             'records' => $records,
+            'richiesteSpostamento' => $authUser->hasPermissionTo('admin')
+                ? RichiestaSpostamentoPortafoglio::with('agente')->where('stato', 'in_attesa')->orderByDesc('id')->get()
+                : collect(),
             'controller' => $nomeClasse,
             'titoloPagina' => 'Elenco movimenti',
             'orderBy' => $orderBy,
@@ -181,6 +192,234 @@ class PortafoglioController extends Controller
         return $this->backToIndex();
     }
 
+    public function richiediSpostamento(Request $request)
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        abort_unless($authUser?->hasPermissionTo('agente'), 403);
+
+        $wallets = array_map(static fn (TipiPortafoglioEnum $case) => $case->value, TipiPortafoglioEnum::cases());
+
+        $request->validate([
+            'portafoglio_da' => ['required', Rule::in($wallets)],
+            'portafoglio_a' => ['required', Rule::in($wallets), 'different:portafoglio_da'],
+            'importo' => ['required'],
+            'descrizione' => ['required', 'max:255'],
+        ], [
+            'portafoglio_a.different' => 'Seleziona due portafogli diversi.',
+        ]);
+
+        $importo = (float) getInputNumero($request->input('importo'));
+
+        if ($importo <= 0) {
+            throw ValidationException::withMessages([
+                'importo' => 'Inserisci un importo maggiore di zero.',
+            ]);
+        }
+
+        $agente = Agente::where('user_id', $authUser->id)->first();
+        if (! $agente) {
+            throw ValidationException::withMessages([
+                'portafoglio_da' => 'Profilo agente non trovato.',
+            ]);
+        }
+
+        if ($this->saldoPortafoglio($agente, $request->input('portafoglio_da')) < $importo) {
+            throw ValidationException::withMessages([
+                'importo' => 'Saldo insufficiente nel portafoglio di partenza.',
+            ]);
+        }
+
+        $richiesta = new RichiestaSpostamentoPortafoglio;
+        $richiesta->agente_id = $authUser->id;
+        $richiesta->portafoglio_da = $request->input('portafoglio_da');
+        $richiesta->portafoglio_a = $request->input('portafoglio_a');
+        $richiesta->importo = $importo;
+        $richiesta->descrizione = trim((string) $request->input('descrizione'));
+        $richiesta->save();
+
+        $testo = '<p>'.$authUser->nominativo().' richiede lo spostamento di '.importo($importo, true)
+            .' da '.$richiesta->portafoglioDaTesto().' a '.$richiesta->portafoglioATesto().'.</p>'
+            .'<p><strong>Motivo:</strong> '.$richiesta->descrizione.'</p>'
+            .'<p><a href="'.action([self::class, 'index']).'">Apri gestione portafoglio</a></p>';
+
+        Notifica::notificaAdAdmin('Richiesta spostamento plafond', $testo, 'warning');
+
+        return redirect()->action([DashboardController::class, 'show'])
+            ->with('status', 'Richiesta inviata ad admin.');
+    }
+
+    public function sposta(Request $request)
+    {
+        abort_unless(Auth::user()?->hasPermissionTo('admin'), 403);
+
+        $wallets = array_map(static fn (TipiPortafoglioEnum $case) => $case->value, TipiPortafoglioEnum::cases());
+
+        $request->validate([
+            'agente_id' => ['required', 'exists:users,id'],
+            'portafoglio_da' => ['required', Rule::in($wallets)],
+            'portafoglio_a' => ['required', Rule::in($wallets), 'different:portafoglio_da'],
+            'importo' => ['required'],
+            'descrizione' => ['required', 'max:255'],
+        ], [
+            'portafoglio_a.different' => 'Seleziona due portafogli diversi.',
+        ]);
+
+        $importo = (float) getInputNumero($request->input('importo'));
+
+        if ($importo <= 0) {
+            throw ValidationException::withMessages([
+                'importo' => 'Inserisci un importo maggiore di zero.',
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $importo) {
+            $agente = Agente::where('user_id', $request->input('agente_id'))->lockForUpdate()->first();
+
+            if (! $agente) {
+                throw ValidationException::withMessages([
+                    'agente_id' => 'Agente non trovato.',
+                ]);
+            }
+
+            $saldoDisponibile = $this->saldoPortafoglio($agente, $request->input('portafoglio_da'));
+
+            if ($saldoDisponibile < $importo) {
+                throw ValidationException::withMessages([
+                    'importo' => 'Saldo insufficiente nel portafoglio di partenza.',
+                ]);
+            }
+
+            $descrizione = trim((string) $request->input('descrizione'));
+            $da = TipiPortafoglioEnum::from($request->input('portafoglio_da'))->testo();
+            $a = TipiPortafoglioEnum::from($request->input('portafoglio_a'))->testo();
+
+            $storno = new MovimentoPortafoglio;
+            $storno->agente_id = $request->input('agente_id');
+            $storno->portafoglio = $request->input('portafoglio_da');
+            $storno->importo = -$importo;
+            $storno->descrizione = "Storno admin da {$da} verso {$a}: {$descrizione}";
+            $storno->save();
+
+            $accredito = new MovimentoPortafoglio;
+            $accredito->agente_id = $request->input('agente_id');
+            $accredito->portafoglio = $request->input('portafoglio_a');
+            $accredito->importo = $importo;
+            $accredito->descrizione = "Accredito admin da {$da} verso {$a}: {$descrizione}";
+            $accredito->save();
+        });
+
+        return redirect()->action([self::class, 'index'])->with('status', 'Portafoglio spostato correttamente.');
+    }
+
+    public function storna(Request $request)
+    {
+        abort_unless(Auth::user()?->hasPermissionTo('admin'), 403);
+
+        $wallets = array_map(static fn (TipiPortafoglioEnum $case) => $case->value, TipiPortafoglioEnum::cases());
+
+        $request->validate([
+            'storno_agente_id' => ['required', 'exists:users,id'],
+            'storno_portafoglio' => ['required', Rule::in($wallets)],
+            'storno_importo' => ['required'],
+            'storno_descrizione' => ['required', 'max:255'],
+        ], [
+            'storno_agente_id.required' => 'Seleziona un agente.',
+            'storno_portafoglio.required' => 'Seleziona il portafoglio da stornare.',
+            'storno_descrizione.required' => 'Inserisci il motivo dello storno.',
+        ]);
+
+        $importo = (float) getInputNumero($request->input('storno_importo'));
+
+        if ($importo <= 0) {
+            throw ValidationException::withMessages([
+                'storno_importo' => 'Inserisci un importo maggiore di zero.',
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $importo) {
+            $agente = Agente::where('user_id', $request->input('storno_agente_id'))->lockForUpdate()->first();
+
+            if (! $agente) {
+                throw ValidationException::withMessages([
+                    'storno_agente_id' => 'Agente non trovato.',
+                ]);
+            }
+
+            $portafoglio = TipiPortafoglioEnum::from($request->input('storno_portafoglio'))->testo();
+            $descrizione = trim((string) $request->input('storno_descrizione'));
+
+            $storno = new MovimentoPortafoglio;
+            $storno->agente_id = $request->input('storno_agente_id');
+            $storno->portafoglio = $request->input('storno_portafoglio');
+            $storno->importo = -$importo;
+            $storno->descrizione = "Storno admin su {$portafoglio}: {$descrizione}";
+            $storno->save();
+        });
+
+        return redirect()->action([self::class, 'index'])->with('status', 'Storno portafoglio registrato correttamente.');
+    }
+
+    public function applicaRichiestaSpostamento(Request $request, int $id)
+    {
+        /** @var User $authUser */
+        $authUser = Auth::user();
+        abort_unless($authUser?->hasPermissionTo('admin'), 403);
+
+        $richiesta = RichiestaSpostamentoPortafoglio::with('agente')->find($id);
+        abort_if(! $richiesta, 404, 'Richiesta non trovata');
+
+        DB::transaction(function () use ($richiesta, $authUser) {
+            $richiesta = RichiestaSpostamentoPortafoglio::whereKey($richiesta->id)->lockForUpdate()->first();
+
+            if (! $richiesta || $richiesta->stato !== 'in_attesa') {
+                throw ValidationException::withMessages([
+                    'richiesta' => 'Questa richiesta è già stata gestita.',
+                ]);
+            }
+
+            $agente = Agente::where('user_id', $richiesta->agente_id)->lockForUpdate()->first();
+
+            if (! $agente) {
+                throw ValidationException::withMessages([
+                    'richiesta' => 'Profilo agente non trovato.',
+                ]);
+            }
+
+            if ($this->saldoPortafoglio($agente, $richiesta->portafoglio_da) < (float) $richiesta->importo) {
+                throw ValidationException::withMessages([
+                    'richiesta' => 'Saldo insufficiente nel portafoglio di partenza.',
+                ]);
+            }
+
+            $this->creaMovimentiSpostamento(
+                $richiesta->agente_id,
+                $richiesta->portafoglio_da,
+                $richiesta->portafoglio_a,
+                (float) $richiesta->importo,
+                $richiesta->descrizione,
+                'Richiesta agente'
+            );
+
+            $richiesta->admin_id = $authUser->id;
+            $richiesta->stato = 'applicata';
+            $richiesta->applicata_il = now();
+            $richiesta->save();
+        });
+
+        $richiesta->refresh();
+        if ($richiesta->agente) {
+            $testo = '<p>Admin ha applicato lo spostamento di '.importo((float) $richiesta->importo, true)
+                .' da '.$richiesta->portafoglioDaTesto().' a '.$richiesta->portafoglioATesto().'.</p>'
+                .'<p><strong>Motivo:</strong> '.$richiesta->descrizione.'</p>';
+
+            Notifica::notificaAdAgente($richiesta->agente, 'Spostamento plafond applicato', $testo, 'success');
+        }
+
+        return redirect()->action([self::class, 'index'])
+            ->with('status', 'Spostamento applicato e agente notificato.');
+    }
+
     /**
      * Display the specified resource.
      *
@@ -279,6 +518,7 @@ class PortafoglioController extends Controller
         // Ciclo su campi
         $campi = [
             'agente_id' => '',
+            'portafoglio' => '',
             'importo' => 'app\getInputNumero',
             'descrizione' => '',
         ];
@@ -313,11 +553,48 @@ class PortafoglioController extends Controller
 
         $rules = [
             'agente_id' => ['required'],
+            'portafoglio' => ['required', Rule::in(array_map(static fn (TipiPortafoglioEnum $case) => $case->value, TipiPortafoglioEnum::cases()))],
             'importo' => ['required'],
             'descrizione' => ['required', 'max:255'],
         ];
 
         return $rules;
+    }
+
+    protected function creaMovimentiSpostamento(
+        int $agenteId,
+        string $portafoglioDa,
+        string $portafoglioA,
+        float $importo,
+        string $descrizione,
+        string $prefisso = 'Spostamento admin'
+    ): void {
+        $da = TipiPortafoglioEnum::from($portafoglioDa)->testo();
+        $a = TipiPortafoglioEnum::from($portafoglioA)->testo();
+
+        $storno = new MovimentoPortafoglio;
+        $storno->agente_id = $agenteId;
+        $storno->portafoglio = $portafoglioDa;
+        $storno->importo = -$importo;
+        $storno->descrizione = "{$prefisso} da {$da} verso {$a}: {$descrizione}";
+        $storno->save();
+
+        $accredito = new MovimentoPortafoglio;
+        $accredito->agente_id = $agenteId;
+        $accredito->portafoglio = $portafoglioA;
+        $accredito->importo = $importo;
+        $accredito->descrizione = "{$prefisso} da {$da} verso {$a}: {$descrizione}";
+        $accredito->save();
+    }
+
+    protected function saldoPortafoglio(Agente $agente, string $portafoglio): float
+    {
+        return match ($portafoglio) {
+            TipiPortafoglioEnum::SERVIZI->value => (float) $agente->portafoglio_servizi,
+            TipiPortafoglioEnum::SPEDIZIONI->value => (float) $agente->portafoglio_spedizioni,
+            TipiPortafoglioEnum::VISURE->value => (float) ($agente->portafoglio_visure ?? 0),
+            default => 0,
+        };
     }
 
     protected function stripeCustomerNonTrovato(ApiErrorException $exception): bool

@@ -860,6 +860,33 @@
                             </div>
                             <div class="menu-item">
                                 <a class="menu-link"
+                                   href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],'errori')}}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Errori server</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link"
+                                   href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],'upload')}}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Upload e allegati</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link"
+                                   href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],'modifiche')}}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Modifiche</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link"
                                    href="{{action([\App\Http\Controllers\Backend\ChiamataApiController::class,'index'])}}">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>

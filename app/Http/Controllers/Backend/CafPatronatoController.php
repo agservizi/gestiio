@@ -146,7 +146,7 @@ class CafPatronatoController extends Controller
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => $testoNuovo,
-            'testoCerca' => 'Cerca in nominativo, codice fiscale',
+            'testoCerca' => 'Cerca in codice pratica, nominativo, codice fiscale',
             'puoModificare' => $puoModificare,
             'puoModificareEsito' => $puoModificareEsito,
             'giorniFermo' => $giorniFermo,
@@ -207,7 +207,7 @@ class CafPatronatoController extends Controller
         if ($term) {
             $arrTerm = explode(' ', $term);
             foreach ($arrTerm as $t) {
-                $queryBuilder->where(DB::raw("concat_ws(' ',id,nome,cognome,codice_fiscale,email,cellulare)"), 'like', "%$t%");
+                $queryBuilder->where(DB::raw("concat_ws(' ',id,codice_pratica,nome,cognome,codice_fiscale,email,cellulare)"), 'like', "%$t%");
             }
             $this->conFiltro = true;
         }
@@ -251,12 +251,15 @@ class CafPatronatoController extends Controller
     public function create($servizio = null)
     {
         if (! $servizio) {
-            $portafoglioServizi = $this->currentUser()->agente->portafoglio_servizi;
+            $user = $this->currentUser();
+            $isBackoffice = $user->hasAnyPermission(['admin', 'operatore', 'supervisore']);
+            $portafoglioServizi = $isBackoffice ? null : optional($user->agente)->portafoglio_servizi;
 
             return view('Backend.CafPatronato.create', [
                 'record' => new CafPatronato,
                 'titoloPagina' => 'Nuova pratica Caf / Patronato',
                 'portafoglioServizi' => $portafoglioServizi,
+                'isBackoffice' => $isBackoffice,
                 'controller' => get_class($this),
                 'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco '.CafPatronato::NOME_PLURALE],
             ]);
@@ -335,7 +338,7 @@ class CafPatronatoController extends Controller
      */
     public function show($id)
     {
-        $record = CafPatronato::find($id);
+        $record = CafPatronato::with(['tipo:id,nome', 'agente:id,nome,cognome,alias', 'esito', 'allegati', 'allegatiPerCliente'])->find($id);
         abort_if(! $record, 404, 'Questo cafpatronato non esiste');
 
         return view('Backend.CafPatronato.show', [
@@ -355,13 +358,9 @@ class CafPatronatoController extends Controller
      */
     public function edit($id)
     {
-        $record = CafPatronato::find($id);
+        $record = CafPatronato::with(['tipo', 'agente:id,nome,cognome,alias', 'esito', 'prodotto', 'allegati', 'allegatiPerCliente'])->find($id);
         abort_if(! $record, 404, 'Questa pratica non esiste');
-        if (false) {
-            $eliminabile = 'Non eliminabile perchè presente in ...';
-        } else {
-            $eliminabile = true;
-        }
+        $eliminabile = true;
 
         return view('Backend.CafPatronato.edit', [
             'record' => $record,
@@ -371,7 +370,7 @@ class CafPatronatoController extends Controller
             'breadcrumbs' => [action([CafPatronatoController::class, 'index']) => 'Torna a elenco '.CafPatronato::NOME_PLURALE],
             'tipoServizio' => $record->tipoProdotto(),
             'recordProdotto' => $record->prodotto,
-            'tipoCafPatronato' => TipoCafPatronato::find($record->tipo_caf_patronato_id),
+            'tipoCafPatronato' => $record->tipo,
 
         ]);
     }
@@ -432,6 +431,8 @@ class CafPatronatoController extends Controller
 
         $cafPatronato->save();
 
+        $this->emettiRimborsoSeRichiesto($cafPatronato, $esito);
+
         if ($cafPatronato->wasChanged('motivo_ko') && $motivoKoprima == null) {
             if ($cafPatronato->motivo_ko && strlen($cafPatronato->motivo_ko) < 70) {
 
@@ -487,6 +488,40 @@ class CafPatronatoController extends Controller
 
             ])->render()),
         ];
+    }
+
+    protected function emettiRimborsoSeRichiesto(CafPatronato $cafPatronato, EsitoCafPatronato $esito): void
+    {
+        if (! Str::contains(Str::lower($esito->nome), 'rimborso')) {
+            return;
+        }
+
+        $importoRimborso = (float) $cafPatronato->prezzo_pratica;
+        if ($importoRimborso <= 0 || ! $cafPatronato->agente_id) {
+            return;
+        }
+
+        $rimborsoGiaEmesso = MovimentoPortafoglio::withoutGlobalScope('filtroOperatore')
+            ->where('agente_id', $cafPatronato->agente_id)
+            ->where('prodotto_id', $cafPatronato->id)
+            ->where('prodotto_type', get_class($cafPatronato))
+            ->where('portafoglio', TipiPortafoglioEnum::SERVIZI->value)
+            ->where('importo', '>', 0)
+            ->where('descrizione', 'like', 'Rimborso pratica CAF%')
+            ->exists();
+
+        if ($rimborsoGiaEmesso) {
+            return;
+        }
+
+        $movimento = new MovimentoPortafoglio;
+        $movimento->agente_id = $cafPatronato->agente_id;
+        $movimento->importo = $importoRimborso;
+        $movimento->descrizione = 'Rimborso pratica CAF '.$cafPatronato->tipo?->nome.' per '.$cafPatronato->nominativo();
+        $movimento->prodotto_id = $cafPatronato->id;
+        $movimento->prodotto_type = get_class($cafPatronato);
+        $movimento->portafoglio = TipiPortafoglioEnum::SERVIZI->value;
+        $movimento->save();
     }
 
     public function downloadAllegato($contrattoId, $allegatoId)
@@ -617,6 +652,18 @@ class CafPatronatoController extends Controller
 
     public function uploadAllegato(Request $request)
     {
+        abort_unless(Auth::user()->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore']), 403);
+
+        $cafPatronatoId = $request->input('caf_patronato_id');
+        if ($cafPatronatoId) {
+            $record = CafPatronato::find($cafPatronatoId);
+            abort_if(! $record, 404);
+
+            if (! $this->currentUser()->hasAnyPermission(['admin', 'supervisore', 'operatore'])) {
+                abort_unless($record->agente_id === Auth::id(), 403);
+            }
+        }
+
         $file = new AllegatoCafPatronato;
 
         if ($request->file('file')) {
@@ -647,8 +694,17 @@ class CafPatronatoController extends Controller
 
     public function deleteAllegato(Request $request)
     {
+        abort_unless(Auth::user()->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore']), 403);
+
         $record = AllegatoCafPatronato::find($request->input('id'));
         abort_if(! $record, 404, 'File non trovato');
+
+        if (! $this->currentUser()->hasAnyPermission(['admin', 'supervisore', 'operatore'])) {
+            $cafPatronato = CafPatronato::find($record->caf_patronato_id);
+            abort_if(! $cafPatronato, 404);
+            abort_unless($cafPatronato->agente_id === Auth::id(), 403);
+        }
+
         Log::debug(__FUNCTION__, $record->toArray());
 
         Log::debug('elimino allegato cliente'.$record->path_filename);
@@ -864,7 +920,7 @@ class CafPatronatoController extends Controller
             $user->nome = $cafPatronato->nome;
             $user->cognome = $cafPatronato->cognome;
             $user->email = $cafPatronato->email;
-            $password = rand(11111111, 99999999);
+            $password = Str::random(16);
             $user->password = Hash::make($password);
             $user->telefono = $cafPatronato->cellulare;
             $user->save();

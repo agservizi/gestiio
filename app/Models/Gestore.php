@@ -78,7 +78,7 @@ class Gestore extends Model
     public function immagineLogo()
     {
         if (! $this->logo) {
-            return '/images/logo-placeholder.png';
+            return '/images/logo-placeholder.svg';
         }
 
         $relativePath = ltrim((string) $this->logo, '/');
@@ -91,12 +91,12 @@ class Gestore extends Model
             }
         }
 
-        $publicStoragePath = public_path('storage');
-        if (is_link($publicStoragePath) || is_dir($publicStoragePath)) {
-            return '/storage/'.$relativePath;
-        }
-
         if (Storage::disk('public')->exists($relativePath)) {
+            $publicStoragePath = public_path('storage');
+            if (is_link($publicStoragePath) || is_dir($publicStoragePath)) {
+                return '/storage/'.$relativePath;
+            }
+
             $extension = Str::lower(pathinfo($relativePath, PATHINFO_EXTENSION));
             $mime = match ($extension) {
                 'png' => 'image/png',
@@ -110,6 +110,6 @@ class Gestore extends Model
             return 'data:'.$mime.';base64,'.base64_encode($contenuto);
         }
 
-        return '/images/logo-placeholder.png';
+        return '/images/logo-placeholder.svg';
     }
 }

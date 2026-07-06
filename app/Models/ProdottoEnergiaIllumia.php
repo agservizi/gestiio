@@ -47,7 +47,7 @@ class ProdottoEnergiaIllumia extends Model
 
     public function comune()
     {
-        return $this->hasOne(Comune::class, 'id', 'citta');
+        return $this->belongsTo(Comune::class, 'citta');
     }
 
     /*

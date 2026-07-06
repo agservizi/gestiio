@@ -3,16 +3,17 @@
 namespace App\Notifications;
 
 use App\Models\ServizioFinanziario;
+use App\Notifications\Concerns\BuildsGestiioMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\HtmlString;
 
 use function importo;
 
 class NotificaPolizzaFacile extends Notification
 {
     use Queueable;
+    use BuildsGestiioMail;
 
     /**
      * Create a new notification instance.
@@ -43,24 +44,38 @@ class NotificaPolizzaFacile extends Notification
      */
     public function toMail($notifiable)
     {
-        $email = (new MailMessage)
-            ->subject('SEGNALAZIONE CAVALIERE CARMINE GESTIIO')
-            ->line('Prodotto: '.$this->servizioFinanziario->tipoProdottoBlade())
-            ->line('Nominativo cliente: '.$this->servizioFinanziario->nominativo())
-            ->salutation(new HtmlString('Saluti,<br>Cavaliere Carmine'));
-
+        $prodottoBlade = $this->servizioFinanziario->tipoProdottoBlade();
         $prodotto = $this->servizioFinanziario->prodotto()->first();
+        $items = [];
 
-        switch ($this->servizioFinanziario->tipoProdottoBlade()) {
+        switch ($prodottoBlade) {
             case 'PolizzaFacile':
-                $email->line('Targa: '.$prodotto->targa);
-                $email->line('Data di nascita: '.$prodotto->data_di_nascita->format('d/m/Y'));
-                $email->line('Importo attuale polizza: '.importo($prodotto->importo_attuale));
+                $items = [
+                    'Targa' => $prodotto->targa,
+                    'Data di nascita' => $prodotto->data_di_nascita?->format('d/m/Y'),
+                    'Importo attuale polizza' => importo($prodotto->importo_attuale),
+                ];
                 break;
 
         }
 
-        return $email;
+        return $this->gestiioMail('Segnalazione PolizzaFacile', [
+            'eyebrow' => 'PolizzaFacile',
+            'title' => 'Nuova richiesta assicurativa',
+            'preheader' => 'Cliente: '.$this->servizioFinanziario->nominativo(),
+            'intro' => 'È arrivata una nuova richiesta PolizzaFacile. Di seguito trovi i dati utili per procedere con la valutazione.',
+            'summary' => [
+                'Prodotto' => $prodottoBlade,
+                'Cliente' => $this->servizioFinanziario->nominativo(),
+            ],
+            'sections' => [
+                [
+                    'title' => 'Dati polizza',
+                    'items' => $this->compactRows($items),
+                ],
+            ],
+            'signature' => 'Cavaliere Carmine',
+        ]);
     }
 
     /**

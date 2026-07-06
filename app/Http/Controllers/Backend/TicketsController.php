@@ -24,6 +24,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class TicketsController extends Controller
 {
@@ -47,10 +48,53 @@ class TicketsController extends Controller
         $baseQuery = $this->applicaFiltri($request);
         $records = (clone $baseQuery)->paginate();
         $records->appends($request->query());
-        $metricheRecords = (clone $baseQuery)->get();
 
-        $kanbanColumns = collect(Ticket::STATI_TICKETS)->map(function ($config, $stato) use ($metricheRecords) {
-            $items = $metricheRecords
+        $now = now();
+        $slaLimit = $now->copy()->addHours(2);
+
+        $metriche = [
+            'totale' => (clone $baseQuery)->count(),
+            'non_assegnati' => (clone $baseQuery)->whereNull('agente_id')->count(),
+            'in_carico_a_me' => (clone $baseQuery)->where('agente_id', Auth::id())->count(),
+            'nuovi_da_leggere' => (clone $baseQuery)->whereHas('lettura', fn ($q) => $q->where('user_id', Auth::id())->where('messaggio_letto', 0))->count(),
+            'sla_violato' => (clone $baseQuery)->where(function ($q) use ($now) {
+                $q->where(function ($inner) use ($now) {
+                    $inner->whereNull('first_response_at')
+                        ->whereNotNull('first_response_due_at')
+                        ->where('first_response_due_at', '<', $now);
+                })->orWhere(function ($inner) use ($now) {
+                    $inner->whereNotIn('stato', ['risolto', 'chiuso'])
+                        ->whereNotNull('resolution_due_at')
+                        ->where('resolution_due_at', '<', $now);
+                });
+            })->count(),
+            'sla_in_scadenza' => (clone $baseQuery)->where(function ($q) use ($now, $slaLimit) {
+                $q->where(function ($inner) use ($now, $slaLimit) {
+                    $inner->whereNull('first_response_at')
+                        ->whereNotNull('first_response_due_at')
+                        ->whereBetween('first_response_due_at', [$now, $slaLimit]);
+                })->orWhere(function ($inner) use ($now, $slaLimit) {
+                    $inner->whereNotIn('stato', ['risolto', 'chiuso'])
+                        ->whereNotNull('resolution_due_at')
+                        ->whereBetween('resolution_due_at', [$now, $slaLimit]);
+                });
+            })->count(),
+            'risolti_oggi' => (clone $baseQuery)->whereDate('resolved_at', $now)->count(),
+            'carico_team' => (clone $baseQuery)
+                ->join('users', 'tickets.agente_id', '=', 'users.id')
+                ->selectRaw("CONCAT(users.cognome, ' ', users.nome) as nominativo, COUNT(*) as cnt")
+                ->groupBy('nominativo')
+                ->orderByDesc('cnt')
+                ->limit(8)
+                ->pluck('cnt', 'nominativo'),
+        ];
+
+        $kanbanRecords = $canUseKanban && $currentView === 'kanban'
+            ? (clone $baseQuery)->limit(200)->get()
+            : collect();
+
+        $kanbanColumns = collect(Ticket::STATI_TICKETS)->map(function ($config, $stato) use ($kanbanRecords) {
+            $items = $kanbanRecords
                 ->where('stato', $stato)
                 ->sortByDesc(fn (Ticket $ticket) => $ticket->workloadScore())
                 ->values();
@@ -63,20 +107,6 @@ class TicketsController extends Controller
                 'count' => $items->count(),
             ];
         })->values();
-
-        $metriche = [
-            'totale' => $metricheRecords->count(),
-            'non_assegnati' => $metricheRecords->whereNull('agente_id')->count(),
-            'in_carico_a_me' => $metricheRecords->where('agente_id', Auth::id())->count(),
-            'nuovi_da_leggere' => $metricheRecords->filter(fn (Ticket $ticket) => (int) ($ticket->lettura?->messaggio_letto ?? 1) === 0)->count(),
-            'sla_violato' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->isSlaViolated())->count(),
-            'sla_in_scadenza' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->isSlaAtRisk())->count(),
-            'risolti_oggi' => $metricheRecords->filter(fn (Ticket $ticket) => $ticket->resolved_at?->isToday())->count(),
-            'carico_team' => $metricheRecords->groupBy(fn (Ticket $ticket) => $ticket->assegnatario?->nominativo() ?? 'Non assegnato')
-                ->map(fn ($items) => $items->count())
-                ->sortDesc()
-                ->take(8),
-        ];
 
         $assegnatariFiltro = collect();
         if ($authUser->hasAnyPermission(['admin', 'supervisore'])) {
@@ -520,9 +550,14 @@ class TicketsController extends Controller
 
             $lettura = LetturaTicket::where('ticket_id', $record->id)->where('user_id', Auth::id())->first();
             if ($lettura && ! $lettura->messaggio_letto) {
-                LetturaTicket::where('ticket_id', $record->id)->where('user_id', '<>', Auth::id())->get()->each(function ($da) use ($record) {
-                    User::find($da->user_id)->notify(new NotificaLetturaTicket($record));
-                });
+                $letture = LetturaTicket::where('ticket_id', $record->id)
+                    ->where('user_id', '<>', Auth::id())
+                    ->pluck('user_id');
+                if ($letture->isNotEmpty()) {
+                    User::whereIn('id', $letture)->get()->each(function ($utente) use ($record) {
+                        $utente->notify(new NotificaLetturaTicket($record));
+                    });
+                }
             }
 
             LetturaTicket::where('ticket_id', $record->id)->where('user_id', Auth::id())->get()->each(function ($record) {
@@ -615,13 +650,23 @@ class TicketsController extends Controller
                     'required',
                     'integer',
                     'exists:users,id',
-                    Rule::exists('users', 'id')->where(function ($query) {
-                        $query->whereHas('permissions', function ($permissionQuery) {
-                            $permissionQuery->whereIn('name', ['agente', 'supervisore', 'operatore']);
-                        });
-                    }),
                 ],
             ]);
+
+            $assegnatarioValido = User::query()
+                ->whereKey($request->integer('agente_id'))
+                ->where(function ($query) {
+                    $query->whereHas('permissions', function ($permissionQuery) {
+                        $permissionQuery->whereIn('name', ['agente', 'supervisore', 'operatore']);
+                    });
+                })
+                ->exists();
+
+            if (! $assegnatarioValido) {
+                throw ValidationException::withMessages([
+                    'agente_id' => 'L\'assegnatario selezionato non è valido.',
+                ]);
+            }
 
             $ticket->agente_id = $request->integer('agente_id');
             $ticket->save();

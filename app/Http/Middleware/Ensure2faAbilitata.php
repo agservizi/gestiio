@@ -21,7 +21,7 @@ class Ensure2faAbilitata
      */
     public function handle($request, Closure $next, $redirectToRoute = null)
     {
-        if (Auth::id() !== 1 && ! $request->user()->two_factor_secret) {
+        if (! $request->user()->two_factor_secret) {
             return Redirect::action([Autenticazione2faController::class, 'show'], '');
         }
 

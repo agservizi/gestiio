@@ -13,6 +13,7 @@ use App\Rules\PartitaIvaRule;
 use App\Rules\TelefonoRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -262,7 +263,7 @@ class ClienteController extends Controller
                     $user->name = $cliente->nome;
                     $user->cognome = $cliente->cognome;
                     $user->email = $cliente->email;
-                    $password = rand(11111111, 99999999);
+                    $password = Str::random(16);
                     $user->password = Hash::make($password);
                     $user->telefono = $cliente->telefono;
                     $user->save();
@@ -287,7 +288,7 @@ class ClienteController extends Controller
             case 'invia-dati-accesso':
 
                 $user = User::find($cliente->user_id);
-                $password = rand(11111111, 99999999);
+                $password = Str::random(16);
                 $user->password = Hash::make($password);
                 $user->save();
 
@@ -312,10 +313,11 @@ class ClienteController extends Controller
 
             case 'resetta-password':
                 $user = User::find($id);
-                $user->password = bcrypt('123456');
+                $tempPassword = Str::random(16);
+                $user->password = bcrypt($tempPassword);
                 $user->save();
 
-                return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
+                return ['success' => true, 'title' => 'Password impostata', 'message' => 'La nuova password temporanea è: '.$tempPassword];
 
         }
 

@@ -7,7 +7,9 @@ use App\Models\AllegatoCafPatronato;
 use App\Models\AllegatoContratto;
 use App\Models\AllegatoContrattoEnergia;
 use App\Models\AllegatoServizio;
+use App\Models\FileAuditLog;
 use App\Models\Licenza;
+use App\Models\RegistroAttivita;
 use App\Models\RegistroEmail;
 use App\Models\RegistroLogin;
 use Carbon\Carbon;
@@ -15,7 +17,10 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Spatie\Backup\BackupDestination\Backup;
 use Spatie\Backup\Helpers\Format;
@@ -36,39 +41,28 @@ class RegistriController extends Controller
 
         switch ($cosa) {
             case 'login':
+                $this->authorizeRegistro($request, 'registro.login.view');
+
                 return $this->registroLogin($request);
 
             case 'modifiche':
-                abort(404);
+                $this->authorizeRegistro($request, 'registro.modifiche.view');
+
+                return $this->registroModifiche($request);
 
             case 'backup-db':
-                if ($request->input('scarica')) {
-                    $backupDisks = (array) config('backup.backup.destination.disks', ['local']);
-                    $disk = (string) $request->input('disk', $backupDisks[0] ?? 'local');
-                    abort_unless(in_array($disk, $backupDisks, true), 404);
-
-                    $filePath = ltrim((string) $request->input('scarica'), '/');
-                    abort_unless(str_starts_with($filePath, 'backup-database/'), 404);
-                    abort_unless(Storage::disk($disk)->exists($filePath), 404);
-
-                    $stream = Storage::disk($disk)->readStream($filePath);
-                    abort_unless($stream !== false, 404);
-
-                    return response()->streamDownload(function () use ($stream) {
-                        fpassthru($stream);
-                        fclose($stream);
-                    }, basename($filePath));
-                }
-                if ($request->has('esegui')) {
-                    Artisan::call('backup:run --only-db --disable-notifications');
-                }
+                $this->authorizeRegistro($request, 'registro.backup.view');
 
                 return $this->backupDatabase();
 
             case 'elenco_licenze':
+                $this->authorizeRegistro($request, 'registro.licenze.view');
+
                 return view('Backend.Registri.indexLicenze')->with(['records' => Licenza::orderBy('nome')->get()]);
 
             case 'email':
+                $this->authorizeRegistro($request, 'registro.email.view');
+
                 if ($request->has('email_id')) {
                     return $this->showEmail($request);
                 }
@@ -76,12 +70,63 @@ class RegistriController extends Controller
                 return $this->registroEmail($request);
 
             case 'info-sito':
+                $this->authorizeRegistro($request, 'registro.info-sito.view');
+
                 return $this->infoSito($request);
+
+            case 'errori':
+                $this->authorizeRegistro($request, 'registro.errori.view');
+
+                return $this->registroErrori($request);
+
+            case 'upload':
+                $this->authorizeRegistro($request, 'registro.upload.view');
+
+                return $this->registroUpload($request);
 
         }
 
         abort(404);
 
+    }
+
+    public function eseguiBackup(Request $request)
+    {
+        $this->authorizeRegistro($request, 'registro.backup.run');
+
+        Artisan::call('backup:run --only-db --disable-notifications');
+
+        return redirect()
+            ->route('registro.index', ['cosa' => 'backup-db'])
+            ->with('success', 'Backup database avviato.');
+    }
+
+    public function scaricaBackup(Request $request)
+    {
+        $this->authorizeRegistro($request, 'registro.backup.download');
+
+        $backupDisks = (array) config('backup.backup.destination.disks', ['local']);
+        $disk = (string) $request->input('disk', $backupDisks[0] ?? 'local');
+        abort_unless(in_array($disk, $backupDisks, true), 404);
+
+        $filePath = ltrim((string) $request->input('path'), '/');
+        abort_unless(str_starts_with($filePath, 'backup-database/'), 404);
+        abort_unless(Storage::disk($disk)->exists($filePath), 404);
+
+        $stream = Storage::disk($disk)->readStream($filePath);
+        abort_unless($stream !== false, 404);
+
+        return response()->streamDownload(function () use ($stream) {
+            fpassthru($stream);
+            fclose($stream);
+        }, basename($filePath));
+    }
+
+    protected function authorizeRegistro(Request $request, string $permission): void
+    {
+        $user = $request->user();
+
+        abort_unless($user && ($user->hasRole('admin') || $user->can('admin') || $user->can($permission)), 403);
     }
 
     protected function showEmail($request)
@@ -184,6 +229,123 @@ class RegistriController extends Controller
 
         ]);
 
+    }
+
+    protected function registroErrori(Request $request)
+    {
+        $records = collect($this->readLaravelLogLines((int) $request->input('righe', 2500)))
+            ->reverse()
+            ->filter(function (string $line) {
+                return Str::contains($line, [
+                    '.ERROR:',
+                    'production.ERROR',
+                    'local.ERROR',
+                    'slow_request',
+                    'slow_query',
+                    'failed_upload',
+                    'Exception',
+                ]);
+            })
+            ->take(250)
+            ->map(fn (string $line) => $this->parseLogLine($line))
+            ->values();
+
+        return view('Backend.Registri.indexErrori', [
+            'records' => $records,
+            'titoloPagina' => 'Registro errori server',
+        ]);
+    }
+
+    protected function registroUpload(Request $request)
+    {
+        $auditLogs = collect();
+        if (Schema::hasTable('files_audit_logs')) {
+            $auditLogs = FileAuditLog::with('utente')
+                ->orderByDesc('id')
+                ->limit(100)
+                ->get();
+        }
+
+        $allegati = collect([
+            'Telefonia' => AllegatoContratto::class,
+            'Energia' => AllegatoContrattoEnergia::class,
+            'CAF / Patronato' => AllegatoCafPatronato::class,
+            'Servizi / Visure' => AllegatoServizio::class,
+        ])->flatMap(function (string $modelClass, string $modulo) {
+            $model = new $modelClass;
+            if (! Schema::hasTable($model->getTable())) {
+                return collect();
+            }
+
+            return $modelClass::query()
+                ->orderByDesc('id')
+                ->limit(50)
+                ->get()
+                ->map(function ($record) use ($modulo) {
+                    return [
+                        'modulo' => $modulo,
+                        'id' => $record->id,
+                        'filename_originale' => $record->filename_originale ?? basename((string) $record->path_filename),
+                        'path_filename' => $record->path_filename ?? null,
+                        'dimensione_file' => $record->dimensione_file ?? null,
+                        'tipo_file' => $record->tipo_file ?? null,
+                        'created_at' => $record->created_at ?? null,
+                    ];
+                });
+        })->sortByDesc('id')->take(150)->values();
+
+        return view('Backend.Registri.indexUpload', [
+            'auditLogs' => $auditLogs,
+            'allegati' => $allegati,
+            'titoloPagina' => 'Registro upload e allegati',
+        ]);
+    }
+
+    protected function registroModifiche(Request $request)
+    {
+        $records = Schema::hasTable('registro_attivita')
+            ? RegistroAttivita::with('utente')->orderByDesc('id')->paginate(100)
+            : collect();
+
+        return view('Backend.Registri.indexModifiche', [
+            'records' => $records,
+            'titoloPagina' => 'Registro modifiche',
+        ]);
+    }
+
+    protected function readLaravelLogLines(int $lines): array
+    {
+        $path = storage_path('logs/laravel.log');
+        if (! is_file($path)) {
+            return [];
+        }
+
+        $lines = max(200, min($lines, 10000));
+        $content = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        return array_slice($content ?: [], -$lines);
+    }
+
+    protected function parseLogLine(string $line): array
+    {
+        preg_match('/^\[([^\]]+)\]\s+([^:]+):\s*(.*)$/', $line, $matches);
+
+        $message = $matches[3] ?? $line;
+        $type = 'Errore';
+        if (Str::contains($message, 'slow_request')) {
+            $type = 'Richiesta lenta';
+        } elseif (Str::contains($message, 'slow_query')) {
+            $type = 'Query lenta';
+        } elseif (Str::contains($message, 'failed_upload')) {
+            $type = 'Upload fallito';
+        }
+
+        return [
+            'data' => $matches[1] ?? null,
+            'livello' => isset($matches[2]) ? trim($matches[2]) : null,
+            'tipo' => $type,
+            'messaggio' => Str::limit($message, 1200),
+        ];
     }
 
     protected function infoSito($request)

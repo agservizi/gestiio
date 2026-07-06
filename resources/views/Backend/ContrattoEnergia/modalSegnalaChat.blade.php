@@ -15,10 +15,32 @@
 @push('customScript')
 <script>
     $(function () {
+        function notify(type, message) {
+            if (window.gestiioToast) {
+                gestiioToast(type, message);
+                return;
+            }
+            if (window.toastr && typeof toastr[type] === 'function') {
+                toastr[type](message);
+                return;
+            }
+            Swal.fire({
+                text: message,
+                icon: type === 'error' ? 'error' : 'success',
+                buttonsStyling: false,
+                confirmButtonText: 'Ok',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+
         $('#form-segnala-chat').off().submit(function (e) {
             e.preventDefault();
             var url = $(this).attr('action');
             var data = $(this).serialize();
+            var button = $(this).find('button[type="submit"]');
+            button.prop('disabled', true);
             $.ajax({
                 url: url,
                 type: 'POST',
@@ -27,16 +49,20 @@
                 success: function (response) {
                     if (response.ok) {
                         $('#kt_modal').modal('hide');
-                        alert(response.message || 'Segnalazione inviata in chat');
+                        notify('success', response.message || 'Segnalazione inviata in chat');
                         if (response.thread_id) {
                             window.open('/backend/chat-interna?thread=' + response.thread_id, '_blank');
                         }
                     } else {
-                        alert(response.message || 'Errore invio segnalazione');
+                        notify('error', response.message || 'Errore invio segnalazione');
                     }
                 },
                 error: function (xhr) {
-                    alert('Errore invio segnalazione');
+                    var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Errore invio segnalazione';
+                    notify('error', message);
+                },
+                complete: function () {
+                    button.prop('disabled', false);
                 }
             });
         });

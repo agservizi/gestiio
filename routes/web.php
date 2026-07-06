@@ -7,6 +7,7 @@ use App\Http\Controllers\Backend\VisuraCameraleController;
 use App\Http\Controllers\Frontend\AreaUtenteController;
 use App\Http\Controllers\Frontend\ContrattoController;
 use App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController;
+use App\Http\Controllers\Frontend\MarketingController;
 use App\Http\Controllers\Frontend\TicketController;
 use App\Http\Controllers\LogOut;
 use App\Http\Controllers\PagineController;
@@ -29,19 +30,8 @@ use Illuminate\Support\Facades\Route;
 | contains the "web" middleware group. Now create something great!
 |
 */
-Route::get('/', function () {
-    if (Auth::check()) {
-        /** @var User $user */
-        $user = Auth::user();
-        if ($user->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore'])) {
-            return redirect('/backend');
-        }
-
-        return redirect('/area-personale');
-    }
-
-    return redirect('/login');
-});
+Route::get('/', [MarketingController::class, 'home'])->name('marketing.home');
+Route::get('/collabora-con-ag-servizi', [MarketingController::class, 'collabora'])->name('marketing.collabora');
 
 Route::get('select2front', [Select2::class, 'response']);
 
@@ -49,7 +39,7 @@ Route::get('/logout', [LogOut::class, 'logOut']);
 Route::post('/webhook/stripe', [StripeWebhookController::class, 'handle']);
 Route::post('/webhook/inpost/tracking', [InpostWebhookController::class, 'handle'])->middleware('throttle:120,1');
 Route::post('/webhook/n8n/ai', [N8nAiWebhookController::class, 'handle'])->middleware('throttle:60,1');
-Route::post('/send-otp-email/{id}', [LogOut::class, 'sendOtpEmail']);
+Route::post('/send-otp-email/{id}', [LogOut::class, 'sendOtpEmail'])->middleware('throttle:3,5');
 
 Route::post('/register', [RegistratiController::class, 'post']);
 Route::get('/registrato', [RegistratiController::class, 'show']);

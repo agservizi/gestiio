@@ -1,0 +1,13 @@
+{
+  "registry-mirrors": ["http://localhost:5001"],
+  "dns": ["1.1.1.1", "8.8.8.8"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "data-root": "/Volume1/@apps/DockerEngine/DockerData",
+  "pidfile": "/var/run/docker.pid",
+  "live-restore": false,
+  "bip": "172.17.0.1/16"
+}

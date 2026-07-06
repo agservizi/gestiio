@@ -3,6 +3,7 @@
         <thead>
         <tr class="fw-bolder fs-6 text-gray-800">
             <th class="">Data</th>
+            <th class="">Codice</th>
             <th class="">Tipo pratica</th>
             <th class="">Esito</th>
             <th class="">Nominativo</th>

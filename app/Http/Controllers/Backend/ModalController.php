@@ -196,6 +196,8 @@ class ModalController extends Controller
 
             case 'vedi-notifica':
                 $record = Notifica::find($id);
+                abort_if(! $record, 404, 'Questa notifica non esiste');
+                abort_if($record->user_id && $record->user_id !== Auth::id() && ! Auth::user()?->hasPermissionTo('admin'), 403);
                 $visto = NotificaLettura::firstOrNew(['notifica_id' => $id, 'user_id' => Auth::id()]);
                 $visto->save();
 

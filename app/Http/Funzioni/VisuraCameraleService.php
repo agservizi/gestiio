@@ -157,10 +157,7 @@ class VisuraCameraleService
     {
         return (string) (
             config('services.openapi.bearer_visure_camerali')
-            ?: env('OPENAPI_BEARER_VISURE_CAMERALI')
             ?: config('services.openapi.bearer_visure')
-            ?: env('OPENAPI_BEARER_VISURE')
-            ?: env('OPENAPI_BEARER')
         );
     }
 

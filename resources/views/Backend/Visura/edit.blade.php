@@ -5,70 +5,432 @@
 @section('content')
     @php($vecchio=$record->id)
     @php($allegatoServizioType=get_class($record))
-    <div class="card">
-        <div class="card-body">
-            @include('Backend._components.alertErrori')
-            <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}" id="form-visura">
-                @csrf
-                @method($record->id?'PATCH':'POST')
-                @php($uid=old('uid',$record->uid))
-
-                <input type="hidden" name="uid" id="uid" value="{{$uid}}">
-                <input type="hidden" name="tipo_visura_id" value="{{old('tipo_visura_id',$tipoServizio->id)}}">
-                <input type="hidden" name="fallback_backoffice" id="fallback_backoffice" value="{{old('fallback_backoffice', '0')}}">
-                @if(Auth::user()->hasAnyPermission(['admin','operatore']))
-                    <div class="row">
-                        <div class="col-md-6">
-                            @include('Backend._inputs.inputSelect2',['campo'=>'agente_id','testo'=>'Agente','required'=>true,'selected'=>\App\Models\User::selected(old('agente_id',$record->agente_id))])
-                        </div>
-                        <div class="col-md-6">
-                            @include('Backend._inputs.inputTextDataMask',['campo'=>'data','testo'=>'Data','required'=>true])
-                        </div>
+    @php($isBackoffice = Auth::user()->hasAnyPermission(['admin','operatore']))
+    <div class="visura-form-page">
+        <div class="visura-form-hero">
+            <div>
+                <div class="visura-eyebrow">Visure</div>
+                <h1>{{ $vecchio ? 'Modifica visura' : 'Crea visura' }}</h1>
+                <p>{{ $tipoServizio->nome }}: raccogli dati, allegati e note in un flusso ordinato per evitare pratiche incomplete.</p>
+            </div>
+            <div class="visura-form-summary">
+                <span>Servizio selezionato</span>
+                <strong>{{ $tipoServizio->nome }}</strong>
+                <div class="visura-summary-grid">
+                    <div>
+                        <small>Tipo</small>
+                        <b>{{ ucfirst($tipoServizio->tipo_visura) }}</b>
                     </div>
-                @else
-                    <input type="hidden" id="agente_id" name="agente_id"
-                           value="{{old('agente_id',$record->agente_id)}}">
-                    <input type="hidden" name="data" value="{{old('data',$record->data->format('d/m/Y'))}}">
-                @endif
-
-                @includeWhen($tipoServizio->tipo_visura=='azienda','Backend.Visura.azienda')
-                @includeWhen($tipoServizio->tipo_visura=='privato','Backend.Visura.privato')
-                @includeWhen($isCatastale ?? false,'Backend.Visura.catasto')
-                <div class="row">
-                    <div class="col-md-12">
-                        @include('Backend._inputs.inputTextAreaCol',['campo'=>'note','testo'=>'Note','col'=>2])
+                    <div>
+                        <small>Allegati</small>
+                        <b>{{ $tipoServizio->richiedi_allegati ? 'Richiesti' : 'Opzionali' }}</b>
                     </div>
                 </div>
-                @if($tipoServizio->html)
-                    {!! $tipoServizio->html !!}
-                @endif
+            </div>
+        </div>
 
-                @if($tipoServizio->richiedi_allegati)
-                    @include('Backend._inputs_.allegati')
-                @endif
-                <div class="row">
-                    <div class="col-md-4 offset-md-4 text-center">
-                        <button class="btn btn-primary mt-3" type="submit"
-                                id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\Visura::NOME_SINGOLARE}}</button>
-                    </div>
-                    @if($vecchio)
-                        <div class="col-md-4 text-end">
-                            @if($eliminabile===true)
-                                <a class="btn btn-danger mt-3" id="elimina"
-                                   href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
-                            @elseif(is_string($eliminabile))
-                                <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
-                                    <a class="btn btn-danger mt-3 disabled" href="javascript:void(0)">Elimina</a>
-                                </span>
+        @include('Backend._components.alertErrori')
+
+        <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}" id="form-visura" class="visura-form-shell">
+            @csrf
+            @method($record->id?'PATCH':'POST')
+            @php($uid=old('uid',$record->uid))
+
+            <input type="hidden" name="uid" id="uid" value="{{$uid}}">
+            <input type="hidden" name="tipo_visura_id" value="{{old('tipo_visura_id',$tipoServizio->id)}}">
+            <input type="hidden" name="fallback_backoffice" id="fallback_backoffice" value="{{old('fallback_backoffice', '0')}}">
+
+            <div class="visura-form-grid">
+                <main class="visura-form-main">
+                    @if($isBackoffice)
+                        <section class="visura-section">
+                            <div class="visura-section-head">
+                                <span class="visura-step">01</span>
+                                <div>
+                                    <h2>Assegnazione</h2>
+                                    <p>Agente, data e riferimento operativo della richiesta.</p>
+                                </div>
+                            </div>
+                            <div class="visura-section-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        @include('Backend._inputs.inputSelect2',['campo'=>'agente_id','testo'=>'Agente','required'=>true,'selected'=>\App\Models\User::selected(old('agente_id',$record->agente_id))])
+                                    </div>
+                                    <div class="col-md-6">
+                                        @include('Backend._inputs.inputTextDataMask',['campo'=>'data','testo'=>'Data','required'=>true])
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    @else
+                        <input type="hidden" id="agente_id" name="agente_id" value="{{old('agente_id',$record->agente_id)}}">
+                        <input type="hidden" name="data" value="{{old('data',$record->data->format('d/m/Y'))}}">
+                    @endif
+
+                    <section class="visura-section">
+                        <div class="visura-section-head">
+                            <span class="visura-step">{{ $isBackoffice ? '02' : '01' }}</span>
+                            <div>
+                                <h2>Dati richiesta</h2>
+                                <p>Compila i dati del soggetto o dell'immobile in base alla visura selezionata.</p>
+                            </div>
+                        </div>
+                        <div class="visura-section-body visura-dynamic-fields">
+                            <div class="visura-inline-hint">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                                <span>Per aziende puoi usare la ricerca guidata; per visure catastali controlla provincia, soggetto e identificativi immobile.</span>
+                            </div>
+                            @includeWhen($tipoServizio->tipo_visura=='azienda','Backend.Visura.azienda')
+                            @includeWhen($tipoServizio->tipo_visura=='privato','Backend.Visura.privato')
+                            @includeWhen($isCatastale ?? false,'Backend.Visura.catasto')
+                            @if($tipoServizio->html)
+                                {!! $tipoServizio->html !!}
                             @endif
                         </div>
-                    @endif
-                </div>
+                    </section>
 
-            </form>
-        </div>
+                    <section class="visura-section">
+                        <div class="visura-section-head">
+                            <span class="visura-step">{{ $isBackoffice ? '03' : '02' }}</span>
+                            <div>
+                                <h2>Note e documenti</h2>
+                                <p>Note interne e file utili alla lavorazione della visura.</p>
+                            </div>
+                        </div>
+                        <div class="visura-section-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputTextAreaCol',['campo'=>'note','testo'=>'Note','col'=>2])
+                                </div>
+                                @if($tipoServizio->richiedi_allegati)
+                                    <div class="col-md-6">
+                                        <div class="dropzone visura-dropzone gestiio-dropzone" id="kt_dropzonejs_example_1">
+                                            <div class="dz-message needsclick">
+                                                <span class="gestiio-dropzone-icon">
+                                                    <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                                                </span>
+                                                <div>
+                                                    <h3>Trascina i file qui o clicca per selezionarli</h3>
+                                                    <span>Documenti, deleghe, identificativi catastali e allegati necessari alla richiesta.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </section>
+                </main>
+
+                <aside class="visura-form-aside">
+                    <div class="visura-sticky-card">
+                        <div class="visura-aside-title">Riepilogo</div>
+                        <div class="visura-aside-row">
+                            <span>Stato</span>
+                            <strong>{{ $vecchio ? 'Modifica' : 'Nuova visura' }}</strong>
+                        </div>
+                        <div class="visura-aside-row">
+                            <span>Servizio</span>
+                            <strong>{{ $tipoServizio->nome }}</strong>
+                        </div>
+                        <div class="visura-aside-row">
+                            <span>Modalita</span>
+                            <strong>{{ $tipoServizio->richiedi_allegati ? 'Con allegati' : 'Senza allegati' }}</strong>
+                        </div>
+                        <div class="visura-aside-note">
+                            Salva quando dati e documenti sono completi. Se il credito OpenAPI non basta, puoi inviare al backoffice dal popup dedicato.
+                        </div>
+                        <button class="btn btn-primary w-100" type="submit" id="submit">
+                            {{$vecchio?'Salva modifiche':'Crea '.\App\Models\Visura::NOME_SINGOLARE}}
+                        </button>
+
+                        @if($vecchio)
+                            <div class="mt-3">
+                                @if($eliminabile===true)
+                                    <a class="btn btn-light-danger w-100" id="elimina" href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
+                                @elseif(is_string($eliminabile))
+                                    <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
+                                        <a class="btn btn-light-danger disabled w-100" href="javascript:void(0)">Elimina</a>
+                                    </span>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                </aside>
+            </div>
+        </form>
     </div>
 @endsection
+
+@include('Backend._components.dropzoneUx')
+
+@push('customCss')
+    <style>
+        .visura-form-page {
+            --visura-bg: #f8fafc;
+            --visura-surface: #ffffff;
+            --visura-text: #020617;
+            --visura-muted: #64748b;
+            --visura-border: #e2e8f0;
+            --visura-primary: #0ea5e9;
+            --visura-primary-dark: #0369a1;
+            color: var(--visura-text);
+        }
+
+        .visura-form-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+            gap: 24px;
+            align-items: stretch;
+            padding: 28px;
+            margin-bottom: 18px;
+            border: 1px solid var(--visura-border);
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #f3f8ff 100%);
+            box-shadow: 0 12px 36px rgba(15, 23, 42, .05);
+        }
+
+        .visura-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 0 10px;
+            margin-bottom: 12px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: var(--visura-primary-dark);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .visura-form-hero h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .visura-form-hero p {
+            max-width: 760px;
+            margin: 10px 0 0;
+            color: var(--visura-muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .visura-form-summary,
+        .visura-sticky-card {
+            border: 1px solid #cfe8ff;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, .9);
+        }
+
+        .visura-form-summary {
+            padding: 20px;
+        }
+
+        .visura-form-summary span,
+        .visura-form-summary small,
+        .visura-aside-row span {
+            color: var(--visura-muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .visura-form-summary strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.35;
+        }
+
+        .visura-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .visura-summary-grid div {
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--visura-bg);
+        }
+
+        .visura-summary-grid b {
+            display: block;
+            margin-top: 4px;
+            font-size: 16px;
+        }
+
+        .visura-form-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .visura-section {
+            margin-bottom: 16px;
+            border: 1px solid var(--visura-border);
+            border-radius: 8px;
+            background: var(--visura-surface);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, .04);
+            overflow: hidden;
+        }
+
+        .visura-section-head {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--visura-border);
+            background: #fbfdff;
+        }
+
+        .visura-step {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            border-radius: 8px;
+            background: #e0f2fe;
+            color: var(--visura-primary-dark);
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .visura-section-head h2 {
+            margin: 0 0 4px;
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .visura-section-head p {
+            margin: 0;
+            color: var(--visura-muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .visura-section-body {
+            padding: 22px 20px 8px;
+        }
+
+        .visura-section-body .row.mb-6 {
+            margin-bottom: 16px !important;
+        }
+
+        .visura-section-body .col-form-label {
+            padding-top: 11px;
+        }
+
+        .visura-section-body .form-control,
+        .visura-section-body .form-select,
+        .visura-section-body .select2-container--bootstrap5 .select2-selection {
+            min-height: 46px;
+            border-radius: 8px;
+        }
+
+        .visura-inline-hint {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            min-height: 44px;
+            padding: 10px 12px;
+            margin-bottom: 18px;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .visura-dynamic-fields > .row {
+            max-width: 100%;
+        }
+
+        .visura-dynamic-fields > .row > [class*="offset-md"] {
+            margin-left: 0 !important;
+        }
+
+        .visura-sticky-card {
+            position: sticky;
+            top: 92px;
+            padding: 18px;
+            box-shadow: 0 12px 34px rgba(15, 23, 42, .06);
+        }
+
+        .visura-aside-title {
+            margin-bottom: 14px;
+            font-size: 16px;
+            font-weight: 900;
+        }
+
+        .visura-aside-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 12px 0;
+            border-top: 1px solid var(--visura-border);
+        }
+
+        .visura-aside-row strong {
+            max-width: 170px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .visura-aside-note {
+            margin: 14px 0;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--visura-bg);
+            color: var(--visura-muted);
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        @media (max-width: 1199.98px) {
+            .visura-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .visura-sticky-card {
+                position: static;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .visura-form-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .visura-form-hero,
+            .visura-section-head,
+            .visura-section-body {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .visura-form-hero h1 {
+                font-size: 24px;
+            }
+
+            .visura-summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+@endpush
 @push('customScript')
     <script src="/assets_backend/js-miei/select2_it.js"></script>
     <script>
@@ -104,86 +466,17 @@
             });
             @endif
 
-            if ($('#kt_dropzonejs_example_1').length) {
-                var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
-                    url: "{{action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'uploadAllegato'])}}", // Set the url for your upload script location
-                    paramName: "file", // The name that will be used to transfer the file
-                    maxFiles: 10,
-                    maxFilesize: 20, // MB
-                    addRemoveLinks: true,
-                    //acceptedFiles: "image/*",
-                    headers: {
-                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                    },
-                    init: function () {
-                        thisDropzone = this;
-                        this.on("sending", function (file, xhr, formData) {
-                            formData.append("uid", $('#uid').val());
-                            formData.append("allegato_id", {{$record->id??'0'}});
-                            formData.append("allegato_type", '{{str_replace('\\','_',$allegatoServizioType)}}');
-
-                        });
-                        const esistenti =@json(\App\Models\AllegatoServizio::perBlade($uid,$record->id,$allegatoServizioType));
-                        if (esistenti) {
-                            $.each(esistenti, function (key, value) {
-
-                                var mockFile = {
-                                    name: value.path_filename,
-                                    size: value.dimensione_file,
-                                    filename: value.path_filename,
-                                    id: value.id
-                                };
-
-                                thisDropzone.emit('addedfile', mockFile);
-                                if (value.thumbnail) {
-                                    thisDropzone.emit('thumbnail', mockFile, "/storage/" + value.thumbnail);
-
-                                }
-                                thisDropzone.emit('complete', mockFile);
-
-
-                            });
-                        }
-
-                    },
-                    accept: function (file, done) {
-                        if (file.name == "q") {
-                            done("Naha, you don't.");
-                        } else {
-                            done();
-                        }
-                    },
-                    success: function (file, response) {
-                        file.filename = response.filename;
-                        file.id = response.id;
-                        if (response.thumbnail) {
-                            file.previewElement.querySelector("img").src = response.thumbnail;
-                        }
-                    },
-                    removedfile: function (file) {
-                        console.dir(file);
-                        var name = file.filename;
-                        $.ajax({
-                            headers: {
-                                'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
-                            },
-                            type: 'DELETE',
-                            url: '{{ action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'deleteAllegato']) }}',
-                            data: {
-                                id: file.id
-                            },
-                            success: function (data) {
-                            },
-                            error: function (e) {
-                            }
-                        });
-                        var fileRef;
-                        return (fileRef = file.previewElement) != null ?
-                            fileRef.parentNode.removeChild(file.previewElement) : void 0;
-                    },
-                });
-
-            }
+            initGestiioDropzone("#kt_dropzonejs_example_1", {
+                uploadUrl: "{{action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'uploadAllegato'])}}",
+                deleteUrl: "{{action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'deleteAllegato'])}}",
+                csrfToken: "{{ csrf_token() }}",
+                existingFiles: @json(\App\Models\AllegatoServizio::perBlade($uid,$record->id,$allegatoServizioType)),
+                sendingData: {
+                    uid: function () { return $('#uid').val(); },
+                    allegato_id: {{$record->id??'0'}},
+                    allegato_type: '{{str_replace('\\','_',$allegatoServizioType)}}'
+                }
+            });
 
 
             $('#codice_fiscale').blur(function (e) {

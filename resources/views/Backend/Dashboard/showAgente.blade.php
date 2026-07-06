@@ -30,7 +30,7 @@
             ['label' => 'Visure', 'value' => (float)($agente->portafoglio_visure ?? 0), 'class' => 'desk-wallet-visure'],
         ];
         $saldoPlafond = array_sum(array_column($wallets, 'value'));
-        $inAttesaDocumenti = $visureInAttesaDocumenti->map(function($r){
+        $inAttesaDocumenti = collect($visureInAttesaDocumenti)->map(function($r){
             return [
                 'id' => $r->id,
                 'record_type' => 'visura',
@@ -41,7 +41,7 @@
                 'assign_url' => action([\App\Http\Controllers\Backend\VisuraController::class,'edit'],$r->id),
                 'complete_url' => action([\App\Http\Controllers\Backend\VisuraController::class,'edit'],$r->id),
             ];
-        })->merge($cafInAttesaDocumenti->map(function($r){
+        })->values()->merge(collect($cafInAttesaDocumenti)->map(function($r){
             return [
                 'id' => $r->id,
                 'record_type' => 'caf',
@@ -52,7 +52,7 @@
                 'assign_url' => action([\App\Http\Controllers\Backend\CafPatronatoController::class,'edit'],$r->id),
                 'complete_url' => action([\App\Http\Controllers\Backend\CafPatronatoController::class,'edit'],$r->id),
             ];
-        }));
+        })->values());
         $queueTotale = $ticketDaPrendereInCarico->count() + $inAttesaDocumenti->count() + $scadenzeOggi->count();
     @endphp
 
@@ -88,8 +88,12 @@
                 </div>
             </div>
             <div class="agent-command-card">
+                <div class="agent-command-label">Operazioni</div>
                 <div class="agent-command-actions">
                     <a href="{{action([\App\Http\Controllers\Backend\PortafoglioController::class,'create'])}}" class="btn btn-primary">Ricarica plafond</a>
+                    <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#modal-richiesta-spostamento-portafoglio">
+                        Sposta plafond
+                    </button>
                     <a href="{{$chatOperativa['url']}}" class="btn btn-light-primary">
                         Chat interna
                         @if((int)$chatOperativa['count'] > 0)
@@ -113,6 +117,54 @@
                 </div>
             </div>
         </section>
+
+        <div class="modal fade" id="modal-richiesta-spostamento-portafoglio" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form method="POST" action="{{action([\App\Http\Controllers\Backend\PortafoglioController::class,'richiediSpostamento'])}}" class="modal-content">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title">Richiedi spostamento plafond</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-5">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold required" for="richiesta_portafoglio_da">Da portafoglio</label>
+                                <select id="richiesta_portafoglio_da" name="portafoglio_da" class="form-select form-select-solid" required>
+                                    <option value="">Seleziona</option>
+                                    @foreach(\App\Enums\TipiPortafoglioEnum::cases() as $item)
+                                        <option value="{{$item->value}}" @selected(old('portafoglio_da') === $item->value)>{{$item->testo()}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold required" for="richiesta_portafoglio_a">A portafoglio</label>
+                                <select id="richiesta_portafoglio_a" name="portafoglio_a" class="form-select form-select-solid" required>
+                                    <option value="">Seleziona</option>
+                                    @foreach(\App\Enums\TipiPortafoglioEnum::cases() as $item)
+                                        <option value="{{$item->value}}" @selected(old('portafoglio_a') === $item->value)>{{$item->testo()}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold required" for="richiesta_importo">Importo</label>
+                                <input id="richiesta_importo" name="importo" type="number" min="0.01" step="0.01"
+                                       class="form-control form-control-solid" value="{{old('importo')}}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold required" for="richiesta_descrizione">Motivo</label>
+                                <input id="richiesta_descrizione" name="descrizione" type="text"
+                                       class="form-control form-control-solid" value="{{old('descrizione')}}" required maxlength="255">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary">Invia richiesta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <section class="row g-5 mb-7">
             <div class="col-xl-3 col-md-6">
@@ -467,6 +519,14 @@
             background: rgba(255, 255, 255, .82);
             box-shadow: 0 22px 60px rgba(16, 24, 39, .11);
             backdrop-filter: blur(12px);
+        }
+
+        .agent-command-label {
+            color: var(--agent-muted);
+            font-size: .78rem;
+            font-weight: 850;
+            letter-spacing: 0;
+            text-transform: uppercase;
         }
 
         .agent-command-actions {

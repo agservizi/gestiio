@@ -1,6 +1,9 @@
 @foreach($records as $record)
     <tr class="" id="tr_{{$record->id}}">
         <td class="">{{$record->data->format('d/m/Y')}}</td>
+        <td class="">
+            <span class="badge badge-light-primary fw-bolder">{{$record->codice_pratica}}</span>
+        </td>
         <td class="">{{$record->tipo->nome}}</td>
 
         <td class="">

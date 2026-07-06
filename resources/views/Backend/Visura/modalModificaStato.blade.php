@@ -49,15 +49,14 @@
             </div>
             <div class="col-lg-10 fv-row fv-plugins-icon-container">
                 <div class="fv-row">
-                    <div class="dropzone" id="kt_dropzonejs_example_1">
+                    <div class="dropzone gestiio-dropzone" id="kt_dropzonejs_example_1">
                         <div class="dz-message needsclick">
-                            <i class="bi bi-file-earmark-arrow-up text-primary fs-3x"></i>
-
-                            <div class="ms-4">
-                                <h3 class="fs-5 fw-bolder text-gray-900 mb-1">Trascina il file qui o clicca per selezionare i files</h3>
-                                <span class="fs-7 fw-bold text-gray-400">
-                                            <span>Qui puoi allegare i documenti relativi al contratto</span>
-                                        </span>
+                            <span class="gestiio-dropzone-icon">
+                                <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                            </span>
+                            <div>
+                                <h3>Trascina i file qui o clicca per selezionarli</h3>
+                                <span>Documenti finali o allegati cliente collegati alla visura.</span>
                             </div>
                         </div>
                     </div>
@@ -67,6 +66,7 @@
 
     </form>
 @endsection
+@include('Backend._components.dropzoneUx')
 @php($uno=1)
 @push('customScript')
     <script src="/assets_backend/js-miei/autoNumeric.min.js"></script>
@@ -124,86 +124,23 @@
                             $('#kt_modal').modal('hide');
                             modalAjax();
                         } else {
-                            alert(response.message);
+                            gestiioToast('error', response.message || 'Impossibile aggiornare lo stato.');
                         }
                     }
                 });
             });
 
-            var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
-                url: "{{action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'uploadAllegato'])}}", // Set the url for your upload script location
-                paramName: "file", // The name that will be used to transfer the file
+            initGestiioDropzone("#kt_dropzonejs_example_1", {
+                uploadUrl: "{{action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'uploadAllegato'])}}",
+                deleteUrl: "{{action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'deleteAllegato'])}}",
+                csrfToken: "{{ csrf_token() }}",
                 maxFiles: 5,
-                maxFilesize: 20, // MB
-                addRemoveLinks: true,
-                //acceptedFiles: "image/*",
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                init: function () {
-                    thisDropzone = this;
-                    this.on("sending", function (file, xhr, formData) {
-                        formData.append("per_cliente", 1);
-                        formData.append("allegato_id", {{$record->id??'0'}});
-                        formData.append("allegato_type", '{{str_replace('\\','_',$allegatoServizioType)}}');
-                    });
-                    const esistenti =@json($allegatiEsistenti);
-                    if (esistenti) {
-                        $.each(esistenti, function (key, value) {
-                            var mockFile = {
-                                name: value.path_filename,
-                                size: value.dimensione_file,
-                                filename: value.path_filename,
-                                id: value.id
-                            };
-
-                            thisDropzone.emit('addedfile', mockFile);
-                            if (value.thumbnail) {
-                                thisDropzone.emit('thumbnail', mockFile, "/storage/" + value.thumbnail);
-
-                            }
-                            thisDropzone.emit('complete', mockFile);
-
-
-                        });
-                    }
-
-                },
-                accept: function (file, done) {
-                    if (file.name == "q") {
-                        done("Naha, you don't.");
-                    } else {
-                        done();
-                    }
-                },
-                success: function (file, response) {
-                    file.filename = response.filename;
-                    file.id = response.id;
-                    if (response.thumbnail) {
-                        file.previewElement.querySelector("img").src = response.thumbnail;
-                    }
-                },
-                removedfile: function (file) {
-                    console.dir(file);
-                    var name = file.filename;
-                    $.ajax({
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
-                        },
-                        type: 'DELETE',
-                        url: '{{ action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'deleteAllegato']) }}',
-                        data: {
-                            id: file.id
-                        },
-                        success: function (data) {
-                        },
-                        error: function (e) {
-                        }
-                    });
-                    var fileRef;
-                    return (fileRef = file.previewElement) != null ?
-                        fileRef.parentNode.removeChild(file.previewElement) : void 0;
-                },
+                existingFiles: @json($allegatiEsistenti),
+                sendingData: {
+                    per_cliente: 1,
+                    allegato_id: {{$record->id??'0'}},
+                    allegato_type: '{{str_replace('\\','_',$allegatoServizioType)}}'
+                }
             });
 
 

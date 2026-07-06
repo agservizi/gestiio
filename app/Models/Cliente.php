@@ -23,12 +23,12 @@ class Cliente extends Model
 
     public function comune()
     {
-        return $this->hasOne(Comune::class, 'id', 'citta');
+        return $this->belongsTo(Comune::class, 'citta');
     }
 
     public function utente()
     {
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /*

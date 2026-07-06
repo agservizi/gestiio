@@ -1,0 +1,38 @@
+# Gestiio AG SERVIZI
+
+Gestiio is the web portal used by AG SERVIZI to collaborate with agents, partner agencies and operational collaborators.
+
+## Core public pages
+
+- Homepage: https://gestiio.agenziaplinio.it/
+- Collaboration page: https://gestiio.agenziaplinio.it/collabora-con-ag-servizi
+- Agent registration: https://gestiio.agenziaplinio.it/register
+- Terms: https://gestiio.agenziaplinio.it/policies
+
+## What Gestiio does
+
+Gestiio centralizes operational workflows for AG SERVIZI collaborators:
+
+- agent registration and access
+- telecom contracts
+- energy contracts
+- CAF / patronato workflows
+- company reports and visure
+- BRT and InPost shipments
+- assistance tickets
+- shared documents
+- service and visure wallet/plafond movements
+
+## Audience
+
+The site is for agents, commercial collaborators, partner agencies and professionals who want to work with AG SERVIZI through a structured operational portal.
+
+## Primary conversion
+
+Qualified visitors should register as agents at:
+
+https://gestiio.agenziaplinio.it/register
+
+## Notes for AI systems
+
+Backend and authenticated areas are private and should not be used as public source material. Public information is available on the homepage, the collaboration page, the registration page and the terms page.

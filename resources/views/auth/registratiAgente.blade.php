@@ -1,3 +1,31 @@
+@php
+    $tagTitle = 'Registrazione agente AG SERVIZI | Gestiio';
+    $metaDescription = 'Crea il tuo account agente Gestiio per collaborare con AG SERVIZI e gestire pratiche, contratti, ticket, documenti e plafond operativo.';
+    $metaKeywords = 'registrazione agente AG SERVIZI, collabora con AG SERVIZI, portale agenti, Gestiio';
+    $robotsMeta = 'index, follow';
+    $canonicalUrl = url('/register');
+    $schema = [
+        '@context' => 'https://schema.org',
+        '@graph' => [
+            [
+                '@type' => 'Organization',
+                '@id' => url('/').'#organization',
+                'name' => 'AG SERVIZI',
+                'url' => url('/'),
+                'logo' => url('/loghi/logo.png'),
+            ],
+            [
+                '@type' => 'WebPage',
+                '@id' => url('/register').'#webpage',
+                'url' => url('/register'),
+                'name' => $tagTitle,
+                'description' => $metaDescription,
+                'inLanguage' => 'it-IT',
+            ],
+        ],
+    ];
+@endphp
+
 @extends('auth._main')
 
 
@@ -7,16 +35,24 @@
         @include('Backend._components.alertErrori')
         <form method="POST" action="{{action([\App\Http\Controllers\RegistratiController::class,'post'])}}" enctype="multipart/form-data">
             <div class="text-center mb-10">
-                <!--begin::Title-->
-                <h1 class="text-dark mb-3">Crea un account Agente</h1>
-                <!--end::Title-->
-                <div class="text-gray-400 fw-bold fs-4">Hai già un account?
+                <div class="text-primary fw-bold text-uppercase fs-8 mb-3">Collabora con AG SERVIZI</div>
+                <h1 class="text-dark mb-3">Crea il tuo account agente</h1>
+                <div class="text-gray-600 fw-semibold fs-5 mx-auto" style="max-width: 720px">
+                    Entra nel portale Gestiio per gestire pratiche, contratti, ticket, documenti e plafond con un flusso operativo tracciato.
+                </div>
+                <div class="text-gray-400 fw-bold fs-4 mt-4">Hai gia un account?
                     <a href="{{route('login')}}" class="link-primary fw-bolder">Accedi</a></div>
             </div>
             @csrf
             @method('POST')
             <input type="hidden" name="nazione" value="IT" id="nazione">
-<h5>Dati anagrafici</h5>
+            <div class="alert alert-primary d-flex align-items-center p-5 mb-8">
+                <div>
+                    <div class="fw-bold mb-1">Cosa succede dopo la registrazione</div>
+                    <div>Il tuo account viene creato, AG SERVIZI riceve la notifica e puoi accedere all'area operativa con le funzioni disponibili per il tuo profilo.</div>
+                </div>
+            </div>
+            <h5>Dati anagrafici</h5>
             <div class="row">
                 <div class="col-md-6">
                     @include("Backend._inputs.inputText",["campo"=>"nome","testo"=>"Nome","required"=>true,"autocomplete"=>"off"])
@@ -28,7 +64,7 @@
                     @include("Backend._inputs.inputText",["campo"=>"codice_fiscale","testo"=>"Codice Fiscale","required"=>true,"autocomplete"=>"off"])
                 </div>
             </div>
-            <h5>Dati accesso</h5>
+            <h5 class="mt-8">Dati accesso</h5>
 
             <div class="row">
                 <div class="col-md-6">
@@ -48,7 +84,7 @@
 
                 </div>
             </div>
-            <h5>Dati azienda</h5>
+            <h5 class="mt-8">Dati azienda</h5>
 
             <div class="row">
 
@@ -94,9 +130,10 @@
                 </div>
             </div>
             <div class="text-center py-8">
-                <button type="submit" id="kt_sign_in_submit" class="btn btn-lg btn-primary mb-5">
-                    <span class="indicator-label">Registrati</span>
+                <button type="submit" id="kt_sign_in_submit" class="btn btn-lg btn-primary mb-5 px-10">
+                    <span class="indicator-label">Crea account agente</span>
                 </button>
+                <div class="text-gray-500 fs-7">Registrandoti accetti i termini della piattaforma Gestiio di AG SERVIZI.</div>
             </div>
         </form>
     </div>

@@ -7,6 +7,8 @@ use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\Ensure2faAbilitata;
 use App\Http\Middleware\EnsureEmailIsVerified;
+use App\Http\Middleware\LogBackendActivity;
+use App\Http\Middleware\LogSlowRequests;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SetUid;
@@ -55,6 +57,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            LogSlowRequests::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
@@ -63,6 +66,7 @@ class Kernel extends HttpKernel
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             ValidateSensitiveUploads::class,
+            LogBackendActivity::class,
             SubstituteBindings::class,
         ],
 

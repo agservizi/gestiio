@@ -775,7 +775,7 @@ class VisuraController extends Controller
      */
     public function show($id)
     {
-        $record = Visura::find($id);
+        $record = Visura::with(['tipo:id,nome', 'agente:id,nome,cognome,alias', 'esito', 'allegati', 'allegatiPerCliente'])->find($id);
         abort_if(! $record, 404, 'Questa visura non esiste');
 
         return view('Backend.Visura.show', [
@@ -795,13 +795,9 @@ class VisuraController extends Controller
      */
     public function edit($id)
     {
-        $record = Visura::find($id);
+        $record = Visura::with(['tipo', 'agente:id,nome,cognome,alias', 'esito', 'allegati', 'allegatiPerCliente'])->find($id);
         abort_if(! $record, 404, 'Questa visura non esiste');
-        if (false) {
-            $eliminabile = 'Non eliminabile perchè presente in ...';
-        } else {
-            $eliminabile = true;
-        }
+        $eliminabile = true;
 
         $isCatastale = $this->isCatastaleType($record->tipo);
         $catastoData = [];

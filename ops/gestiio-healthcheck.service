@@ -1,0 +1,6 @@
+[Unit]
+Description=Gestiio production healthcheck
+
+[Service]
+Type=oneshot
+ExecStart=/Volume1/homes/Carmine/gestiio-healthcheck.sh

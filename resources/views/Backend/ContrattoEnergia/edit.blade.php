@@ -42,166 +42,602 @@
 @section('content')
     @php
         $vecchio = $record->id;
+        $isBackoffice = Auth::user()->hasAnyPermission(['admin','operatore','supervisore']);
+        $gestoreEnergia = \App\Models\GestoreContrattoEnergia::find($record->gestore_id);
+        $categoriaCorrente = old('categoria_pratica', $categoriaPratica ?? 'consumer');
     @endphp
-    <div class="card card-flush">
-        <div class="card-body">
-            @include('Backend._components.alertErrori')
-            <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}">
-                @csrf
-                @method($record->id?'PATCH':'POST')
-                @php
-                    $uid = old('uid', $record->uid);
-                @endphp
-                <input type="hidden" name="uid" id="uid" value="{{$uid}}">
-                <input type="hidden" id="gestore_id" name="gestore_id"
-                       value="{{old('gestore_id',$record->gestore_id)}}">
-                <input type="hidden" id="tipo_prodotto" name="tipo_prodotto"
-                       value="{{old('tipo_prodotto',$tipoProdotto)}}">
-                <input type="hidden" name="categoria_pratica" id="categoria_pratica"
-                       value="{{ old('categoria_pratica', $categoriaPratica ?? 'consumer') }}">
-
-                <div class="mb-5">
-                    <h4 class="fw-bold mb-1">Dati pratica</h4>
-                    <div class="text-muted fs-7">Informazioni generali e assegnazione</div>
+    <div class="energy-form-page">
+        <div class="energy-form-hero">
+            <div>
+                <div class="energy-eyebrow">Contratti energia</div>
+                <h1>{{ $vecchio ? 'Modifica contratto' : 'Crea contratto energia' }}</h1>
+                <p>{{ $gestoreEnergia?->nome }}: compila dati pratica, intestatario, fornitura e allegati in un flusso guidato.</p>
+            </div>
+            <div class="energy-form-summary">
+                <span>Gestore selezionato</span>
+                <strong>{{ $gestoreEnergia?->nome }}</strong>
+                <div class="energy-summary-prices">
+                    <div>
+                        <small>Categoria</small>
+                        <b>{{ ucfirst($categoriaCorrente) }}</b>
+                    </div>
+                    <div>
+                        <small>Form</small>
+                        <b>{{ $tipoProdotto ? 'Guidato' : 'Base' }}</b>
+                    </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputTextReadonly',['campo'=>'tipo_contratto_id','testo'=>'Tipo contratto','valore'=>\App\Models\GestoreContrattoEnergia::find($record->gestore_id)?->nome])
-                    </div>
+        @include('Backend._components.alertErrori')
 
-                </div>
-                @if(Auth::user()->hasAnyPermission(['admin','operatore','supervisore']))
-                    <div class="row">
-                        <div class="col-md-6">
-                            @include('Backend._inputs.inputSelect2',['campo'=>'agente_id','testo'=>'Agente','required'=>true,'selected'=>\App\Models\User::selected(old('agente_id',$record->agente_id))])
+        <form method="POST" action="{{action([$controller,'update'],$record->id??'')}}" class="energy-form-shell">
+            @csrf
+            @method($record->id?'PATCH':'POST')
+            @php
+                $uid = old('uid', $record->uid);
+            @endphp
+            <input type="hidden" name="uid" id="uid" value="{{$uid}}">
+            <input type="hidden" id="gestore_id" name="gestore_id" value="{{old('gestore_id',$record->gestore_id)}}">
+            <input type="hidden" id="tipo_prodotto" name="tipo_prodotto" value="{{old('tipo_prodotto',$tipoProdotto)}}">
+            <input type="hidden" name="categoria_pratica" id="categoria_pratica" value="{{ $categoriaCorrente }}">
+
+            <div class="energy-form-grid">
+                <main class="energy-form-main">
+                    <section class="energy-section">
+                        <div class="energy-section-head">
+                            <span class="energy-step">01</span>
+                            <div>
+                                <h2>Dati pratica</h2>
+                                <p>Gestore, assegnazione agente e data di apertura del contratto.</p>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            @include('Backend._inputs.inputTextDataMask',['campo'=>'data','testo'=>'Data','required'=>true])
+                        <div class="energy-section-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputTextReadonly',['campo'=>'tipo_contratto_id','testo'=>'Tipo contratto','valore'=>$gestoreEnergia?->nome])
+                                </div>
+                                <div class="col-md-6"></div>
+                            </div>
+
+                            @if($isBackoffice)
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        @include('Backend._inputs.inputSelect2',['campo'=>'agente_id','testo'=>'Agente','required'=>true,'selected'=>\App\Models\User::selected(old('agente_id',$record->agente_id))])
+                                    </div>
+                                    <div class="col-md-6">
+                                        @include('Backend._inputs.inputTextDataMask',['campo'=>'data','testo'=>'Data','required'=>true])
+                                    </div>
+                                </div>
+                            @else
+                                <input type="hidden" id="agente_id" name="agente_id" value="{{old('agente_id',$record->agente_id)}}">
+                                <input type="hidden" name="data" value="{{old('data',$record->data->format('d/m/Y'))}}">
+                            @endif
                         </div>
-                    </div>
-                @else
-                    <input type="hidden" id="agente_id" name="agente_id"
-                           value="{{old('agente_id',$record->agente_id)}}">
-                    <input type="hidden" name="data" value="{{old('data',$record->data->format('d/m/Y'))}}">
-                @endif
+                    </section>
 
-                @if($recordProdotto)
-                    <div class="separator separator-dashed my-6"></div>
-                    <div class="mb-5">
-                        <h4 class="fw-bold mb-1">Dettagli contratto</h4>
-                        <div class="text-muted fs-7">Campi specifici del gestore e della fornitura</div>
-                    </div>
-                    @php
-                        $categoriaDaProdotto = null;
-                        if (str_contains(strtolower((string)$tipoProdotto), 'business')) {
-                            $categoriaDaProdotto = 'business';
-                        } elseif (str_contains(strtolower((string)$tipoProdotto), 'consumer')) {
-                            $categoriaDaProdotto = 'consumer';
-                        }
-                        $switchConsumerUrl = $categoriaSwitchUrls['consumer'] ?? null;
-                        $switchBusinessUrl = $categoriaSwitchUrls['business'] ?? null;
-                        $switchAbilitato = !empty($switchConsumerUrl) && !empty($switchBusinessUrl);
-                    @endphp
+                    @if($recordProdotto)
+                        <section class="energy-section">
+                            <div class="energy-section-head">
+                                <span class="energy-step">02</span>
+                                <div>
+                                    <h2>Categoria pratica</h2>
+                                    <p>Seleziona consumer o business quando il gestore ha entrambe le configurazioni disponibili.</p>
+                                </div>
+                            </div>
+                            <div class="energy-section-body">
+                                @php
+                                    $categoriaDaProdotto = null;
+                                    if (str_contains(strtolower((string)$tipoProdotto), 'business')) {
+                                        $categoriaDaProdotto = 'business';
+                                    } elseif (str_contains(strtolower((string)$tipoProdotto), 'consumer')) {
+                                        $categoriaDaProdotto = 'consumer';
+                                    }
+                                    $switchConsumerUrl = $categoriaSwitchUrls['consumer'] ?? null;
+                                    $switchBusinessUrl = $categoriaSwitchUrls['business'] ?? null;
+                                    $switchAbilitato = !empty($switchConsumerUrl) && !empty($switchBusinessUrl);
+                                @endphp
 
-                    <div class="mb-6">
-                        <label class="fw-bold fs-6 mb-3 d-block required">Categoria pratica</label>
-                        <ul class="nav nav-pills gap-3" id="categoria-pratica-tabs">
-                            <li class="nav-item">
-                                <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
-                                        data-categoria="consumer"
-                                        data-switch-url="{{ $switchConsumerUrl }}"
-                                        @if(!$switchAbilitato) disabled @endif>
-                                    <i class="bi bi-person-circle me-1"></i>Consumer
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
-                                        data-categoria="business"
-                                        data-switch-url="{{ $switchBusinessUrl }}"
-                                        @if(!$switchAbilitato) disabled @endif>
-                                    <i class="bi bi-building me-1"></i>Business
-                                </button>
-                            </li>
-                        </ul>
-                        @if(!$switchAbilitato && !empty($categoriaDaProdotto))
-                            <div class="text-muted fs-7 mt-2">
-                                Categoria fissata dal prodotto selezionato: <span class="fw-bold text-gray-700">{{ ucfirst($categoriaDaProdotto) }}</span>.
-                            </div>
-                        @elseif($switchAbilitato)
-                            <div class="text-muted fs-7 mt-2">
-                                Cambiando categoria apri direttamente il form prodotto corrispondente.
-                            </div>
-                        @endif
-                        @error('categoria_pratica')
-                        <div class="text-danger fs-7 mt-2">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    @include("Backend.ContrattoEnergia.Prodotti.{$tipoProdotto}Edit",['record'=>$recordProdotto,'codiceFiscale'=>$record->codice_fiscale,'email'=>$record->email,'telefono'=>$record->telefono,'denominazione'=>$record->denominazione])
-                @endif
+                                <div class="energy-category-picker" id="categoria-pratica-tabs">
+                                    <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
+                                            data-categoria="consumer"
+                                            data-switch-url="{{ $switchConsumerUrl }}"
+                                            @if(!$switchAbilitato) disabled @endif>
+                                        <i class="bi bi-person-circle me-1"></i>Consumer
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light-primary js-categoria-tab"
+                                            data-categoria="business"
+                                            data-switch-url="{{ $switchBusinessUrl }}"
+                                            @if(!$switchAbilitato) disabled @endif>
+                                        <i class="bi bi-building me-1"></i>Business
+                                    </button>
+                                </div>
 
-                <div class="separator separator-dashed my-6"></div>
-                <div class="row">
-                    <div class="col-md-6">
-                        @include('Backend._inputs.inputTextAreaCol',['campo'=>'note','testo'=>'Note interne','col'=>2])
-                    </div>
-                    <div class="col-md-6">
-                        <div class="row mb-6">
-                            <div class="col-lg-2 col-form-label text-lg-end">
-                                <label class="fw-bold fs-6">Allegati</label>
+                                @if(!$switchAbilitato && !empty($categoriaDaProdotto))
+                                    <div class="energy-inline-hint mt-3">
+                                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                        <span>Categoria fissata dal prodotto selezionato: <strong>{{ ucfirst($categoriaDaProdotto) }}</strong>.</span>
+                                    </div>
+                                @elseif($switchAbilitato)
+                                    <div class="energy-inline-hint mt-3">
+                                        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+                                        <span>Cambiando categoria apri direttamente il form prodotto corrispondente.</span>
+                                    </div>
+                                @endif
+                                @error('categoria_pratica')
+                                    <div class="text-danger fs-7 mt-2">{{ $message }}</div>
+                                @enderror
                             </div>
-                            <div class="col-lg-10 fv-row fv-plugins-icon-container">
-                                <div class="fv-row">
-                                    <div class="dropzone" id="kt_dropzonejs_example_1">
+                        </section>
+
+                        <section class="energy-section">
+                            <div class="energy-section-head">
+                                <span class="energy-step">03</span>
+                                <div>
+                                    <h2>Dettagli contratto</h2>
+                                    <p>Campi specifici del gestore, dati cliente, indirizzo fornitura e codici tecnici.</p>
+                                </div>
+                            </div>
+                            <div class="energy-section-body energy-dynamic-fields">
+                                <div class="energy-inline-hint">
+                                    <i class="bi bi-magic" aria-hidden="true"></i>
+                                    <span>Inserisci il codice fiscale: se il cliente esiste gia, Gestiio completa i dati disponibili e verifica eventuali blocchi.</span>
+                                </div>
+                                @include("Backend.ContrattoEnergia.Prodotti.{$tipoProdotto}Edit",['record'=>$recordProdotto,'codiceFiscale'=>$record->codice_fiscale,'email'=>$record->email,'telefono'=>$record->telefono,'denominazione'=>$record->denominazione])
+                            </div>
+                        </section>
+                    @endif
+
+                    <section class="energy-section">
+                        <div class="energy-section-head">
+                            <span class="energy-step">{{ $recordProdotto ? '04' : '02' }}</span>
+                            <div>
+                                <h2>Note e allegati</h2>
+                                <p>Annotazioni interne e documenti collegati al contratto energia.</p>
+                            </div>
+                        </div>
+                        <div class="energy-section-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    @include('Backend._inputs.inputTextAreaCol',['campo'=>'note','testo'=>'Note interne','col'=>2])
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="dropzone energy-dropzone gestiio-dropzone" id="kt_dropzonejs_example_1">
                                         <div class="dz-message needsclick">
-                                            <i class="bi bi-file-earmark-arrow-up text-primary fs-3x"></i>
-
-                                            <div class="ms-4">
-                                                <h3 class="fs-5 fw-bolder text-gray-900 mb-1">Trascina il file qui o
-                                                    clicca per selezionare i files</h3>
-                                                <span class="fs-7 fw-bold text-gray-400">
-                                            <span>Qui puoi allegare i documenti relativi al contratto</span>
-                                        </span>
+                                            <span class="energy-upload-icon gestiio-dropzone-icon">
+                                                <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                                            </span>
+                                            <div>
+                                                <h3>Trascina i file qui o clicca per selezionarli</h3>
+                                                <span>Documenti identita, bollette, deleghe e allegati relativi al contratto.</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </section>
+                </main>
 
+                <aside class="energy-form-aside">
+                    <div class="energy-sticky-card">
+                        <div class="energy-aside-title">Riepilogo</div>
+                        <div class="energy-aside-row">
+                            <span>Stato</span>
+                            <strong>{{ $vecchio ? 'Modifica' : 'Nuovo contratto' }}</strong>
+                        </div>
+                        <div class="energy-aside-row">
+                            <span>Gestore</span>
+                            <strong>{{ $gestoreEnergia?->nome }}</strong>
+                        </div>
+                        <div class="energy-aside-row">
+                            <span>Categoria</span>
+                            <strong>{{ ucfirst($categoriaCorrente) }}</strong>
+                        </div>
+                        <div class="energy-aside-note">
+                            Salva in bozza se mancano allegati o dati tecnici. Conferma quando la pratica e pronta per la lavorazione.
+                        </div>
 
-                <div class="separator separator-dashed my-6"></div>
-                <div class="row align-items-center">
-                    <div class="col-md-8 text-center text-md-start mb-3 mb-md-0">
                         @if($creaContratto)
-                            <button class="btn btn-primary" type="submit"
-                                    id="submit">{{$vecchio?'Salva modifiche':'Crea '.\App\Models\ContrattoTelefonia::NOME_SINGOLARE}}</button>
+                            <button class="btn btn-primary w-100" type="submit" id="submit">
+                                {{ $vecchio ? 'Salva modifiche' : 'Crea '.\App\Models\ContrattoEnergia::NOME_SINGOLARE }}
+                            </button>
                         @endif
                         @if(!$vecchio || $record->esito_id=='bozza')
-                            <button class="btn btn-light-warning" type="submit" id="submit-bozza" name="bozza"
-                                    value="bozza">{{$vecchio?'Salva bozza':'Crea bozza'}}</button>
+                            <button class="btn btn-light-warning w-100 mt-2" type="submit" id="submit-bozza" name="bozza" value="bozza">
+                                {{ $vecchio ? 'Salva bozza' : 'Crea bozza' }}
+                            </button>
+                        @endif
+
+                        @if($vecchio)
+                            <div class="mt-3">
+                                @if($eliminabile===true)
+                                    <a class="btn btn-light-danger w-100" id="elimina" href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
+                                @elseif(is_string($eliminabile))
+                                    <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
+                                        <a class="btn btn-light-danger disabled w-100" href="javascript:void(0)">Elimina</a>
+                                    </span>
+                                @endif
+                            </div>
                         @endif
                     </div>
-                    @if($vecchio)
-                        <div class="col-md-4 text-center text-md-end">
-                            @if($eliminabile===true)
-                                <a class="btn btn-light-danger" id="elimina"
-                                   href="{{action([$controller,'destroy'],$record->id)}}">Elimina</a>
-                            @elseif(is_string($eliminabile))
-                                <span data-bs-toggle="tooltip" title="{{$eliminabile}}">
-                                    <a class="btn btn-light-danger disabled" href="javascript:void(0)">Elimina</a>
-                                </span>
-                            @endif
-                        </div>
-                    @endif
-                </div>
-
-            </form>
-        </div>
+                </aside>
+            </div>
+        </form>
     </div>
 @endsection
+
+@push('customCss')
+    <style>
+        .energy-form-page {
+            --energy-bg: #f8fafc;
+            --energy-surface: #ffffff;
+            --energy-text: #020617;
+            --energy-muted: #64748b;
+            --energy-border: #e2e8f0;
+            --energy-primary: #0ea5e9;
+            --energy-primary-dark: #0369a1;
+            color: var(--energy-text);
+        }
+
+        .energy-form-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+            gap: 24px;
+            align-items: stretch;
+            padding: 28px;
+            margin-bottom: 18px;
+            border: 1px solid var(--energy-border);
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #f3f8ff 100%);
+            box-shadow: 0 12px 36px rgba(15, 23, 42, .05);
+        }
+
+        .energy-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 0 10px;
+            margin-bottom: 12px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: var(--energy-primary-dark);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .energy-form-hero h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .energy-form-hero p {
+            max-width: 760px;
+            margin: 10px 0 0;
+            color: var(--energy-muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .energy-form-summary,
+        .energy-sticky-card {
+            border: 1px solid #cfe8ff;
+            border-radius: 8px;
+            background: rgba(255,255,255,.9);
+        }
+
+        .energy-form-summary {
+            padding: 20px;
+        }
+
+        .energy-form-summary span,
+        .energy-form-summary small,
+        .energy-aside-row span {
+            color: var(--energy-muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .energy-form-summary strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.35;
+        }
+
+        .energy-summary-prices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .energy-summary-prices div {
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--energy-bg);
+        }
+
+        .energy-summary-prices b {
+            display: block;
+            margin-top: 4px;
+            font-size: 16px;
+        }
+
+        .energy-form-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .energy-section {
+            margin-bottom: 16px;
+            border: 1px solid var(--energy-border);
+            border-radius: 8px;
+            background: var(--energy-surface);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, .04);
+            overflow: hidden;
+        }
+
+        .energy-section-head {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--energy-border);
+            background: #fbfdff;
+        }
+
+        .energy-step {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            border-radius: 8px;
+            background: #e0f2fe;
+            color: var(--energy-primary-dark);
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .energy-section-head h2 {
+            margin: 0 0 4px;
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .energy-section-head p {
+            margin: 0;
+            color: var(--energy-muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .energy-section-body {
+            padding: 22px 20px 8px;
+        }
+
+        .energy-section-body .row.mb-6 {
+            margin-bottom: 16px !important;
+        }
+
+        .energy-section-body .col-form-label {
+            padding-top: 11px;
+        }
+
+        .energy-section-body .form-control,
+        .energy-section-body .form-select,
+        .energy-section-body .select2-container--bootstrap5 .select2-selection {
+            min-height: 46px;
+            border-radius: 8px;
+        }
+
+        .energy-inline-hint {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            min-height: 44px;
+            padding: 10px 12px;
+            margin-bottom: 18px;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .energy-inline-hint i {
+            color: var(--energy-primary-dark);
+        }
+
+        .energy-category-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .energy-category-picker .btn {
+            min-width: 130px;
+        }
+
+        .energy-dynamic-fields > .row {
+            max-width: 100%;
+        }
+
+        .energy-dynamic-fields > .row > [class*="offset-md"] {
+            margin-left: 0 !important;
+        }
+
+        .energy-dynamic-fields h4,
+        .energy-dynamic-fields > strong {
+            display: block;
+            margin: 18px 0 14px;
+            color: var(--energy-text);
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .energy-dynamic-fields h4:first-child,
+        .energy-dynamic-fields > strong:first-child {
+            margin-top: 0;
+        }
+
+        .energy-dynamic-fields ul {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            padding: 0;
+            margin: 12px 0 18px;
+            list-style: none;
+        }
+
+        .energy-dynamic-fields li {
+            min-height: 44px;
+            padding: 11px 12px 11px 34px;
+            border: 1px solid var(--energy-border);
+            border-radius: 8px;
+            background: var(--energy-bg);
+            color: #334155;
+            font-size: 13px;
+            line-height: 1.45;
+            position: relative;
+        }
+
+        .energy-dynamic-fields li::before {
+            content: "";
+            position: absolute;
+            left: 12px;
+            top: 15px;
+            width: 10px;
+            height: 10px;
+            border: 2px solid var(--energy-primary);
+            border-radius: 3px;
+            background: #fff;
+        }
+
+        .energy-dropzone {
+            min-height: 170px;
+            border: 1px dashed #93c5fd;
+            border-radius: 8px;
+            background: #f8fbff;
+        }
+
+        .energy-dropzone .dz-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            min-height: 140px;
+            margin: 0;
+        }
+
+        .energy-upload-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 54px;
+            height: 54px;
+            border-radius: 8px;
+            background: #e0f2fe;
+            color: var(--energy-primary-dark);
+            font-size: 25px;
+        }
+
+        .energy-dropzone h3 {
+            margin: 0 0 6px;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .energy-dropzone span {
+            color: var(--energy-muted);
+            font-size: 13px;
+        }
+
+        .energy-sticky-card {
+            position: sticky;
+            top: 90px;
+            padding: 18px;
+            box-shadow: 0 12px 36px rgba(15, 23, 42, .05);
+        }
+
+        .energy-aside-title {
+            margin-bottom: 14px;
+            font-size: 16px;
+            font-weight: 900;
+        }
+
+        .energy-aside-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-top: 1px solid var(--energy-border);
+        }
+
+        .energy-aside-row strong {
+            max-width: 170px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        .energy-aside-note {
+            padding: 14px;
+            margin: 14px 0;
+            border-radius: 8px;
+            background: var(--energy-bg);
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.65;
+        }
+
+        @media (max-width: 1199.98px) {
+            .energy-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .energy-sticky-card {
+                position: static;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .energy-form-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .energy-form-hero,
+            .energy-section-head,
+            .energy-section-body {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .energy-form-hero h1 {
+                font-size: 24px;
+            }
+
+            .energy-dynamic-fields ul,
+            .energy-summary-prices {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+@endpush
+
+@include('Backend._components.dropzoneUx')
+
 @push('customScript')
     @php
         $contrattoEnergiaConfig = [
@@ -414,80 +850,15 @@
                 }
             });
 
-            var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
-                url: config.uploadAllegatoUrl, // Set the url for your upload script location
-                paramName: "file", // The name that will be used to transfer the file
-                maxFiles: 10,
-                maxFilesize: 20, // MB
-                addRemoveLinks: true,
-                //acceptedFiles: "image/*",
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                init: function () {
-                    thisDropzone = this;
-                    this.on("sending", function (file, xhr, formData) {
-                        formData.append("uid", $('#uid').val());
-                        formData.append("contratto_energia_id", config.contrattoId);
-                    });
-                    const esistenti = config.allegatiEsistenti || [];
-                    if (esistenti) {
-                        $.each(esistenti, function (key, value) {
-
-                            var mockFile = {
-                                name: value.path_filename,
-                                size: value.dimensione_file,
-                                filename: value.path_filename,
-                                id: value.id
-                            };
-
-                            thisDropzone.emit('addedfile', mockFile);
-                            if (value.thumbnail) {
-                                thisDropzone.emit('thumbnail', mockFile, "/storage/" + value.thumbnail);
-
-                            }
-                            thisDropzone.emit('complete', mockFile);
-
-
-                        });
-                    }
-
-                },
-                accept: function (file, done) {
-                    if (file.name == "q") {
-                        done("Naha, you don't.");
-                    } else {
-                        done();
-                    }
-                },
-                success: function (file, response) {
-                    file.filename = response.filename;
-                    file.id = response.id;
-                    if (response.thumbnail) {
-                        file.previewElement.querySelector("img").src = response.thumbnail;
-                    }
-                },
-                removedfile: function (file) {
-                    console.dir(file);
-                    var name = file.filename;
-                    $.ajax({
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken
-                        },
-                        type: 'DELETE',
-                        url: config.deleteAllegatoUrl,
-                        data: {
-                            id: file.id
-                        },
-                        success: function (data) {
-                        },
-                        error: function (e) {
-                        }
-                    });
-                    var fileRef;
-                    return (fileRef = file.previewElement) != null ?
-                        fileRef.parentNode.removeChild(file.previewElement) : void 0;
-                },
+            initGestiioDropzone("#kt_dropzonejs_example_1", {
+                uploadUrl: config.uploadAllegatoUrl,
+                deleteUrl: config.deleteAllegatoUrl,
+                csrfToken: csrfToken,
+                existingFiles: config.allegatiEsistenti || [],
+                sendingData: {
+                    uid: function () { return $('#uid').val(); },
+                    contratto_energia_id: config.contrattoId
+                }
             });
 
             $('#codice_fiscale').on('blur change', function () {

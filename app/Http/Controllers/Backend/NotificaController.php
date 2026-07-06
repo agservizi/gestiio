@@ -90,9 +90,21 @@ class NotificaController extends Controller
      */
     protected function applicaFiltri($request)
     {
+        /** @var User|null $authUser */
+        $authUser = Auth::user();
 
         $queryBuilder = Notifica::query()
             ->withCount('letture');
+
+        if ($authUser instanceof User && ! $authUser->hasPermissionTo('admin')) {
+            $destinatario = $authUser->hasPermissionTo('operatore') ? 'operatore' : 'agente';
+            $queryBuilder
+                ->where('destinatario', $destinatario)
+                ->where(function ($q) use ($authUser) {
+                    $q->whereNull('user_id')
+                        ->orWhere('user_id', $authUser->id);
+                });
+        }
 
         // $this->conFiltro = true;
         return $queryBuilder;

@@ -22,7 +22,7 @@ class Comune extends Model
 
     public function provincia()
     {
-        return $this->hasOne('\App\Models\Provincia', 'id', 'provincia_id')->withDefault();
+        return $this->belongsTo(Provincia::class, 'provincia_id')->withDefault();
     }
 
     /***************************************************

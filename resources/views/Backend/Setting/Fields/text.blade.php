@@ -11,9 +11,11 @@
                placeholder="{{ $field['label'] }}">
 
         <div class="fv-plugins-message-container invalid-feedback">
-            @error($field['name'])
-            {{$message}}
-            @enderror
+            @if(isset($errors))
+                @error($field['name'])
+                {{$message}}
+                @enderror
+            @endif
         </div>
     </div>
 </div>

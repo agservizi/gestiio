@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class CafPatronato extends Model
 {
@@ -31,6 +32,11 @@ class CafPatronato extends Model
      */
     protected static function booted()
     {
+        static::creating(function (CafPatronato $model) {
+            if (! $model->codice_pratica) {
+                $model->codice_pratica = self::generaCodicePratica();
+            }
+        });
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
             if (Auth::check() && Auth::user()->hasPermissionTo('agente')) {
@@ -58,7 +64,7 @@ class CafPatronato extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function allegati()
@@ -73,12 +79,12 @@ class CafPatronato extends Model
 
     public function caricatoDa()
     {
-        return $this->hasOne(User::class, 'id', 'caricato_da_user_id');
+        return $this->belongsTo(User::class, 'caricato_da_user_id');
     }
 
     public function esito()
     {
-        return $this->hasOne(EsitoCafPatronato::class, 'id', 'esito_id');
+        return $this->belongsTo(EsitoCafPatronato::class, 'esito_id');
     }
 
     public function prodotto()
@@ -88,7 +94,7 @@ class CafPatronato extends Model
 
     public function tipo()
     {
-        return $this->hasOne(TipoCafPatronato::class, 'id', 'tipo_caf_patronato_id');
+        return $this->belongsTo(TipoCafPatronato::class, 'tipo_caf_patronato_id');
     }
 
     /*
@@ -96,6 +102,28 @@ class CafPatronato extends Model
     | SCOPE
     |--------------------------------------------------------------------------
     */
+
+    public function scopeAperte(Builder $builder): Builder
+    {
+        return $builder->whereNull('esito_finale');
+    }
+
+    public function scopeInLavorazione(Builder $builder): Builder
+    {
+        return $builder->whereIn('esito_id', ['bozza', 'da-gestire']);
+    }
+
+    public function scopeFerme(Builder $builder, int $giorni = 7): Builder
+    {
+        return $builder->inLavorazione()
+            ->whereDate('created_at', '<=', now()->subDays($giorni));
+    }
+
+    public function scopeDelMese(Builder $builder, int $anno, int $mese): Builder
+    {
+        return $builder->whereYear('data', $anno)
+            ->whereMonth('data', $mese);
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -121,11 +149,9 @@ class CafPatronato extends Model
 
     public function bulletEsitoFinale()
     {
-        if ($this->esito_finale) {
-
-            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style=background-color:'.self::ESITI[$this->esito_finale].';"></span>';
+        if ($this->esito_finale && isset(self::ESITI[$this->esito_finale])) {
+            return '<span class="bullet bullet-vertical d-flex align-items-center min-h-20px mh-100 me-2" style="background-color:'.self::ESITI[$this->esito_finale].'"></span>';
         }
-
     }
 
     /*
@@ -137,5 +163,14 @@ class CafPatronato extends Model
     public function tipoProdotto()
     {
         return str_replace('App\Models\\', '', $this->prodotto_type);
+    }
+
+    public static function generaCodicePratica(): string
+    {
+        do {
+            $codice = 'CAF'.Str::upper((string) Str::ulid());
+        } while (self::withoutGlobalScope('filtroOperatore')->where('codice_pratica', $codice)->exists());
+
+        return $codice;
     }
 }

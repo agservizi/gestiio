@@ -36,7 +36,7 @@
                                 <!--begin::Description-->
                                 <div class="mb-15 fs-5 fw-normal text-gray-800">
 
-                                    {!! $messaggio->messaggio !!}
+                                    {!! \Illuminate\Support\Str::of($messaggio->messaggio)->stripTags('<p><br><b><i><u><strong><em><ul><ol><li><a><span><div><h1><h2><h3><h4><h5><h6>') !!}
                                 </div>
                                 @if($messaggio->allegati->count())
                                     <p class="fw-normal fs-7 text-gray-700 m-0">
@@ -100,7 +100,7 @@
                                         <!--end::Wrapper-->
                                         <!--begin::Desc-->
                                         <p class="fw-normal fs-5 text-gray-700 m-0">
-                                            {!! $messaggio->messaggio !!}
+                                            {!! \Illuminate\Support\Str::of($messaggio->messaggio)->stripTags('<p><br><b><i><u><strong><em><ul><ol><li><a><span><div><h1><h2><h3><h4><h5><h6>') !!}
                                         </p>
                                         @if($messaggio->allegati->count())
                                             <p class="fw-normal fs-7 text-gray-700 m-0">

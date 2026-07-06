@@ -190,6 +190,10 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::resource('fattura-proforma', FatturaProformaController::class)->except(['edit', 'update']);
 
     // Portafoglio
+    Route::post('/portafoglio/richiedi-spostamento', [PortafoglioController::class, 'richiediSpostamento']);
+    Route::post('/portafoglio/sposta', [PortafoglioController::class, 'sposta']);
+    Route::post('/portafoglio/storna', [PortafoglioController::class, 'storna']);
+    Route::post('/portafoglio/richieste-spostamento/{id}/applica', [PortafoglioController::class, 'applicaRichiestaSpostamento']);
     Route::resource('/portafoglio', PortafoglioController::class);
     Route::post('/pagamento/{servizio}', [PaymentController::class, 'pagamento']);
     Route::get('/pagamento/{servizio}/{result}', [PaymentController::class, 'response']);
@@ -240,7 +244,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
 
 });
 
-Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function () {
+Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], function () {
 
     // Cliente
     Route::get('cliente/{id}/tab/{tab}', [ClienteController::class, 'tab']);
@@ -253,6 +257,10 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::get('/settings', [SettingController::class, 'index'])->name('settings');
     Route::get('/controlli-contratti', [SettingController::class, 'index'])->name('controlli-contratti');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+    Route::get('/settings/export', [SettingController::class, 'export'])->name('settings.export');
+    Route::post('/settings/import', [SettingController::class, 'import'])->name('settings.import');
+    Route::post('/settings/rollback/{auditLog}', [SettingController::class, 'rollback'])->name('settings.rollback');
+    Route::post('/settings/test-codice-fiscale', [SettingController::class, 'testCodiceFiscale'])->name('settings.test-codice-fiscale');
 
     // Assistenza
     Route::resource('cliente-assistenza', ClienteAssistenzaController::class);
@@ -261,7 +269,11 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::get('richiesta-assistenza/{id}/pdf', [RichiestaAssistenzaController::class, 'pdf']);
     Route::post('richiesta-assistenza/{id}/reinvio-credenziali', [RichiestaAssistenzaController::class, 'reinviaCredenziali']);
     // Registri
-    Route::get('registro/{cosa}', [RegistriController::class, 'index']);
+    Route::get('registro/{cosa}', [RegistriController::class, 'index'])
+        ->whereIn('cosa', ['login', 'email', 'backup-db', 'elenco_licenze', 'info-sito', 'errori', 'upload', 'modifiche'])
+        ->name('registro.index');
+    Route::post('registro/backup-db/esegui', [RegistriController::class, 'eseguiBackup'])->name('registro.backup.esegui');
+    Route::get('registro/backup-db/scarica', [RegistriController::class, 'scaricaBackup'])->name('registro.backup.scarica');
 
     // plafond
     Route::get('/carica-plafond', [RicaricaPlafonController::class, 'show']);

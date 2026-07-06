@@ -27,15 +27,15 @@
 
             <div class="gestiio-ai-messages" data-gestiio-ai-messages>
                 <div class="gestiio-ai-message gestiio-ai-message-bot">
-                    Ciao, sono Gestiio AI. Posso aiutarti a trovare dati, preparare messaggi, capire priorità o avviare un'automazione.
+                    Ciao, sono Gestiio AI. Posso spiegarti questa pagina, dirti quali documenti servono e guidarti nel prossimo passo.
                 </div>
             </div>
 
             <div class="gestiio-ai-suggestions">
-                <button type="button" data-ai-prompt="Cosa devo controllare in questa pagina?">Controlla pagina</button>
+                <button type="button" data-ai-prompt="Spiegami questa pagina">Spiega pagina</button>
+                <button type="button" data-ai-prompt="Quali documenti servono?">Documenti</button>
                 <button type="button" data-ai-prompt="Preparami un messaggio per il cliente">Scrivi messaggio</button>
                 <button type="button" data-ai-prompt="Voglio ricaricare il plafond con carta">Ricarica plafond</button>
-                <button type="button" data-ai-prompt="Qual è la prossima cosa da fare?">Prossima azione</button>
             </div>
 
             <form class="gestiio-ai-form" data-gestiio-ai-form>
@@ -567,12 +567,20 @@
                     function pageContext() {
                         const title = document.title || '';
                         const heading = document.querySelector('h1,h2,.card-title')?.textContent?.trim() || '';
+                        const labels = Array.from(document.querySelectorAll('label,.form-label,th,h3,h4,strong'))
+                            .map(function (node) {
+                                return node.textContent.trim();
+                            })
+                            .filter(Boolean)
+                            .slice(0, 35);
+
                         return {
                             url: window.location.pathname,
                             full_url: window.location.href,
                             title: title,
                             heading: heading,
-                            menu: document.querySelector('.menu-link.active .menu-title, .menu-item.show .menu-title')?.textContent?.trim() || ''
+                            menu: document.querySelector('.menu-link.active .menu-title, .menu-item.show .menu-title')?.textContent?.trim() || '',
+                            visible_text: labels.join(' | ')
                         };
                     }
 

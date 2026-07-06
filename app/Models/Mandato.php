@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Http\MieClassiCache\CacheGestoriDashboard;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Mandato extends Model
 {
@@ -24,8 +24,8 @@ class Mandato extends Model
 
     }
 
-    public function gestore(): HasOne
+    public function gestore(): BelongsTo
     {
-        return $this->hasOne(Gestore::class, 'id', 'gestore_id')->select(['id', 'nome', 'logo']);
+        return $this->belongsTo(Gestore::class, 'gestore_id')->select(['id', 'nome', 'logo']);
     }
 }

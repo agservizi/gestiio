@@ -38,7 +38,7 @@ class ProdottoEnergiaEnelConsumer extends Model
 
     public function comuneIndirizzo()
     {
-        $this->hasOne(Comune::class, 'id', 'citta');
+        return $this->belongsTo(Comune::class, 'citta');
     }
 
     /*

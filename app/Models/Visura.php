@@ -55,7 +55,7 @@ class Visura extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function allegati()
@@ -70,17 +70,17 @@ class Visura extends Model
 
     public function caricatoDa()
     {
-        return $this->hasOne(User::class, 'id', 'caricato_da_user_id');
+        return $this->belongsTo(User::class, 'caricato_da_user_id');
     }
 
     public function esito()
     {
-        return $this->hasOne(EsitoVisura::class, 'id', 'esito_id');
+        return $this->belongsTo(EsitoVisura::class, 'esito_id');
     }
 
     public function tipo()
     {
-        return $this->hasOne(TipoVisura::class, 'id', 'tipo_visura_id');
+        return $this->belongsTo(TipoVisura::class, 'tipo_visura_id');
     }
 
     /*

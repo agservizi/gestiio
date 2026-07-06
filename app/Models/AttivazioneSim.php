@@ -52,7 +52,7 @@ class AttivazioneSim extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function allegati()
@@ -62,27 +62,27 @@ class AttivazioneSim extends Model
 
     public function caricatoDa()
     {
-        return $this->hasOne(User::class, 'id', 'caricato_da_user_id');
+        return $this->belongsTo(User::class, 'caricato_da_user_id');
     }
 
     public function comune()
     {
-        return $this->hasOne(Comune::class, 'id', 'citta');
+        return $this->belongsTo(Comune::class, 'citta');
     }
 
     public function esito()
     {
-        return $this->hasOne(EsitoAttivazioneSim::class, 'id', 'esito_id');
+        return $this->belongsTo(EsitoAttivazioneSim::class, 'esito_id');
     }
 
     public function gestore()
     {
-        return $this->hasOne(GestoreAttivazioniSim::class, 'id', 'gestore_id');
+        return $this->belongsTo(GestoreAttivazioniSim::class, 'gestore_id');
     }
 
     public function offerta()
     {
-        return $this->hasOne(OffertaSim::class, 'id', 'offerta_sim_id');
+        return $this->belongsTo(OffertaSim::class, 'offerta_sim_id');
     }
 
     /*

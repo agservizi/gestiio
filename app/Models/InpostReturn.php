@@ -40,7 +40,7 @@ class InpostReturn extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function chiamate(): MorphMany

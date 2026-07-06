@@ -1,9 +1,11 @@
 @extends('Backend._layout._main')
-@section('titolo','Registro login')
+@section('titolo','Registro backup database')
 @section('toolbar')
     <div class="d-flex align-items-center py-1">
-        <a class="btn btn-sm btn-primary" data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-           href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],['backup-db','esegui'])}}">Esegui backup</a>
+        <form method="POST" action="{{ route('registro.backup.esegui') }}">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-primary">Esegui backup</button>
+        </form>
     </div>
 @endsection
 @section('content')
@@ -60,7 +62,7 @@
                             <td>{{ \Carbon\Carbon::createFromTimestamp($file['lastModified'])->diffForHumans() }}</td>
                             <td class="text-end">{{ \App\humanFileSize($file['fileSize']) }}</td>
                             <td class="text-end">
-                                <a href="{{ action([\App\Http\Controllers\Backend\RegistriController::class,'index'],['cosa'=>'backup-db','scarica'=>$file['path'],'disk'=>$file['disk']]) }}">Scarica</a>
+                                <a href="{{ route('registro.backup.scarica', ['path' => $file['path'], 'disk' => $file['disk']]) }}">Scarica</a>
                             </td>
                         </tr>
                     @empty

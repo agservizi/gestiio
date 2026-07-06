@@ -33,221 +33,130 @@
             'thread_attive' => 0,
             'nuovi_messaggi_oggi' => 0,
         ];
+        $controlRoomAdmin = $controlRoomAdmin ?? [
+            'code' => [],
+            'alert' => [],
+            'economico' => ['entrate' => 0, 'uscite' => 0, 'utile' => 0, 'assistenze_5' => 0, 'ricariche_plafond' => 0, 'produzione_agenti' => 0],
+            'audit' => collect(),
+            'azioni' => [],
+            'salute' => [],
+        ];
     @endphp
 
-    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-0">
-                    <div class="card-title d-flex align-items-center gap-2">
-                        <span class="svg-icon svg-icon-2 text-primary">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path opacity="0.3" d="M4 19C4 17.8954 4.89543 17 6 17H20V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z" fill="currentColor"/>
-                                <path d="M6 3C4.89543 3 4 3.89543 4 5V15H20V5C20 3.89543 19.1046 3 18 3H6ZM7 12L10.2 8.8L12.4 11L16.5 6.9L18 8.4L12.4 14L10.2 11.8L8.5 13.5L7 12Z" fill="currentColor"/>
-                            </svg>
-                        </span>
-                        <h3 class="card-title m-0">Produzione mese</h3>
-                    </div>
-                </div>
-                <div class="card-body pt-0">
-                    <div class="bg-light-primary rounded p-4 mb-4">
-                        <div class="text-muted fw-semibold fs-8 mb-1">Contratti totali</div>
-                        <div class="fs-2 fw-bolder text-primary">{{ number_format($produzioneConteggio) }}</div>
-                    </div>
-                    <div class="d-flex justify-content-between fw-semibold mb-2">
-                        <span class="text-muted">In lavorazione</span>
-                        <span>{{ number_format($produzioneInLavorazione) }} ({{ $percentualeProduzione }}%)</span>
-                    </div>
-                    <div class="progress h-8px bg-light-primary">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $percentualeProduzione }}%" aria-valuenow="{{ $percentualeProduzione }}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                </div>
+    <section class="admin-control-room mb-5 mb-xl-10">
+        <div class="admin-control-hero">
+            <div>
+                <span class="admin-control-kicker">Operazioni</span>
+                <h2>Dashboard admin</h2>
+                <p>Code, alert e numeri del mese. Le azioni importanti restano qui.</p>
+            </div>
+            <div class="admin-control-actions">
+                @foreach($controlRoomAdmin['azioni'] as $azione)
+                    <a href="{{$azione['url']}}" class="btn btn-sm {{$loop->first ? 'btn-primary' : 'btn-light-primary'}}">{{$azione['label']}}</a>
+                @endforeach
             </div>
         </div>
 
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-0">
-                    <div class="card-title d-flex align-items-center gap-2">
-                        <span class="svg-icon svg-icon-2 text-primary">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path opacity="0.3" d="M4 19C4 17.8954 4.89543 17 6 17H20V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z" fill="currentColor"/>
-                                <path d="M6 3H18C19.1046 3 20 3.89543 20 5V15H6C4.89543 15 4 15.8954 4 17V5C4 3.89543 4.89543 3 6 3Z" fill="currentColor"/>
-                            </svg>
-                        </span>
-                        <h3 class="card-title m-0">Economico mese</h3>
+        @include('Backend.Dashboard.partials.adminKpiCards')
+
+        @include('Backend.Dashboard.partials.adminOverviewCards')
+
+        <div class="admin-control-grid">
+            <div class="admin-control-panel admin-control-panel-wide">
+                <div class="admin-control-head">
+                    <div>
+                        <h3>Code</h3>
+                        <span>Aperti o da controllare.</span>
                     </div>
                 </div>
-                <div class="card-body pt-0">
-                    <div class="bg-light-primary rounded p-4 mb-4">
-                        <div class="text-muted fw-semibold fs-8 mb-1">Utile stimato</div>
-                        <div class="fs-2 fw-bolder text-primary">{{ importo($guadagno->utile,true) }}</div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="text-muted fw-semibold">Entrate</span>
-                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ importo($guadagno->entrate,true) }}</span>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <span class="text-muted fw-semibold">Uscite</span>
-                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ importo($guadagno->uscite,true) }}</span>
-                    </div>
-
-                    <div class="d-flex justify-content-between fw-semibold mb-2">
-                        <span class="text-muted">Incidenza utile</span>
-                        <span>{{ $percentualeUtile }}%</span>
-                    </div>
-                    <div class="progress h-8px bg-light-success">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $percentualeUtile }}%" aria-valuenow="{{ $percentualeUtile }}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
+                <div class="admin-queue-grid">
+                    @foreach($controlRoomAdmin['code'] as $item)
+                        <a href="{{$item['url']}}" class="admin-queue-card admin-queue-{{$item['tone']}}">
+                            <span>{{$item['label']}}</span>
+                            <strong>{{number_format((int)$item['count'])}}</strong>
+                        </a>
+                    @endforeach
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-0">
-                    <div class="card-title d-flex align-items-center gap-2">
-                        <span class="svg-icon svg-icon-2 text-primary">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path opacity="0.3" d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V8C18.8954 8 18 8.89543 18 10C18 11.1046 18.8954 12 20 12V15C20 16.1046 19.1046 17 18 17H6C4.89543 17 4 16.1046 4 15V12C5.10457 12 6 11.1046 6 10C6 8.89543 5.10457 8 4 8V5Z" fill="currentColor"/>
-                                <path d="M9 7.5C9 6.67157 9.67157 6 10.5 6H13.5C14.3284 6 15 6.67157 15 7.5C15 8.32843 14.3284 9 13.5 9H10.5C9.67157 9 9 8.32843 9 7.5Z" fill="currentColor"/>
-                            </svg>
-                        </span>
-                        <h3 class="card-title m-0">Ticket</h3>
+            <div class="admin-control-panel">
+                <div class="admin-control-head">
+                    <div>
+                        <h3>Alert</h3>
+                        <span>Prima passa da qui.</span>
                     </div>
                 </div>
-                <div class="card-body pt-0">
-                    <div class="bg-light-primary rounded p-4 mb-4">
-                        <div class="text-muted fw-semibold fs-8 mb-1">Aperti / in lavorazione</div>
-                        <div class="fs-2 fw-bolder text-primary">{{ number_format($ticketAperti) }}</div>
-                    </div>
-
-                    <div class="d-flex align-items-center justify-content-between mb-5">
-                        <span class="text-muted fw-semibold">Chiusi</span>
-                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ number_format($ticketChiusi) }}</span>
-                    </div>
-
-                    <a href="{{ action([\App\Http\Controllers\Backend\TicketsController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri ticket</a>
+                <div class="admin-alert-list">
+                    @foreach($controlRoomAdmin['alert'] as $alert)
+                        <a href="{{$alert['url']}}" class="admin-alert-row admin-alert-{{$alert['severity']}}">
+                            <span>{{$alert['label']}}</span>
+                            <strong>{{number_format((int)$alert['count'])}}</strong>
+                        </a>
+                    @endforeach
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-6 col-lg-3">
-            <div class="card card-flush h-md-100">
-                <div class="card-header border-0 pt-5 pb-0">
-                    <div class="card-title d-flex align-items-center gap-2">
-                        <span class="svg-icon svg-icon-2 text-primary">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path opacity="0.3" d="M12 3C7.02944 3 3 6.80558 3 11.5C3 14.0409 4.18896 16.3218 6.07143 17.8898V21L9.02857 19.3716C9.94801 19.623 10.9482 19.75 12 19.75C16.9706 19.75 21 15.9444 21 11.25C21 6.55558 16.9706 3 12 3Z" fill="currentColor"/>
-                                <path d="M8.5 11.25C8.5 10.6977 8.94772 10.25 9.5 10.25H14.5C15.0523 10.25 15.5 10.6977 15.5 11.25C15.5 11.8023 15.0523 12.25 14.5 12.25H9.5C8.94772 12.25 8.5 11.8023 8.5 11.25Z" fill="currentColor"/>
-                            </svg>
-                        </span>
-                        <h3 class="card-title m-0">Assistenza</h3>
+            <div class="admin-control-panel">
+                <div class="admin-control-head">
+                    <div>
+                        <h3>Economico mese</h3>
+                        <span>Il mese in numeri.</span>
                     </div>
                 </div>
-                <div class="card-body pt-0">
-                    <div class="bg-light-primary rounded p-4 mb-4">
-                        <div class="text-muted fw-semibold fs-8 mb-1">Richieste totali</div>
-                        <div class="fs-2 fw-bolder text-primary">{{ number_format($kpiDashboard['richieste_assistenza_totali']) }}</div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="text-muted fw-semibold">Nuove oggi</span>
-                        <span class="badge badge-light-primary fw-bolder px-4 py-2">{{ number_format($kpiDashboard['richieste_assistenza_oggi']) }}</span>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-5">
-                        <span class="text-muted fw-semibold">Senza credenziali</span>
-                        <span class="badge badge-light-danger fw-bolder px-4 py-2">{{ number_format($alertDashboard['richieste_senza_credenziali']) }}</span>
-                    </div>
-
-                    <a href="{{ action([\App\Http\Controllers\Backend\RichiestaAssistenzaController::class, 'index']) }}" class="btn btn-light-warning btn-sm">Apri richieste</a>
+                <div class="admin-money-main">
+                    <span>Utile</span>
+                    <strong>{!! importo($controlRoomAdmin['economico']['utile'], true) !!}</strong>
+                </div>
+                <div class="admin-money-list">
+                    <div><span>Entrate</span><strong>{!! importo($controlRoomAdmin['economico']['entrate'], true) !!}</strong></div>
+                    <div><span>Uscite</span><strong>{!! importo($controlRoomAdmin['economico']['uscite'], true) !!}</strong></div>
+                    <div><span>Assistenze</span><strong>{!! importo($controlRoomAdmin['economico']['assistenze_5'], true) !!}</strong></div>
+                    <div><span>Ricariche plafond</span><strong>{!! importo($controlRoomAdmin['economico']['ricariche_plafond'], true) !!}</strong></div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-        <div class="col-xl-6">
-            <div class="card card-flush h-lg-100">
-                <div class="card-header border-0 pt-5 pb-0">
-                    <div class="card-title d-flex align-items-center gap-2">
-                        <span class="svg-icon svg-icon-2 text-primary">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path opacity="0.3" d="M3 13.2C3 9.32002 6.14 6.18002 10.02 6.18002C11.76 6.18002 13.36 6.82002 14.6 7.86002L16.32 6.14002C16.64 5.82002 17.18 5.98002 17.26 6.42002L17.84 9.76002C17.88 10.02 17.7 10.26 17.44 10.3L14.1 10.88C13.66 10.96 13.5 10.42 13.82 10.1L15.5 8.42002C14.48 7.56002 13.2 7.04002 11.78 7.04002C8.46002 7.04002 5.76002 9.74002 5.76002 13.06C5.76002 16.38 8.46002 19.08 11.78 19.08C14.1 19.08 16.12 17.76 17.12 15.84C17.3 15.5 17.74 15.36 18.08 15.54C18.42 15.72 18.56 16.16 18.38 16.5C17.14 18.88 14.62 20.52 11.78 20.52C7.90002 20.52 3 17.08 3 13.2Z" fill="currentColor"/>
-                                <path d="M20 5.00002C20 4.44002 19.56 4.00002 19 4.00002C18.44 4.00002 18 4.44002 18 5.00002V11C18 11.56 18.44 12 19 12C19.56 12 20 11.56 20 11V5.00002Z" fill="currentColor"/>
-                            </svg>
-                        </span>
-                        <div>
-                            <h3 class="fw-bolder mb-0">Esito finale</h3>
-                            <div class="fs-7 fw-semibold text-gray-400">Monitoraggio esiti contratti</div>
+            <div class="admin-control-panel">
+                <div class="admin-control-head">
+                    <div>
+                        <h3>Audit documenti</h3>
+                        <span>Chi ha toccato cosa.</span>
+                    </div>
+                    <a href="{{action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'index'])}}" class="btn btn-sm btn-light-primary">Apri</a>
+                </div>
+                <div class="admin-audit-list">
+                    @forelse($controlRoomAdmin['audit'] as $log)
+                        <div class="admin-audit-row">
+                            <strong>{{$log->utente?->nominativo() ?? 'Utente'}}</strong>
+                            <span>{{ucfirst((string)$log->azione)}} - {{$log->filename_originale ?: basename((string)$log->path_filename)}}</span>
+                            <em>{{$log->created_at?->diffForHumans()}}</em>
                         </div>
-                    </div>
+                    @empty
+                        <div class="admin-empty">Nessun audit recente.</div>
+                    @endforelse
                 </div>
-                <div class="card-body p-8 pt-4">
-                    <div class="bg-light-primary rounded p-4 mb-5 d-flex align-items-center justify-content-between">
-                        <span class="text-muted fw-semibold">Ordini totali</span>
-                        <span class="fs-2 fw-bolder text-primary">{{ number_format((int) $datiTortaEsiti['totale']) }}</span>
-                    </div>
+            </div>
 
-                    <div class="d-flex flex-wrap align-items-center">
-                        <div class="position-relative d-flex flex-center h-280px w-280px me-5 mb-7 mb-xl-0">
-                            <div id="kt_card_widget_17_chart" style="width: 280px; height: 280px;"></div>
-                        </div>
-                        <div class="d-flex flex-column justify-content-center flex-row-fluid pe-0 pe-xl-5">
-                            @for($n=0;$n<count($datiTortaEsiti['labels']);$n++)
-                                <div class="d-flex fs-6 fw-bold align-items-center mb-2 p-2 rounded bg-light">
-                                    <div class="bullet me-3 h-6px w-20px" style="background-color: {{ $datiTortaEsiti['backgroundColor'][$n] }};"></div>
-                                    <div class="text-gray-700">{{ $datiTortaEsiti['labels'][$n] }}</div>
-                                    <div class="ms-auto fw-bolder text-gray-900">{{ number_format((int) $datiTortaEsiti['data'][$n]) }}</div>
-                                </div>
-                            @endfor
-                        </div>
+            <div class="admin-control-panel">
+                <div class="admin-control-head">
+                    <div>
+                        <h3>Salute sistema</h3>
+                        <span>App, backup e tunnel.</span>
                     </div>
+                    <a href="{{action([\App\Http\Controllers\Backend\RegistriController::class, 'index'], 'backup-db')}}" class="btn btn-sm btn-light-primary">Backup</a>
+                </div>
+                <div class="admin-health-list">
+                    @foreach($controlRoomAdmin['salute'] as $check)
+                        <div class="admin-health-row">
+                            <span>{{$check['label']}}</span>
+                            <strong class="badge badge-light-{{$check['tone']}}">{{$check['value']}}</strong>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         </div>
-        <div class="col-xl-3">
-            <div class="card card-flush h-lg-100">
-                <div class="card-header border-0 pt-5 pb-0">
-                    <div class="card-title d-flex align-items-center gap-2">
-                        <span class="svg-icon svg-icon-2 text-primary">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path opacity="0.3" d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V14C20 15.1046 19.1046 16 18 16H10L6 20V16C4.89543 16 4 15.1046 4 14V6Z" fill="currentColor"/>
-                                <path d="M8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 8.55228 15.5523 9 15 9H9C8.44772 9 8 8.55228 8 8ZM8 11.5C8 10.9477 8.44772 10.5 9 10.5H13C13.5523 10.5 14 10.9477 14 11.5C14 12.0523 13.5523 12.5 13 12.5H9C8.44772 12.5 8 12.0523 8 11.5Z" fill="currentColor"/>
-                            </svg>
-                        </span>
-                        <div>
-                            <h3 class="fw-bolder mb-0">Chat interna</h3>
-                            <div class="fs-7 fw-semibold text-gray-400">Monitoraggio conversazioni</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body pt-3">
-                    <div class="bg-light-primary rounded p-4 mb-4">
-                        <div class="text-muted fw-semibold fs-8 mb-1">Messaggi non letti</div>
-                        <div class="fs-2 fw-bolder text-primary">{{ number_format((int) $chatDashboard['messaggi_non_letti']) }}</div>
-                    </div>
+    </section>
 
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <span class="text-muted fw-semibold">Thread attive (7 giorni)</span>
-                        <span class="badge badge-light-primary fw-bolder px-4 py-2">{{ number_format((int) $chatDashboard['thread_attive']) }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-5">
-                        <span class="text-muted fw-semibold">Nuovi messaggi oggi</span>
-                        <span class="badge badge-light-success fw-bolder px-4 py-2">{{ number_format((int) $chatDashboard['nuovi_messaggi_oggi']) }}</span>
-                    </div>
 
-                    <a href="{{ action([\App\Http\Controllers\Backend\ChatController::class, 'index']) }}" class="btn btn-light-primary btn-sm">Apri chat interna</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3">
-            @include('Backend.Dashboard.linksGestori',['altezza'=>'h-lg-100'])
-        </div>
-    </div>
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-xxl-6">
@@ -393,6 +302,296 @@
         </div>
     </div>
 @endsection
+@push('customCss')
+    <style>
+        .admin-control-room {
+            --acr-border: #e4edf6;
+            --acr-soft: #f7fafc;
+            --acr-text: #172033;
+            --acr-muted: #7a88a6;
+            --acr-blue: #009ef7;
+        }
+
+        .admin-control-hero,
+        .admin-control-panel {
+            border: 1px solid var(--acr-border);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 10px 28px rgba(16, 24, 39, .035);
+        }
+
+        .admin-control-hero {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            padding: 1.45rem 1.6rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .98) 0%, rgba(248, 251, 255, .98) 100%);
+        }
+
+        .admin-control-kicker {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 .65rem;
+            border: 1px solid #d7ecfb;
+            border-radius: 999px;
+            background: #eef8ff;
+            margin-bottom: .25rem;
+            color: var(--acr-blue);
+            font-size: .72rem;
+            font-weight: 850;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .admin-control-hero h2,
+        .admin-control-head h3 {
+            margin: 0;
+            color: var(--acr-text);
+            font-weight: 850;
+        }
+
+        .admin-control-hero h2 {
+            margin-top: .45rem;
+            font-size: 1.55rem;
+            line-height: 1.15;
+        }
+
+        .admin-control-hero p,
+        .admin-control-head span {
+            margin: .25rem 0 0;
+            color: var(--acr-muted);
+            font-weight: 600;
+        }
+
+        .admin-control-actions {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            gap: .55rem;
+            max-width: none;
+            overflow-x: auto;
+            padding-bottom: .15rem;
+            white-space: nowrap;
+        }
+
+        .admin-control-actions .btn {
+            flex: 0 0 auto;
+            min-height: 34px;
+            padding-inline: .9rem;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .admin-control-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        .admin-control-panel {
+            grid-column: span 4;
+            padding: 1.25rem;
+            min-width: 0;
+            min-height: 100%;
+        }
+
+        .admin-control-panel-wide {
+            grid-column: span 8;
+        }
+
+        .admin-control-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .admin-control-head h3 {
+            font-size: 1.05rem;
+        }
+
+        .admin-queue-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: .75rem;
+        }
+
+        .admin-queue-card,
+        .admin-alert-row,
+        .admin-health-row,
+        .admin-money-list > div,
+        .admin-audit-row {
+            border: 1px solid #e9f1f8;
+            border-radius: 8px;
+            background: var(--acr-soft);
+        }
+
+        .admin-queue-card {
+            display: block;
+            min-height: 108px;
+            padding: .95rem;
+            border-left: 3px solid var(--acr-blue);
+            color: var(--acr-text);
+            transition: transform .22s cubic-bezier(.2, .8, .2, 1), border-color .22s cubic-bezier(.2, .8, .2, 1), background .22s cubic-bezier(.2, .8, .2, 1);
+        }
+
+        .admin-queue-card:hover {
+            background: #fff;
+            border-color: #d6e7f5;
+            transform: translateY(-2px);
+        }
+
+        .admin-queue-card span,
+        .admin-money-main span,
+        .admin-money-list span,
+        .admin-alert-row span,
+        .admin-health-row span,
+        .admin-audit-row span,
+        .admin-audit-row em {
+            color: var(--acr-muted);
+            font-weight: 700;
+        }
+
+        .admin-queue-card strong {
+            display: block;
+            margin-top: .45rem;
+            color: var(--acr-text);
+            font-size: 1.7rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0;
+        }
+
+        .admin-queue-success { border-left-color: #50cd89; }
+        .admin-queue-warning { border-left-color: #ffc700; }
+        .admin-queue-danger { border-left-color: #f1416c; }
+        .admin-queue-info { border-left-color: #7239ea; }
+        .admin-queue-dark { border-left-color: #3f4254; }
+
+        .admin-alert-list,
+        .admin-health-list,
+        .admin-audit-list,
+        .admin-money-list {
+            display: grid;
+            gap: .65rem;
+        }
+
+        .admin-alert-row,
+        .admin-health-row,
+        .admin-money-list > div {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .8rem .95rem;
+        }
+
+        .admin-alert-row {
+            border-left: 4px solid #ffc700;
+        }
+
+        .admin-alert-danger {
+            border-left-color: #f1416c;
+        }
+
+        .admin-alert-row strong {
+            color: var(--acr-text);
+            font-size: 1.1rem;
+            font-weight: 900;
+        }
+
+        .admin-money-main {
+            padding: 1rem;
+            margin-bottom: .75rem;
+            border-radius: 8px;
+            border: 1px solid #d7ecfb;
+            background: linear-gradient(180deg, #eef8ff 0%, #f7fbff 100%);
+        }
+
+        .admin-money-main strong {
+            display: block;
+            margin-top: .25rem;
+            color: var(--acr-blue);
+            font-size: 1.65rem;
+            font-weight: 900;
+        }
+
+        .admin-money-list strong {
+            color: var(--acr-text);
+            font-weight: 850;
+        }
+
+        .admin-audit-row {
+            display: grid;
+            gap: .2rem;
+            padding: .8rem .95rem;
+            min-height: 74px;
+        }
+
+        .admin-audit-row strong {
+            color: var(--acr-text);
+        }
+
+        .admin-audit-row span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .admin-audit-row em {
+            font-size: .78rem;
+            font-style: normal;
+        }
+
+        .admin-empty {
+            padding: 1rem;
+            border: 1px dashed var(--acr-border);
+            border-radius: 8px;
+            color: var(--acr-muted);
+            background: var(--acr-soft);
+            font-weight: 700;
+        }
+
+        @media (max-width: 1199.98px) {
+            .admin-control-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .admin-control-panel,
+            .admin-control-panel-wide {
+                grid-column: span 1;
+            }
+
+            .admin-queue-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .admin-control-hero {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .admin-control-actions {
+                justify-content: flex-start;
+            }
+
+            .admin-control-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-queue-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+@endpush
 @push('customScript')
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script>

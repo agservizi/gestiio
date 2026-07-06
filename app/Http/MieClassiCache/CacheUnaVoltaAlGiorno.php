@@ -47,7 +47,7 @@ class CacheUnaVoltaAlGiorno
         Log::debug('Creata cache '.self::$cacheKey.' in '.number_format(microtime(true) - $start, 3));
         Cache::put(self::$cacheKey, Carbon::now(), Carbon::now()->endOfDay());
 
-        if (env('APP_ENV') == 'production') {
+        if (config('app.env') == 'production') {
             \Artisan::call('backup:run --only-db --disable-notifications');
             \Artisan::call('backup:clean --disable-notifications');
         }

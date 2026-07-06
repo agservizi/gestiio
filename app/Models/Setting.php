@@ -93,7 +93,10 @@ class Setting extends Model
     public static function remove($key)
     {
         if (self::has($key)) {
-            return self::whereName($key)->delete();
+            $deleted = self::whereName($key)->delete();
+            self::flushCache();
+
+            return $deleted;
         }
 
         return false;
@@ -182,7 +185,7 @@ class Setting extends Model
 
             case 'bool':
             case 'boolean':
-                return boolval($val);
+                return filter_var($val, FILTER_VALIDATE_BOOLEAN);
 
             case 'float':
                 return getInputNumero($val);

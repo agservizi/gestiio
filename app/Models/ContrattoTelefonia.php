@@ -113,7 +113,7 @@ class ContrattoTelefonia extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function allegati()
@@ -123,22 +123,22 @@ class ContrattoTelefonia extends Model
 
     public function caricatoDa()
     {
-        return $this->hasOne(User::class, 'id', 'caricato_da_user_id');
+        return $this->belongsTo(User::class, 'caricato_da_user_id');
     }
 
     public function cliente()
     {
-        return $this->hasOne(Cliente::class, 'id', 'cliente_id');
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
     public function comune()
     {
-        return $this->hasOne(Comune::class, 'id', 'citta');
+        return $this->belongsTo(Comune::class, 'citta');
     }
 
     public function esito()
     {
-        return $this->hasOne(EsitoTelefonia::class, 'id', 'esito_id');
+        return $this->belongsTo(EsitoTelefonia::class, 'esito_id');
     }
 
     public function mandato()
@@ -153,7 +153,7 @@ class ContrattoTelefonia extends Model
 
     public function tipoContratto()
     {
-        return $this->hasOne(TipoContratto::class, 'id', 'tipo_contratto_id');
+        return $this->belongsTo(TipoContratto::class, 'tipo_contratto_id');
     }
 
     /*

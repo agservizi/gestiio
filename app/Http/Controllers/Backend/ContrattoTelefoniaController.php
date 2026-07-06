@@ -104,6 +104,16 @@ class ContrattoTelefoniaController extends Controller
         // Applico ordinamento
         $recordsQB = call_user_func($ordinamenti[$orderBy]['filtro'], $recordsQB);
 
+        $contrattiOverview = [
+            'totali' => (clone $recordsQB)->count(),
+            'mese' => (clone $recordsQB)
+                ->whereDate('created_at', '>=', now()->startOfMonth())
+                ->whereDate('created_at', '<=', now()->endOfMonth())
+                ->count(),
+            'bozze' => (clone $recordsQB)->where('esito_id', 'bozza')->count(),
+            'da_gestire' => (clone $recordsQB)->where('esito_id', 'da-gestire')->count(),
+        ];
+
         $contrattiFermiCount = (clone $recordsQB)
             ->whereIn('esito_id', ['bozza', 'da-gestire'])
             ->whereDate('created_at', '<=', now()->subDays($giorniFermo))
@@ -143,6 +153,7 @@ class ContrattoTelefoniaController extends Controller
             'puoCreare' => $puoCreare,
             'giorniFermo' => $giorniFermo,
             'contrattiFermiCount' => $contrattiFermiCount,
+            'contrattiOverview' => $contrattiOverview,
         ]);
 
     }
@@ -257,6 +268,10 @@ class ContrattoTelefoniaController extends Controller
             abort_if(! $record, 404);
             $record->id = null;
             $tipoContratto = TipoContratto::find($record->tipo_contratto_id);
+            if (! $tipoContratto) {
+                return redirect()->action([self::class, 'index'])
+                    ->withErrors(['tipo_contratto_id' => 'Tipo contratto non trovato per il contratto da duplicare.']);
+            }
             $prodotto = $record->prodotto;
 
         } else {
@@ -269,6 +284,15 @@ class ContrattoTelefoniaController extends Controller
             $record->tipo_contratto_id = $request->input('tipo_contratto_id');
 
             $tipoContratto = TipoContratto::find($record->tipo_contratto_id);
+            if (! $tipoContratto) {
+                return view('Backend.ContrattoTelefonia.create', [
+                    'record' => $record,
+                    'controller' => get_class($this),
+                    'titoloPagina' => 'Nuovo contratto telefonia',
+                    'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco '.ContrattoTelefonia::NOME_PLURALE],
+                ]);
+            }
+
             if ($tipoContratto->prodotto) {
                 $classe = 'App\Models\\'.$tipoContratto->prodotto;
                 $prodotto = $this->presetCampi(new $classe, $tipoContratto->prodotto);
@@ -286,8 +310,8 @@ class ContrattoTelefoniaController extends Controller
             'controller' => get_class($this),
             'breadcrumbs' => [action([ContrattoTelefoniaController::class, 'index']) => 'Torna a elenco '.ContrattoTelefonia::NOME_PLURALE],
             'recordProdotto' => $prodotto,
-            'tipoProdotto' => $tipoContratto->prodotto,
-            'creaContratto' => ! $tipoContratto->crea_in_bozza,
+            'tipoProdotto' => $tipoContratto?->prodotto,
+            'creaContratto' => ! (bool) ($tipoContratto?->crea_in_bozza ?? false),
             'categoriaPratica' => $record->categoria_pratica,
         ]);
     }
@@ -503,9 +527,7 @@ class ContrattoTelefoniaController extends Controller
         $record = ContrattoTelefonia::find($id);
         abort_if(! $record, 404, 'Questo contratto non esiste');
 
-        foreach ($record->allegati as $allegato) {
-            $allegato->delete();
-        }
+        $record->allegati()->delete();
         $record->delete();
 
         return [
@@ -1033,7 +1055,7 @@ class ContrattoTelefoniaController extends Controller
             $user->nome = $cliente->nome;
             $user->cognome = $cliente->cognome;
             $user->email = $cliente->email;
-            $password = rand(11111111, 99999999);
+            $password = Str::random(16);
             $user->password = Hash::make($password);
             $user->telefono = $cliente->telefono;
             $user->save();

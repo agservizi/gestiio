@@ -1,0 +1,52 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, intl, pdo_mysql, zip, bcmath, gd
+          coverage: none
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+
+      - name: Syntax Check
+        run: find app config database routes resources -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Package
+        run: tar --exclude='.git' --exclude='node_modules' --exclude='.env' -czf gestiio-release.tar.gz .
+
+      - name: Upload Release
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          source: gestiio-release.tar.gz
+          target: /tmp
+
+      - name: Deploy With Rollback
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          script: |
+            set -e
+            mkdir -p /tmp/gestiio-release
+            tar -xzf /tmp/gestiio-release.tar.gz -C /tmp/gestiio-release
+            rsync -a --delete --exclude='.env' /tmp/gestiio-release/ /Volume1/homes/Carmine/gestiio-latest-deploy/
+            /bin/sh /Volume1/homes/Carmine/gestiio-deploy.sh
+
+      - name: Public Smoke
+        run: |
+          code=$(curl -k -s -o /dev/null -w "%{http_code}" --max-time 30 https://gestiio.agenziaplinio.it/login)
+          test "$code" = "200"

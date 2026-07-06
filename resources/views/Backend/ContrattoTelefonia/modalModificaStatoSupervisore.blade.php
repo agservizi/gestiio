@@ -65,16 +65,14 @@
         </div>
         <div class="col-lg-10 fv-row fv-plugins-icon-container">
             <div class="fv-row">
-                <div class="dropzone" id="kt_dropzonejs_example_1">
+                <div class="dropzone gestiio-dropzone" id="kt_dropzonejs_example_1">
                     <div class="dz-message needsclick">
-                        <i class="bi bi-file-earmark-arrow-up text-primary fs-3x"></i>
-
-                        <div class="ms-4">
-                            <h3 class="fs-5 fw-bolder text-gray-900 mb-1">Trascina il file qui o clicca per selezionare
-                                i files</h3>
-                            <span class="fs-7 fw-bold text-gray-400">
-                                            <span>Qui puoi allegare i documenti relativi al contratto</span>
-                                        </span>
+                        <span class="gestiio-dropzone-icon">
+                            <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                            <h3>Trascina i file qui o clicca per selezionarli</h3>
+                            <span>Allegati collegati allo stato della pratica telefonia.</span>
                         </div>
                     </div>
                 </div>
@@ -83,6 +81,7 @@
     </div>
 
 @endsection
+@include('Backend._components.dropzoneUx')
 @push('customScript')
 
     <script>
@@ -187,78 +186,15 @@
                     }
                 });
             });
-            var myDropzone = new Dropzone("#kt_dropzonejs_example_1", {
-                url: "{{action([$controller,'uploadAllegato'])}}", // Set the url for your upload script location
-                paramName: "file", // The name that will be used to transfer the file
-                maxFiles: 10,
-                maxFilesize: 20, // MB
-                addRemoveLinks: true,
-                //acceptedFiles: "image/*",
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                init: function () {
-                    thisDropzone = this;
-                    this.on("sending", function (file, xhr, formData) {
-                        formData.append("uid", $('#uid').val());
-                        formData.append("contratto_id", {{$record->id}});
-                    });
-                    const esistenti =@json(\App\Models\AllegatoContratto::perBlade($uid,$record->id));
-                    if (esistenti) {
-                        $.each(esistenti, function (key, value) {
-
-                            var mockFile = {
-                                name: value.path_filename,
-                                size: value.dimensione_file,
-                                filename: value.path_filename,
-                                id: value.id
-                            };
-
-                            thisDropzone.emit('addedfile', mockFile);
-                            if (value.tipo_file === 'immagine') {
-                                thisDropzone.emit('thumbnail', mockFile, "/storage/" + value.path_filename);
-
-                            }
-                            thisDropzone.emit('complete', mockFile);
-
-
-                        });
-                    }
-
-                },
-                accept: function (file, done) {
-                    if (file.name == "q") {
-                        done("Naha, you don't.");
-                    } else {
-                        done();
-                    }
-                },
-                success: function (file, response) {
-                    file.filename = response.filename;
-                    file.id = response.id;
-                    console.dir(file);
-                },
-                removedfile: function (file) {
-                    console.dir(file);
-                    var name = file.filename;
-                    $.ajax({
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
-                        },
-                        type: 'DELETE',
-                        url: '{{ action([$controller,'deleteAllegato']) }}',
-                        data: {
-                            id: file.id
-                        },
-                        success: function (data) {
-                        },
-                        error: function (e) {
-                        }
-                    });
-                    var fileRef;
-                    return (fileRef = file.previewElement) != null ?
-                        fileRef.parentNode.removeChild(file.previewElement) : void 0;
-                },
+            initGestiioDropzone("#kt_dropzonejs_example_1", {
+                uploadUrl: "{{action([$controller,'uploadAllegato'])}}",
+                deleteUrl: "{{action([$controller,'deleteAllegato'])}}",
+                csrfToken: "{{ csrf_token() }}",
+                existingFiles: @json(\App\Models\AllegatoContratto::perBlade($uid,$record->id)),
+                sendingData: {
+                    uid: function () { return $('#uid').val(); },
+                    contratto_id: {{$record->id}}
+                }
             });
 
 

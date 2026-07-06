@@ -15,6 +15,10 @@
             </div>
             <div class="row g-5">
                 <div class="col-md-6">
+                    <div class="text-muted fs-7">Codice pratica</div>
+                    <div class="fw-bolder text-primary">{{ $record->codice_pratica }}</div>
+                </div>
+                <div class="col-md-6">
                     <div class="text-muted fs-7">Data</div>
                     <div class="fw-semibold">{{ $record->data?->format('d/m/Y') }}</div>
                 </div>

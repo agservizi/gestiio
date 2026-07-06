@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Comune;
 use App\Models\ContrattoTelefonia;
+use App\Notifications\Concerns\BuildsGestiioMail;
 use App\Notifications\Concerns\UsesPersonalizedMailSender;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -16,6 +17,7 @@ use function siNo;
 class NotificaGenericaGestore extends Notification
 {
     use Queueable;
+    use BuildsGestiioMail;
     use UsesPersonalizedMailSender;
 
     /**
@@ -47,42 +49,59 @@ class NotificaGenericaGestore extends Notification
      */
     public function toMail($notifiable)
     {
-        $email = (new MailMessage)
-            ->subject($this->contratto->tipoContratto->gestore->titolo_notifica_a_gestore.' - '.$this->contratto->tipoContratto->nome.' per '.$this->contratto->nominativo());
+        $subject = $this->contratto->tipoContratto->gestore->titolo_notifica_a_gestore.' - '.$this->contratto->tipoContratto->nome.' per '.$this->contratto->nominativo();
+        $sections = [];
 
         if ($this->contratto->tipoContratto->gestore->testo_notifica_a_gestore) {
-            $email->line($this->contratto->tipoContratto->gestore->testo_notifica_a_gestore);
+            $sections[] = [
+                'title' => 'Messaggio per il gestore',
+                'intro' => $this->contratto->tipoContratto->gestore->testo_notifica_a_gestore,
+            ];
         }
 
         if ($this->contratto->tipoContratto->gestore->includi_dati_contratto) {
-            $email->line(new HtmlString('<strong>Dati contratto</strong>'));
-            $email->line('Cognome: '.$this->contratto->cognome);
-            $email->line('Nome: '.$this->contratto->nome);
-            $email->line('Codice fiscale: '.$this->contratto->codice_fiscale);
-            $email->line('Email: '.$this->contratto->email);
-            $email->line('Telefono: '.$this->contratto->telefono);
-            $email->line('Indirizzo: '.$this->contratto->indirizzo);
-            $email->line('Città: '.Comune::find($this->contratto->citta)?->comuneConTarga());
-            $email->line('Cap: '.$this->contratto->cap);
-            $email->line('Tipo documento: '.$this->contratto->tipo_documento ? ContrattoTelefonia::TIPI_DOCUMENTO[$this->contratto->tipo_documento] : '');
-            $email->line('Numero documento: '.$this->contratto->numero_documento);
-            $email->line('Rilasciato da: '.$this->contratto->rilasciato_da);
-            $email->line('Data rilascio: '.$this->contratto->data_rilascio?->format('d/m/Y'));
-            $email->line('Data scadenza: '.$this->contratto->data_scadenza?->format('d/m/Y'));
-            $email->line(' ');
+            $items = [
+                'Cognome' => $this->contratto->cognome,
+                'Nome' => $this->contratto->nome,
+                'Codice fiscale' => $this->contratto->codice_fiscale,
+                'Email' => $this->contratto->email,
+                'Telefono' => $this->contratto->telefono,
+                'Indirizzo' => $this->contratto->indirizzo,
+                'Città' => Comune::find($this->contratto->citta)?->comuneConTarga(),
+                'Cap' => $this->contratto->cap,
+                'Tipo documento' => $this->contratto->tipo_documento ? ContrattoTelefonia::TIPI_DOCUMENTO[$this->contratto->tipo_documento] : '',
+                'Numero documento' => $this->contratto->numero_documento,
+                'Rilasciato da' => $this->contratto->rilasciato_da,
+                'Data rilascio' => $this->contratto->data_rilascio?->format('d/m/Y'),
+                'Data scadenza' => $this->contratto->data_scadenza?->format('d/m/Y'),
+            ];
 
             if ($this->contratto->prodotto_type == 'App\Models\ProdottoTimWifi') {
-                $email->line('Pagamento bollettino postale: '.siNo($this->contratto->prodotto->pagamento_bollettino));
+                $items['Pagamento bollettino postale'] = siNo($this->contratto->prodotto->pagamento_bollettino);
             }
 
+            $sections[] = [
+                'title' => 'Dati contratto',
+                'items' => $this->compactRows($items),
+            ];
         }
 
         $conteggio = count($this->contratto->allegati);
-        if ($conteggio) {
-            $email->line($conteggio.' Documenti in allegato');
-        }
-
-        $email->salutation(new HtmlString('Saluti,<br>'.($this->contratto->agente?->nominativo() ?? config('mail.from.name'))));
+        $email = $this->gestiioMail($subject, [
+            'eyebrow' => 'Contratti telefonia',
+            'title' => 'Nuovo contratto da lavorare',
+            'preheader' => $this->contratto->tipoContratto->nome.' per '.$this->contratto->nominativo(),
+            'intro' => 'È stato inviato un nuovo contratto. Trovi sotto il contesto, i dati essenziali e l’indicazione degli allegati presenti.',
+            'summary' => [
+                'Cliente' => $this->contratto->nominativo(),
+                'Servizio' => $this->contratto->tipoContratto->nome,
+                'Gestore' => $this->contratto->tipoContratto->gestore->nome ?? $this->contratto->tipoContratto->gestore->titolo ?? 'Gestore',
+                'Documenti' => $conteggio ? $conteggio.' in allegato' : 'Nessun allegato',
+            ],
+            'sections' => $sections,
+            'note' => $conteggio ? 'I documenti sono allegati a questa email.' : null,
+            'signature' => $this->contratto->agente?->nominativo() ?? config('mail.from.name'),
+        ]);
 
         foreach ($this->contratto->allegati as $allegato) {
             if ($allegato->path_filename && Storage::exists($allegato->path_filename)) {

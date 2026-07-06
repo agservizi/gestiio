@@ -504,6 +504,30 @@
     <script>
         var vecchio = {{$vecchio?'true':'false'}};
 
+        function mostraErroreAjax(xhr, fallback) {
+            var message = fallback || 'Operazione non riuscita.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                message = xhr.responseJSON.message;
+            } else if (xhr.responseText) {
+                try {
+                    var parsed = JSON.parse(xhr.responseText);
+                    message = parsed.message || message;
+                } catch (e) {
+                    message = fallback || 'Operazione non riuscita.';
+                }
+            }
+
+            Swal.fire({
+                text: message,
+                icon: 'error',
+                buttonsStyling: false,
+                confirmButtonText: 'Ok',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+
         function imposta(ragione_sociale_destinatario, indirizzo_destinatario, cap_destinatario, localita_destinazione, mobile_referente_consegna, provincia_destinatario, nome_provincia) {
             $('#ragione_sociale_destinatario').val(ragione_sociale_destinatario);
             $('#indirizzo_destinatario').val(indirizzo_destinatario);
@@ -568,9 +592,7 @@
 
                         },
                         error: function (xhr, ajaxOptions, thrownError) {
-                            var err = eval("(" + xhr.responseText + ")");
-
-                            alert(err.message);
+                            mostraErroreAjax(xhr, 'Impossibile cercare il destinatario.');
                         }
                     });
                 });
@@ -822,9 +844,7 @@
                         $(target).modal('show');
                     },
                     error: function (xhr, ajaxOptions, thrownError) {
-                        var err = eval("(" + xhr.responseText + ")");
-
-                        alert(err.message);
+                        mostraErroreAjax(xhr, 'Impossibile aprire la finestra richiesta.');
                     }
                 });
             }

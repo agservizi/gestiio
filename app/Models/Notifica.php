@@ -26,6 +26,11 @@ class Notifica extends Model
         return $this->hasMany(NotificaLettura::class, 'notifica_id', 'id');
     }
 
+    public function utente()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPE
@@ -50,7 +55,19 @@ class Notifica extends Model
         $notifica->titolo = $titolo;
         $notifica->destinatario = 'admin';
         $notifica->testo = $testo;
+        $notifica->tipo = $tipo;
         $notifica->save();
 
+    }
+
+    public static function notificaAdAgente(User $agente, $titolo, $testo, $tipo = 'info')
+    {
+        $notifica = new Notifica;
+        $notifica->titolo = $titolo;
+        $notifica->destinatario = 'agente';
+        $notifica->user_id = $agente->id;
+        $notifica->testo = $testo;
+        $notifica->tipo = $tipo;
+        $notifica->save();
     }
 }

@@ -27,7 +27,7 @@ class SostituzioneSim extends Model
     */
     public function agente()
     {
-        return $this->hasOne(Agente::class, 'id', 'agente_id');
+        return $this->belongsTo(Agente::class, 'agente_id');
     }
 
     /*

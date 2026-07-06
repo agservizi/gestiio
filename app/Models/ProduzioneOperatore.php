@@ -61,12 +61,12 @@ class ProduzioneOperatore extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function fatturaProforma()
     {
-        return $this->hasOne(FatturaProforma::class, 'id', 'fattura_proforma_id');
+        return $this->belongsTo(FatturaProforma::class, 'fattura_proforma_id');
     }
 
     /**********************

@@ -26,7 +26,7 @@ class TipoContratto extends Model
 
     public function gestore()
     {
-        return $this->hasOne(Gestore::class, 'id', 'gestore_id');
+        return $this->belongsTo(Gestore::class, 'gestore_id');
     }
 
     public function mandati()

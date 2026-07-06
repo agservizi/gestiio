@@ -162,8 +162,6 @@ class OpenApiVisureService
             return $this->bearerTokenOverride;
         }
 
-        return (string) (config('services.openapi.bearer_visure')
-            ?: env('OPENAPI_BEARER_VISURE')
-            ?: env('OPENAPI_BEARER'));
+        return (string) (config('services.openapi.bearer_visure'));
     }
 }

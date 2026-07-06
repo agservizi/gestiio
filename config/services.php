@@ -38,6 +38,12 @@ return [
         'encryption' => env('RESEND_ENCRYPTION', 'tls'),
     ],
 
+    'stripe' => [
+        'key' => env('STRIPE_KEY', env('STRIPE_PUBLIC_KEY')),
+        'secret' => env('STRIPE_SECRET', env('STRIPE_SECRET_KEY')),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
     'openapi' => [
         'bearer_visure_camerali' => env('OPENAPI_BEARER_VISURE_CAMERALI'),
         'bearer_visure' => env('OPENAPI_BEARER_VISURE', env('OPENAPI_BEARER')),

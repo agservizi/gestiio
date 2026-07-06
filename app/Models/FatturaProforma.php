@@ -60,7 +60,7 @@ class FatturaProforma extends Model
 
     public function intestazione()
     {
-        return $this->hasOne(IntestazioneFatturaProforma::class, 'id', 'intestazione_id');
+        return $this->belongsTo(IntestazioneFatturaProforma::class, 'intestazione_id');
     }
 
     /*

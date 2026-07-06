@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RichiestaAssistenza extends Model
 {
@@ -52,14 +52,14 @@ class RichiestaAssistenza extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function cliente(): HasOne
+    public function cliente(): BelongsTo
     {
-        return $this->hasOne(ClienteAssistenza::class, 'id', 'cliente_id');
+        return $this->belongsTo(ClienteAssistenza::class, 'cliente_id');
     }
 
-    public function prodotto(): HasOne
+    public function prodotto(): BelongsTo
     {
-        return $this->hasOne(ProdottoAssistenza::class, 'id', 'prodotto_assistenza_id');
+        return $this->belongsTo(ProdottoAssistenza::class, 'prodotto_assistenza_id');
     }
 
     /*

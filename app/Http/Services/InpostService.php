@@ -279,17 +279,41 @@ class InpostService
 
     public function account(): array
     {
+        $this->ensureConfigured();
+
         return $this->requestJson('get', $this->baseUrl.$this->replaceOrganization($this->accountEndpoint));
     }
 
     public function deposits(array $query = []): array
     {
+        $this->ensureConfigured();
+
         return $this->requestJson('get', $this->baseUrl.$this->replaceOrganization($this->depositsEndpoint), $query);
     }
 
     public function createDeposit(array $payload): array
     {
+        $this->ensureConfigured();
+
         return $this->requestJson('post', $this->baseUrl.$this->replaceOrganization($this->depositsEndpoint), $payload);
+    }
+
+    public function missingConfiguration(): array
+    {
+        return collect([
+            'INPOST_CLIENT_ID' => $this->clientId,
+            'INPOST_CLIENT_SECRET' => $this->clientSecret,
+            'INPOST_ORGANIZATION_ID' => $this->organizationId,
+        ])
+            ->filter(fn ($value) => trim((string) $value) === '')
+            ->keys()
+            ->values()
+            ->all();
+    }
+
+    public function isConfigured(): bool
+    {
+        return $this->missingConfiguration() === [];
     }
 
     public function extractTrackingNumber(array $response): ?string
@@ -614,6 +638,14 @@ class InpostService
     protected function replaceOrganization(string $path): string
     {
         return str_replace('{organizationId}', $this->organizationId, $path);
+    }
+
+    protected function ensureConfigured(): void
+    {
+        $missing = $this->missingConfiguration();
+        if ($missing !== []) {
+            throw new \RuntimeException('Configurazione InPost incompleta: '.implode(', ', $missing));
+        }
     }
 
     protected function requestRaw(string $method, string $url, array $payload = [], ?Model $record = null, array $headers = []): array

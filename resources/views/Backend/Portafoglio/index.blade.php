@@ -12,6 +12,7 @@
 @endsection
 @section('content')
     @php
+        $isAdmin = \Illuminate\Support\Facades\Auth::user()->hasPermissionTo('admin');
         $agente = \Illuminate\Support\Facades\Auth::user()->agente ?? null;
         $wallets = [
             ['label' => 'Servizi', 'value' => (float)($agente->portafoglio_servizi ?? 0), 'class' => 'wallet-servizi'],
@@ -21,6 +22,38 @@
         $totalePlafond = array_sum(array_column($wallets, 'value'));
     @endphp
     <div class="wallet-page">
+        @if(session('message'))
+            <div class="alert alert-success" role="alert">{{ session('message') }}</div>
+        @endif
+        @if($isAdmin && ($richiesteSpostamento ?? collect())->count())
+            <div class="wallet-requests mb-8">
+                <div class="wallet-requests-head">
+                    <div>
+                        <h4>Richieste spostamento in attesa</h4>
+                        <p>Applica le richieste inviate dagli agenti dopo la verifica del saldo.</p>
+                    </div>
+                    <span class="badge badge-light-warning">{{($richiesteSpostamento ?? collect())->count()}}</span>
+                </div>
+                <div class="wallet-request-list">
+                    @foreach($richiesteSpostamento as $richiesta)
+                        <div class="wallet-request-row">
+                            <div>
+                                <strong>{{$richiesta->agente?->aliasAgente() ?? $richiesta->agente?->nominativo() ?? 'Agente'}}</strong>
+                                <span>
+                                    {!! importo($richiesta->importo, true) !!}
+                                    da {{$richiesta->portafoglioDaTesto()}} a {{$richiesta->portafoglioATesto()}}
+                                </span>
+                                <em>{{$richiesta->descrizione}}</em>
+                            </div>
+                            <form method="POST" action="{{action([\App\Http\Controllers\Backend\PortafoglioController::class,'applicaRichiestaSpostamento'],$richiesta->id)}}">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-primary">Applica</button>
+                            </form>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
         <div class="wallet-hero mb-8">
             <div>
                 <div class="text-uppercase fw-semibold text-primary fs-8 mb-2">Portafoglio operativo</div>
@@ -43,6 +76,178 @@
                 </div>
             @endforeach
         </div>
+
+        @if($isAdmin)
+            <div class="wallet-transfer mb-8">
+                <div class="wallet-transfer-head">
+                    <div>
+                        <h4>Sposta plafond agente</h4>
+                        <p>Storna un importo da un portafoglio e lo accredita su un altro, con doppio movimento nello storico.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{action([\App\Http\Controllers\Backend\PortafoglioController::class,'sposta'])}}">
+                    @csrf
+                    <div class="row g-6">
+                        <div class="col-xl-6">
+                            @include('Backend._inputs.inputSelect2',[
+                                'campo'=>'agente_id',
+                                'testo'=>'Agente',
+                                'required'=>true,
+                                'selected'=>\App\Models\User::selected(old('agente_id'))
+                            ])
+                        </div>
+                        <div class="col-xl-6">
+                            <div class="row mb-6" id="div_importo_spostamento">
+                                <div class="col-lg-4 col-form-label text-lg-end">
+                                    <label class="fw-bold fs-6 required" for="importo_spostamento">Importo</label>
+                                </div>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <input type="text" id="importo_spostamento" name="importo"
+                                           class="form-control form-control-solid autonumericImporto"
+                                           value="{{old('importo')}}" required>
+                                    <div class="fv-plugins-message-container invalid-feedback">
+                                        @error('importo') {{$message}} @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-6">
+                            <div class="row mb-6" id="div_portafoglio_da">
+                                <div class="col-lg-4 col-form-label text-lg-end">
+                                    <label class="fw-bold fs-6 required" for="portafoglio_da">Da portafoglio</label>
+                                </div>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <select id="portafoglio_da" name="portafoglio_da" class="form-select form-select-solid" required
+                                            data-kt-select2="true" data-placeholder="Seleziona"
+                                            data-minimum-results-for-search="Infinity">
+                                        <option value="">Seleziona</option>
+                                        @foreach(\App\Enums\TipiPortafoglioEnum::cases() as $item)
+                                            <option value="{{$item->value}}" @selected(old('portafoglio_da') === $item->value)>{{$item->testo()}}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="fv-plugins-message-container invalid-feedback">
+                                        @error('portafoglio_da') {{$message}} @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-6">
+                            <div class="row mb-6" id="div_portafoglio_a">
+                                <div class="col-lg-4 col-form-label text-lg-end">
+                                    <label class="fw-bold fs-6 required" for="portafoglio_a">A portafoglio</label>
+                                </div>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <select id="portafoglio_a" name="portafoglio_a" class="form-select form-select-solid" required
+                                            data-kt-select2="true" data-placeholder="Seleziona"
+                                            data-minimum-results-for-search="Infinity">
+                                        <option value="">Seleziona</option>
+                                        @foreach(\App\Enums\TipiPortafoglioEnum::cases() as $item)
+                                            <option value="{{$item->value}}" @selected(old('portafoglio_a') === $item->value)>{{$item->testo()}}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="fv-plugins-message-container invalid-feedback">
+                                        @error('portafoglio_a') {{$message}} @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="row mb-6" id="div_descrizione_spostamento">
+                                <div class="col-lg-2 col-form-label text-lg-end">
+                                    <label class="fw-bold fs-6 required" for="descrizione_spostamento">Motivo</label>
+                                </div>
+                                <div class="col-lg-10 fv-row fv-plugins-icon-container">
+                                    <input type="text" id="descrizione_spostamento" name="descrizione"
+                                           class="form-control form-control-solid"
+                                           value="{{old('descrizione')}}" required maxlength="255">
+                                    <div class="fv-plugins-message-container invalid-feedback">
+                                        @error('descrizione') {{$message}} @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wallet-transfer-actions">
+                        <button type="submit" class="btn btn-primary">Sposta plafond</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="wallet-transfer wallet-transfer-danger mb-8">
+                <div class="wallet-transfer-head">
+                    <div>
+                        <h4>Storna plafond agente</h4>
+                        <p>Registra un movimento negativo sul portafoglio selezionato, ad esempio uno storno di 30 euro viene salvato come -30 euro.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{action([\App\Http\Controllers\Backend\PortafoglioController::class,'storna'])}}">
+                    @csrf
+                    <div class="row g-6">
+                        <div class="col-xl-6">
+                            @include('Backend._inputs.inputSelect2',[
+                                'campo'=>'storno_agente_id',
+                                'testo'=>'Agente',
+                                'required'=>true,
+                                'selected'=>\App\Models\User::selected(old('storno_agente_id'))
+                            ])
+                        </div>
+                        <div class="col-xl-6">
+                            <div class="row mb-6" id="div_storno_importo">
+                                <div class="col-lg-4 col-form-label text-lg-end">
+                                    <label class="fw-bold fs-6 required" for="storno_importo">Importo da stornare</label>
+                                </div>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <input type="text" id="storno_importo" name="storno_importo"
+                                           class="form-control form-control-solid autonumericImporto"
+                                           value="{{old('storno_importo')}}" required>
+                                    <div class="fv-plugins-message-container invalid-feedback">
+                                        @error('storno_importo') {{$message}} @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-6">
+                            <div class="row mb-6" id="div_storno_portafoglio">
+                                <div class="col-lg-4 col-form-label text-lg-end">
+                                    <label class="fw-bold fs-6 required" for="storno_portafoglio">Portafoglio</label>
+                                </div>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <select id="storno_portafoglio" name="storno_portafoglio" class="form-select form-select-solid" required
+                                            data-kt-select2="true" data-placeholder="Seleziona"
+                                            data-minimum-results-for-search="Infinity">
+                                        <option value="">Seleziona</option>
+                                        @foreach(\App\Enums\TipiPortafoglioEnum::cases() as $item)
+                                            <option value="{{$item->value}}" @selected(old('storno_portafoglio') === $item->value)>{{$item->testo()}}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="fv-plugins-message-container invalid-feedback">
+                                        @error('storno_portafoglio') {{$message}} @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-6">
+                            <div class="row mb-6" id="div_storno_descrizione">
+                                <div class="col-lg-4 col-form-label text-lg-end">
+                                    <label class="fw-bold fs-6 required" for="storno_descrizione">Motivo</label>
+                                </div>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <input type="text" id="storno_descrizione" name="storno_descrizione"
+                                           class="form-control form-control-solid"
+                                           value="{{old('storno_descrizione')}}" required maxlength="255">
+                                    <div class="fv-plugins-message-container invalid-feedback">
+                                        @error('storno_descrizione') {{$message}} @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wallet-transfer-actions">
+                        <button type="submit" class="btn btn-danger">Storna plafond</button>
+                    </div>
+                </form>
+            </div>
+        @endif
 
         <div class="wallet-panel">
             <div class="wallet-panel-head">
@@ -82,6 +287,8 @@
         }
 
         .wallet-hero,
+        .wallet-requests,
+        .wallet-transfer,
         .wallet-panel {
             border: 1px solid var(--wallet-border);
             border-radius: 8px;
@@ -151,6 +358,109 @@
 
         .wallet-panel {
             overflow: hidden;
+        }
+
+        .wallet-requests {
+            overflow: hidden;
+        }
+
+        .wallet-requests-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.35rem 1.75rem;
+            border-bottom: 1px solid var(--wallet-border);
+            background: #fffaf0;
+        }
+
+        .wallet-requests-head h4 {
+            margin: 0 0 .35rem;
+            color: var(--wallet-text);
+            font-weight: 800;
+        }
+
+        .wallet-requests-head p {
+            margin: 0;
+            color: var(--wallet-muted);
+        }
+
+        .wallet-request-list {
+            display: grid;
+            gap: .75rem;
+            padding: 1rem 1.25rem 1.25rem;
+        }
+
+        .wallet-request-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #f3e7c5;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .wallet-request-row strong,
+        .wallet-request-row span,
+        .wallet-request-row em {
+            display: block;
+        }
+
+        .wallet-request-row strong {
+            color: var(--wallet-text);
+            font-weight: 800;
+        }
+
+        .wallet-request-row span {
+            color: #3b4663;
+            margin-top: .15rem;
+        }
+
+        .wallet-request-row em {
+            color: var(--wallet-muted);
+            font-style: normal;
+            margin-top: .2rem;
+        }
+
+        .wallet-transfer {
+            padding: 1.5rem 1.75rem;
+        }
+
+        .wallet-transfer-danger {
+            border-color: #f3d6d6;
+        }
+
+        .wallet-transfer-danger .wallet-transfer-head {
+            border-bottom-color: #f3d6d6;
+        }
+
+        .wallet-transfer-head {
+            padding-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--wallet-border);
+        }
+
+        .wallet-transfer-head h4 {
+            margin: 0 0 .35rem;
+            color: var(--wallet-text);
+            font-weight: 800;
+        }
+
+        .wallet-transfer-head p {
+            margin: 0;
+            color: var(--wallet-muted);
+        }
+
+        .wallet-transfer .row.mb-6 {
+            margin-bottom: 0 !important;
+        }
+
+        .wallet-transfer-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 1rem;
         }
 
         .wallet-panel-head {
@@ -276,15 +586,36 @@
             .wallet-actions .btn {
                 width: 100%;
             }
+
+            .wallet-transfer {
+                padding: 1.25rem;
+            }
+
+            .wallet-transfer-actions .btn {
+                width: 100%;
+            }
+
+            .wallet-request-row {
+                grid-template-columns: 1fr;
+            }
+
+            .wallet-request-row .btn {
+                width: 100%;
+            }
         }
     </style>
 @endpush
 @push('customScript')
+    <script src="/assets_backend/js-miei/select2_it.js"></script>
+    <script src="/assets_backend/js-miei/autoNumeric.min.js"></script>
     <script>
         var indexUrl = '{{action([$controller,'index'])}}';
 
         $(function () {
             searchHandler();
+            select2UniversaleBackend('agente_id', 'un agente', 1);
+            select2UniversaleBackend('storno_agente_id', 'un agente', 1, 'agente_id');
+            autonumericImporto('autonumericImporto');
         });
     </script>
 @endpush

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OffertaSim extends Model
 {
@@ -22,9 +22,9 @@ class OffertaSim extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function gestore(): HasOne
+    public function gestore(): BelongsTo
     {
-        return $this->hasOne(GestoreAttivazioniSim::class, 'id', 'gestore_id');
+        return $this->belongsTo(GestoreAttivazioniSim::class, 'gestore_id');
     }
 
     /*

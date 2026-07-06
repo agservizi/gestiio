@@ -34,6 +34,26 @@
 </div>
 
 <script>
+    function notificaMandato(type, message) {
+        if (window.gestiioToast) {
+            gestiioToast(type, message);
+            return;
+        }
+        if (window.toastr && typeof toastr[type] === 'function') {
+            toastr[type](message);
+            return;
+        }
+        Swal.fire({
+            text: message,
+            icon: type === 'error' ? 'error' : 'success',
+            buttonsStyling: false,
+            confirmButtonText: 'Ok',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
+
     $('.form-check-input').change(function () {
 
         var stato = $(this).is(':checked') ? 1 : 0;
@@ -54,9 +74,13 @@
                     $('#kt_modal').modal('hide');
                     modalAjax();
                 } else {
-                    alert(response.message);
+                    notificaMandato('error', response.message || 'Impossibile aggiornare il mandato.');
                 }
 
+            },
+            error: function (xhr) {
+                var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Impossibile aggiornare il mandato.';
+                notificaMandato('error', message);
             }
         });
 

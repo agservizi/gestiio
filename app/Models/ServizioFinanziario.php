@@ -135,7 +135,7 @@ class ServizioFinanziario extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function allegati()
@@ -145,7 +145,7 @@ class ServizioFinanziario extends Model
 
     public function esito()
     {
-        return $this->hasOne(EsitoServizioFinanziario::class, 'id', 'esito_id');
+        return $this->belongsTo(EsitoServizioFinanziario::class, 'esito_id');
     }
 
     public function prodotto()

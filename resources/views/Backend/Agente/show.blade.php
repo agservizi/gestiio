@@ -192,10 +192,17 @@
                 $.ajax({
                     url: url,
                     error: function (xhr, ajaxOptions, thrownError) {
-                        var err = eval("(" + xhr.responseText + ")");
+                        var err = xhr.responseJSON || {};
+                        if (!err.message && xhr.responseText) {
+                            try {
+                                err = JSON.parse(xhr.responseText);
+                            } catch (e) {
+                                err = {message: 'Impossibile caricare la pagina richiesta.'};
+                            }
+                        }
                         Swal.fire(
                             "Errore " + xhr.status,
-                            err.message,
+                            err.message || 'Impossibile caricare la pagina richiesta.',
                             "error"
                         )
                     }

@@ -94,7 +94,7 @@ class ProdottoSkyGlass extends Model
 
     public function contratto()
     {
-        return $this->hasOne(ContrattoTelefonia::class, 'id', 'contratto_id');
+        return $this->belongsTo(ContrattoTelefonia::class, 'contratto_id');
     }
 
     /*

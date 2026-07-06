@@ -20,7 +20,7 @@ class StripeWebhookController extends Controller
     {
         $payload = $request->getContent();
         $signature = $request->header('Stripe-Signature');
-        $secret = env('STRIPE_WEBHOOK_SECRET');
+        $secret = config('services.stripe.webhook_secret');
 
         if (! $secret) {
             Log::alert('Webhook Stripe non configurato: STRIPE_WEBHOOK_SECRET mancante');

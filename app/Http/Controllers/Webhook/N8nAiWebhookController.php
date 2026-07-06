@@ -11,9 +11,8 @@ class N8nAiWebhookController extends Controller
     public function handle(Request $request, AiAutomationService $automation)
     {
         $expectedSecret = (string) config('services.n8n.callback_secret');
-        if ($expectedSecret !== '') {
-            abort_if(! hash_equals($expectedSecret, (string) $request->header('X-Gestiio-AI-Secret')), 403);
-        }
+        abort_if($expectedSecret === '', 503, 'Webhook not configured');
+        abort_if(! hash_equals($expectedSecret, (string) $request->header('X-Gestiio-AI-Secret')), 403);
 
         $suggestion = $automation->createSuggestionFromWebhook($request->all());
 

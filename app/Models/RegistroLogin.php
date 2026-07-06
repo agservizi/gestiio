@@ -29,7 +29,7 @@ class RegistroLogin extends Model
 
     public function utente()
     {
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function impersonatoDa()

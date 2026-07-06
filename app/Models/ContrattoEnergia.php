@@ -169,7 +169,7 @@ class ContrattoEnergia extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function allegati()
@@ -179,22 +179,22 @@ class ContrattoEnergia extends Model
 
     public function caricatoDa()
     {
-        return $this->hasOne(User::class, 'id', 'caricato_da_user_id');
+        return $this->belongsTo(User::class, 'caricato_da_user_id');
     }
 
     public function cliente()
     {
-        return $this->hasOne(Cliente::class, 'id', 'cliente_id');
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
     public function gestore()
     {
-        return $this->hasOne(GestoreContrattoEnergia::class, 'id', 'gestore_id');
+        return $this->belongsTo(GestoreContrattoEnergia::class, 'gestore_id');
     }
 
     public function esito()
     {
-        return $this->hasOne(EsitoContrattoEnergia::class, 'id', 'esito_id');
+        return $this->belongsTo(EsitoContrattoEnergia::class, 'esito_id');
     }
 
     public function mandato()

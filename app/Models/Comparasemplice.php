@@ -77,7 +77,7 @@ class Comparasemplice extends Model
 
     public function agente()
     {
-        return $this->hasOne(User::class, 'id', 'agente_id');
+        return $this->belongsTo(User::class, 'agente_id');
     }
 
     public function allegati()
@@ -87,7 +87,7 @@ class Comparasemplice extends Model
 
     public function esito()
     {
-        return $this->hasOne(EsitoComparasemplice::class, 'id', 'esito_id');
+        return $this->belongsTo(EsitoComparasemplice::class, 'esito_id');
     }
 
     /*

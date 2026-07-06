@@ -19,14 +19,22 @@ services:
       DB_PORT: 3306
       DB_DATABASE: u427445037_gestiio
       DB_USERNAME: u427445037_gestiio
-      DB_PASSWORD: Nightcoder88@
+      DB_PASSWORD: ${DB_PASSWORD}
       STRIPE_KEY: ${STRIPE_KEY}
       STRIPE_PUBLIC_KEY: ${STRIPE_KEY}
       STRIPE_SECRET: ${STRIPE_SECRET}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      N8N_AUTOMATION_ENABLED: "true"
+      N8N_GESTIIO_WEBHOOK_URL: http://n8n:5678/webhook/gestiio-ai
+      N8N_GESTIIO_WEBHOOK_SECRET: ${N8N_GESTIIO_WEBHOOK_SECRET}
+      N8N_GESTIIO_CALLBACK_SECRET: ${N8N_GESTIIO_CALLBACK_SECRET}
+      N8N_GESTIIO_TIMEOUT: ${N8N_GESTIIO_TIMEOUT:-12}
     volumes:
       - gestiio_storage:/var/www/html/storage
+    networks:
+      - default
+      - proxy_network
 
   db:
     image: mariadb:11.8
@@ -35,8 +43,8 @@ services:
     environment:
       MARIADB_DATABASE: u427445037_gestiio
       MARIADB_USER: u427445037_gestiio
-      MARIADB_PASSWORD: Nightcoder88@
-      MARIADB_ROOT_PASSWORD: Nightcoder88@
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -51,3 +59,7 @@ services:
 volumes:
   gestiio_db:
   gestiio_storage:
+
+networks:
+  proxy_network:
+    external: true

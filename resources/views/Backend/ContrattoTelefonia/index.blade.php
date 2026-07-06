@@ -62,29 +62,290 @@
     </div>
 @endsection
 @section('content')
-    @if(($contrattiFermiCount ?? 0) > 0)
-        <div class="alert alert-warning d-flex align-items-center mb-5">
-            <span class="svg-icon svg-icon-2hx svg-icon-warning me-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path opacity="0.3" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"/>
-                    <path d="M12 7C12.5523 7 13 7.44772 13 8V13C13 13.5523 12.5523 14 12 14C11.4477 14 11 13.5523 11 13V8C11 7.44772 11.4477 7 12 7Z" fill="currentColor"/>
-                    <path d="M12 16C12.5523 16 13 16.4477 13 17C13 17.5523 12.5523 18 12 18C11.4477 18 11 17.5523 11 17C11 16.4477 11.4477 16 12 16Z" fill="currentColor"/>
-                </svg>
-            </span>
-            <div class="d-flex flex-column flex-grow-1">
-                <span class="fw-bold">{{ number_format($contrattiFermiCount) }} contratti fermi da almeno {{ $giorniFermo }} giorni</span>
-                <span class="text-muted">Stato bozza o da gestire.</span>
+    @php
+        $contrattiOverview = $contrattiOverview ?? ['totali' => 0, 'mese' => 0, 'bozze' => 0, 'da_gestire' => 0];
+    @endphp
+    <div class="contracts-page">
+        <section class="contracts-hero mb-6">
+            <div class="contracts-hero-copy">
+                <span>Control room telefonia</span>
+                <h1>Contratti, code e segnali in una vista sola.</h1>
+                <p>Una pagina fatta per capire subito dove intervenire: nuovi ordini, bozze ferme, pratiche da gestire e storico operativo.</p>
             </div>
-            <a href="{{ request()->fullUrlWithQuery(['solo_fermi' => 1, 'giorni_fermo' => $giorniFermo]) }}" class="btn btn-sm btn-warning">Vedi solo fermi</a>
-        </div>
-    @endif
+            <div class="contracts-hero-actions">
+                @if($puoCreare)
+                    <a href="{{action([$controller,'create'])}}" class="btn btn-primary">Nuovo contratto</a>
+                @endif
+                <a href="{{ request()->fullUrlWithQuery(['solo_fermi' => 1, 'giorni_fermo' => $giorniFermo]) }}" class="btn btn-light-warning">Contratti fermi</a>
+            </div>
+        </section>
 
-    <div class="card card-flush pt-4">
-        <div class="card-body pt-0 pb-5 fs-6" id="tabella">
-            @include('Backend.ContrattoTelefonia.tabella')
+        <section class="contracts-kpis mb-6">
+            <div class="contracts-kpi contracts-kpi-dark">
+                <span>Contratti filtrati</span>
+                <strong>{{number_format((int)$contrattiOverview['totali'])}}</strong>
+            </div>
+            <div class="contracts-kpi">
+                <span>Mese corrente</span>
+                <strong>{{number_format((int)$contrattiOverview['mese'])}}</strong>
+            </div>
+            <div class="contracts-kpi">
+                <span>Bozze</span>
+                <strong>{{number_format((int)$contrattiOverview['bozze'])}}</strong>
+            </div>
+            <div class="contracts-kpi contracts-kpi-warn">
+                <span>Da gestire</span>
+                <strong>{{number_format((int)$contrattiOverview['da_gestire'])}}</strong>
+            </div>
+        </section>
+
+        @if(($contrattiFermiCount ?? 0) > 0)
+            <div class="contracts-alert mb-6">
+                <div>
+                    <strong>{{ number_format($contrattiFermiCount) }} contratti fermi da almeno {{ $giorniFermo }} giorni</strong>
+                    <span>Stato bozza o da gestire.</span>
+                </div>
+                <a href="{{ request()->fullUrlWithQuery(['solo_fermi' => 1, 'giorni_fermo' => $giorniFermo]) }}" class="btn btn-sm btn-warning">Vedi solo fermi</a>
+            </div>
+        @endif
+
+        <div class="contracts-board">
+            <div class="contracts-board-head">
+                <div>
+                    <span>Registro ordini</span>
+                    <h2>Pipeline telefonia</h2>
+                </div>
+                <div class="contracts-board-meta">
+                    <span>{{number_format($records->total())}} movimenti</span>
+                    @if($conFiltro)
+                        <a href="{{action([$controller,'index'])}}" class="btn btn-sm btn-light">Rimuovi filtri</a>
+                    @endif
+                </div>
+            </div>
+            <div class="contracts-table-wrap fs-6" id="tabella">
+                @include('Backend.ContrattoTelefonia.tabella')
+            </div>
         </div>
     </div>
 @endsection
+@push('customCss')
+    <style>
+        .contracts-page {
+            --ct-text: #162033;
+            --ct-muted: #6c7890;
+            --ct-line: #dfe8f3;
+            --ct-blue: #0b8fe8;
+            --ct-green: #42b883;
+            --ct-amber: #f2a93b;
+            --ct-ink: #101828;
+        }
+
+        .contracts-hero {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 1rem;
+            min-height: 210px;
+            padding: 1.75rem;
+            border: 1px solid var(--ct-line);
+            border-radius: 8px;
+            background:
+                linear-gradient(135deg, rgba(11, 143, 232, .13), rgba(66, 184, 131, .09)),
+                repeating-linear-gradient(90deg, rgba(22, 32, 51, .055) 0 1px, transparent 1px 30px),
+                #fff;
+            overflow: hidden;
+        }
+
+        .contracts-hero-copy {
+            max-width: 760px;
+        }
+
+        .contracts-hero-copy span,
+        .contracts-board-head > div > span,
+        .contracts-kpi span {
+            display: block;
+            color: var(--ct-blue);
+            font-size: .75rem;
+            font-weight: 850;
+            letter-spacing: 0;
+            text-transform: uppercase;
+        }
+
+        .contracts-hero-copy h1 {
+            max-width: 720px;
+            margin: .65rem 0 .85rem;
+            color: var(--ct-text);
+            font-size: clamp(2.1rem, 3.4vw, 4rem);
+            line-height: .98;
+            font-weight: 900;
+            letter-spacing: 0;
+        }
+
+        .contracts-hero-copy p {
+            max-width: 620px;
+            margin: 0;
+            color: var(--ct-muted);
+            font-size: 1.05rem;
+            line-height: 1.55;
+            font-weight: 600;
+        }
+
+        .contracts-hero-actions {
+            display: flex;
+            flex: 0 0 auto;
+            align-items: flex-end;
+            gap: .65rem;
+            white-space: nowrap;
+        }
+
+        .contracts-kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .85rem;
+        }
+
+        .contracts-kpi {
+            min-height: 104px;
+            padding: 1.1rem 1.2rem;
+            border: 1px solid var(--ct-line);
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .contracts-kpi strong {
+            display: block;
+            margin-top: .35rem;
+            color: var(--ct-text);
+            font-size: 2rem;
+            line-height: 1;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .contracts-kpi-dark {
+            background: var(--ct-ink);
+            border-color: var(--ct-ink);
+        }
+
+        .contracts-kpi-dark span,
+        .contracts-kpi-dark strong {
+            color: #fff;
+        }
+
+        .contracts-kpi-warn {
+            border-color: #f7dfaf;
+            background: #fffaf0;
+        }
+
+        .contracts-alert {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border: 1px solid #f1d79d;
+            border-radius: 8px;
+            background: #fff8e8;
+        }
+
+        .contracts-alert strong,
+        .contracts-alert span {
+            display: block;
+        }
+
+        .contracts-alert strong {
+            color: #7a4d00;
+            font-weight: 850;
+        }
+
+        .contracts-alert span {
+            color: #9b6b16;
+            margin-top: .1rem;
+            font-weight: 600;
+        }
+
+        .contracts-board {
+            border: 1px solid var(--ct-line);
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .contracts-board-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.2rem 1.35rem;
+            border-bottom: 1px solid var(--ct-line);
+            background: #fbfdff;
+        }
+
+        .contracts-board-head h2 {
+            margin: .2rem 0 0;
+            color: var(--ct-text);
+            font-size: 1.25rem;
+            font-weight: 900;
+        }
+
+        .contracts-board-meta {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            color: var(--ct-muted);
+            font-weight: 750;
+            white-space: nowrap;
+        }
+
+        .contracts-table-wrap {
+            padding: .35rem .75rem .95rem;
+        }
+
+        .contracts-table-wrap .table {
+            margin-bottom: 0;
+        }
+
+        .contracts-table-wrap thead th {
+            color: #6c7890;
+            background: #fbfdff;
+            border-bottom: 1px solid var(--ct-line);
+            font-size: .74rem;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+
+        .contracts-table-wrap tbody td {
+            border-color: #edf2f7;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 1199.98px) {
+            .contracts-kpis {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .contracts-hero,
+            .contracts-alert,
+            .contracts-board-head {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .contracts-hero-actions,
+            .contracts-board-meta {
+                align-items: stretch;
+                flex-direction: column;
+                white-space: normal;
+            }
+
+            .contracts-kpis {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+@endpush
 @push('customScript')
     <script>
         var indexUrl = '{{action([$controller,'index'])}}';

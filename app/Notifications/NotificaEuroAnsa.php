@@ -4,16 +4,17 @@ namespace App\Notifications;
 
 use App\Models\Comune;
 use App\Models\ServizioFinanziario;
+use App\Notifications\Concerns\BuildsGestiioMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\HtmlString;
 
 use function importo;
 
 class NotificaEuroAnsa extends Notification
 {
     use Queueable;
+    use BuildsGestiioMail;
 
     /**
      * Create a new notification instance.
@@ -44,59 +45,76 @@ class NotificaEuroAnsa extends Notification
      */
     public function toMail($notifiable)
     {
-        $email = (new MailMessage)
-            ->subject('SEGNALAZIONE CAVALIERE CARMINE GESTIIO')
-            ->line('Prodotto: '.$this->servizioFinanziario->tipoProdottoBlade())
-            ->line('Nominativo cliente: '.$this->servizioFinanziario->nominativo())
-            ->salutation(new HtmlString('Saluti,<br>Cavaliere Carmine'));
-
+        $prodottoBlade = $this->servizioFinanziario->tipoProdottoBlade();
         $prodotto = $this->servizioFinanziario->prodotto()->first();
+        $items = [];
 
-        switch ($this->servizioFinanziario->tipoProdottoBlade()) {
+        switch ($prodottoBlade) {
             case 'Polizza':
-                $email->line('Targa: '.$prodotto->targa);
-                $email->line('Data di nascita: '.$prodotto->data_di_nascita->format('d/m/Y'));
+                $items = [
+                    'Targa' => $prodotto->targa,
+                    'Data di nascita' => $prodotto->data_di_nascita?->format('d/m/Y'),
+                ];
                 break;
 
             case 'Mutuo':
-                $email->line('Finalità: '.$prodotto->finalita);
-                $email->line('Tipo di tasso: '.$prodotto->tipo_di_tasso);
-                $email->line('Valore immobile: '.$prodotto->valore_immobile);
-                $email->line('Importo del mutuo: '.$prodotto->importo_del_mutuo);
-                $email->line('Durata: '.$prodotto->durata.' anni');
-                $email->line('Data di nascita: '.$prodotto->data_di_nascita->format('d/m/Y'));
-                $email->line('Posizione lavorativa: '.$prodotto->posizione_lavorativa);
-                $email->line('Reddito richiedenti: '.$prodotto->reddito_richiedenti);
-                $email->line('Comune domicilio: '.Comune::find($prodotto->comune_domicilio)?->comuneConTarga());
-                $email->line('Comune immobile: '.Comune::find($prodotto->comune_immobile)?->comuneConTarga());
-                $email->line('Stato ricerca immobile: '.$prodotto->stato_ricerca_immobile);
+                $items = [
+                    'Finalità' => $prodotto->finalita,
+                    'Tipo di tasso' => $prodotto->tipo_di_tasso,
+                    'Valore immobile' => $prodotto->valore_immobile,
+                    'Importo del mutuo' => $prodotto->importo_del_mutuo,
+                    'Durata' => $prodotto->durata.' anni',
+                    'Data di nascita' => $prodotto->data_di_nascita?->format('d/m/Y'),
+                    'Posizione lavorativa' => $prodotto->posizione_lavorativa,
+                    'Reddito richiedenti' => $prodotto->reddito_richiedenti,
+                    'Comune domicilio' => Comune::find($prodotto->comune_domicilio)?->comuneConTarga(),
+                    'Comune immobile' => Comune::find($prodotto->comune_immobile)?->comuneConTarga(),
+                    'Stato ricerca immobile' => $prodotto->stato_ricerca_immobile,
+                ];
                 break;
 
             case 'Prestito':
-                $email->line('importo prestito: '.$prodotto->importo_prestito);
-                $email->line('Durata prestito: '.$prodotto->durata_prestito.' mesi');
-                $email->line('Stato civile: '.$prodotto->stato_civile);
-                $email->line('Immobile residenza: '.$prodotto->immobile_residenza);
-                $email->line('Telefono fisso: '.$prodotto->telefono_fisso);
-                $email->line('Prestiti in corso: '.($prodotto->prestiti_in_corso ? 'Si' : 'No'));
-                $email->line('Prestiti in passato: '.($prodotto->prestiti_in_passato ? 'Si' : 'No'));
-                $email->line('Motivazione prestito: '.$prodotto->motivazione_prestito);
-                $email->line('Componenti famiglia: '.$prodotto->componenti_famiglia);
-                $email->line('Componenti famiglia con reddito: '.$prodotto->componenti_famiglia_con_reddito);
-                $email->line('Lavoro: '.$prodotto->lavoro);
-                $email->line('Datore lavoro intestazione: '.$prodotto->datore_lavoro_intestazione);
-                $email->line('Mesi anzianità servizio: '.$prodotto->mesi_anzianita_servizio);
-                $email->line('Anni anzianità servizio: '.$prodotto->anni_anzianita_servizio);
-                $email->line('Indirizzo lavoro: '.$prodotto->indirizzo_lavoro);
-                $email->line('Citta lavoro: '.Comune::find($prodotto->citta_lavoro)?->comuneConTarga());
-                $email->line('Telefono lavoro: '.$prodotto->telefono_lavoro);
-                $email->line('Titolo studio: '.$prodotto->titolo_studio);
-                $email->line('Reddito mensile: '.importo($prodotto->reddito_mensile));
+                $items = [
+                    'Importo prestito' => $prodotto->importo_prestito,
+                    'Durata prestito' => $prodotto->durata_prestito.' mesi',
+                    'Stato civile' => $prodotto->stato_civile,
+                    'Immobile residenza' => $prodotto->immobile_residenza,
+                    'Telefono fisso' => $prodotto->telefono_fisso,
+                    'Prestiti in corso' => $prodotto->prestiti_in_corso ? 'Si' : 'No',
+                    'Prestiti in passato' => $prodotto->prestiti_in_passato ? 'Si' : 'No',
+                    'Motivazione prestito' => $prodotto->motivazione_prestito,
+                    'Componenti famiglia' => $prodotto->componenti_famiglia,
+                    'Componenti famiglia con reddito' => $prodotto->componenti_famiglia_con_reddito,
+                    'Lavoro' => $prodotto->lavoro,
+                    'Datore lavoro' => $prodotto->datore_lavoro_intestazione,
+                    'Anzianità servizio' => trim($prodotto->anni_anzianita_servizio.' anni '.$prodotto->mesi_anzianita_servizio.' mesi'),
+                    'Indirizzo lavoro' => $prodotto->indirizzo_lavoro,
+                    'Città lavoro' => Comune::find($prodotto->citta_lavoro)?->comuneConTarga(),
+                    'Telefono lavoro' => $prodotto->telefono_lavoro,
+                    'Titolo studio' => $prodotto->titolo_studio,
+                    'Reddito mensile' => importo($prodotto->reddito_mensile),
+                ];
                 break;
 
         }
 
-        return $email;
+        return $this->gestiioMail('Segnalazione Gestiio - '.$prodottoBlade, [
+            'eyebrow' => 'Servizi finanziari',
+            'title' => 'Nuova segnalazione '.$prodottoBlade,
+            'preheader' => 'Cliente: '.$this->servizioFinanziario->nominativo(),
+            'intro' => 'È arrivata una nuova richiesta da valutare. I dati principali sono raccolti qui sotto per una prima lettura rapida.',
+            'summary' => [
+                'Prodotto' => $prodottoBlade,
+                'Cliente' => $this->servizioFinanziario->nominativo(),
+            ],
+            'sections' => [
+                [
+                    'title' => 'Dati richiesta',
+                    'items' => $this->compactRows($items),
+                ],
+            ],
+            'signature' => 'Cavaliere Carmine',
+        ]);
     }
 
     /**
