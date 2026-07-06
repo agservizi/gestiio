@@ -47,6 +47,12 @@ mkdir -p "$release"
 rsync -a --delete --exclude='.env' "$DEPLOY_DIR"/ "$release"/ >> "$LOG" 2>&1
 log "snapshot created: $release"
 
+if ! "$DOCKER" exec "$APP_CONTAINER" sh -lc "cd /var/www/html && php artisan migrate --no-interaction --force" >> "$LOG" 2>&1; then
+    log "artisan migrate failed"
+    rollback
+    exit 1
+fi
+
 if ! "$DOCKER" exec "$APP_CONTAINER" sh -lc "cd /var/www/html && php artisan config:clear && php artisan cache:clear && php artisan optimize && php artisan view:cache" >> "$LOG" 2>&1; then
     log "artisan optimize failed"
     rollback
