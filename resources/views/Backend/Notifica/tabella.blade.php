@@ -30,11 +30,8 @@
                 </td>
                 <td class="text-center">{!! $record->letture_count !!}</td>
                 <td class="text-end text-nowrap">
-                    @if($record->destinatario=='agente' && $record->letture_count==0)
-                        <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-                           class="btn btn-sm btn-light btn-active-light-primary"
-                           href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
-                    @endif
+                    <a class="btn btn-sm btn-light btn-active-light-primary"
+                       href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
                 </td>
             </tr>
         @endforeach
