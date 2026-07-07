@@ -11,6 +11,7 @@
 
 <!--begin::Global Stylesheets Bundle(used by all pages)-->
 <link href="/assets_backend/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css"/>
+<link href="/assets_backend/keenicons/duotone/style.css" rel="stylesheet" type="text/css"/>
 <link href="/assets_backend/css/style.bundle.css" rel="stylesheet" type="text/css"/>
 <link href="/assets_backend/css-miei/mio.css?v=5" rel="stylesheet" type="text/css">
 <link href="/assets_backend/css-miei/responsive.css?v=2" rel="stylesheet" type="text/css">

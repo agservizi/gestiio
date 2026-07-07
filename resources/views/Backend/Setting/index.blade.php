@@ -74,7 +74,7 @@
                 <input type="hidden" name="_settings_scope" value="{{ ($isControlliContrattiPage ?? false) ? 'controlli_contratti' : 'all' }}">
 
                 @foreach(config('setting_fields', []) as $section => $fields)
-                    <div class="mb-8" @if($section === 'controlli_contratti') id="controlli-contratti" @endif>
+                    <div class="mb-8" id="{{ str_replace('_', '-', $section) }}">
                         @if(!(($isControlliContrattiPage ?? false) && $section === 'controlli_contratti'))
                             <h3 class="mb-2">{{ $fields['title'] }}</h3>
                         @endif
