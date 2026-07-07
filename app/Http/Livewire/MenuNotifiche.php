@@ -42,11 +42,13 @@ class MenuNotifiche extends Component
     {
         /** @var User $authUser */
         $authUser = Auth::user();
-        $destinatario = $authUser->hasPermissionTo('admin') ? 'admin' : 'agente';
+        $destinatario = $authUser->hasPermissionTo('admin')
+            ? 'admin'
+            : ($authUser->hasPermissionTo('operatore') ? 'operatore' : 'agente');
 
         $this->notifiche = Notifica::query()
             ->whereDate('created_at', '>=', $authUser->created_at)
-            ->where('destinatario', $destinatario)
+            ->whereIn('destinatario', [$destinatario, 'tutti'])
             ->where(function ($q) {
                 $q->whereNull('user_id')
                     ->orWhere('user_id', Auth::id());
@@ -83,7 +85,7 @@ class MenuNotifiche extends Component
 
         if ($this->conteggio < 6) {
             $this->notifiche = $this->notifiche->merge(Notifica::query()
-                ->where('destinatario', $destinatario)
+                ->whereIn('destinatario', [$destinatario, 'tutti'])
                 ->where(function ($q) {
                     $q->whereNull('user_id')
                         ->orWhere('user_id', Auth::id());

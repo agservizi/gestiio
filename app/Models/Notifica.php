@@ -70,4 +70,9 @@ class Notifica extends Model
         $notifica->tipo = $tipo;
         $notifica->save();
     }
+
+    public function urlImmagine(): ?string
+    {
+        return $this->immagine ? '/storage/'.$this->immagine : null;
+    }
 }

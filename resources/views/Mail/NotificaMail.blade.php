@@ -37,6 +37,9 @@
                         <tr style="display: flex; justify-content: center; margin:0 60px 35px 60px">
                             <td align="start" valign="start" style="padding-bottom: 10px;">
                                 <p style="color:#181C32; font-size: 18px; font-weight: 600; margin-bottom:13px">{{$notifica->titolo}}</p>
+                                @if($notifica->immagine)
+                                    <img src="{{ url($notifica->urlImmagine()) }}" alt="" style="max-width:100%; border-radius:12px; margin-bottom:18px; display:block;">
+                                @endif
                                 <div style="background: #F9F9F9; border-radius: 12px; padding:35px 30px">
                                     {!! $notifica->testo !!}
                                 </div>

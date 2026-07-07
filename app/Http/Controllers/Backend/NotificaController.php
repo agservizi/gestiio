@@ -99,7 +99,7 @@ class NotificaController extends Controller
         if ($authUser instanceof User && ! $authUser->hasPermissionTo('admin')) {
             $destinatario = $authUser->hasPermissionTo('operatore') ? 'operatore' : 'agente';
             $queryBuilder
-                ->where('destinatario', $destinatario)
+                ->whereIn('destinatario', [$destinatario, 'tutti'])
                 ->where(function ($q) use ($authUser) {
                     $q->whereNull('user_id')
                         ->orWhere('user_id', $authUser->id);
@@ -237,13 +237,6 @@ class NotificaController extends Controller
      */
     protected function salvaDati($model, $request)
     {
-
-        $nuovo = ! $model->id;
-
-        if ($nuovo) {
-
-        }
-
         // Ciclo su campi
         $campi = [
             'titolo' => 'app\getInputUcfirst',
@@ -257,6 +250,13 @@ class NotificaController extends Controller
             $model->$campo = $valore;
         }
         $model->destinatario = $request->input('destinatario', 'agente');
+
+        if ($request->hasFile('immagine')) {
+            $model->immagine = $request->file('immagine')->store('notifiche', 'public');
+        } elseif ($request->boolean('rimuovi_immagine')) {
+            $model->immagine = null;
+        }
+
         $model->save();
 
         return $model;
@@ -322,6 +322,7 @@ class NotificaController extends Controller
             'testo' => ['required'],
             'destinatario' => ['required', 'in:agente,operatore,admin,tutti'],
             'emails_aggiuntive' => ['nullable', 'string'],
+            'immagine' => ['nullable', 'image', 'max:4096'],
         ];
 
         return $rules;
