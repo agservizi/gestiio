@@ -330,8 +330,11 @@
                     <div class="menu-item">
                         <a class="menu-link"
                            href="{{action([\App\Http\Controllers\Backend\EbikeProdottoController::class,'index'])}}">
-                        <span class="menu-bullet">
-                            <span class="bullet bullet-dot"></span>
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-gift fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
                         </span>
                             <span class="menu-title">Catalogo ebike</span>
                         </a>
@@ -339,8 +342,11 @@
                     <div class="menu-item">
                         <a class="menu-link"
                            href="{{action([\App\Http\Controllers\Backend\EbikeOrdineController::class,'index'])}}">
-                        <span class="menu-bullet">
-                            <span class="bullet bullet-dot"></span>
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-archive fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
                         </span>
                             <span class="menu-title">Ordini ebike</span>
                         </a>
