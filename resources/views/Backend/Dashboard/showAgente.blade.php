@@ -85,6 +85,9 @@
                     @can('servizio_documentazione')
                         <a href="{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'index'])}}" class="btn btn-sm btn-light-primary">Documentazione</a>
                     @endcan
+                    @can('ebike-b2b')
+                        <a href="{{action([\App\Http\Controllers\Backend\EbikeOrdineController::class,'index'])}}" class="btn btn-sm btn-light-primary">Ebike B2B</a>
+                    @endcan
                 </div>
             </div>
             <div class="agent-command-card">
