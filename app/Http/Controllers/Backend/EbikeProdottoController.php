@@ -159,7 +159,7 @@ class EbikeProdottoController extends Controller
             'descrizione' => ['nullable', 'string'],
             'prezzo' => ['required'],
             'giacenza' => ['required', 'integer', 'min:0'],
-            'immagine' => ['nullable', 'image', 'max:4096'],
+            'immagine' => ['nullable', 'image', 'max:2048'],
         ];
     }
 
