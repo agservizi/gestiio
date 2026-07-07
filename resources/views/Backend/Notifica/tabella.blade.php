@@ -16,10 +16,17 @@
                     {{$record->destinatario}}
                 </td>
                 <td class="">
-                    @if($record->titolo)
-                        <strong>{{$record->titolo}}</strong>
-                    @endif
-                    {!! $record->testo !!}
+                    <div class="d-flex align-items-start gap-4">
+                        @if($record->immagine)
+                            <img src="{{$record->urlImmagine()}}" alt="" class="rounded" style="width:56px;height:56px;object-fit:cover;flex:0 0 auto;">
+                        @endif
+                        <div>
+                            @if($record->titolo)
+                                <strong>{{$record->titolo}}</strong>
+                            @endif
+                            {!! $record->testo !!}
+                        </div>
+                    </div>
                 </td>
                 <td class="text-center">{!! $record->letture_count !!}</td>
                 <td class="text-end text-nowrap">
