@@ -46,7 +46,7 @@
                                 <td>
                                     <div class="d-flex align-items-center gap-4">
                                         @if($riga->prodotto?->immagine)
-                                            <img src="{{$riga->prodotto->urlImmagine()}}" alt="" class="rounded" style="width:40px;height:40px;object-fit:cover;flex:0 0 auto;">
+                                            <img src="{{$riga->prodotto->urlImmagine()}}" alt="" class="rounded zoomable-thumb" style="width:40px;height:40px;object-fit:cover;flex:0 0 auto;">
                                         @endif
                                         <span>{{$riga->nome_prodotto}}</span>
                                     </div>

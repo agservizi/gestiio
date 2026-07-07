@@ -50,6 +50,7 @@
 </div>
 
 @include('Backend._layout.modal')
+@include('Backend._components.imageZoomModal')
 @include('Backend._layout.gestiioAiWidget')
 @include('Backend._layout.partials.scrolltop')
 @include('Backend._layout.partials.scripts')

@@ -18,7 +18,7 @@
                 <td class="">
                     <div class="d-flex align-items-start gap-4">
                         @if($record->immagine)
-                            <img src="{{$record->urlImmagine()}}" alt="" class="rounded" style="width:56px;height:56px;object-fit:cover;flex:0 0 auto;">
+                            <img src="{{$record->urlImmagine()}}" alt="" class="rounded zoomable-thumb" style="width:56px;height:56px;object-fit:cover;flex:0 0 auto;">
                         @endif
                         <div>
                             @if($record->titolo)

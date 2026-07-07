@@ -46,7 +46,7 @@
                     <div class="col-lg-8 fv-row">
                         <input type="file" name="immagine" class="form-control" accept="image/*">
                         @if($record->immagine)
-                            <img src="{{$record->urlImmagine()}}" alt="{{$record->nome}}" style="max-width:120px" class="mt-3 rounded">
+                            <img src="{{$record->urlImmagine()}}" alt="{{$record->nome}}" style="max-width:120px" class="mt-3 rounded zoomable-thumb">
                         @endif
                     </div>
                 </div>
