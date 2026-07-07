@@ -17,6 +17,8 @@ use App\Http\Controllers\Backend\ContattoBrtController;
 use App\Http\Controllers\Backend\ContrattoEnergiaController;
 use App\Http\Controllers\Backend\ContrattoTelefoniaController;
 use App\Http\Controllers\Backend\DashboardController;
+use App\Http\Controllers\Backend\EbikeOrdineController;
+use App\Http\Controllers\Backend\EbikeProdottoController;
 use App\Http\Controllers\Backend\EsitoCafPatronatoController;
 use App\Http\Controllers\Backend\EsitoContrattoEnergiaController;
 use App\Http\Controllers\Backend\EsitoTelefoniaController;
@@ -27,8 +29,8 @@ use App\Http\Controllers\Backend\FatturaProformaController;
 use App\Http\Controllers\Backend\GestoreAttivazioniController;
 use App\Http\Controllers\Backend\GestoreContrattoEnergiaController;
 use App\Http\Controllers\Backend\GestoreController;
-use App\Http\Controllers\Backend\InpostPickupController;
 use App\Http\Controllers\Backend\InpostConsoleController;
+use App\Http\Controllers\Backend\InpostPickupController;
 use App\Http\Controllers\Backend\InpostReturnController;
 use App\Http\Controllers\Backend\ListinoBrtController;
 use App\Http\Controllers\Backend\ListinoBrtEuropaController;
@@ -195,6 +197,16 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/portafoglio/storna', [PortafoglioController::class, 'storna']);
     Route::post('/portafoglio/richieste-spostamento/{id}/applica', [PortafoglioController::class, 'applicaRichiestaSpostamento']);
     Route::resource('/portafoglio', PortafoglioController::class);
+
+    // Ebike B2B
+    Route::resource('/ebike/prodotti', EbikeProdottoController::class)->except(['show']);
+    Route::post('/ebike/ordini/{id}/carica-pagamento', [EbikeOrdineController::class, 'caricaPagamento']);
+    Route::post('/ebike/ordini/{id}/conferma-pagamento', [EbikeOrdineController::class, 'confermaPagamento']);
+    Route::post('/ebike/ordini/{id}/imposta-tracking', [EbikeOrdineController::class, 'impostaTracking']);
+    Route::post('/ebike/ordini/{id}/segna-consegnato', [EbikeOrdineController::class, 'segnaConsegnato']);
+    Route::post('/ebike/ordini/{id}/annulla', [EbikeOrdineController::class, 'annulla']);
+    Route::resource('/ebike/ordini', EbikeOrdineController::class)->only(['index', 'create', 'store', 'show']);
+
     Route::post('/pagamento/{servizio}', [PaymentController::class, 'pagamento']);
     Route::get('/pagamento/{servizio}/{result}', [PaymentController::class, 'response']);
     Route::post('/pagamento', [PaymentController::class, 'storePagamento']);

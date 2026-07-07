@@ -163,4 +163,38 @@ return [
     //            ]
     //        ]
     //    ],
+
+    'ebike_b2b' => [
+        'title' => 'Ebike B2B',
+        'desc' => 'Dati per il bonifico istantaneo mostrati agli agenti al momento dell\'ordine.',
+        'elements' => [
+            [
+                'type' => 'text',
+                'data' => 'string',
+                'name' => 'ebike_iban',
+                'label' => 'IBAN',
+                'rules' => 'nullable|string|max:34',
+                'class' => '',
+                'value' => '',
+            ],
+            [
+                'type' => 'text',
+                'data' => 'string',
+                'name' => 'ebike_intestatario_conto',
+                'label' => 'Intestatario conto',
+                'rules' => 'nullable|string|max:255',
+                'class' => '',
+                'value' => '',
+            ],
+            [
+                'type' => 'text',
+                'data' => 'string',
+                'name' => 'ebike_banca',
+                'label' => 'Banca',
+                'rules' => 'nullable|string|max:255',
+                'class' => '',
+                'value' => '',
+            ],
+        ],
+    ],
 ];

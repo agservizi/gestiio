@@ -388,6 +388,33 @@
                     </div>
 
                 @endcan
+                @can('ebike-b2b')
+                    <div class="menu-item">
+                        <a class="menu-link"
+                           href="{{action([\App\Http\Controllers\Backend\EbikeOrdineController::class,'index'])}}">
+                        <span class="menu-icon">
+                            <span class="svg-icon svg-icon-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path opacity="0.3" d="M5 17C6.65685 17 8 15.6569 8 14C8 12.3431 6.65685 11 5 11C3.34315 11 2 12.3431 2 14C2 15.6569 3.34315 17 5 17Z" fill="currentColor"/>
+                                    <path opacity="0.3" d="M19 17C20.6569 17 22 15.6569 22 14C22 12.3431 20.6569 11 19 11C17.3431 11 16 12.3431 16 14C16 15.6569 17.3431 17 19 17Z" fill="currentColor"/>
+                                    <path d="M12 17C13.6569 17 15 15.6569 15 14C15 12.3431 13.6569 11 12 11C10.3431 11 9 12.3431 9 14C9 15.6569 10.3431 17 12 17Z" fill="currentColor"/>
+                                </svg>
+                            </span>
+                        </span>
+                            <span class="menu-title">Ebike B2B</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a class="menu-link"
+                           href="{{action([\App\Http\Controllers\Backend\EbikeOrdineController::class,'create'])}}">
+                        <span class="menu-bullet">
+                            <span class="bullet bullet-dot"></span>
+                        </span>
+                            <span class="menu-title">Nuovo ordine ebike</span>
+                        </a>
+                    </div>
+                @endcan
                 @can('admin')
                     <div class="menu-item">
                         <a class="menu-link"
@@ -410,6 +437,24 @@
                                 <!--end::Svg Icon-->
                             </span>
                             <span class="menu-title">Ricarica plafond agenti</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a class="menu-link"
+                           href="{{action([\App\Http\Controllers\Backend\EbikeProdottoController::class,'index'])}}">
+                        <span class="menu-bullet">
+                            <span class="bullet bullet-dot"></span>
+                        </span>
+                            <span class="menu-title">Catalogo ebike</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a class="menu-link"
+                           href="{{action([\App\Http\Controllers\Backend\EbikeOrdineController::class,'index'])}}">
+                        <span class="menu-bullet">
+                            <span class="bullet bullet-dot"></span>
+                        </span>
+                            <span class="menu-title">Ordini ebike</span>
                         </a>
                     </div>
                 @endcan

@@ -47,6 +47,11 @@ class Kernel extends ConsoleKernel
             ->dailyAt('08:00')
             ->withoutOverlapping()
             ->onOneServer();
+
+        $schedule->command('ebike:controlla-sla-spedizione')
+            ->dailyAt('08:30')
+            ->withoutOverlapping()
+            ->onOneServer();
     }
 
     /**
