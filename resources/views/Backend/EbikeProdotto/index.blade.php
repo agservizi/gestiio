@@ -26,7 +26,14 @@
                     <tbody>
                         @forelse($records as $record)
                             <tr>
-                                <td>{{$record->nome}}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-4">
+                                        @if($record->immagine)
+                                            <img src="{{$record->urlImmagine()}}" alt="" class="rounded" style="width:40px;height:40px;object-fit:cover;flex:0 0 auto;">
+                                        @endif
+                                        <span>{{$record->nome}}</span>
+                                    </div>
+                                </td>
                                 <td>{{$record->sku}}</td>
                                 <td>{{importo($record->prezzo, true)}}</td>
                                 <td>{{$record->giacenza}}</td>

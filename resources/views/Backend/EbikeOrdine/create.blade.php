@@ -29,7 +29,14 @@
                         <tbody>
                             @forelse($prodotti as $prodotto)
                                 <tr>
-                                    <td>{{$prodotto->nome}} <span class="text-muted">({{$prodotto->sku}})</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-4">
+                                            @if($prodotto->immagine)
+                                                <img src="{{$prodotto->urlImmagine()}}" alt="" class="rounded" style="width:48px;height:48px;object-fit:cover;flex:0 0 auto;">
+                                            @endif
+                                            <span>{{$prodotto->nome}} <span class="text-muted">({{$prodotto->sku}})</span></span>
+                                        </div>
+                                    </td>
                                     <td>{{importo($prodotto->prezzo, true)}}</td>
                                     <td>{{$prodotto->giacenza}}</td>
                                     <td>
