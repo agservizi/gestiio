@@ -322,7 +322,7 @@ class NotificaController extends Controller
             'testo' => ['required'],
             'destinatario' => ['required', 'in:agente,operatore,admin,tutti'],
             'emails_aggiuntive' => ['nullable', 'string'],
-            'immagine' => ['nullable', 'image', 'max:2048'],
+            'immagine' => ['nullable', 'image', 'max:8192'],
         ];
 
         return $rules;

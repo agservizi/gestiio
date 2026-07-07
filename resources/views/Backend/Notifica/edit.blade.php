@@ -107,7 +107,7 @@
                                 <div class="notifica-image-drop-empty" id="notificaImageEmpty" @if($record->immagine ?? null) style="display:none" @endif>
                                     <i class="ki-duotone ki-picture fs-1"><span class="path1"></span><span class="path2"></span></i>
                                     <div class="fw-bold">Trascina un'immagine qui o clicca per selezionarla</div>
-                                    <div class="text-muted fs-7">JPG, PNG o WEBP — max 2MB</div>
+                                    <div class="text-muted fs-7">JPG, PNG o WEBP — max 8MB</div>
                                 </div>
                                 <img id="notificaImagePreview" src="{{ $record->urlImmagine() ?? '' }}"
                                      class="notifica-image-preview" @if(!($record->immagine ?? null)) style="display:none" @endif alt="Anteprima immagine">

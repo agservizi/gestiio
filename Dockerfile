@@ -25,6 +25,7 @@ WORKDIR /var/www/html
 COPY . .
 COPY .docker/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY .docker/entrypoint.sh /usr/local/bin/gestiio-entrypoint
+COPY docker/php/conf.d/*.ini /usr/local/etc/php/conf.d/
 
 RUN chmod +x /usr/local/bin/gestiio-entrypoint \
     && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
