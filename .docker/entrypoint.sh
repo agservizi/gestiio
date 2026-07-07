@@ -8,5 +8,6 @@ php artisan config:clear --no-interaction || true
 php artisan route:clear --no-interaction || true
 php artisan view:clear --no-interaction || true
 php artisan package:discover --ansi --no-interaction || true
+php artisan storage:link --no-interaction || true
 
 exec apache2-foreground
