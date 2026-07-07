@@ -70,19 +70,20 @@ class SensitiveFileService
             throw ValidationException::withMessages(['file' => 'Tipo file non consentito.']);
         }
 
+        // Controlliamo solo l'inizio del file (come i "magic bytes"): un file
+        // travestito da immagine/documento ma in realtà PHP/script/eseguibile
+        // comincia con quella firma. Cercarla ovunque nei primi byte dava falsi
+        // positivi su foto reali con metadati XMP/ICC che possono contenere
+        // queste sottostringhe per puro caso.
         $head = (string) file_get_contents($file->getRealPath(), false, null, 0, 4096);
-        $normalizedHead = Str::lower($head);
+        $normalizedHead = Str::lower(ltrim($head));
         foreach ((array) config('security_files.blocked_signatures', []) as $signature) {
             $signature = (string) $signature;
             if ($signature === '') {
                 continue;
             }
 
-            if ($signature === 'MZ' && str_starts_with($head, 'MZ')) {
-                throw ValidationException::withMessages(['file' => 'File bloccato per motivi di sicurezza.']);
-            }
-
-            if ($signature !== 'MZ' && Str::contains($normalizedHead, Str::lower($signature))) {
+            if (str_starts_with($normalizedHead, Str::lower($signature))) {
                 throw ValidationException::withMessages(['file' => 'File bloccato per motivi di sicurezza.']);
             }
         }
