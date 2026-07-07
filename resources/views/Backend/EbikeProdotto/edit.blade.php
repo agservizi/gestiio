@@ -17,9 +17,10 @@
                     </div>
                 </div>
                 <div class="row mb-6">
-                    <div class="col-lg-4 col-form-label text-lg-end"><label class="fw-bold fs-6 required">SKU</label></div>
+                    <div class="col-lg-4 col-form-label text-lg-end"><label class="fw-bold fs-6">SKU</label></div>
                     <div class="col-lg-8 fv-row">
-                        <input type="text" name="sku" class="form-control" value="{{old('sku',$record->sku)}}" required>
+                        <input type="text" class="form-control" value="{{$record->sku}}" readonly disabled>
+                        <div class="form-text">Generato automaticamente, non modificabile.</div>
                     </div>
                 </div>
                 <div class="row mb-6">

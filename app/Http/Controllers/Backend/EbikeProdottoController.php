@@ -44,6 +44,7 @@ class EbikeProdottoController extends Controller
     public function create()
     {
         $record = new ProdottoEbike;
+        $record->sku = $this->generaSku();
 
         return view('Backend.EbikeProdotto.edit', [
             'record' => $record,
@@ -121,8 +122,12 @@ class EbikeProdottoController extends Controller
      */
     protected function salvaDati($model, Request $request)
     {
+        $nuovo = ! $model->id;
+
         $model->nome = trim((string) $request->input('nome'));
-        $model->sku = trim((string) $request->input('sku'));
+        if ($nuovo) {
+            $model->sku = $this->generaSku();
+        }
         $model->descrizione = $request->input('descrizione');
         $model->prezzo = getInputNumero($request->input('prezzo'));
         $model->giacenza = (int) $request->input('giacenza', 0);
@@ -151,11 +156,25 @@ class EbikeProdottoController extends Controller
     {
         return [
             'nome' => ['required', 'max:255'],
-            'sku' => ['required', 'max:100', 'unique:prodotti_ebike,sku,'.($id ?? 'NULL').',id'],
             'descrizione' => ['nullable', 'string'],
             'prezzo' => ['required'],
             'giacenza' => ['required', 'integer', 'min:0'],
             'immagine' => ['nullable', 'image', 'max:4096'],
         ];
+    }
+
+    protected function generaSku(): string
+    {
+        $ultimo = ProdottoEbike::withTrashed()
+            ->where('sku', 'like', 'EB-%')
+            ->orderByRaw('CAST(SUBSTRING(sku, 4) AS UNSIGNED) DESC')
+            ->value('sku');
+
+        $numero = 1;
+        if ($ultimo && preg_match('/^EB-(\d+)$/', $ultimo, $matches)) {
+            $numero = ((int) $matches[1]) + 1;
+        }
+
+        return 'EB-'.str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
     }
 }
