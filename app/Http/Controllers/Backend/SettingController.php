@@ -186,6 +186,7 @@ class SettingController extends Controller
         foreach ($data as $key => $value) {
             if (Str::endsWith($key, '_verifica_cf_attivo')) {
                 $data[$key] = (string) (filter_var($value, FILTER_VALIDATE_BOOLEAN) ? 1 : 0);
+
                 continue;
             }
 
@@ -205,7 +206,7 @@ class SettingController extends Controller
         $energiaIds = GestoreContrattoEnergia::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         foreach ($data as $key => $value) {
-            if (! Str::contains($key, '_cf_')) {
+            if (! Str::contains($key, '_cf_') || Str::endsWith($key, '_verifica_cf_attivo')) {
                 continue;
             }
 
@@ -217,6 +218,7 @@ class SettingController extends Controller
                         abort_unless($this->isValidCodiceFiscale($cf), 422, "Codice fiscale non valido in {$key}: {$cf}");
                     }
                 }
+
                 continue;
             }
 
