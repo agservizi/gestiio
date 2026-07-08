@@ -43,8 +43,16 @@ class NotificaMail extends Mailable
     public function content()
     {
         return new Content(
-            view: 'Mail.NotificaMail',
-            with: ['notifica' => $this->notifica]
+            view: 'emails.gestiio-notification',
+            with: [
+                'subject' => $this->notifica->titolo,
+                'kicker' => 'Notifica',
+                'title' => $this->notifica->titolo,
+                'preheader' => $this->notifica->titolo,
+                'tone' => $this->notifica->tipo ?: 'info',
+                'image' => $this->notifica->urlImmagine() ? url($this->notifica->urlImmagine()) : null,
+                'bodyHtml' => $this->notifica->testo,
+            ]
         );
     }
 

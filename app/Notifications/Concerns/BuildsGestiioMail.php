@@ -17,6 +17,7 @@ trait BuildsGestiioMail
                 'preheader' => 'Aggiornamento da Gestiio',
                 'intro' => null,
                 'tone' => 'info',
+                'code' => null,
                 'summary' => [],
                 'sections' => [],
                 'cta_label' => null,
