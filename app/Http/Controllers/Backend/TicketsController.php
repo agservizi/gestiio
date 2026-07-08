@@ -81,6 +81,7 @@ class TicketsController extends Controller
             })->count(),
             'risolti_oggi' => (clone $baseQuery)->whereDate('resolved_at', $now)->count(),
             'carico_team' => (clone $baseQuery)
+                ->reorder()
                 ->join('users', 'tickets.agente_id', '=', 'users.id')
                 ->selectRaw("CONCAT(users.cognome, ' ', users.nome) as nominativo, COUNT(*) as cnt")
                 ->groupBy('nominativo')

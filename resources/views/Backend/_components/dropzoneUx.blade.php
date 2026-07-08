@@ -113,7 +113,7 @@
                     addRemoveLinks: typeof options.addRemoveLinks === 'boolean' ? options.addRemoveLinks : true,
                     dictRemoveFile: 'Rimuovi',
                     dictCancelUpload: 'Annulla',
-                    dictFileTooBig: 'File troppo grande. Limite: {{filesize}} MB.',
+                    dictFileTooBig: 'File troppo grande. Limite: @{{filesize}} MB.',
                     dictMaxFilesExceeded: 'Hai raggiunto il numero massimo di file.',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken
