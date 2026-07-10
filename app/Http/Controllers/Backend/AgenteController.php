@@ -232,7 +232,7 @@ class AgenteController extends Controller
     {
         $record = new User;
 
-        return view('Backend.Agente.edit', [
+        return view('Backend.Agente.edit', array_merge([
             'record' => $record,
             'titoloPagina' => 'Nuovo '.Agente::NOME_SINGOLARE,
             'controller' => get_class($this),
@@ -240,7 +240,7 @@ class AgenteController extends Controller
             'newPassword' => rand(111111, 999999),
             'breadcrumbs' => [action([AgenteController::class, 'index']) => 'Torna a elenco '.Agente::NOME_PLURALE],
 
-        ]);
+        ], $this->datiPermessiAvanzati($record)));
     }
 
     /**
@@ -321,14 +321,38 @@ class AgenteController extends Controller
             abort(403, 'Non hai il permesso per effettuare questa operazione');
         }
 
-        return view('Backend.Agente.edit', [
+        return view('Backend.Agente.edit', array_merge([
             'record' => $record,
             'controller' => AgenteController::class,
             'titoloPagina' => 'Modifica '.Agente::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
             'breadcrumbs' => [action([AgenteController::class, 'index']) => 'Torna a elenco '.Agente::NOME_PLURALE],
             'ruoli' => $this->ruoliApplicabili(),
-        ]);
+        ], $this->datiPermessiAvanzati($record)));
+    }
+
+    /**
+     * Calcola l'elenco dei permessi da escludere dal blocco "Servizi" (perché mostrati
+     * come gruppi nel blocco "Registro & Impostazioni") e lo stato checked di ogni gruppo.
+     */
+    protected function datiPermessiAvanzati(User $record): array
+    {
+        $permessiAvanzati = array_merge(...array_values(self::GRUPPI_PERMESSI_AVANZATI));
+        $permessiAvanzati[] = 'settings.update';
+
+        $gruppiAvanzati = [];
+        foreach (self::ETICHETTE_GRUPPI_AVANZATI as $chiave => $etichetta) {
+            $permessiGruppo = self::GRUPPI_PERMESSI_AVANZATI[$chiave] ?? [$chiave];
+            $gruppiAvanzati[$chiave] = [
+                'etichetta' => $etichetta,
+                'checked' => $record->id && collect($permessiGruppo)->every(fn ($p) => $record->hasPermissionTo($p)),
+            ];
+        }
+
+        return [
+            'permessiAvanzati' => $permessiAvanzati,
+            'gruppiAvanzati' => $gruppiAvanzati,
+        ];
     }
 
     /**
