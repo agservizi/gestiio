@@ -38,7 +38,6 @@ class AttivaServizioController extends Controller
 
         return view('Backend.Dashboard.attivaServizio', [
             'servizi' => $this->serviziDisponibili(),
-            'richiestaInviata' => (bool) $request->session()->get($this->sessionKey($user)),
         ]);
     }
 
@@ -51,25 +50,24 @@ class AttivaServizioController extends Controller
             return redirect('/');
         }
 
-        $sessionKey = $this->sessionKey($user);
-        if ($request->session()->get($sessionKey)) {
-            (new AlertMessage)->messaggio('Richiesta già inviata: attendi che un amministratore attivi i tuoi servizi.', 'info')->flash();
+        $serviziValidi = array_keys($this->serviziDisponibili());
+        $selezionati = array_values(array_intersect((array) $request->input('servizi', []), $serviziValidi));
+
+        if (empty($selezionati)) {
+            (new AlertMessage)->messaggio('Seleziona almeno un servizio da attivare.', 'warning')->flash();
 
             return back();
         }
 
-        $serviziValidi = array_keys($this->serviziDisponibili());
-        $richiesti = array_values(array_intersect((array) $request->input('servizi', []), $serviziValidi));
+        $user->givePermissionTo($selezionati);
 
-        User::permission('admin')->get()->each(function (User $admin) use ($user, $richiesti) {
-            $admin->notify(new NotificaRichiestaAttivazioneServizi($user, $richiesti));
+        User::permission('admin')->get()->each(function (User $admin) use ($user, $selezionati) {
+            $admin->notify(new NotificaRichiestaAttivazioneServizi($user, $selezionati));
         });
 
-        $request->session()->put($sessionKey, now()->toDateTimeString());
+        (new AlertMessage)->messaggio('Servizi attivati! Da ora puoi iniziare a lavorare.')->flash();
 
-        (new AlertMessage)->messaggio('Richiesta inviata! Un amministratore attiverà i tuoi servizi al più presto.')->flash();
-
-        return back();
+        return redirect('/');
     }
 
     protected function serviziDisponibili(): array
@@ -77,10 +75,5 @@ class AttivaServizioController extends Controller
         $nomi = Permission::where('id', '>', 3)->where('name', '<>', 'operatore')->pluck('name');
 
         return $nomi->mapWithKeys(fn ($nome) => [$nome => self::ETICHETTE_SERVIZI[$nome] ?? ucfirst(str_replace(['servizio_', '_', '-'], ['', ' ', ' '], $nome))])->all();
-    }
-
-    protected function sessionKey(User $user): string
-    {
-        return 'servizi_richiesta_inviata_'.$user->id;
     }
 }
