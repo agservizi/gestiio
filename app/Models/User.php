@@ -134,6 +134,17 @@ class User extends Authenticatable implements MustVerifyEmail
     /**********************
      * ALTRO
      **********************/
+
+    /**
+     * Determina se l'utente ha almeno un servizio abilitato (permesso diverso dai ruoli base).
+     */
+    public function hasServiziAttivi(): bool
+    {
+        return $this->permissions()
+            ->whereNotIn('name', ['admin', 'agente', 'supervisore', 'operatore'])
+            ->exists();
+    }
+
     public function nominativo()
     {
         return $this->nome.' '.$this->cognome;

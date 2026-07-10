@@ -4,6 +4,7 @@ use App\Http\Controllers\Backend\AgenteController;
 use App\Http\Controllers\Backend\AiAutomationController;
 use App\Http\Controllers\Backend\AjaxController;
 use App\Http\Controllers\Backend\AllegatoServizioController;
+use App\Http\Controllers\Backend\AttivaServizioController;
 use App\Http\Controllers\Backend\Autenticazione2faController;
 use App\Http\Controllers\Backend\BrtOrmController;
 use App\Http\Controllers\Backend\CafPatronatoController;
@@ -67,6 +68,8 @@ Route::middleware(['auth', 'role_or_permission:admin|agente|supervisore|operator
 Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa']], function () {
     Route::get('/', [DashboardController::class, 'show']);
     Route::get('/lavoro', [DashboardController::class, 'show']);
+    Route::get('/attiva-servizio', [AttivaServizioController::class, 'show'])->name('attiva-servizio');
+    Route::post('/attiva-servizio', [AttivaServizioController::class, 'richiedi'])->name('attiva-servizio.richiedi');
     Route::post('/dashboard/bulk-action', [DashboardController::class, 'bulkAction']);
     Route::get('/ai-control-tower', [AiAutomationController::class, 'index']);
     Route::post('/ai-control-tower/dashboard-review', [AiAutomationController::class, 'triggerDashboard']);

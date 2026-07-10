@@ -116,6 +116,8 @@ class DashboardController extends Controller
             return $this->showAdmin($request);
         } elseif ($user->hasPermissionTo('supervisore')) {
             return $this->showSupervisore($request);
+        } elseif ($user->hasPermissionTo('agente') && ! $user->hasServiziAttivi()) {
+            return redirect()->route('attiva-servizio');
         } else {
             return $this->showAgente($request);
         }
