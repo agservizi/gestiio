@@ -14,11 +14,7 @@ class AttivaServizioController extends Controller
 {
     public const ETICHETTE_SERVIZI = [
         'servizio_contratti_telefonia' => 'Contratti Telefonia',
-        'servizio_contratti_amex' => 'Contratti Amex',
         'servizio_contratti_energia' => 'Contratti Energia',
-        'servizio_servizi_finanziari' => 'Servizi Finanziari',
-        'servizio_compara_semplice' => 'Compara Semplice',
-        'servizio_attivazioni_sim' => 'Attivazioni SIM',
         'servizio_visure' => 'Visure Camerali',
         'servizio_caf_patronato' => 'CAF / Patronato',
         'servizio_spedizioni' => 'Spedizioni',
