@@ -38,6 +38,50 @@ class AgenteController extends Controller
     protected $conFiltro = false;
 
     /**
+     * Raggruppa i permessi granulari di Registro/Impostazioni/Controlli Contratti
+     * in pochi toggle "di comodo": abilitando un gruppo si abilitano tutti i
+     * permessi che contiene.
+     */
+    public const GRUPPI_PERMESSI_AVANZATI = [
+        'gruppo:registro-visualizza' => [
+            'registro.login.view',
+            'registro.email.view',
+            'registro.backup.view',
+            'registro.licenze.view',
+            'registro.info-sito.view',
+            'registro.errori.view',
+            'registro.upload.view',
+            'registro.modifiche.view',
+        ],
+        'gruppo:registro-backup' => [
+            'registro.backup.run',
+            'registro.backup.download',
+        ],
+        'gruppo:settings-visualizza' => [
+            'settings.view',
+            'settings.test',
+        ],
+        'gruppo:settings-avanzate' => [
+            'settings.export',
+            'settings.import',
+            'settings.rollback',
+        ],
+        'gruppo:controlli-contratti' => [
+            'controlli-contratti.view',
+            'controlli-contratti.update',
+        ],
+    ];
+
+    public const ETICHETTE_GRUPPI_AVANZATI = [
+        'gruppo:registro-visualizza' => 'Registro: Visualizzazione',
+        'gruppo:registro-backup' => 'Registro: Gestione Backup',
+        'gruppo:settings-visualizza' => 'Impostazioni: Visualizzazione',
+        'settings.update' => 'Impostazioni: Modifica',
+        'gruppo:settings-avanzate' => 'Impostazioni: Import / Export / Rollback',
+        'gruppo:controlli-contratti' => 'Controlli Contratti',
+    ];
+
+    /**
      * Display a listing of the resource.
      *
      * @return mixed
@@ -471,7 +515,15 @@ class AgenteController extends Controller
         }
         $model->save();
 
-        $model->syncPermissions(array_merge([$request->input('ruolo')], $request->input('vedi', [])));
+        $permessiEspansi = [];
+        foreach ((array) $request->input('vedi', []) as $voce) {
+            if (array_key_exists($voce, self::GRUPPI_PERMESSI_AVANZATI)) {
+                array_push($permessiEspansi, ...self::GRUPPI_PERMESSI_AVANZATI[$voce]);
+            } else {
+                $permessiEspansi[] = $voce;
+            }
+        }
+        $model->syncPermissions(array_merge([$request->input('ruolo')], $permessiEspansi));
 
         if ($nuovo) {
             dispatch(function () use ($model, $password) {

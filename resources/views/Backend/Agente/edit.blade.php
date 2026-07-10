@@ -54,17 +54,41 @@
                     </div>
                     @includeWhen(false,'Backend._inputs.inputSwitch',['campo'=>'operatori-vedi_tutti','testo'=>'Vedi tutti gli operatori','required'=>false,'help'=>'Vede tutti gli operatori'])
                 @endif
+                @php
+                    $permessiAvanzati = array_merge(
+                        ...array_values(\App\Http\Controllers\Backend\AgenteController::GRUPPI_PERMESSI_AVANZATI)
+                    );
+                    $permessiAvanzati[] = 'settings.update';
+                @endphp
                 <div class="row mb-6" id="div_vedi">
                     <div class="col-lg-4 col-form-label text-lg-end">
                         <label class="fw-bold fs-6">Servizi</label><br>
                     </div>
                     <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                        @foreach(\Spatie\Permission\Models\Permission::where('id','>',3)->where('name','<>','operatore')->get()->pluck('name')->toArray() as $ruolo=>$testo)
+                        @foreach(\Spatie\Permission\Models\Permission::where('id','>',3)->where('name','<>','operatore')->whereNotIn('name',$permessiAvanzati)->get()->pluck('name')->toArray() as $ruolo=>$testo)
                             @php($ruolo=$testo)
                             <div class="form-check form-check-custom form-check-solid my-3">
                                 <input class="form-check-input" name="vedi[]" type="checkbox" id="radio{{$ruolo}}"
                                        value="{{$ruolo}}" {{$record->hasPermissionTo($ruolo)?'checked':''}}/>
                                 <label class="form-check-label" for="radio{{$ruolo}}">{{$testo}}</label>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="row mb-6" id="div_vedi_avanzati">
+                    <div class="col-lg-4 col-form-label text-lg-end">
+                        <label class="fw-bold fs-6">Registro &amp; Impostazioni</label><br>
+                    </div>
+                    <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                        @foreach(\App\Http\Controllers\Backend\AgenteController::ETICHETTE_GRUPPI_AVANZATI as $chiave=>$etichetta)
+                            @php
+                                $permessiGruppo = \App\Http\Controllers\Backend\AgenteController::GRUPPI_PERMESSI_AVANZATI[$chiave] ?? [$chiave];
+                                $abilitato = collect($permessiGruppo)->every(fn($p) => $record->hasPermissionTo($p));
+                            @endphp
+                            <div class="form-check form-check-custom form-check-solid my-3">
+                                <input class="form-check-input" name="vedi[]" type="checkbox" id="radio{{$chiave}}"
+                                       value="{{$chiave}}" {{$abilitato?'checked':''}}/>
+                                <label class="form-check-label" for="radio{{$chiave}}">{{$etichetta}}</label>
                             </div>
                         @endforeach
                     </div>
