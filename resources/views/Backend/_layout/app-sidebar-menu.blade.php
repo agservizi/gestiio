@@ -73,6 +73,18 @@
                 </div>
 
 
+                <div class="menu-item">
+                    <a class="menu-link"
+                       href="{{ url('/backend/deposito-bagagli/dashboard') }}">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-safe-home fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Deposito Bagagli</span>
+                    </a>
+                </div>
                 @if(Auth::user()->hasAnyPermission(['admin']))
                     <div class="menu-item">
                         <a class="menu-link"
@@ -707,6 +719,43 @@
                                     </div>
                                 </div>
                                 <!--end:Menu sub-->
+                            </div>
+
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
+                                <span class="menu-link">
+                                    <span class="menu-title">Deposito Bagagli</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion">
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{ action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'settings']) }}#tariffe">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Tariffe e capacità</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{ action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'settings']) }}#prenotazioni">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Prenotazioni e portale</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{ action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'settings']) }}#notifiche">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Notifiche</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{ action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'settings']) }}#api">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Integrazione API REST</span>
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="menu-item">

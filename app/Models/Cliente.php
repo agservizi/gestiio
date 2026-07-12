@@ -53,6 +53,16 @@ class Cliente extends Model
         return $this->ragione_sociale ?: ($this->cognome.' '.$this->nome);
     }
 
+    public static function selected($id)
+    {
+        if ($id) {
+            $record = self::find($id);
+            if ($record) {
+                return '<option value="'.$record->id.'" selected>'.e($record->denominazione()).'</option>';
+            }
+        }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | ALTRO

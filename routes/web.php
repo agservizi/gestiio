@@ -7,6 +7,9 @@ use App\Http\Controllers\Backend\VisuraCameraleController;
 use App\Http\Controllers\Frontend\AreaUtenteController;
 use App\Http\Controllers\Frontend\ContrattoController;
 use App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController;
+use App\Http\Controllers\Frontend\LuggageBookingController;
+use App\Http\Controllers\Frontend\LuggageVerifyPageController;
+use App\Http\Controllers\Frontend\LuggagePickupController;
 use App\Http\Controllers\Frontend\MarketingController;
 use App\Http\Controllers\Frontend\TicketController;
 use App\Http\Controllers\LogOut;
@@ -32,6 +35,18 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/', [MarketingController::class, 'home'])->name('marketing.home');
 Route::get('/collabora-con-ag-servizi', [MarketingController::class, 'collabora'])->name('marketing.collabora');
+
+Route::prefix('deposito-bagagli')->group(function () {
+    Route::get('/', [LuggageBookingController::class, 'index']);
+    Route::get('/disponibilita', [LuggageBookingController::class, 'availability']);
+    Route::post('/prenota', [LuggageBookingController::class, 'store']);
+    Route::get('/conferma', [LuggageBookingController::class, 'confirm']);
+    Route::get('/qr/{id}', [LuggageBookingController::class, 'qr'])->name('luggage.public.qr');
+    Route::get('/verify/{id}', [LuggageVerifyPageController::class, 'show']);
+    Route::get('/ritiro/{id}', [LuggagePickupController::class, 'show'])->name('luggage.public.pickup');
+    Route::post('/ritiro/{id}/scan', [LuggagePickupController::class, 'scan'])->middleware('throttle:120,1');
+    Route::post('/ritiro/{id}/complete', [LuggagePickupController::class, 'complete'])->middleware('throttle:30,1');
+});
 
 Route::get('select2front', [Select2::class, 'response']);
 

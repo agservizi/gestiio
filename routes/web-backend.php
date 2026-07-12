@@ -37,6 +37,7 @@ use App\Http\Controllers\Backend\ListinoBrtController;
 use App\Http\Controllers\Backend\ListinoBrtEuropaController;
 use App\Http\Controllers\Backend\ListinoController;
 use App\Http\Controllers\Backend\ListinoInpostController;
+use App\Http\Controllers\Backend\LuggageDepositController;
 use App\Http\Controllers\Backend\ModalController;
 use App\Http\Controllers\Backend\NotificaController;
 use App\Http\Controllers\Backend\OffertaSimController;
@@ -333,6 +334,26 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
     Route::get('inpost-account', [InpostConsoleController::class, 'account']);
     Route::get('inpost-deposits', [InpostConsoleController::class, 'deposits']);
     Route::post('inpost-deposits', [InpostConsoleController::class, 'storeDeposit']);
+
+    Route::prefix('deposito-bagagli')->group(function () {
+        Route::get('dashboard', [LuggageDepositController::class, 'dashboard']);
+        Route::get('pipeline', [LuggageDepositController::class, 'pipeline']);
+        Route::get('check-in', [LuggageDepositController::class, 'checkInPage']);
+        Route::get('check-out', [LuggageDepositController::class, 'checkOutPage']);
+        Route::get('settings', [LuggageDepositController::class, 'settings']);
+        Route::post('settings', [LuggageDepositController::class, 'updateSettings']);
+        Route::get('report', [LuggageDepositController::class, 'report']);
+        Route::get('export/csv', [LuggageDepositController::class, 'exportCsv']);
+        Route::get('create', [LuggageDepositController::class, 'create']);
+        Route::post('/', [LuggageDepositController::class, 'store']);
+        Route::get('/', [LuggageDepositController::class, 'index']);
+        Route::post('{id}/action', [LuggageDepositController::class, 'action']);
+        Route::delete('{id}', [LuggageDepositController::class, 'destroy']);
+        Route::get('{id}/pdf/receipt', [LuggageDepositController::class, 'pdfReceipt']);
+        Route::get('{id}/pdf/tags', [LuggageDepositController::class, 'pdfTags']);
+        Route::get('{id}/pdf/agreement', [LuggageDepositController::class, 'pdfAgreement']);
+        Route::get('{id}', [LuggageDepositController::class, 'show']);
+    });
 
     // Chiamate api
     Route::get('chiamata-api', [ChiamataApiController::class, 'index']);

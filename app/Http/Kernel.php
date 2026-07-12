@@ -98,5 +98,6 @@ class Kernel extends HttpKernel
         'verified' => EnsureEmailIsVerified::class,
         'set-uid' => SetUid::class,
         '2fa' => Ensure2faAbilitata::class,
+        'luggage.api' => \App\Http\Middleware\ValidateLuggageApiKey::class,
     ];
 }

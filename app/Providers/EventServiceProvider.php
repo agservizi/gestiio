@@ -2,7 +2,13 @@
 
 namespace App\Providers;
 
+use App\Events\LuggageDepositCheckedOut;
+use App\Events\LuggageDepositCreated;
 use App\Listeners\EmailLogger;
+use App\Listeners\LogLuggageDepositCheckedIn;
+use App\Listeners\NotifyStaffOnLuggageDepositCreated;
+use App\Listeners\SendLuggagePickupQrEmail;
+use App\Listeners\SendLuggageDepositReceiptEmail;
 use App\Listeners\LogSuccessfulLogin;
 use App\Listeners\RecordFailedLoginAttempt;
 use App\Listeners\RespectUserNotificationPreferences;
@@ -40,6 +46,16 @@ class EventServiceProvider extends ServiceProvider
         ],
         NotificationSending::class => [
             RespectUserNotificationPreferences::class,
+        ],
+        LuggageDepositCreated::class => [
+            NotifyStaffOnLuggageDepositCreated::class,
+        ],
+        \App\Events\LuggageDepositCheckedIn::class => [
+            LogLuggageDepositCheckedIn::class,
+            SendLuggagePickupQrEmail::class,
+        ],
+        LuggageDepositCheckedOut::class => [
+            SendLuggageDepositReceiptEmail::class,
         ],
         /*
         TwoFactorAuthenticationChallenged::class => [

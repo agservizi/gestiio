@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cliente;
 use App\Models\ClienteAssistenza;
 use App\Models\Comune;
 use App\Models\ContattoBrt;
@@ -135,6 +136,18 @@ class Select2 extends Controller
                     ->orderBy('nome');
                 if ($term) {
                     $qb->where('nome', 'like', "%$term%");
+                }
+
+                return $qb->get();
+
+            case 'cliente_id':
+                $qb = Cliente::query()
+                    ->select('id', DB::raw('CONCAT_WS(" ", cognome, nome, codice_fiscale) as text'))
+                    ->orderBy('cognome')
+                    ->orderBy('nome')
+                    ->limit(20);
+                if ($term) {
+                    $qb->whereRaw('CONCAT_WS(" ", cognome, nome, codice_fiscale, email) like ?', ["%$term%"]);
                 }
 
                 return $qb->get();
