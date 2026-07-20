@@ -3,6 +3,42 @@
 @extends('Backend._layout._main')
 
 @push('customCss')
+    <script>
+        /* Blocca subito richieste a allegati orfani (anche da HTML in cache CDN). */
+        (function () {
+            function scrub(img) {
+                if (!img || img.tagName !== 'IMG') return;
+                const src = img.getAttribute('src') || '';
+                if (!/\/backend\/chat-interna\/attachment\/\d+/i.test(src)) return;
+                img.removeAttribute('src');
+                img.removeAttribute('data-src');
+                const wrap = img.closest('a.chat-image-preview') || img.parentNode;
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-light-warning';
+                badge.textContent = 'Allegato non disponibile';
+                if (wrap && wrap.parentNode) {
+                    wrap.parentNode.replaceChild(badge, wrap);
+                } else {
+                    img.replaceWith(badge);
+                }
+            }
+            const mo = new MutationObserver(function (mutations) {
+                mutations.forEach(function (m) {
+                    m.addedNodes.forEach(function (node) {
+                        if (node.nodeType !== 1) return;
+                        if (node.tagName === 'IMG') scrub(node);
+                        if (node.querySelectorAll) {
+                            node.querySelectorAll('img[src*="/chat-interna/attachment/"]').forEach(scrub);
+                        }
+                    });
+                });
+            });
+            mo.observe(document.documentElement, { childList: true, subtree: true });
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('img[src*="/chat-interna/attachment/"]').forEach(scrub);
+            });
+        })();
+    </script>
     <style>
         .typing-dots {
             display: inline-flex;
@@ -183,36 +219,153 @@
         @media (max-width: 991.98px) {
             .chat-layout {
                 height: auto;
+                min-height: calc(100vh - 180px);
+            }
+
+            .chat-layout .chat-pane-list,
+            .chat-layout .chat-pane-conversation {
+                display: none;
+            }
+
+            .chat-layout.mobile-list .chat-pane-list {
+                display: block;
+            }
+
+            .chat-layout.mobile-conversation .chat-pane-conversation {
+                display: block;
+            }
+
+            .chat-layout .chat-pane-list,
+            .chat-layout .chat-pane-conversation {
+                height: calc(100vh - 180px);
             }
 
             #chat-messages {
                 min-height: 42vh;
+            }
+
+            #chat-mobile-back {
+                display: inline-flex !important;
+            }
+        }
+
+        #chat-mobile-back {
+            display: none;
+        }
+
+        .chat-pdf-frame {
+            width: 100%;
+            height: 75vh;
+            border: 0;
+        }
+
+        /* Select2 chat: stile Metronic — toolbar su una sola riga */
+        #chat-toolbar-actions {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            max-width: 100%;
+        }
+        #chat-new-thread-form {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+        #chat-new-thread-form .select2-container {
+            flex: 1 1 auto;
+            min-width: 160px;
+            max-width: 280px;
+            width: auto !important;
+        }
+        #chat-new-thread-form .select2-selection--multiple {
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+        }
+        #chat-new-thread-form #chat-avvia-btn,
+        #chat-toolbar-actions #chat-search-toggle {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        #chat-send-form .select2-container {
+            min-width: 160px;
+            vertical-align: middle;
+        }
+        #chat-send-form .select2-container .select2-selection--single {
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            background-color: #f5f8fa !important;
+            border: 1px solid #e4e6ef !important;
+            border-radius: 0.475rem !important;
+            padding: 0.15rem 0.5rem;
+        }
+        #chat-send-form .select2-container .select2-selection__rendered {
+            padding-left: 0.25rem !important;
+            line-height: 1.4 !important;
+        }
+        #chat-send-form .select2-container .select2-selection__arrow {
+            height: 34px !important;
+        }
+        #chat-new-thread-form .select2-container--bootstrap5 .select2-selection--multiple {
+            background-color: var(--kt-input-solid-bg, #f5f8fa);
+            border: 0;
+            border-radius: 0.475rem;
+        }
+        /* Se Select2 non parte, il select nativo resta evidenziato */
+        #chat-send-form select.form-select:not(.select2-hidden-accessible) {
+            box-shadow: inset 0 0 0 2px #f1416c;
+        }
+        @media (max-width: 767.98px) {
+            #chat-toolbar-actions,
+            #chat-new-thread-form {
+                flex-wrap: wrap;
+            }
+            #chat-new-thread-form .select2-container {
+                max-width: 100%;
+                width: 100% !important;
             }
         }
     </style>
 @endpush
 
 @section('toolbar')
-    <form method="POST" action="{{action([$controller, 'storeThread'])}}" class="d-flex align-items-center gap-2">
-        @csrf
-        <select name="destinatario_id" class="form-select form-select-sm w-250px" required>
-            <option value="">Nuova chat con...</option>
-            @foreach($utentiDisponibili as $utente)
-                <option value="{{$utente->id}}">{{$utente->nominativo()}}</option>
-            @endforeach
-        </select>
-        <button type="submit" class="btn btn-sm btn-primary">Avvia</button>
-    </form>
-    <button type="button" class="btn btn-sm btn-light-info ms-3" id="chat-search-toggle" title="Cerca messaggi">
-        <i class="fas fa-search"></i> Cerca
-    </button>
+    <div id="chat-toolbar-actions" class="d-flex align-items-center flex-nowrap gap-2">
+        <form method="POST" action="{{action([$controller, 'storeThread'])}}" class="d-flex align-items-center flex-nowrap gap-2" id="chat-new-thread-form">
+            @csrf
+            <select name="destinatario_ids[]"
+                    id="chat-destinatari"
+                    class="form-select form-select-solid form-select-sm"
+                    data-control="select2"
+                    data-kt-select2="true"
+                    data-placeholder="Seleziona destinatari"
+                    data-allow-clear="true"
+                    data-close-on-select="false"
+                    data-hide-search="false"
+                    multiple="multiple"
+                    required>
+                @foreach($utentiDisponibili as $utente)
+                    <option value="{{$utente->id}}">{{$utente->nominativo()}}</option>
+                @endforeach
+            </select>
+            <input type="text" name="name" id="chat-group-name" class="form-control form-control-sm w-150px d-none" placeholder="Nome gruppo" maxlength="120">
+            <button type="submit" class="btn btn-sm btn-primary" id="chat-avvia-btn">Avvia chat</button>
+        </form>
+        <button type="button" class="btn btn-sm btn-light-info" id="chat-search-toggle" title="Cerca messaggi">
+            <i class="fas fa-search"></i> Cerca
+        </button>
+    </div>
 @endsection
 
 @section('content')
     @include('Backend._components.alertErrori')
 
-    <div class="row g-5 chat-layout">
-        <div class="col-12 col-lg-4 col-xl-3 h-100">
+    <div class="row g-5 chat-layout mobile-list" id="chat-layout">
+        <div class="col-12 col-lg-4 col-xl-3 h-100 chat-pane-list">
             <div class="card h-100">
                 <div class="card-header border-0 pt-5 pb-3">
                     <h3 class="card-title align-items-start flex-column m-0">
@@ -227,13 +380,22 @@
             </div>
         </div>
 
-        <div class="col-12 col-lg-8 col-xl-9 h-100">
+        <div class="col-12 col-lg-8 col-xl-9 h-100 chat-pane-conversation">
             <div class="card h-100 overflow-hidden">
-                <div class="card-header border-0 pt-5 pb-3">
+                <div class="card-header border-0 pt-5 pb-3 d-flex align-items-center justify-content-between">
                     <h3 class="card-title m-0 fw-bolder fs-4">
+                        <button type="button" class="btn btn-sm btn-light me-2" id="chat-mobile-back" title="Torna alle conversazioni">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
                         <span id="chat-header-title">
-                            @if($threadAttivo && $threadAttivo->getRelation('altroPartecipante'))
-                                Chat con {{$threadAttivo->getRelation('altroPartecipante')->nominativo()}}
+                            @if($threadAttivo)
+                                @if($threadAttivo->is_group)
+                                    {{ $threadAttivo->display_name ?? $threadAttivo->nomeVisualizzato() }}
+                                @elseif($threadAttivo->getRelation('altroPartecipante'))
+                                    Chat con {{$threadAttivo->getRelation('altroPartecipante')->nominativo()}}
+                                @else
+                                    Chat interna
+                                @endif
                             @else
                                 Chat interna
                             @endif
@@ -252,7 +414,20 @@
                         <div class="row g-2 mt-1">
                             <div class="col-md-3"><input type="date" id="chat-search-from" class="form-control form-control-sm"></div>
                             <div class="col-md-3"><input type="date" id="chat-search-to" class="form-control form-control-sm"></div>
-                            <div class="col-md-3"><select id="chat-search-priority" class="form-select form-select-sm"><option value="">Priorità</option><option value="2">Alta</option><option value="1">Media</option><option value="0">Normale</option></select></div>
+                            <div class="col-md-3">
+                                <select id="chat-search-priority"
+                                        class="form-select form-select-solid form-select-sm"
+                                        data-control="select2"
+                                        data-kt-select2="true"
+                                        data-hide-search="true"
+                                        data-placeholder="Priorità"
+                                        data-allow-clear="true">
+                                    <option></option>
+                                    <option value="2">Alta</option>
+                                    <option value="1">Media</option>
+                                    <option value="0">Normale</option>
+                                </select>
+                            </div>
                             <div class="col-md-3 d-flex align-items-center gap-3">
                                 <label class="form-check form-check-sm m-0"><input class="form-check-input" type="checkbox" id="chat-search-attachments"><span class="form-check-label">Allegati</span></label>
                                 <label class="form-check form-check-sm m-0"><input class="form-check-input" type="checkbox" id="chat-search-favorites"><span class="form-check-label">Preferiti</span></label>
@@ -304,20 +479,27 @@
 
                     <form id="chat-send-form" class="pt-5 border-top mt-5">
                         @csrf
-                        <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                             <button type="button" id="chat-emoji-toggle" class="btn btn-sm btn-light-primary">😊 Emoticon</button>
-                            <select id="chat-template-select" class="form-select form-select-sm w-250px">
-                                <option value="">Template rapidi...</option>
-                                @foreach($quickTemplates as $template)
-                                    <option value="{{e($template->contenuto)}}">{{$template->titolo}}</option>
-                                @endforeach
-                            </select>
+                            <div class="w-250px">
+                                <select id="chat-template-select"
+                                        class="form-select form-select-solid form-select-sm"
+                                        data-placeholder="Template rapidi..."
+                                        data-allow-clear="true">
+                                    <option></option>
+                                    @foreach($quickTemplates as $template)
+                                        <option value="{{e($template->contenuto)}}">{{$template->titolo}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <button type="button" id="chat-template-save" class="btn btn-sm btn-light-info">Salva template</button>
-                            <select id="chat-priority" class="form-select form-select-sm w-150px">
-                                <option value="0">Priorità normale</option>
-                                <option value="1">Priorità media</option>
-                                <option value="2">Priorità alta</option>
-                            </select>
+                            <div class="w-175px">
+                                <select id="chat-priority" class="form-select form-select-solid form-select-sm">
+                                    <option value="0" selected>Priorità normale</option>
+                                    <option value="1">Priorità media</option>
+                                    <option value="2">Priorità alta</option>
+                                </select>
+                            </div>
                             <div id="chat-emoji-panel" class="d-none">
                                 <button type="button" class="btn btn-sm btn-light chat-emoji-item">😀</button>
                                 <button type="button" class="btn btn-sm btn-light chat-emoji-item">😂</button>
@@ -365,12 +547,198 @@
         </div>
     </div>
 
+    <div class="modal fade" id="chatPdfModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header py-3">
+                    <h5 class="modal-title fs-6" id="chatPdfModalTitle">Anteprima PDF</h5>
+                    <button type="button" class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body p-0">
+                    <iframe id="chatPdfModalFrame" class="chat-pdf-frame" title="Anteprima PDF"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="chatHistoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-3">
+                    <h5 class="modal-title fs-6">Storico modifiche</h5>
+                    <button type="button" class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="chatHistoryModalBody">
+                    <div class="text-muted">Caricamento...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div style="display:none" aria-hidden="true">
         Sound Effect by <a href="https://pixabay.com/it/users/universfield-28281460/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=485897">Universfield</a> from <a href="https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=485897">Pixabay</a>
     </div>
 @endsection
 
 @push('customScript')
+    {{-- Select2 isolato: non dipende dallo script chat (errori/race KTApp/Cloudflare) --}}
+    <script>
+        (function () {
+            function safeDestroy($el) {
+                if (!$el || !$el.length || typeof $.fn.select2 !== 'function') return;
+                try {
+                    if ($el.hasClass('select2-hidden-accessible')) {
+                        $el.select2('destroy');
+                    }
+                } catch (e) {}
+                $el.removeAttr('data-kt-initialized');
+                $el.next('.select2-container').remove();
+            }
+
+            function initOne($el, options) {
+                if (!$el.length || typeof $.fn.select2 !== 'function') return false;
+                safeDestroy($el);
+                try {
+                    $el.select2($.extend({
+                        width: 'style',
+                        dropdownParent: $(document.body),
+                        language: {
+                            noResults: function () { return 'Nessun risultato'; },
+                            searching: function () { return 'Ricerca...'; },
+                            removeAllItems: function () { return 'Rimuovi tutti'; },
+                        },
+                    }, options || {}));
+                    $el.attr('data-kt-initialized', '1');
+                    return $el.hasClass('select2-hidden-accessible');
+                } catch (e) {
+                    console.warn('[chat] select2 init failed', $el.attr('id'), e);
+                    return false;
+                }
+            }
+
+            function aggiornaConteggioDestinatari($el) {
+                const n = ($el.val() || []).length;
+                const $rendered = $el.next('.select2-container').find('.select2-selection__rendered');
+                $rendered.empty().append(
+                    $('<li class="select2-selection__choice"></li>').text('Elementi selezionati: ' + n)
+                );
+                if (n > 1) {
+                    $('#chat-group-name').removeClass('d-none');
+                    $('#chat-avvia-btn').text('Crea gruppo');
+                } else {
+                    $('#chat-group-name').addClass('d-none');
+                    $('#chat-avvia-btn').text('Avvia chat');
+                }
+            }
+
+            function priorityBadge(state) {
+                if (!state.id) {
+                    return state.text;
+                }
+                const map = {
+                    '0': { cls: 'badge-light', label: 'Priorità normale' },
+                    '1': { cls: 'badge-light-warning', label: 'Priorità media' },
+                    '2': { cls: 'badge-light-danger', label: 'Priorità alta' },
+                };
+                const item = map[String(state.id)] || { cls: 'badge-light', label: state.text };
+                return jQuery('<span class="badge ' + item.cls + '">' + item.label + '</span>');
+            }
+
+            window.initChatPageSelect2 = function () {
+                if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 !== 'function') {
+                    return false;
+                }
+                if (window.__chatSelect2Ready === true
+                    && jQuery('#chat-priority').hasClass('select2-hidden-accessible')
+                    && jQuery('#chat-template-select').hasClass('select2-hidden-accessible')) {
+                    return true;
+                }
+                const $ = jQuery;
+                let ok = true;
+
+                const $dest = $('#chat-destinatari');
+                if ($dest.length) {
+                    ok = initOne($dest, {
+                        placeholder: 'Seleziona destinatari',
+                        allowClear: true,
+                        closeOnSelect: false,
+                        width: '100%',
+                    }) && ok;
+                    $dest.off('change.chatDest select2:select.chatDest select2:unselect.chatDest select2:clear.chatDest')
+                        .on('change.chatDest select2:select.chatDest select2:unselect.chatDest select2:clear.chatDest', function () {
+                            setTimeout(function () { aggiornaConteggioDestinatari($dest); }, 0);
+                        });
+                    setTimeout(function () { aggiornaConteggioDestinatari($dest); }, 0);
+                }
+
+                const $template = $('#chat-template-select');
+                if ($template.length) {
+                    ok = initOne($template, {
+                        placeholder: 'Template rapidi...',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownParent: $(document.body),
+                    }) && ok;
+                }
+
+                const $priority = $('#chat-priority');
+                if ($priority.length) {
+                    ok = initOne($priority, {
+                        minimumResultsForSearch: Infinity,
+                        width: '100%',
+                        dropdownParent: $(document.body),
+                        templateResult: priorityBadge,
+                        templateSelection: priorityBadge,
+                    }) && ok;
+                }
+
+                const $searchPriority = $('#chat-search-priority');
+                if ($searchPriority.length && $searchPriority.is(':visible')) {
+                    initOne($searchPriority, {
+                        minimumResultsForSearch: Infinity,
+                        width: '100%',
+                        allowClear: true,
+                        placeholder: 'Priorità',
+                    });
+                }
+
+                window.__chatSelect2Ready = ok;
+                if (ok) {
+                    console.info('[chat] Select2 OK', {
+                        destinatari: $dest.hasClass('select2-hidden-accessible'),
+                        template: $template.hasClass('select2-hidden-accessible'),
+                        priority: $priority.hasClass('select2-hidden-accessible'),
+                    });
+                }
+                return ok;
+            };
+
+            let bootAttempts = 0;
+            function boot() {
+                if (window.initChatPageSelect2()) return;
+                bootAttempts += 1;
+                if (bootAttempts > 20) return;
+                setTimeout(boot, 250);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    setTimeout(boot, 0);
+                    setTimeout(boot, 300);
+                    setTimeout(boot, 1000);
+                });
+            } else {
+                setTimeout(boot, 0);
+                setTimeout(boot, 300);
+                setTimeout(boot, 1000);
+            }
+            window.addEventListener('load', function () { setTimeout(boot, 50); });
+        })();
+    </script>
     <script>
         $(function () {
             const authUserId = @json((int) Auth::id());
@@ -392,6 +760,11 @@
             let pollRequestSeq = 0;
             let currentLoadRequest = null;
             let currentPollRequest = null;
+            let chatEventSource = null;
+            let sseReconnectTimer = null;
+            let pollFallbackTimer = null;
+            const POLL_FALLBACK_MS = 8000;
+            const isMobileChat = function () { return window.matchMedia('(max-width: 991.98px)').matches; };
             const threadMessagesCache = {};
             const mentionUsers = @json($mentionUsers ?? []);
 
@@ -577,6 +950,7 @@
                 if (!cached || !cached.html) return false;
 
                 $('#chat-messages').html(cached.html);
+                scrubLegacyAttachmentImages('#chat-messages');
                 oldestLoadedMessageId = cached.oldestId ?? null;
                 hasMoreHistory = cached.hasMore ?? true;
                 activeLastMessageId = cached.ultimoId ?? activeLastMessageId;
@@ -663,8 +1037,205 @@
                     return;
                 }
 
+                const $item = $('.chat-thread-item[data-thread-id="' + numericThreadId + '"]');
+                const isGroup = parseInt($item.data('is-group') || 0, 10) === 1;
                 const resolvedName = (threadName || getThreadNameById(numericThreadId) || 'Conversazione').trim();
-                $('#chat-header-title').text('Chat con ' + resolvedName);
+                $('#chat-header-title').text(isGroup ? resolvedName : ('Chat con ' + resolvedName));
+            }
+
+            function showMobileConversation() {
+                const $layout = $('#chat-layout');
+                $layout.removeClass('mobile-list').addClass('mobile-conversation');
+            }
+
+            function showMobileList() {
+                const $layout = $('#chat-layout');
+                $layout.removeClass('mobile-conversation').addClass('mobile-list');
+            }
+
+            function streamUrl(threadId) {
+                return chatBaseUrl + '/' + threadId + '/stream';
+            }
+
+            function historyUrl(msgId) {
+                return chatBaseUrl.replace(/\/chat-interna$/, '/chat-interna/message/' + msgId + '/history');
+            }
+
+            function stopChatStream() {
+                if (chatEventSource) {
+                    try { chatEventSource.close(); } catch (e) {}
+                    chatEventSource = null;
+                }
+                if (sseReconnectTimer) {
+                    clearTimeout(sseReconnectTimer);
+                    sseReconnectTimer = null;
+                }
+            }
+
+            function startChatStream(threadId) {
+                stopChatStream();
+                if (!threadId || typeof EventSource === 'undefined') {
+                    return;
+                }
+
+                const afterId = activeLastMessageId || 0;
+                const url = streamUrl(threadId) + '?after_id=' + encodeURIComponent(afterId);
+                try {
+                    chatEventSource = new EventSource(url, { withCredentials: true });
+                } catch (e) {
+                    return;
+                }
+
+                chatEventSource.onmessage = function (event) {
+                    if (!event.data || event.data === '{}') {
+                        // Heartbeat/timeout: riconnetti
+                        stopChatStream();
+                        sseReconnectTimer = setTimeout(function () {
+                            if (activeThreadId) startChatStream(activeThreadId);
+                        }, 150);
+                        return;
+                    }
+                    let payload = null;
+                    try {
+                        payload = JSON.parse(event.data);
+                    } catch (err) {
+                        return;
+                    }
+
+                    if (payload.hasNew) {
+                        // Carica il frammento HTML via poll delta (più completo di JSON grezzo).
+                        refreshPoll(false);
+                    }
+
+                    stopChatStream();
+                    sseReconnectTimer = setTimeout(function () {
+                        if (activeThreadId) startChatStream(activeThreadId);
+                    }, payload.hasNew ? 300 : 150);
+                };
+
+                chatEventSource.onerror = function () {
+                    stopChatStream();
+                    sseReconnectTimer = setTimeout(function () {
+                        if (activeThreadId) startChatStream(activeThreadId);
+                    }, 2000);
+                };
+            }
+
+            function appendDeltaMessages(html, ultimoId) {
+                if (!html) return;
+                const nearBottom = isNearBottom();
+                const $box = $('#chat-messages');
+                // Se c'era solo il placeholder "nessun messaggio", sostituisci.
+                if ($box.find('.chat-msg-row').length === 0) {
+                    $box.html(html);
+                } else {
+                    $box.append(html);
+                }
+                if (ultimoId) {
+                    activeLastMessageId = ultimoId;
+                }
+                cacheThreadMessages(activeThreadId, {
+                    html: $box.html(),
+                    oldestId: parseInt($('.chat-msg-row').first().data('msg-id') || 0, 10) || null,
+                    hasMore: hasMoreHistory,
+                    ultimoId: activeLastMessageId,
+                    pinnedHtml: $('#chat-pinned-content').html(),
+                });
+                if (nearBottom) {
+                    scrollToBottom();
+                }
+            }
+
+            function isNearBottom() {
+                const el = document.getElementById('chat-messages');
+                if (!el) return true;
+                return (el.scrollHeight - el.scrollTop - el.clientHeight) < 80;
+            }
+
+            function applyTypingStatus(typing) {
+                if (typing && typing.active) {
+                    $('#chat-typing-name').text(typing.name || 'Utente');
+                    $('#chat-typing-indicator').removeClass('d-none');
+                } else {
+                    $('#chat-typing-indicator').addClass('d-none');
+                    $('#chat-typing-name').text('');
+                }
+            }
+
+            function applyPollMeta(response) {
+                if (response.threadsHtml !== undefined) {
+                    $('#chat-threads').html(response.threadsHtml);
+                    if (activeThreadId) {
+                        $('.chat-thread-item').removeClass('active');
+                        $('.chat-thread-item[data-thread-id="' + activeThreadId + '"]').addClass('active');
+                        updateChatHeader(activeThreadId);
+                    } else {
+                        updateChatHeader(null);
+                    }
+                    syncThreadActiveStyles();
+                    renderForwardTargets();
+                }
+                if (response.nonLettiTotali !== undefined) {
+                    const nuovoTotale = parseInt(response.nonLettiTotali, 10) || 0;
+                    $('.js-chat-unread-total').text(nuovoTotale);
+                    if (nuovoTotale > 0) {
+                        $('.js-chat-unread-wrap').removeClass('d-none');
+                    } else {
+                        $('.js-chat-unread-wrap').addClass('d-none');
+                    }
+                    ultimoTotaleNonLetti = nuovoTotale;
+                }
+                if (response.notificationMessage && response.notificationMessage.id) {
+                    const notif = response.notificationMessage;
+                    const notifId = parseInt(notif.id, 10) || 0;
+                    const notifSenderId = parseInt(notif.sender_id || 0, 10) || null;
+                    if (notifId > lastNotifiedMessageId && notifSenderId !== authUserId) {
+                        playNotificationSound();
+                        showDesktopNotification(notif);
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'info',
+                            title: (notif.sender || 'Utente') + ' · ' + (notif.thread_name || 'Conversazione'),
+                            text: notif.excerpt || 'Nuovo messaggio',
+                            showConfirmButton: false,
+                            timer: 3800,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.style.cursor = 'pointer';
+                                toast.title = 'Apri conversazione';
+                                toast.addEventListener('click', function () {
+                                    const threadId = parseInt(notif.thread_id || 0, 10);
+                                    if (threadId > 0) {
+                                        loadMessages(threadId, true);
+                                    }
+                                    Swal.close();
+                                });
+                            },
+                        });
+                    }
+                    if (notifId > lastNotifiedMessageId) {
+                        lastNotifiedMessageId = notifId;
+                    }
+                }
+                if (response.pinnedHtml !== undefined) {
+                    $('#chat-pinned-content').html(response.pinnedHtml);
+                    refreshPinnedPanelVisibility();
+                }
+                if (response.typing !== undefined) {
+                    applyTypingStatus(response.typing);
+                }
+                if (response.altroOnline !== undefined) {
+                    const $onlineEl = $('#chat-header-online-status');
+                    if (response.altroOnline) {
+                        $onlineEl.html('<span class="chat-online-dot online"></span> online');
+                    } else {
+                        $onlineEl.html('<span class="chat-online-dot offline"></span> offline');
+                    }
+                    if (response.threadMuted) {
+                        $onlineEl.append(' <span class="ms-2">silenziata</span>');
+                    }
+                }
             }
 
             function setComposerEnabled(enabled) {
@@ -832,6 +1403,7 @@
                         appendHistory(response.html);
                     } else {
                         $('#chat-messages').html(response.html);
+                        scrubLegacyAttachmentImages('#chat-messages');
                         cacheThreadMessages(threadId, {
                             html: response.html,
                             oldestId: response.oldestId || null,
@@ -863,6 +1435,11 @@
                         nextUrl.searchParams.set('thread', threadId);
                         window.history.replaceState({}, '', nextUrl.toString());
                     }
+
+                    if (isMobileChat()) {
+                        showMobileConversation();
+                    }
+                    startChatStream(threadId);
                 }).fail(function (error) {
                     if (error?.statusText === 'abort') {
                         return;
@@ -876,125 +1453,56 @@
                 });
             }
 
-            /* ================= POLLING ================= */
-            function refreshPoll() {
+            /* ================= POLLING + SSE ================= */
+            function refreshPoll(forceFull) {
                 const requestedThreadId = activeThreadId;
                 const requestSeq = ++pollRequestSeq;
                 if (currentPollRequest && currentPollRequest.readyState !== 4) {
                     currentPollRequest.abort();
                 }
 
-                currentPollRequest = $.get(pollUrl, {thread_id: requestedThreadId}, function (response) {
+                const params = { thread_id: requestedThreadId || '' };
+                const useDelta = !forceFull && requestedThreadId && activeLastMessageId;
+                if (useDelta) {
+                    params.after_id = activeLastMessageId;
+                    params.delta = 1;
+                }
+
+                currentPollRequest = $.get(pollUrl, params, function (response) {
                     if (requestSeq !== pollRequestSeq) {
                         return;
                     }
 
-                    if (response.threadsHtml !== undefined) {
-                        $('#chat-threads').html(response.threadsHtml);
-                        if (activeThreadId) {
-                            $('.chat-thread-item').removeClass('active');
-                            $('.chat-thread-item[data-thread-id="' + activeThreadId + '"]').addClass('active');
-                            updateChatHeader(activeThreadId);
-                        } else {
-                            updateChatHeader(null);
-                        }
-                        syncThreadActiveStyles();
-                        renderForwardTargets();
-                    }
-                    if (requestedThreadId && requestedThreadId === activeThreadId && response.messaggiHtml !== undefined && !loadingHistory) {
-                        const incomingLastId = parseInt(response.activeLastMessageId || 0, 10) || null;
-                        const incomingSenderId = parseInt(response.activeLastMessageSenderId || 0, 10) || null;
-                        const scrollState = captureMessagesScrollState();
+                    applyPollMeta(response);
 
-                        $('#chat-messages').html(response.messaggiHtml);
-                        cacheThreadMessages(requestedThreadId, {
-                            html: response.messaggiHtml,
-                            ultimoId: incomingLastId,
-                            pinnedHtml: response.pinnedHtml,
-                        });
-                        if (scrollState && !scrollState.nearBottom) {
-                            restoreMessagesScrollState(scrollState);
-                        } else {
-                            scrollToBottom();
-                        }
-
-                        if (incomingLastId) {
-                            activeLastMessageId = incomingLastId;
-                        }
-                    }
-                    if (response.nonLettiTotali !== undefined) {
-                        const nuovoTotale = parseInt(response.nonLettiTotali, 10) || 0;
-                        $('.js-chat-unread-total').text(nuovoTotale);
-                        if (nuovoTotale > 0) {
-                            $('.js-chat-unread-wrap').removeClass('d-none');
-                        } else {
-                            $('.js-chat-unread-wrap').addClass('d-none');
-                        }
-                        ultimoTotaleNonLetti = nuovoTotale;
-                    }
-
-                    if (response.notificationMessage && response.notificationMessage.id) {
-                        const notif = response.notificationMessage;
-                        const notifId = parseInt(notif.id, 10) || 0;
-                        const notifSenderId = parseInt(notif.sender_id || 0, 10) || null;
-
-                        if (notifId > lastNotifiedMessageId && notifSenderId !== authUserId) {
-                            playNotificationSound();
-                            showDesktopNotification(notif);
-                            Swal.fire({
-                                toast: true,
-                                position: 'top-end',
-                                icon: 'info',
-                                title: (notif.sender || 'Utente') + ' · ' + (notif.thread_name || 'Conversazione'),
-                                text: notif.excerpt || 'Nuovo messaggio',
-                                showConfirmButton: false,
-                                timer: 3800,
-                                timerProgressBar: true,
-                                didOpen: (toast) => {
-                                    toast.style.cursor = 'pointer';
-                                    toast.title = 'Apri conversazione';
-                                    toast.addEventListener('click', function () {
-                                        const threadId = parseInt(notif.thread_id || 0, 10);
-                                        if (threadId > 0) {
-                                            loadMessages(threadId, true);
-                                        }
-                                        Swal.close();
-                                    });
-                                },
+                    if (requestedThreadId && requestedThreadId === activeThreadId && !loadingHistory) {
+                        if (response.delta) {
+                            if (response.hasNew && response.messaggiHtml) {
+                                appendDeltaMessages(
+                                    response.messaggiHtml,
+                                    parseInt(response.ultimoId || response.activeLastMessageId || 0, 10) || null
+                                );
+                            } else if (response.ultimoId) {
+                                activeLastMessageId = parseInt(response.ultimoId, 10) || activeLastMessageId;
+                            }
+                        } else if (response.messaggiHtml !== undefined) {
+                            const incomingLastId = parseInt(response.activeLastMessageId || 0, 10) || null;
+                            const scrollState = captureMessagesScrollState();
+                            $('#chat-messages').html(response.messaggiHtml);
+                            scrubLegacyAttachmentImages('#chat-messages');
+                            cacheThreadMessages(requestedThreadId, {
+                                html: response.messaggiHtml,
+                                ultimoId: incomingLastId,
+                                pinnedHtml: response.pinnedHtml,
                             });
-                        }
-
-                        if (notifId > lastNotifiedMessageId) {
-                            lastNotifiedMessageId = notifId;
-                        }
-                    }
-
-                    if (response.pinnedHtml !== undefined) {
-                        $('#chat-pinned-content').html(response.pinnedHtml);
-                        refreshPinnedPanelVisibility();
-                    }
-
-                    // Typing
-                    if (response.typing !== undefined) {
-                        if (response.typing.active) {
-                            $('#chat-typing-name').text(response.typing.name || 'Utente');
-                            $('#chat-typing-indicator').removeClass('d-none');
-                        } else {
-                            $('#chat-typing-indicator').addClass('d-none');
-                            $('#chat-typing-name').text('');
-                        }
-                    }
-
-                    // Online status nell'header
-                    if (response.altroOnline !== undefined) {
-                        const $onlineEl = $('#chat-header-online-status');
-                        if (response.altroOnline) {
-                            $onlineEl.html('<span class="chat-online-dot online"></span> online');
-                        } else {
-                            $onlineEl.html('<span class="chat-online-dot offline"></span> offline');
-                        }
-                        if (response.threadMuted) {
-                            $onlineEl.append(' <span class="ms-2">🔕 silenziata</span>');
+                            if (scrollState && !scrollState.nearBottom) {
+                                restoreMessagesScrollState(scrollState);
+                            } else {
+                                scrollToBottom();
+                            }
+                            if (incomingLastId) {
+                                activeLastMessageId = incomingLastId;
+                            }
                         }
                     }
                 }).fail(function (error) {
@@ -1021,11 +1529,76 @@
                     $('.chat-thread-item[data-thread-id="' + threadId + '"]').addClass('active');
                     syncThreadActiveStyles();
                     updateChatHeader(threadId);
+                    if (isMobileChat()) {
+                        showMobileConversation();
+                    }
                     if (!renderMessagesFromCache(threadId)) {
                         showMessagesLoading();
                     }
                 }
                 loadMessages(threadId, true);
+            });
+
+            $('#chat-mobile-back').on('click', function () {
+                showMobileList();
+            });
+
+            if (typeof window.initChatPageSelect2 === 'function') {
+                window.initChatPageSelect2();
+            }
+
+            $('#chat-new-thread-form').on('submit', function (e) {
+                const vals = $('#chat-destinatari').val() || [];
+                if (!vals.length) {
+                    e.preventDefault();
+                    Swal.fire('Attenzione', 'Seleziona almeno un destinatario.', 'warning');
+                }
+            });
+
+            $(document).on('click', '.chat-pdf-preview', function (e) {
+                e.preventDefault();
+                const url = $(this).data('url');
+                const name = $(this).data('name') || 'Documento PDF';
+                $('#chatPdfModalTitle').text(name);
+                $('#chatPdfModalFrame').attr('src', url);
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('chatPdfModal'));
+                modal.show();
+            });
+
+            $('#chatPdfModal').on('hidden.bs.modal', function () {
+                $('#chatPdfModalFrame').attr('src', 'about:blank');
+            });
+
+            $(document).on('click', '.chat-history-btn', function () {
+                const msgId = parseInt($(this).data('msg-id'), 10);
+                if (!msgId) return;
+                $('#chatHistoryModalBody').html('<div class="text-muted">Caricamento...</div>');
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('chatHistoryModal'));
+                modal.show();
+                $.get(historyUrl(msgId), function (response) {
+                    const rows = response.history || [];
+                    if (!rows.length) {
+                        $('#chatHistoryModalBody').html('<div class="text-muted">Nessuna modifica registrata.</div>');
+                        return;
+                    }
+                    let html = '<div class="list-group list-group-flush">';
+                    rows.forEach(function (row) {
+                        html += '<div class="list-group-item px-0">';
+                        html += '<div class="fw-bold fs-8">' + $('<span>').text((row.azione || '') + ' · ' + (row.utente || 'Utente')).html() + '</div>';
+                        html += '<div class="text-muted fs-9 mb-1">' + $('<span>').text(row.created_at || '').html() + '</div>';
+                        if (row.old_text) {
+                            html += '<div class="fs-8"><span class="text-muted">Prima:</span> ' + $('<span>').text(row.old_text).html() + '</div>';
+                        }
+                        if (row.new_text) {
+                            html += '<div class="fs-8"><span class="text-muted">Dopo:</span> ' + $('<span>').text(row.new_text).html() + '</div>';
+                        }
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    $('#chatHistoryModalBody').html(html);
+                }).fail(function () {
+                    $('#chatHistoryModalBody').html('<div class="text-danger">Impossibile caricare lo storico.</div>');
+                });
             });
 
             $(document).on('click', '.chat-thread-close', function (event) {
@@ -1210,7 +1783,7 @@
                 const textarea = document.getElementById('chat-messaggio');
                 if (!textarea) return;
                 insertAtCursor(textarea, (textarea.value ? "\n" : "") + templateText);
-                $(this).val('');
+                $(this).val(null).trigger('change.select2');
                 $('#chat-messaggio').trigger('input');
             });
 
@@ -1235,7 +1808,12 @@
                         contenuto: testo,
                     }, function (response) {
                         if (response.template) {
-                            $('#chat-template-select').append('<option value="' + $('<span>').text(response.template.contenuto).html() + '">' + $('<span>').text(response.template.titolo).html() + '</option>');
+                            const $sel = $('#chat-template-select');
+                            const opt = new Option(response.template.titolo, response.template.contenuto, false, false);
+                            $sel.append(opt);
+                            if ($sel.hasClass('select2-hidden-accessible')) {
+                                $sel.trigger('change.select2');
+                            }
                         }
                         Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Template salvato', showConfirmButton: false, timer: 1600});
                     });
@@ -1592,22 +2170,34 @@
             });
 
             /* ================= INIT ================= */
+            function scrubLegacyAttachmentImages(scope) {
+                const root = scope ? $(scope) : $(document);
+                root.find('img[src*="/chat-interna/attachment/"]').each(function () {
+                    const $img = $(this);
+                    const $wrap = $img.closest('a.chat-image-preview');
+                    const badge = $('<span class="badge badge-light-warning">Allegato non disponibile</span>');
+                    if ($wrap.length) {
+                        $wrap.replaceWith(badge);
+                    } else {
+                        $img.replaceWith(badge);
+                    }
+                });
+            }
+            scrubLegacyAttachmentImages('#chat-messages');
+
             if (activeThreadId) {
                 setComposerEnabled(true);
-                scrollToBottom();
-                const lastRenderedId = parseInt($('.chat-msg-row').last().data('msg-id') || 0, 10);
-                if (lastRenderedId > 0) {
-                    activeLastMessageId = lastRenderedId;
+                // Ricarica sempre dal server per evitare HTML allegati stale (cache browser/CDN/JS).
+                loadMessages(activeThreadId, false);
+                if (isMobileChat()) {
+                    showMobileConversation();
                 }
-                cacheThreadMessages(activeThreadId, {
-                    html: $('#chat-messages').html(),
-                    oldestId: parseInt($('.chat-msg-row').first().data('msg-id') || 0, 10) || null,
-                    hasMore: true,
-                    ultimoId: lastRenderedId > 0 ? lastRenderedId : null,
-                    pinnedHtml: $('#chat-pinned-content').html(),
-                });
+                startChatStream(activeThreadId);
             } else {
                 setComposerEnabled(false);
+                if (isMobileChat()) {
+                    showMobileList();
+                }
             }
 
             refreshPinnedPanelVisibility();
@@ -1618,7 +2208,10 @@
             initWebPushNotifications();
             unlockNotificationSound();
 
-            setInterval(refreshPoll, 3000);
+            // Fallback lento: SSE gestisce il near-realtime; il poll aggiorna lista thread / badge.
+            pollFallbackTimer = setInterval(function () {
+                refreshPoll(false);
+            }, POLL_FALLBACK_MS);
         });
     </script>
 @endpush

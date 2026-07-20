@@ -21,6 +21,16 @@ class AttivaServizioController extends Controller
         'servizio_documentazione' => 'Documentazione',
         'servizio_ticket' => 'Ticket',
         'ebike-b2b' => 'Ebike B2B',
+        'servizio_deposito_bagagli' => 'Deposito Bagagli',
+        'servizio_locker_point' => 'Locker Point',
+        'servizio_send' => 'SEND — Notifiche Digitali',
+    ];
+
+    /** Permessi assegnabili solo dall'admin dal profilo agente (non in auto-attivazione). */
+    public const PERMESSI_SOLO_ADMIN = [
+        'servizio_deposito_bagagli',
+        'servizio_locker_point',
+        'servizio_send',
     ];
 
     public function show(Request $request)
@@ -68,7 +78,10 @@ class AttivaServizioController extends Controller
 
     protected function serviziDisponibili(): array
     {
-        $nomi = Permission::where('id', '>', 3)->where('name', '<>', 'operatore')->pluck('name');
+        $nomi = Permission::where('id', '>', 3)
+            ->where('name', '<>', 'operatore')
+            ->whereNotIn('name', self::PERMESSI_SOLO_ADMIN)
+            ->pluck('name');
 
         return $nomi->mapWithKeys(fn ($nome) => [$nome => self::ETICHETTE_SERVIZI[$nome] ?? ucfirst(str_replace(['servizio_', '_', '-'], ['', ' ', ' '], $nome))])->all();
     }

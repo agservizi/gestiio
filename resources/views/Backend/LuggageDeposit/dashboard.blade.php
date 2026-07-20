@@ -9,7 +9,9 @@
         <a href="{{ action([$controller, 'pipeline']) }}" class="btn btn-sm btn-light">Pipeline</a>
         <a href="{{ action([$controller, 'checkOutPage']) }}" class="btn btn-sm btn-light-success">Check-out</a>
         <a href="{{ action([$controller, 'create']) }}" class="btn btn-sm btn-primary">Nuovo deposito</a>
+        @can('viewReports', \App\Models\LuggageDeposit::class)
         <a href="{{ action([$controller, 'exportCsv']) }}" class="btn btn-sm btn-light">Export CSV</a>
+        @endcan
     </div>
 @endsection
 

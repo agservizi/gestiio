@@ -1,0 +1,55 @@
+# InvoiceShelf — stack Docker indipendente (UI pubblica) + rete Gestiio (API interna)
+# Docs: https://docs.invoiceshelf.com/install/docker.html
+# Dominio: https://invoice.agenziaplinio.it (Cloudflare Tunnel → 127.0.0.1:8093)
+#
+# Avvio sul NAS:
+#   mkdir -p /home/Carmine/apps/invoiceshelf
+#   cp questo file → /home/Carmine/apps/invoiceshelf/docker-compose.yml
+#   docker compose up -d
+#   sh ops/remote-add-invoice-tunnel.sh   # DNS + ingress tunnel corehost
+#
+# Gestiio continua a parlare via rete Docker: INVOICESHELF_URL=http://invoiceshelf:8080
+# I documenti creati da Gestiio compaiono anche nella UI su invoice.agenziaplinio.it (stesso DB).
+
+services:
+  invoiceshelf:
+    image: invoiceshelf/invoiceshelf:latest
+    container_name: invoiceshelf
+    restart: unless-stopped
+    ports:
+      # Solo localhost: esposto pubblicamente solo via Cloudflare Tunnel
+      - "127.0.0.1:8093:8080"
+    volumes:
+      - invoiceshelf_storage:/var/www/html/storage/
+      - invoiceshelf_modules:/var/www/html/Modules/
+    environment:
+      APP_NAME: InvoiceShelf
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://invoice.agenziaplinio.it
+      SESSION_DOMAIN: invoice.agenziaplinio.it
+      SANCTUM_STATEFUL_DOMAINS: invoice.agenziaplinio.it,192.168.1.50:8093
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/storage/app/database.sqlite
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      SESSION_LIFETIME: "240"
+      AUTORUN_ENABLED: "true"
+      AUTORUN_LARAVEL_MIGRATION: "false"
+      AUTORUN_LARAVEL_OPTIMIZE: "false"
+      PHP_OPCACHE_ENABLE: "1"
+    networks:
+      - invoiceshelf_internal
+      - gestiio_net
+
+networks:
+  invoiceshelf_internal:
+    name: invoiceshelf_internal
+  gestiio_net:
+    external: true
+    # Stessa rete di gestiio-app: API interna senza passare da Internet
+    name: gestiio-20260624-2128_default
+
+volumes:
+  invoiceshelf_storage:
+  invoiceshelf_modules:

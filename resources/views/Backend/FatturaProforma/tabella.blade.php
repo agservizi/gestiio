@@ -1,41 +1,42 @@
 <div class="table-responsive">
-    <table class="table table-row-bordered" id="tabella-elenco">
+    <table class="table table-row-bordered align-middle gy-4" id="tabella-elenco">
         <thead>
         <tr class="fw-bolder fs-6 text-gray-800">
-            <th class="">Numero</th>
-            <th class="">Data</th>
-
-            <th class="">Intestazione</th>
+            <th>Numero</th>
+            <th>Data</th>
+            <th class="d-none d-md-table-cell">Periodo</th>
+            <th>Intestazione</th>
             <th class="text-end">Totale</th>
-            <th></th>
+            <th>Stato</th>
+            <th class="text-end">Azioni</th>
         </tr>
         </thead>
         <tbody>
-        @foreach($records as $record)
-            <tr class="">
-                <td class="">{{$record->numero}}</td>
-
-                <td class="">{{$record->data->format('d/m/Y')}}</td>
-                <td class="">
-                    {{$record->intestazione->denominazione}}
+        @forelse($records as $record)
+            <tr>
+                <td>#{{ $record->numero }}</td>
+                <td>{{ $record->data->format('d/m/Y') }}</td>
+                <td class="d-none d-md-table-cell">{{ $record->periodoLabel() ?? '—' }}</td>
+                <td>{{ optional($record->intestazione)->denominazione }}</td>
+                <td class="text-end fw-bold">{{ importo($record->totale_con_iva) }}</td>
+                <td>
+                    <span class="badge {{ $record->statusBadgeClass() }}">{{ $record->statusLabel() }}</span>
                 </td>
-                <td class="text-end">{{$record->totale_con_iva}}</td>
-
                 <td class="text-end text-nowrap">
-                    <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-                       class="btn btn-sm btn-light btn-active-light-success"
-                       href="{{action([$controller,'show'],$record->id)}}">Vedi</a>
-                    <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-                       class="btn btn-sm btn-light btn-active-light-success"
-                       href="{{action([$controller,'pdf'],$record->id)}}">Pdf</a>
+                    <a class="btn btn-sm btn-light-primary" href="{{ action([$controller, 'show'], $record->id) }}">Vedi</a>
+                    <a class="btn btn-sm btn-light" href="{{ action([$controller, 'pdf'], $record->id) }}" target="_blank" rel="noopener" aria-label="Scarica PDF">PDF</a>
                 </td>
             </tr>
-        @endforeach
+        @empty
+            <tr>
+                <td colspan="7" class="text-center text-muted py-10">Nessuna proforma</td>
+            </tr>
+        @endforelse
         </tbody>
     </table>
 </div>
-@if($records instanceof \Illuminate\Pagination\LengthAwarePaginator )
+@if($records instanceof \Illuminate\Pagination\LengthAwarePaginator)
     <div class="w-100 text-center">
-        {{$records->links()}}
+        {{ $records->links() }}
     </div>
 @endif

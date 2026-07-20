@@ -11,6 +11,18 @@ class ChatThread extends Model
 
     protected $table = 'chat_threads';
 
+    protected $fillable = [
+        'created_by',
+        'name',
+        'is_group',
+        'archived_at',
+    ];
+
+    protected $casts = [
+        'is_group' => 'boolean',
+        'archived_at' => 'datetime',
+    ];
+
     public function creatore()
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -43,5 +55,18 @@ class ChatThread extends Model
         return $this->hasMany(ChatMessage::class, 'thread_id')
             ->whereHas('pin')
             ->latest('id');
+    }
+
+    /**
+     * Nome da mostrare per il thread: per i gruppi usa il campo `name`,
+     * per le conversazioni 1:1 il chiamante userà l'altro partecipante.
+     */
+    public function nomeVisualizzato(): ?string
+    {
+        if ($this->is_group) {
+            return $this->name ?: 'Gruppo';
+        }
+
+        return $this->name;
     }
 }

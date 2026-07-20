@@ -29,7 +29,10 @@
         @if($deposit->status->value === 'CHECK_IN')
             <div class="card mt-5">
                 <div class="card-body d-flex flex-wrap gap-2 align-items-center">
-                    <a href="{{ $deposit->pickupUrl() }}" class="btn btn-primary" target="_blank">Ritiro mobile (QR cliente + scan tag)</a>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#pickupMobileModal-{{ $deposit->id }}">
+                        Ritiro mobile (QR cliente + scan tag)
+                    </button>
+                    @include('Backend.LuggageDeposit.partials.pickup-mobile-qr-modal', ['deposit' => $deposit])
                     <form method="post" action="{{ action([$controller,'action'], $deposit->id) }}" class="d-flex flex-wrap gap-2 align-items-center">@csrf
                         <input type="hidden" name="action" value="check-out">
                         <select name="paymentMethod" class="form-select form-select-solid w-auto">

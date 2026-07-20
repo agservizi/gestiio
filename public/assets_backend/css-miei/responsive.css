@@ -1,11 +1,11 @@
 @media (max-width: 991.98px) {
-    .w-300px,
-    .w-250px,
-    .w-200px,
-    .w-175px,
-    .w-150px,
-    .w-125px,
-    .w-90px,
+    .w-300px:not(.ui-toolbar-actions .w-300px):not(.ui-toolbar-actions .form-select):not(.ui-toolbar-actions .form-control),
+    .w-250px:not(.ui-toolbar-actions .form-select):not(.ui-toolbar-actions .form-control),
+    .w-200px:not(.ui-toolbar-actions .form-select):not(.ui-toolbar-actions .form-control),
+    .w-175px:not(.ui-toolbar-actions .form-select):not(.ui-toolbar-actions .form-control),
+    .w-150px:not(.ui-toolbar-actions .form-select):not(.ui-toolbar-actions .form-control),
+    .w-125px:not(.ui-toolbar-actions .form-select):not(.ui-toolbar-actions .form-control),
+    .w-90px:not(.ui-toolbar-actions .form-select):not(.ui-toolbar-actions .form-control),
     .min-w-300px,
     .min-w-250px,
     .min-w-200px,
@@ -14,6 +14,30 @@
     .min-w-125px {
         width: 100% !important;
         min-width: 0 !important;
+    }
+
+    /* Toolbar: keep filters/buttons on one horizontal line; never force 100% width */
+    .ui-toolbar-actions {
+        width: auto !important;
+        max-width: none !important;
+        justify-content: flex-end;
+    }
+
+    .ui-toolbar-actions .form-select,
+    .ui-toolbar-actions .form-control,
+    .ui-toolbar-actions .btn,
+    .ui-toolbar-actions .w-200px,
+    .ui-toolbar-actions .w-175px,
+    .ui-toolbar-actions .w-150px,
+    .ui-toolbar-actions .w-140px,
+    .ui-toolbar-actions .w-125px,
+    .ui-toolbar-actions .w-120px,
+    .ui-toolbar-actions .w-110px,
+    .ui-toolbar-actions .w-100px,
+    .ui-toolbar-actions .w-90px {
+        width: auto !important;
+        min-width: 5.5rem !important;
+        max-width: 14rem !important;
     }
 
     .h-300px,
@@ -33,11 +57,6 @@
         -webkit-overflow-scrolling: touch;
     }
 
-    .ui-toolbar-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
-
     .ticket-ui-toolbar {
         align-items: stretch;
     }
@@ -53,7 +72,8 @@
     }
 
     .ui-toolbar-actions .btn {
-        width: 100%;
+        width: auto;
+        white-space: nowrap;
     }
 
     .ticket-ui-quick {

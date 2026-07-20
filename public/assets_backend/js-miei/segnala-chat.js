@@ -26,11 +26,21 @@
             } else if (data.success && data.redirect) {
                 window.location.href = data.redirect;
             } else {
-                if (data.message) alert(data.message);
+                if (data.message) {
+                    if (typeof gestiioNotify === 'function') {
+                        gestiioNotify('error', data.message);
+                    } else if (window.Swal) {
+                        Swal.fire({ text: data.message, icon: 'error', buttonsStyling: false, confirmButtonText: 'Ok', customClass: { confirmButton: 'btn btn-primary' } });
+                    }
+                }
             }
         }).catch(function (err) {
             console.error('segnala-chat error', err);
-            alert('Errore durante l\'apertura della chat');
+            if (typeof gestiioNotify === 'function') {
+                gestiioNotify('error', 'Errore durante l\'apertura della chat');
+            } else if (window.Swal) {
+                Swal.fire({ text: 'Errore durante l\'apertura della chat', icon: 'error', buttonsStyling: false, confirmButtonText: 'Ok', customClass: { confirmButton: 'btn btn-primary' } });
+            }
         });
 
     });

@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Enums\LuggageDepositStatus;
+use App\Enums\SendRequestStatus;
 use App\Http\Controllers\Controller;
 use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
+use App\Http\Services\SendRequestService;
 use App\Models\CafPatronato;
 use App\Models\ChatMessage;
 use App\Models\ChatThreadUser;
@@ -16,10 +19,12 @@ use App\Models\FileAuditLog;
 use App\Models\File;
 use App\Models\AiSuggestion;
 use App\Models\GuadagnoAgenzia;
+use App\Models\LuggageDeposit;
 use App\Models\MovimentoPortafoglio;
 use App\Models\ProduzioneOperatore;
 use App\Models\RegistroLogin;
 use App\Models\RichiestaAssistenza;
+use App\Models\SendRequest;
 use App\Models\SpedizioneBrt;
 use App\Models\SpedizioneInpost;
 use App\Models\Ticket;
@@ -47,7 +52,7 @@ class DashboardController extends Controller
     {
         if ($this->tableExistsCache === null) {
             $this->tableExistsCache = [];
-            foreach (['chat_thread_users', 'chat_messages', 'ai_suggestions', 'ai_events', 'files_audit_logs', 'produzioni_operatori', 'users'] as $t) {
+            foreach (['chat_thread_users', 'chat_messages', 'ai_suggestions', 'ai_events', 'files_audit_logs', 'produzioni_operatori', 'users', 'send_requests'] as $t) {
                 $this->tableExistsCache[$t] = Schema::hasTable($t);
             }
         }
@@ -329,8 +334,8 @@ class DashboardController extends Controller
                 'permesso' => 'servizio_documentazione',
                 'titolo' => 'Documentazione',
                 'descrizione' => 'Panoramica documenti caricati nel periodo',
-                'url' => action([CartellaFilesController::class, 'index']),
-                'cta' => 'Apri elenco',
+                'url' => url('/backend/documenti'),
+                'cta' => 'Apri Documenti',
                 'kpi_valore' => $kpiSupervisore['documenti_mese'],
                 'kpi_testo' => 'File mese',
             ],
@@ -388,7 +393,18 @@ class DashboardController extends Controller
             'canDocumentazione' => $canDocumentazione,
             'serviziAbilitati' => $serviziAbilitati,
             'chatDashboard' => $chatDashboard,
+            'sendOperativo' => $this->sendOperativoForSupervisor(),
         ]);
+    }
+
+    protected function sendOperativoForSupervisor(): ?array
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->can('viewAny', SendRequest::class) || ! $user->can('send.requests.process') || ! $this->tableExists('send_requests')) {
+            return null;
+        }
+
+        return app(SendRequestService::class)->supervisorOperativoForDashboard($user);
     }
 
     /**
@@ -1122,9 +1138,91 @@ class DashboardController extends Controller
             'monitorOperativo' => $monitorOperativo,
             'timelineAttivita' => $timelineAttivita,
             'aiSuggestions' => $aiSuggestions,
-
+            'luggageOperativo' => $this->luggageOperativoForAgent(),
+            'sendOperativo' => $this->sendOperativoForAgent(),
         ]);
 
+    }
+
+    protected function sendOperativoForAgent(): ?array
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->can('viewAny', SendRequest::class) || ! $this->tableExists('send_requests')) {
+            return null;
+        }
+
+        $stats = app(SendRequestService::class)->stats($user);
+        $base = app(SendRequestService::class)->scopedQuery($user);
+
+        $prossime = (clone $base)
+            ->with(['subjects', 'supervisor'])
+            ->whereIn('status', [
+                SendRequestStatus::DRAFT->value,
+                SendRequestStatus::INTEGRATION_REQUIRED->value,
+                SendRequestStatus::COMPLETED->value,
+            ])
+            ->orderByRaw("CASE
+                WHEN status = '".SendRequestStatus::INTEGRATION_REQUIRED->value."' THEN 0
+                WHEN status = '".SendRequestStatus::COMPLETED->value."' THEN 1
+                ELSE 2 END")
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        return [
+            'aperte' => (int) data_get(collect($stats['kpis'] ?? [])->firstWhere('key', 'open'), 'value', 0),
+            'da_integrare' => (int) ($stats['integration_required'] ?? 0),
+            'da_consegnare' => (int) ($stats['completed'] ?? 0),
+            'create_oggi' => (int) data_get(collect($stats['kpis'] ?? [])->firstWhere('key', 'today'), 'value', 0),
+            'plafond_servizi' => $stats['pricing']['plafond_servizi'] ?? null,
+            'prezzo_cliente' => $stats['pricing']['prezzo_cliente'] ?? 5,
+            'prossime' => $prossime,
+        ];
+    }
+
+    protected function luggageOperativoForAgent(): ?array
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->can('viewAny', LuggageDeposit::class) || ! $this->tableExists('luggage_deposits')) {
+            return null;
+        }
+
+        $checkInOggi = LuggageDeposit::query()
+            ->whereIn('status', [LuggageDepositStatus::PRENOTATO, LuggageDepositStatus::NO_SHOW])
+            ->whereDate('booking_date', '<=', today())
+            ->count();
+
+        $inCustodia = LuggageDeposit::query()
+            ->where('status', LuggageDepositStatus::CHECK_IN)
+            ->count();
+
+        $ritiroOggi = LuggageDeposit::query()
+            ->where('status', LuggageDepositStatus::CHECK_IN)
+            ->whereDate('expected_check_out', '<=', today())
+            ->count();
+
+        $prossimi = LuggageDeposit::query()
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereIn('status', [LuggageDepositStatus::PRENOTATO, LuggageDepositStatus::NO_SHOW])
+                        ->whereDate('booking_date', '<=', today());
+                })->orWhere(function ($q) {
+                    $q->where('status', LuggageDepositStatus::CHECK_IN)
+                        ->whereDate('expected_check_out', '<=', today());
+                });
+            })
+            ->orderByRaw("CASE WHEN status = '".LuggageDepositStatus::CHECK_IN->value."' THEN 0 ELSE 1 END")
+            ->orderBy('expected_check_out')
+            ->orderBy('booking_date')
+            ->limit(5)
+            ->get(['id', 'code', 'customer_name', 'status', 'bag_count', 'expected_check_out']);
+
+        return [
+            'check_in_oggi' => $checkInOggi,
+            'in_custodia' => $inCustodia,
+            'ritiro_oggi' => $ritiroOggi,
+            'prossimi' => $prossimi,
+        ];
     }
 
     protected function aiSuggestionDisplayKey(AiSuggestion $suggestion): string

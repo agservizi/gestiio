@@ -6,50 +6,74 @@ use App\Exceptions\LuggageNoAvailabilityException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreLuggageBookingRequest;
 use App\Http\Services\LuggageDepositService;
+use App\Http\Services\LuggageStationService;
 use App\Http\Support\LuggageConfig;
 use App\Http\Support\LuggageQrCode;
 use App\Models\LuggageDeposit;
+use App\Models\LuggageStation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 
 class LuggageBookingController extends Controller
 {
-    public function __construct(private LuggageDepositService $service)
-    {
+    public function __construct(
+        private LuggageDepositService $service,
+        private LuggageStationService $stations,
+    ) {
     }
 
-    public function index()
+    public function index(?string $slug = null)
     {
-        $settings = $this->service->getSettings();
-        $availability = $this->service->getAvailability(today());
+        $station = $this->resolveStationOrAbort($slug);
+        $settings = $this->service->settingsFor($station);
+        $availability = $this->service->getAvailability(today(), $station);
+        $onlineEnabled = $station
+            ? (bool) $station->online_booking_enabled
+            : LuggageConfig::onlineBookingEnabled();
 
         return view('Frontend.LuggageDeposit.book', [
             'settings' => $settings,
             'availability' => $availability,
-            'onlineBookingEnabled' => LuggageConfig::onlineBookingEnabled(),
+            'station' => $station,
+            'stationSlug' => $station?->slug,
+            'onlineBookingEnabled' => $onlineEnabled,
             'bookingInstructions' => LuggageConfig::bookingInstructions(),
-            'metaTitle' => 'Deposito Bagagli | Prenota online',
+            'metaTitle' => $station
+                ? ('Deposito Bagagli '.$station->name.' | Prenota online')
+                : 'Deposito Bagagli | Prenota online',
             'metaDescription' => 'Prenota il deposito bagagli online con conferma immediata.',
+            'bookAction' => $station
+                ? url('/deposito-bagagli/'.$station->slug.'/prenota')
+                : url('/deposito-bagagli/prenota'),
+            'availabilityUrl' => $station
+                ? url('/deposito-bagagli/'.$station->slug.'/disponibilita')
+                : url('/deposito-bagagli/disponibilita'),
+            'confirmBaseUrl' => $station
+                ? url('/deposito-bagagli/'.$station->slug.'/conferma')
+                : url('/deposito-bagagli/conferma'),
         ]);
     }
 
-    public function availability(Request $request): JsonResponse
+    public function availability(Request $request, ?string $slug = null): JsonResponse
     {
+        $station = $this->resolveStationOrAbort($slug);
         $validated = $request->validate([
             'date' => ['required', 'date', 'after_or_equal:today'],
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $this->service->getAvailability(\Illuminate\Support\Carbon::parse($validated['date'])),
+            'data' => $this->service->getAvailability(\Illuminate\Support\Carbon::parse($validated['date']), $station),
         ]);
     }
 
-    public function store(StoreLuggageBookingRequest $request)
+    public function store(StoreLuggageBookingRequest $request, ?string $slug = null)
     {
+        $station = $this->resolveStationOrAbort($slug);
+
         try {
-            $deposit = $this->service->create($request->payload(), 'PORTALE');
+            $deposit = $this->service->create($request->payload(), 'PORTALE', $station);
         } catch (LuggageNoAvailabilityException $e) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -70,26 +94,38 @@ class LuggageBookingController extends Controller
             return redirect()->back()->withInput()->withErrors(['booking' => $e->getMessage()]);
         }
 
+        $confirmUrl = $station
+            ? url('/deposito-bagagli/'.$station->slug.'/conferma').'?code='.urlencode($deposit->code)
+            : url('/deposito-bagagli/conferma').'?code='.urlencode($deposit->code);
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'data' => ['code' => $deposit->code],
+                'data' => ['code' => $deposit->code, 'confirmUrl' => $confirmUrl],
             ], 201);
         }
 
-        return redirect()->to(url('/deposito-bagagli/conferma').'?code='.urlencode($deposit->code));
+        return redirect()->to($confirmUrl);
     }
 
-    public function confirm(Request $request)
+    public function confirm(Request $request, ?string $slug = null)
     {
+        $station = $this->resolveStationOrAbort($slug);
         $code = $request->query('code');
         abort_unless($code, 404);
 
         $deposit = $this->service->findByCode($code);
         abort_unless($deposit, 404);
 
+        if ($station) {
+            abort_unless($deposit->station_id === $station->id, 404);
+        } else {
+            abort_unless($deposit->station_id === null, 404);
+        }
+
         return view('Frontend.LuggageDeposit.confirm', [
             'deposit' => $deposit,
+            'station' => $station,
             'qrSvg' => LuggageQrCode::svg($deposit->verifyUrl(), 220),
         ]);
     }
@@ -107,5 +143,17 @@ class LuggageBookingController extends Controller
             'Content-Type' => 'image/svg+xml',
             'Cache-Control' => 'private, max-age=3600',
         ]);
+    }
+
+    protected function resolveStationOrAbort(?string $slug): ?LuggageStation
+    {
+        if ($slug === null || $slug === '') {
+            return null;
+        }
+
+        $station = $this->stations->findBySlug($slug);
+        abort_unless($station, 404);
+
+        return $station;
     }
 }

@@ -5,8 +5,8 @@ Documentazione per l'integrazione tra **agenziaplinio.it** (sito marketing) e **
 > **Guida passo-passo per l'agente/sviluppatore del sito marketing:**  
 > vedi [INTEGRAZIONE_AGENZIAPLINIO_DEPOSITO_BAGAGLI.md](./INTEGRAZIONE_AGENZIAPLINIO_DEPOSITO_BAGAGLI.md) (proxy PHP, checklist, file da creare).
 
-**Versione API:** 1.1.0  
-**Ultimo aggiornamento:** 2026-07-12
+**Versione API:** 1.2.0  
+**Ultimo aggiornamento:** 2026-07-15
 
 ---
 
@@ -30,8 +30,23 @@ GET https://gestiio.agenziaplinio.it/api/public/deposito-bagagli/docs
 |---------|-----------|
 | **Tipo** | API Key (non Bearer, non sessione) |
 | **Header** | `x-api-key: <LA_TUA_CHIAVE>` |
-| **Configurazione server** | Variabile `.env` su Gestiio: `LUGGAGE_API_KEY` |
+| **HQ globale** | Variabile `.env` su Gestiio: `LUGGAGE_API_KEY` → depositi senza postazione |
+| **Postazione agente** | Chiave dedicata generata da admin su `/backend/deposito-bagagli/postazioni` → depositi isolati della postazione |
 | **Endpoint senza chiave** | `GET /health`, `GET /verify`, `GET /docs` |
+
+### Chiavi postazione agente
+
+1. L’agente richiede l’API da **Mia postazione bagagli**.
+2. Un admin abilita/rigenera la chiave (mostrata una sola volta).
+3. Il sito dell’agente usa quella chiave (solo server-side). Tutti book/list/availability/pricing restano isolati.
+4. Header opzionale: `X-Station-Slug: <slug>` (se presente deve coincidere con la stazione della key).
+5. Link pubblico prenotazione: `https://gestiio.agenziaplinio.it/deposito-bagagli/<slug>`
+
+### Errori chiave
+
+- `401 UNAUTHORIZED` — chiave mancante/errata  
+- `403 API_DISABLED` — postazione con API non abilitate  
+- `403 STATION_MISMATCH` — `X-Station-Slug` non corrisponde  
 
 ### Header richiesti (endpoint protetti)
 

@@ -13,6 +13,8 @@
         $visureInAttesaDocumenti = $visureInAttesaDocumenti ?? collect();
         $cafInAttesaDocumenti = $cafInAttesaDocumenti ?? collect();
         $scadenzeOggi = $scadenzeOggi ?? collect();
+        $luggageOperativo = $luggageOperativo ?? null;
+        $sendOperativo = $sendOperativo ?? null;
         $monitorOperativo = $monitorOperativo ?? [
             'trend_7d' => 0,
             'trend_30d' => 0,
@@ -72,6 +74,9 @@
                     @can('servizio_caf_patronato')
                         <a href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'index'])}}" class="btn btn-sm btn-light-primary">CAF/Patronato</a>
                     @endcan
+                    @can('viewAny', \App\Models\SendRequest::class)
+                        <a href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'dashboard']) }}" class="btn btn-sm btn-light-primary">SEND</a>
+                    @endcan
                     @can('servizio_contratti_telefonia')
                         <a href="{{action([\App\Http\Controllers\Backend\ContrattoTelefoniaController::class,'index'])}}" class="btn btn-sm btn-light-primary">Telefonia</a>
                     @endcan
@@ -83,10 +88,18 @@
                         <a href="{{action([\App\Http\Controllers\Backend\SpedizioneInpostController::class,'index'])}}" class="btn btn-sm btn-light-primary">InPost</a>
                     @endcan
                     @can('servizio_documentazione')
-                        <a href="{{action([\App\Http\Controllers\Backend\CartellaFilesController::class,'index'])}}" class="btn btn-sm btn-light-primary">Documentazione</a>
+                        <a href="{{ route('backend.documenti') }}" class="btn btn-sm btn-light-primary">Documentazione</a>
                     @endcan
                     @can('ebike-b2b')
                         <a href="{{action([\App\Http\Controllers\Backend\EbikeOrdineController::class,'index'])}}" class="btn btn-sm btn-light-primary">Ebike B2B</a>
+                    @endcan
+                    @can('viewAny', \App\Models\LuggageDeposit::class)
+                        <a href="{{ url('/backend/deposito-bagagli/dashboard') }}" class="btn btn-sm btn-light-primary">Deposito bagagli</a>
+                    @endcan
+                    @can('agente')
+                        <a href="{{ action([\App\Http\Controllers\Backend\PdfToolsController::class, 'index']) }}" class="btn btn-sm btn-light-primary">
+                            <i class="fas fa-file-pdf me-1"></i>PDF Tools
+                        </a>
                     @endcan
                 </div>
             </div>
@@ -361,6 +374,116 @@
             </div>
 
             <div class="col-xl-4 agent-side-column">
+                @can('viewAny', \App\Models\SendRequest::class)
+                    @if($sendOperativo)
+                        <section class="agent-panel mb-7">
+                            <div class="agent-panel-head">
+                                <div>
+                                    <h3>SEND — Notifiche Digitali</h3>
+                                    <p>Le tue pratiche sportello.</p>
+                                </div>
+                                @if(($sendOperativo['da_integrare'] + $sendOperativo['da_consegnare']) > 0)
+                                    <div class="agent-panel-count">{{ $sendOperativo['da_integrare'] + $sendOperativo['da_consegnare'] }}</div>
+                                @endif
+                            </div>
+                            <div class="agent-monitor">
+                                <div class="agent-signal agent-signal-primary">
+                                    <span>Aperte</span>
+                                    <strong>{{ number_format($sendOperativo['aperte']) }}</strong>
+                                </div>
+                                <div class="agent-signal {{ $sendOperativo['da_integrare'] > 0 ? 'agent-signal-warning' : '' }}">
+                                    <span>Da integrare</span>
+                                    <strong>{{ number_format($sendOperativo['da_integrare']) }}</strong>
+                                </div>
+                                <div class="agent-signal {{ $sendOperativo['da_consegnare'] > 0 ? 'agent-signal-danger' : '' }}">
+                                    <span>Da consegnare</span>
+                                    <strong>{{ number_format($sendOperativo['da_consegnare']) }}</strong>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'dashboard']) }}" class="btn btn-sm btn-primary">Apri SEND</a>
+                                </div>
+                                @if($sendOperativo['prossime']->isEmpty())
+                                    <div class="agent-empty">
+                                        <strong>Nessuna urgenza</strong>
+                                        <span>Non ci sono bozze, integrazioni o consegne in attesa.</span>
+                                    </div>
+                                @else
+                                    <div class="agent-timeline">
+                                        @foreach($sendOperativo['prossime'] as $pratica)
+                                            @php
+                                                $dest = $pratica->subjects->firstWhere('subject_role', 'destinatario')
+                                                    ?? $pratica->subjects->firstWhere('subject_role', 'impresa')
+                                                    ?? $pratica->subjects->first();
+                                                $azione = match ($pratica->status->value) {
+                                                    'integration_required' => 'Da integrare',
+                                                    'completed' => 'Da consegnare al cittadino',
+                                                    default => 'Bozza da completare',
+                                                };
+                                            @endphp
+                                            <a href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'show'], $pratica) }}" class="agent-timeline-item">
+                                                <span>{{ $pratica->request_number }}</span>
+                                                <strong>{{ $dest?->displayName() ?: '—' }}</strong>
+                                                <em>{{ $azione }}</em>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        </section>
+                    @endif
+                @endcan
+                @can('viewAny', \App\Models\LuggageDeposit::class)
+                    @if($luggageOperativo)
+                        <section class="agent-panel mb-7">
+                            <div class="agent-panel-head">
+                                <div>
+                                    <h3>Deposito bagagli</h3>
+                                    <p>Operatività sportello oggi.</p>
+                                </div>
+                                @if($luggageOperativo['prossimi']->count() > 0)
+                                    <div class="agent-panel-count">{{ $luggageOperativo['prossimi']->count() }}</div>
+                                @endif
+                            </div>
+                            <div class="agent-monitor">
+                                <div class="agent-signal {{ $luggageOperativo['check_in_oggi'] > 0 ? 'agent-signal-warning' : 'agent-signal-primary' }}">
+                                    <span>Check-in in attesa</span>
+                                    <strong>{{ number_format($luggageOperativo['check_in_oggi']) }}</strong>
+                                </div>
+                                <div class="agent-signal">
+                                    <span>In custodia</span>
+                                    <strong>{{ number_format($luggageOperativo['in_custodia']) }}</strong>
+                                </div>
+                                <div class="agent-signal {{ $luggageOperativo['ritiro_oggi'] > 0 ? 'agent-signal-danger' : '' }}">
+                                    <span>Ritiro oggi</span>
+                                    <strong>{{ number_format($luggageOperativo['ritiro_oggi']) }}</strong>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'checkInPage']) }}" class="btn btn-sm btn-light-primary">Check-in</a>
+                                    <a href="{{ action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'checkOutPage']) }}" class="btn btn-sm btn-light-success">Check-out</a>
+                                    <a href="{{ action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'create']) }}" class="btn btn-sm btn-light">Nuovo</a>
+                                </div>
+                                @if($luggageOperativo['prossimi']->isEmpty())
+                                    <div class="agent-empty">
+                                        <strong>Nessuna urgenza</strong>
+                                        <span>Non ci sono depositi in attesa di check-in o ritiro oggi.</span>
+                                    </div>
+                                @else
+                                    <div class="agent-timeline">
+                                        @foreach($luggageOperativo['prossimi'] as $deposito)
+                                            @php($urlDeposito = action([\App\Http\Controllers\Backend\LuggageDepositController::class, 'show'], $deposito->id))
+                                            @php($azione = $deposito->status === \App\Enums\LuggageDepositStatus::CHECK_IN ? 'Ritiro previsto '.$deposito->expected_check_out?->format('d/m') : 'Check-in sportello')
+                                            <a href="{{ $urlDeposito }}" class="agent-timeline-item">
+                                                <span>{{ $deposito->code }}</span>
+                                                <strong>{{ $deposito->customer_name }} · {{ $deposito->bag_count }} borse</strong>
+                                                <em>{{ $azione }}</em>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        </section>
+                    @endif
+                @endcan
                 <section class="agent-panel mb-7">
                     <div class="agent-panel-head">
                         <div>

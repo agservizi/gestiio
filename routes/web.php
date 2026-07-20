@@ -2,11 +2,14 @@
 
 use App\Http\Controllers\Backend\AreaPersonaleController;
 use App\Http\Controllers\Backend\CartellaFilesController;
+use App\Http\Controllers\Backend\PdfToolsController;
 use App\Http\Controllers\Backend\Select2;
 use App\Http\Controllers\Backend\VisuraCameraleController;
 use App\Http\Controllers\Frontend\AreaUtenteController;
 use App\Http\Controllers\Frontend\ContrattoController;
 use App\Http\Controllers\Frontend\ContrattoEnergiaDocumentiController;
+use App\Http\Controllers\Frontend\LockerBookingController;
+use App\Http\Controllers\Frontend\LockerPickupController;
 use App\Http\Controllers\Frontend\LuggageBookingController;
 use App\Http\Controllers\Frontend\LuggageVerifyPageController;
 use App\Http\Controllers\Frontend\LuggagePickupController;
@@ -46,6 +49,27 @@ Route::prefix('deposito-bagagli')->group(function () {
     Route::get('/ritiro/{id}', [LuggagePickupController::class, 'show'])->name('luggage.public.pickup');
     Route::post('/ritiro/{id}/scan', [LuggagePickupController::class, 'scan'])->middleware('throttle:120,1');
     Route::post('/ritiro/{id}/complete', [LuggagePickupController::class, 'complete'])->middleware('throttle:30,1');
+
+    // Postazione agente (slug) — dopo le rotte fisse HQ
+    Route::get('/{slug}', [LuggageBookingController::class, 'index'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+    Route::get('/{slug}/disponibilita', [LuggageBookingController::class, 'availability'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+    Route::post('/{slug}/prenota', [LuggageBookingController::class, 'store'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+    Route::get('/{slug}/conferma', [LuggageBookingController::class, 'confirm'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+});
+
+Route::prefix('locker-point')->group(function () {
+    Route::get('/ritiro/{id}', [LockerPickupController::class, 'show'])->name('locker.public.pickup');
+    Route::post('/ritiro/{id}/scan', [LockerPickupController::class, 'scan'])->middleware('throttle:120,1');
+    Route::post('/ritiro/{id}/complete', [LockerPickupController::class, 'complete'])->middleware('throttle:30,1');
+    Route::get('/', [LockerBookingController::class, 'index']);
+    Route::get('/disponibilita', [LockerBookingController::class, 'availability']);
+    Route::post('/prenota', [LockerBookingController::class, 'store']);
+    Route::get('/conferma', [LockerBookingController::class, 'confirm']);
+
+    Route::get('/{slug}', [LockerBookingController::class, 'index'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+    Route::get('/{slug}/disponibilita', [LockerBookingController::class, 'availability'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+    Route::post('/{slug}/prenota', [LockerBookingController::class, 'store'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+    Route::get('/{slug}/conferma', [LockerBookingController::class, 'confirm'])->where('slug', '^[a-z0-9]+(?:-[a-z0-9]+)*$');
 });
 
 Route::get('select2front', [Select2::class, 'response']);
@@ -97,6 +121,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/metronic/{cosa}', [AreaPersonaleController::class, 'metronic']);
 
 });
+
+// Stirling PDF proxy (same-origin). Auth in controller; mobile-scanner/asset pubblici (QR telefono).
+Route::any('/pdf-tools/{path?}', [PdfToolsController::class, 'proxy'])
+    ->where('path', '.*')
+    ->name('pdf-tools.proxy');
 
 // Alias compatibilità: alcune chiamate legacy puntano senza prefisso /backend.
 Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa']], function () {

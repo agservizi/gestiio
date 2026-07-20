@@ -1,7 +1,7 @@
 @extends('Backend._layout._main')
 
 @section('content')
-    <div class="card mw-800px">
+    <div class="card">
         <div class="card-header">
             <h3 class="card-title">Nuovo {{ \App\Models\LuggageDeposit::NOME_SINGOLARE }}</h3>
         </div>
@@ -9,12 +9,6 @@
             @include('Backend._components.alertErrori')
             <form method="post" action="{{ action([$controller,'store']) }}" id="deposit-create-form">@csrf
                 <h4 class="mb-4">Cliente</h4>
-                @include('Backend._inputs.inputSelect2', [
-                    'campo' => 'cliente_id',
-                    'testo' => 'Cliente CRM (opzionale)',
-                    'col' => 4,
-                    'selected' => \App\Models\Cliente::selected(old('cliente_id')),
-                ])
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label class="form-label required">Nome cliente</label>
@@ -79,20 +73,6 @@
 
 @push('customScript')
     <script>
-        $('#cliente_id').select2({
-            placeholder: 'Collega cliente esistente',
-            allowClear: true,
-            minimumInputLength: 1,
-            width: '100%',
-            ajax: {
-                url: '{{ action([\App\Http\Controllers\Backend\Select2::class, 'response']) }}?cliente_id',
-                dataType: 'json',
-                delay: 150,
-                data: params => ({ term: params.term }),
-                processResults: data => ({ results: data })
-            }
-        });
-
         (function () {
             const dailyRate = {{ json_encode((float) $settings->daily_rate) }};
             const minDays = {{ json_encode((int) $settings->min_days) }};

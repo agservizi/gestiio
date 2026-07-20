@@ -34,11 +34,21 @@ class ChatMessageSent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $mittente = $this->messaggio->relationLoaded('mittente')
+            ? $this->messaggio->mittente
+            : $this->messaggio->mittente()->first();
+
         return [
-            'thread_id' => $this->messaggio->thread_id,
-            'message_id' => $this->messaggio->id,
-            'user_id' => $this->messaggio->user_id,
+            'thread_id' => (int) $this->messaggio->thread_id,
+            'message_id' => (int) $this->messaggio->id,
+            'user_id' => (int) $this->messaggio->user_id,
+            'sender' => $mittente?->nominativo(),
             'messaggio' => $this->messaggio->messaggio,
+            'priority' => (int) ($this->messaggio->priority ?? 0),
+            'reply_to_id' => $this->messaggio->reply_to_id ? (int) $this->messaggio->reply_to_id : null,
+            'has_attachments' => $this->messaggio->relationLoaded('allegati')
+                ? $this->messaggio->allegati->isNotEmpty()
+                : $this->messaggio->allegati()->exists(),
             'created_at' => $this->messaggio->created_at?->toIso8601String(),
         ];
     }

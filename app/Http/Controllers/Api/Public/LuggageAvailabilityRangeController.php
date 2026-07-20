@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Public;
 
+use App\Http\Controllers\Api\ResolvesLuggageStationFromRequest;
 use App\Http\Controllers\Api\RespondsWithLuggageJson;
 use App\Http\Controllers\Controller;
 use App\Http\Services\LuggageDepositService;
@@ -12,6 +13,7 @@ use Illuminate\Support\Carbon;
 class LuggageAvailabilityRangeController extends Controller
 {
     use RespondsWithLuggageJson;
+    use ResolvesLuggageStationFromRequest;
 
     public function __construct(private LuggageDepositService $service)
     {
@@ -41,15 +43,17 @@ class LuggageAvailabilityRangeController extends Controller
             return $this->luggageError('RANGE_TOO_LARGE', 'Intervallo massimo 60 giorni', 400);
         }
 
+        $station = $this->luggageStation($request);
         $days = [];
         for ($day = $from->copy(); $day->lte($to); $day->addDay()) {
-            $days[] = $this->service->getAvailability($day->copy());
+            $days[] = $this->service->getAvailability($day->copy(), $station);
         }
 
         return $this->luggageSuccess($days, 200, [
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'count' => count($days),
+            'station_slug' => $station?->slug,
         ]);
     }
 }

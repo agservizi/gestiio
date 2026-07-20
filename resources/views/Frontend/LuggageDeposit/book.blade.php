@@ -34,7 +34,7 @@
                                 <p class="text-muted mb-0">Al momento non è possibile prenotare online. Contatta l'agenzia per assistenza o presentati direttamente in sportello.</p>
                             @else
                                 <h2 class="mb-6">Dati prenotazione</h2>
-                                <form id="booking-form" method="post" action="{{ url('/deposito-bagagli/prenota') }}">
+                                <form id="booking-form" method="post" action="{{ $bookAction ?? url('/deposito-bagagli/prenota') }}">
                                     @csrf
                                     <div class="row g-4">
                                         <div class="col-md-6">
@@ -83,7 +83,7 @@
     document.getElementById('bookingDate')?.addEventListener('change', async (e) => {
         const date = e.target.value;
         if (!date) return;
-        const res = await fetch(@json(url('/deposito-bagagli/disponibilita')) + '?date=' + encodeURIComponent(date), {
+        const res = await fetch(@json($availabilityUrl ?? url('/deposito-bagagli/disponibilita')) + '?date=' + encodeURIComponent(date), {
             headers: { 'Accept': 'application/json' }
         });
         const json = await res.json();

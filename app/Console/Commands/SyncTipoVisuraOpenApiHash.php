@@ -8,14 +8,21 @@ use Illuminate\Console\Command;
 
 class SyncTipoVisuraOpenApiHash extends Command
 {
-    protected $signature = 'visure:sync-openapi-hash {--dry-run : Mostra solo mapping senza salvare} {--force : Sovrascrive anche hash gia valorizzati} {--debug : Mostra struttura dati OpenAPI per diagnosi}';
+    protected $signature = 'visure:sync-openapi-hash
+                            {--dry-run : Mostra solo mapping senza salvare}
+                            {--force : Sovrascrive anche hash gia valorizzati}
+                            {--import-missing : Crea tipi_visure per servizi Visengine assenti in Gestiio}
+                            {--default-prezzo-agente=15 : Prezzo agente Gestiio di default per import}
+                            {--default-prezzo-cliente=25 : Prezzo cliente Gestiio di default per import}
+                            {--debug : Mostra struttura dati OpenAPI per diagnosi}';
 
-    protected $description = 'Allinea tipi_visure.openapi_hash_visura usando l elenco servizi Visengine OpenAPI';
+    protected $description = 'Allinea tipi_visure a Visengine (hash + eventuale import prodotti mancanti)';
 
     public function handle(): int
     {
         $dryRun = (bool) $this->option('dry-run');
         $force = (bool) $this->option('force');
+        $importMissing = (bool) $this->option('import-missing');
 
         $service = new OpenApiVisureService;
         $elenco = $service->elencoVisure();
@@ -38,13 +45,9 @@ class SyncTipoVisuraOpenApiHash extends Command
             return self::FAILURE;
         }
 
+        $this->line('Servizi Visengine indicizzati: '.count($indicizzato));
+
         $records = TipoVisura::query()->orderBy('id')->get();
-        if ($records->isEmpty()) {
-            $this->warn('Nessun tipo visura trovato.');
-
-            return self::SUCCESS;
-        }
-
         $updated = 0;
         $skipped = 0;
         $notMatched = 0;
@@ -78,18 +81,111 @@ class SyncTipoVisuraOpenApiHash extends Command
             }
         }
 
+        $imported = 0;
+        if ($importMissing) {
+            $imported = $this->importMissingTipi($indicizzato, $dryRun);
+        }
+
         $this->newLine();
-        $this->line('Totali: '.$records->count());
-        $this->line("Aggiornati: {$updated}");
+        $this->line('Tipi Gestiio: '.$records->count());
+        $this->line("Hash aggiornati: {$updated}");
         $this->line("Saltati (gia valorizzati): {$skipped}");
         $this->line("Senza match: {$notMatched}");
+        if ($importMissing) {
+            $this->line("Importati da Visengine: {$imported}");
+        }
         $this->line($dryRun ? 'Modalita dry-run: nessun salvataggio eseguito.' : 'Salvataggi completati.');
 
         return self::SUCCESS;
     }
 
     /**
-     * @return array<int, array{name:string, normalized:string, hash:string}>
+     * @param  array<int, array{name:string, normalized:string, hash:string, price:?float, tipo_visura:string}>  $indicizzato
+     */
+    protected function importMissingTipi(array $indicizzato, bool $dryRun): int
+    {
+        $existingHashes = TipoVisura::query()
+            ->whereNotNull('openapi_hash_visura')
+            ->pluck('openapi_hash_visura')
+            ->map(fn ($h) => trim((string) $h))
+            ->filter()
+            ->all();
+        $existingHashes = array_fill_keys($existingHashes, true);
+
+        $existingNames = TipoVisura::query()
+            ->pluck('nome')
+            ->map(fn ($n) => $this->normalize((string) $n))
+            ->filter()
+            ->all();
+        $existingNames = array_fill_keys($existingNames, true);
+
+        $defaultAgente = (float) $this->option('default-prezzo-agente');
+        $defaultCliente = (float) $this->option('default-prezzo-cliente');
+        $imported = 0;
+
+        foreach ($indicizzato as $row) {
+            $hash = trim((string) $row['hash']);
+            $name = trim((string) $row['name']);
+            if ($hash === '' || $name === '') {
+                continue;
+            }
+            if (isset($existingHashes[$hash])) {
+                continue;
+            }
+            $norm = $this->normalize($name);
+            if ($norm !== '' && isset($existingNames[$norm])) {
+                // Stesso nome senza hash: aggiorna hash sul record esistente
+                $tipo = TipoVisura::query()->get()->first(function (TipoVisura $t) use ($norm) {
+                    return $this->normalize((string) $t->nome) === $norm;
+                });
+                if ($tipo && trim((string) $tipo->openapi_hash_visura) === '') {
+                    $this->info("LINK hash a tipo esistente #{$tipo->id} {$tipo->nome} -> {$hash}");
+                    if (! $dryRun) {
+                        $tipo->openapi_hash_visura = $hash;
+                        $tipo->save();
+                    }
+                    $existingHashes[$hash] = true;
+                }
+
+                continue;
+            }
+
+            $prezzoOpenapi = $row['price'] ?? null;
+            $prezzoAgente = $prezzoOpenapi !== null ? round($prezzoOpenapi * 1.5, 2) : $defaultAgente;
+            $prezzoCliente = $prezzoOpenapi !== null ? round($prezzoOpenapi * 2, 2) : $defaultCliente;
+            if ($prezzoAgente <= 0) {
+                $prezzoAgente = $defaultAgente;
+            }
+            if ($prezzoCliente <= 0) {
+                $prezzoCliente = $defaultCliente;
+            }
+
+            $this->info("IMPORT {$name} ({$hash}) agente={$prezzoAgente} cliente={$prezzoCliente} tipo={$row['tipo_visura']}");
+            $imported++;
+            $existingHashes[$hash] = true;
+            $existingNames[$norm] = true;
+
+            if ($dryRun) {
+                continue;
+            }
+
+            $tipo = new TipoVisura;
+            $tipo->nome = $name;
+            $tipo->prezzo_agente = $prezzoAgente;
+            $tipo->prezzo_cliente = $prezzoCliente;
+            $tipo->abilitato = 1;
+            $tipo->richiedi_allegati = 0;
+            $tipo->tipo_visura = $row['tipo_visura'] ?? 'privato';
+            $tipo->openapi_hash_visura = $hash;
+            $tipo->html = null;
+            $tipo->save();
+        }
+
+        return $imported;
+    }
+
+    /**
+     * @return array<int, array{name:string, normalized:string, hash:string, price:?float, tipo_visura:string}>
      */
     protected function indicizzaVisureOpenApi(array $elenco): array
     {
@@ -110,6 +206,8 @@ class SyncTipoVisuraOpenApiHash extends Command
                 'name' => $name,
                 'normalized' => $this->normalize($name),
                 'hash' => $hash,
+                'price' => $this->extractPrice($item),
+                'tipo_visura' => $this->inferTipoVisura($name, $item),
             ];
         }
 
@@ -120,6 +218,52 @@ class SyncTipoVisuraOpenApiHash extends Command
         }
 
         return array_values($unique);
+    }
+
+    protected function extractPrice(array $item): ?float
+    {
+        $keys = ['prezzo', 'price', 'costo', 'importo', 'amount', 'tariffa', 'cost'];
+        foreach ($keys as $key) {
+            $value = $item[$key] ?? null;
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+            if (is_string($value) && is_numeric(str_replace(',', '.', trim($value)))) {
+                return (float) str_replace(',', '.', trim($value));
+            }
+        }
+
+        foreach ($item as $key => $value) {
+            $k = mb_strtolower((string) $key, 'UTF-8');
+            if (! str_contains($k, 'prezz') && ! str_contains($k, 'price') && ! str_contains($k, 'cost')) {
+                continue;
+            }
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+        }
+
+        return null;
+    }
+
+    protected function inferTipoVisura(string $name, array $item = []): string
+    {
+        $explicit = strtolower((string) ($item['tipo'] ?? $item['tipo_visura'] ?? $item['subject'] ?? ''));
+        if (in_array($explicit, ['azienda', 'impresa', 'societa', 'company'], true)) {
+            return 'azienda';
+        }
+        if (in_array($explicit, ['privato', 'persona', 'person', 'fisica'], true)) {
+            return 'privato';
+        }
+
+        $n = $this->normalize($name);
+        foreach (['impresa', 'aziend', 'societa', 'capitale', 'persone', 'camera', 'camerale', 'cciaa', 'bilancio', 'statuto', 'fascicolo'] as $token) {
+            if (str_contains($n, $token)) {
+                return 'azienda';
+            }
+        }
+
+        return 'privato';
     }
 
     protected function extractName(array $item): string
@@ -291,8 +435,12 @@ class SyncTipoVisuraOpenApiHash extends Command
         if (str_contains($normalized, 'camerale') || str_contains($normalized, 'impresa')) {
             return 'camerale';
         }
-        if (str_contains($normalized, 'crif') || str_contains($normalized, 'centrale rischi')) {
+        // CRIF (SIC privato) ≠ Centrale Rischi Banca d'Italia (CR): famiglie separate.
+        if (str_contains($normalized, 'crif')) {
             return 'crif';
+        }
+        if (str_contains($normalized, 'centrale rischi') || preg_match('/\bcr\b/', $normalized)) {
+            return 'centrale_rischi';
         }
         if (str_contains($normalized, 'protest')) {
             return 'protesti';
@@ -306,7 +454,7 @@ class SyncTipoVisuraOpenApiHash extends Command
         $value = ' '.$value.' ';
         $replacements = [
             ' catastale ' => ' catasto ',
-            ' centrale rischi ' => ' crif ',
+            // Non mappare "centrale rischi" su "crif": sono prodotti diversi.
             ' pregiudizievoli ' => ' protesti ',
             ' societa ' => ' giuridica ',
             ' persona giuridica ' => ' giuridica ',

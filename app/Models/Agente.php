@@ -17,6 +17,8 @@ class Agente extends Model
     protected $casts = [
         'openapi_visure_token' => 'encrypted',
         'openapi_catasto_token' => 'encrypted',
+        'openapi_email' => 'encrypted',
+        'openapi_api_key' => 'encrypted',
     ];
 
     /*

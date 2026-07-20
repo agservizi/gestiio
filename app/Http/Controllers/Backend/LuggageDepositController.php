@@ -8,29 +8,51 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LuggageDepositActionRequest;
 use App\Http\Requests\UpdateLuggageSettingsRequest;
 use App\Http\Services\LuggageDepositService;
-use App\Models\LuggageDeposit;
+use App\Http\Services\LuggageStationService;
 use App\Http\Support\LuggageTagPdf;
+use App\Models\LuggageDeposit;
+use App\Models\LuggageStation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 
 class LuggageDepositController extends Controller
 {
-    public function __construct(private LuggageDepositService $service)
-    {
+    public function __construct(
+        private LuggageDepositService $service,
+        private LuggageStationService $stations,
+    ) {
         $this->middleware('can:viewAny,'.LuggageDeposit::class);
+    }
+
+    protected function currentStation(): ?LuggageStation
+    {
+        $user = Auth::user();
+        if (! $user || $user->hasPermissionTo('admin')) {
+            return null;
+        }
+
+        return $this->stations->forUser($user);
+    }
+
+    protected function isAdmin(): bool
+    {
+        return Auth::user()?->hasPermissionTo('admin') ?? false;
     }
 
     public function dashboard()
     {
         $this->authorize('viewAny', LuggageDeposit::class);
+        $station = $this->currentStation();
 
-        $stats = $this->service->stats();
+        $stats = $this->service->stats(null, null, $station, $this->isAdmin());
 
         return view('Backend.LuggageDeposit.dashboard', [
             'stats' => $stats,
-            'titoloPagina' => 'Deposito Bagagli',
+            'station' => $station,
+            'titoloPagina' => $station ? ('Deposito Bagagli — '.$station->name) : 'Deposito Bagagli',
             'controller' => self::class,
         ]);
     }
@@ -38,11 +60,14 @@ class LuggageDepositController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', LuggageDeposit::class);
+        $station = $this->currentStation();
 
         $records = $this->service->list(
             array_merge($request->only(['view', 'q', 'status', 'source']), ['view' => $request->get('view', 'oggi')]),
             (int) $request->get('page', 1),
-            (int) config('configurazione.paginazione', 25)
+            (int) config('configurazione.paginazione', 25),
+            $station,
+            $this->isAdmin()
         );
         $records->appends($request->query());
 
@@ -57,6 +82,7 @@ class LuggageDepositController extends Controller
 
         return view('Backend.LuggageDeposit.index', [
             'records' => $records,
+            'station' => $station,
             'controller' => self::class,
             'titoloPagina' => 'Elenco '.LuggageDeposit::NOME_PLURALE,
             'view' => $request->get('view', 'oggi'),
@@ -67,14 +93,19 @@ class LuggageDepositController extends Controller
 
     public function pipeline()
     {
+        $station = $this->currentStation();
+        $base = LuggageDeposit::query();
+        $this->service->scopeStationQuery($base, $station, $this->isAdmin());
+
         $columns = [
-            'prenotati' => LuggageDeposit::whereIn('status', [LuggageDepositStatus::PRENOTATO, LuggageDepositStatus::NO_SHOW])->orderBy('booking_date')->get(),
-            'attivi' => LuggageDeposit::where('status', LuggageDepositStatus::CHECK_IN)->orderBy('checked_in_at')->get(),
-            'completati' => LuggageDeposit::where('status', LuggageDepositStatus::COMPLETATO)->latest('checked_out_at')->limit(20)->get(),
+            'prenotati' => (clone $base)->whereIn('status', [LuggageDepositStatus::PRENOTATO, LuggageDepositStatus::NO_SHOW])->orderBy('booking_date')->get(),
+            'attivi' => (clone $base)->where('status', LuggageDepositStatus::CHECK_IN)->orderBy('checked_in_at')->get(),
+            'completati' => (clone $base)->where('status', LuggageDepositStatus::COMPLETATO)->latest('checked_out_at')->limit(20)->get(),
         ];
 
         return view('Backend.LuggageDeposit.pipeline', [
             'columns' => $columns,
+            'station' => $station,
             'controller' => self::class,
             'titoloPagina' => 'Pipeline Deposito Bagagli',
         ]);
@@ -82,20 +113,26 @@ class LuggageDepositController extends Controller
 
     public function checkInPage(Request $request)
     {
+        $station = $this->currentStation();
         $deposit = null;
         if ($request->filled('code')) {
             $deposit = $this->service->findByCode($request->input('code'));
+            if ($deposit && ! $this->isAdmin()) {
+                $this->authorize('view', $deposit);
+            }
         }
 
-        $prenotati = LuggageDeposit::whereIn('status', [LuggageDepositStatus::PRENOTATO, LuggageDepositStatus::NO_SHOW])
+        $prenotatiQuery = LuggageDeposit::query()
+            ->whereIn('status', [LuggageDepositStatus::PRENOTATO, LuggageDepositStatus::NO_SHOW])
             ->whereDate('booking_date', '<=', today()->addDay())
             ->orderBy('booking_date')
-            ->limit(50)
-            ->get();
+            ->limit(50);
+        $this->service->scopeStationQuery($prenotatiQuery, $station, $this->isAdmin());
 
         return view('Backend.LuggageDeposit.check-in', [
             'deposit' => $deposit,
-            'prenotati' => $prenotati,
+            'prenotati' => $prenotatiQuery->get(),
+            'station' => $station,
             'controller' => self::class,
             'titoloPagina' => 'Check-in Bagagli',
         ]);
@@ -103,25 +140,33 @@ class LuggageDepositController extends Controller
 
     public function checkOutPage(Request $request)
     {
+        $station = $this->currentStation();
         $deposit = null;
         $preview = null;
 
         if ($request->filled('code')) {
             $deposit = $this->service->findByCode($request->input('code'));
-            if ($deposit && $deposit->status === LuggageDepositStatus::CHECK_IN) {
-                $preview = $this->service->computeStoragePrice($deposit);
+            if ($deposit) {
+                if (! $this->isAdmin()) {
+                    $this->authorize('view', $deposit);
+                }
+                if ($deposit->status === LuggageDepositStatus::CHECK_IN) {
+                    $preview = $this->service->computeStoragePrice($deposit);
+                }
             }
         }
 
-        $attivi = LuggageDeposit::where('status', LuggageDepositStatus::CHECK_IN)
+        $attiviQuery = LuggageDeposit::query()
+            ->where('status', LuggageDepositStatus::CHECK_IN)
             ->orderBy('checked_in_at')
-            ->limit(50)
-            ->get();
+            ->limit(50);
+        $this->service->scopeStationQuery($attiviQuery, $station, $this->isAdmin());
 
         return view('Backend.LuggageDeposit.check-out', [
             'deposit' => $deposit,
             'preview' => $preview,
-            'attivi' => $attivi,
+            'attivi' => $attiviQuery->get(),
+            'station' => $station,
             'controller' => self::class,
             'titoloPagina' => 'Check-out Bagagli',
         ]);
@@ -132,9 +177,10 @@ class LuggageDepositController extends Controller
         $this->authorize('manageSettings', LuggageDeposit::class);
 
         return view('Backend.LuggageDeposit.settings', [
-            'settings' => $this->service->getSettings(),
+            'settings' => \App\Models\LuggageSetting::singleton(),
             'controller' => self::class,
             'titoloPagina' => 'Impostazioni Deposito Bagagli',
+            'stations' => LuggageStation::query()->with('user')->orderBy('name')->get(),
         ]);
     }
 
@@ -149,11 +195,103 @@ class LuggageDepositController extends Controller
         return redirect()->back()->with('success', 'Impostazioni deposito bagagli aggiornate.');
     }
 
+    public function stationSettings()
+    {
+        $this->authorize('manageStationSettings', LuggageDeposit::class);
+        $station = $this->currentStation();
+        abort_unless($station, 404);
+
+        return view('Backend.LuggageDeposit.station-settings', [
+            'station' => $station,
+            'controller' => self::class,
+            'titoloPagina' => 'La mia postazione deposito',
+            'plainApiKey' => session('luggage_station_api_key'),
+        ]);
+    }
+
+    public function updateStationSettings(Request $request)
+    {
+        $this->authorize('manageStationSettings', LuggageDeposit::class);
+        $station = $this->currentStation();
+        abort_unless($station, 404);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'daily_rate' => ['required', 'numeric', 'min:0'],
+            'currency' => ['required', 'string', 'size:3'],
+            'max_capacity' => ['required', 'integer', 'min:1'],
+            'min_days' => ['required', 'integer', 'min:1'],
+            'max_bags_per_booking' => ['required', 'integer', 'min:1'],
+            'online_booking_enabled' => ['nullable', 'boolean'],
+        ]);
+        $validated['online_booking_enabled'] = $request->boolean('online_booking_enabled');
+
+        $this->stations->updateStation($station, $validated);
+
+        return redirect()->back()->with('success', 'Impostazioni postazione aggiornate.');
+    }
+
+    public function requestStationApi()
+    {
+        $this->authorize('manageStationSettings', LuggageDeposit::class);
+        $station = $this->currentStation();
+        abort_unless($station, 404);
+
+        $this->stations->requestApi($station);
+
+        return redirect()->back()->with('success', 'Richiesta API inviata. Un admin dovrà abilitare la chiave.');
+    }
+
+    public function stationsIndex()
+    {
+        $this->authorize('manageStationApis', LuggageDeposit::class);
+
+        return view('Backend.LuggageDeposit.stations-admin', [
+            'stations' => LuggageStation::query()->with('user')->orderByDesc('api_requested_at')->orderBy('name')->get(),
+            'controller' => self::class,
+            'titoloPagina' => 'Postazioni deposito bagagli',
+            'plainApiKey' => session('luggage_station_api_key'),
+        ]);
+    }
+
+    public function enableStationApi(string $id)
+    {
+        $this->authorize('manageStationApis', LuggageDeposit::class);
+        $station = LuggageStation::findOrFail($id);
+        $result = $this->stations->enableApi($station);
+
+        return redirect()->back()
+            ->with('success', 'API abilitate per '.$result['station']->name.'. Copia la chiave ora: non sarà più mostrata per intero.')
+            ->with('luggage_station_api_key', $result['plain_key']);
+    }
+
+    public function regenerateStationApi(string $id)
+    {
+        $this->authorize('manageStationApis', LuggageDeposit::class);
+        $station = LuggageStation::findOrFail($id);
+        $result = $this->stations->regenerateApiKey($station);
+
+        return redirect()->back()
+            ->with('success', 'Nuova API key generata per '.$result['station']->name.'.')
+            ->with('luggage_station_api_key', $result['plain_key']);
+    }
+
+    public function disableStationApi(string $id)
+    {
+        $this->authorize('manageStationApis', LuggageDeposit::class);
+        $station = LuggageStation::findOrFail($id);
+        $this->stations->disableApi($station);
+
+        return redirect()->back()->with('success', 'API disabilitate per '.$station->name.'.');
+    }
+
     public function report(Request $request)
     {
+        $this->authorize('viewReports', LuggageDeposit::class);
+
         $from = $request->filled('from') ? Carbon::parse($request->input('from')) : today()->subDays(30);
         $to = $request->filled('to') ? Carbon::parse($request->input('to')) : today();
-        $stats = $this->service->stats($from, $to);
+        $stats = $this->service->stats($from, $to, null, true);
 
         return view('Backend.LuggageDeposit.report', [
             'stats' => $stats,
@@ -167,9 +305,11 @@ class LuggageDepositController extends Controller
     public function create()
     {
         $this->authorize('create', LuggageDeposit::class);
+        $station = $this->currentStation();
 
         return view('Backend.LuggageDeposit.create', [
-            'settings' => $this->service->getSettings(),
+            'settings' => $this->service->settingsFor($station),
+            'station' => $station,
             'controller' => self::class,
             'titoloPagina' => 'Nuovo '.LuggageDeposit::NOME_SINGOLARE,
             'breadcrumbs' => [action([self::class, 'index']) => 'Torna a elenco'],
@@ -179,6 +319,10 @@ class LuggageDepositController extends Controller
     public function store(Request $request)
     {
         $this->authorize('create', LuggageDeposit::class);
+        $station = $this->currentStation();
+        if (! $this->isAdmin()) {
+            abort_unless($station, 403, 'Postazione deposito non disponibile.');
+        }
 
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
@@ -187,7 +331,6 @@ class LuggageDepositController extends Controller
             'customer_email' => ['nullable', 'email'],
             'customer_phone' => ['nullable', 'string', 'max:50'],
             'notes' => ['nullable', 'string'],
-            'cliente_id' => ['nullable', 'integer', 'exists:clienti,id'],
             'expected_check_in' => ['nullable', 'date', 'after_or_equal:booking_date'],
             'expected_check_out' => ['required', 'date', 'after_or_equal:booking_date'],
         ]);
@@ -202,7 +345,7 @@ class LuggageDepositController extends Controller
         }
 
         try {
-            $deposit = $this->service->create($validated, 'SPORTELLO');
+            $deposit = $this->service->create($validated, 'SPORTELLO', $station);
         } catch (LuggageNoAvailabilityException $e) {
             return redirect()->back()->withInput()->withErrors(['bag_count' => $e->getMessage()]);
         }
@@ -215,7 +358,7 @@ class LuggageDepositController extends Controller
 
     public function show(string $id)
     {
-        $deposit = LuggageDeposit::findOrFail($id);
+        $deposit = LuggageDeposit::with('station')->findOrFail($id);
         $this->authorize('view', $deposit);
 
         $pricingPreview = null;
@@ -234,7 +377,7 @@ class LuggageDepositController extends Controller
 
     public function action(LuggageDepositActionRequest $request, string $id)
     {
-        $deposit = LuggageDeposit::findOrFail($id);
+        $deposit = LuggageDeposit::with('station')->findOrFail($id);
 
         if ($request->input('action') === 'delete') {
             $this->authorize('delete', $deposit);
@@ -276,7 +419,7 @@ class LuggageDepositController extends Controller
 
     public function exportCsv(Request $request)
     {
-        $this->authorize('viewAny', LuggageDeposit::class);
+        $this->authorize('viewReports', LuggageDeposit::class);
 
         return app(\App\Http\Controllers\Api\Admin\LuggageExportController::class)->csv($request);
     }

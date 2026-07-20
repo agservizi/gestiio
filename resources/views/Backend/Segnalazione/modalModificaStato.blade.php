@@ -77,7 +77,7 @@
                             $('#kt_modal').modal('hide');
                             modalAjax();
                         } else {
-                            alert(response.message);
+                            gestiioNotify('error', response.message || 'Operazione non riuscita.');
                         }
                     }
                 });

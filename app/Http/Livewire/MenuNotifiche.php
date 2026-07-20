@@ -44,7 +44,9 @@ class MenuNotifiche extends Component
         $authUser = Auth::user();
         $destinatario = $authUser->hasPermissionTo('admin')
             ? 'admin'
-            : ($authUser->hasPermissionTo('operatore') ? 'operatore' : 'agente');
+            : ($authUser->hasPermissionTo('operatore')
+                ? 'operatore'
+                : ($authUser->hasPermissionTo('supervisore') ? 'supervisore' : 'agente'));
 
         $this->notifiche = Notifica::query()
             ->whereDate('created_at', '>=', $authUser->created_at)

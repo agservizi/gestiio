@@ -43,7 +43,9 @@
                         </div>
                     </div>
                 </div>
-                @include('Backend._layout.app-footer')
+                @unless($nascondiFooter ?? false)
+                    @include('Backend._layout.app-footer')
+                @endunless
             </div>
         </div>
     </div>

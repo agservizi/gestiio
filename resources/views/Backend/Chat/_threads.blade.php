@@ -6,25 +6,33 @@
 @forelse($threads as $thread)
     @php
         $altro = $thread->getRelation('altroPartecipante');
-        $isOnline = $altro && isset($onlineMap[$altro->id]) && $onlineMap[$altro->id];
+        $isGroup = (bool) ($thread->is_group ?? false);
+        $displayName = $thread->display_name
+            ?? ($isGroup ? ($thread->name ?: 'Gruppo') : ($altro?->nominativo() ?? 'Conversazione'));
+        $isOnline = ! $isGroup && $altro && isset($onlineMap[$altro->id]) && $onlineMap[$altro->id];
         $isActive = $threadAttivoId === $thread->id;
         $canChat = (bool) ($thread->can_chat ?? true);
     @endphp
     <div class="list-group-item list-group-item-action border-0 py-3 px-4 chat-thread-item {{$isActive ? 'active' : ''}}"
          data-thread-id="{{$thread->id}}"
-         data-thread-name="{{$altro?->nominativo() ?? 'Conversazione'}}"
+         data-thread-name="{{$displayName}}"
+         data-is-group="{{$isGroup ? 1 : 0}}"
          data-chat-allowed="{{$canChat ? 1 : 0}}"
          style="cursor: {{$canChat ? 'pointer' : 'not-allowed'}};">
         <div class="d-flex justify-content-between align-items-start gap-3">
             <div class="d-flex flex-column text-start">
                 <span class="chat-thread-title fw-bolder fs-6 {{$isActive ? 'text-white' : 'text-gray-900'}}">
-                    <span class="chat-online-dot {{$isOnline ? 'online' : 'offline'}}"></span>
-                    {{$altro?->nominativo() ?? 'Conversazione'}}
+                    @if($isGroup)
+                        <i class="fas fa-users fs-8 me-1 {{$isActive ? 'text-white' : 'text-muted'}}"></i>
+                    @else
+                        <span class="chat-online-dot {{$isOnline ? 'online' : 'offline'}}"></span>
+                    @endif
+                    {{$displayName}}
                     @if(!$canChat)
                         <span class="badge badge-light-danger ms-1">Accesso revocato</span>
                     @endif
                     @if(!empty($thread->is_muted))
-                        <span class="badge badge-light ms-1">🔕</span>
+                        <span class="badge badge-light ms-1">Silenziata</span>
                     @endif
                 </span>
                 <span class="chat-thread-preview {{$isActive ? 'text-white opacity-75' : 'text-gray-700'}} fs-8 mt-1">{{\Illuminate\Support\Str::limit(strip_tags($thread->ultimoMessaggio?->messaggio ?? 'Nessun messaggio'), 60)}}</span>

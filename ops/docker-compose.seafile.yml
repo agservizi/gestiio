@@ -1,0 +1,64 @@
+# Seafile CE — Documenti Gestiio (rete Docker condivisa)
+# Avvio sul NAS:
+#   mkdir -p /home/Carmine/apps/seafile/{data,mysql}
+#   cd /home/Carmine/apps/seafile
+#   /Volume1/@apps/DockerEngine/dockerd/bin/docker compose -f docker-compose.seafile.yml up -d
+#
+# Hostname pubblico: documenti.agenziaplinio.it (DNS/Cloudflare → questo stack)
+# Interno (gestiio-app): http://seafile
+services:
+  db:
+    image: mariadb:10.11
+    container_name: seafile-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SEAFILE_MYSQL_ROOT_PASSWORD:-SfRootGestiio2026Secure}
+      MYSQL_LOG_CONSOLE: "true"
+    volumes:
+      - /home/Carmine/apps/seafile/mysql:/var/lib/mysql
+    networks:
+      - seafile_net
+
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: seafile-memcached
+    restart: unless-stopped
+    entrypoint: memcached -m 256
+    networks:
+      - seafile_net
+
+  seafile:
+    image: seafileltd/seafile-mc:11.0-latest
+    container_name: seafile
+    restart: unless-stopped
+    depends_on:
+      - db
+      - memcached
+    # Solo rete Docker (+ opzionale host bind per reverse proxy/tunnel)
+    expose:
+      - "80"
+    ports:
+      # Bind localhost NAS: tunnel/proxy host → Seafile senza esporre LAN
+      - "127.0.0.1:8089:80"
+    volumes:
+      - /home/Carmine/apps/seafile/data:/shared
+    environment:
+      # NON usare host "db": sulla rete gestiio punta al MySQL Gestiio
+      DB_HOST: seafile-mysql
+      DB_ROOT_PASSWD: ${SEAFILE_MYSQL_ROOT_PASSWORD:-SfRootGestiio2026Secure}
+      TIME_ZONE: Europe/Rome
+      SEAFILE_ADMIN_EMAIL: ${SEAFILE_ADMIN_EMAIL:-admin@gestiio.local}
+      SEAFILE_ADMIN_PASSWORD: ${SEAFILE_ADMIN_PASSWORD:-SfAdminGestiio2026}
+      SEAFILE_SERVER_LETSENCRYPT: "false"
+      SEAFILE_SERVER_HOSTNAME: ${SEAFILE_SERVER_HOSTNAME:-documenti.agenziaplinio.it}
+      MEMCACHED_HOST: seafile-memcached
+    networks:
+      - seafile_net
+      - gestiio_net
+
+networks:
+  seafile_net:
+    driver: bridge
+  gestiio_net:
+    external: true
+    name: gestiio-20260624-2128_default

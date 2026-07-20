@@ -22,10 +22,14 @@ class UpdateLuggageSettingsRequest extends FormRequest
             'currency' => ['nullable', 'string', 'size:3'],
             'luggage_online_booking_enabled' => ['nullable', 'boolean'],
             'luggage_notify_staff' => ['nullable', 'boolean'],
+            'luggage_notify_customer_booking' => ['nullable', 'boolean'],
+            'luggage_notify_customer_thank_you' => ['nullable', 'boolean'],
             'luggage_notify_customer_receipt' => ['nullable', 'boolean'],
             'luggage_notify_customer_pickup_qr' => ['nullable', 'boolean'],
+            'luggage_pickup_qr_hours_before' => ['nullable', 'integer', 'min:1', 'max:168'],
             'luggage_staff_notification_email' => ['nullable', 'email', 'max:255'],
             'luggage_booking_instructions' => ['nullable', 'string', 'max:5000'],
+            'luggage_agent_monthly_fee' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 
@@ -34,6 +38,8 @@ class UpdateLuggageSettingsRequest extends FormRequest
         foreach ([
             'luggage_online_booking_enabled',
             'luggage_notify_staff',
+            'luggage_notify_customer_booking',
+            'luggage_notify_customer_thank_you',
             'luggage_notify_customer_receipt',
             'luggage_notify_customer_pickup_qr',
         ] as $checkbox) {

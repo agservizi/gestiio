@@ -17,8 +17,10 @@ Guida operativa per lo sviluppatore/agente che deve collegare il sito marketing 
 5. Testare il flusso end-to-end e verificare che la prenotazione compaia su Gestiio.
 
 > **Alternativa rapida (zero sviluppo):** linkare direttamente  
-> `https://gestiio.agenziaplinio.it/deposito-bagagli`  
-> La pagina è già pronta, sicura e collegata al backoffice.
+> `https://gestiio.agenziaplinio.it/deposito-bagagli` (HQ)  
+> oppure il link postazione agente:  
+> `https://gestiio.agenziaplinio.it/deposito-bagagli/<slug>`  
+> Le pagine sono già pronte e isolate per postazione.
 
 ---
 
@@ -26,19 +28,19 @@ Guida operativa per lo sviluppatore/agente che deve collegare il sito marketing 
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────────┐
-│  agenziaplinio.it   │         │  gestiio.agenziaplinio.it    │
-│  (sito marketing)   │         │  (backoffice + API)          │
+│  sito agente        │         │  gestiio.agenziaplinio.it    │
+│  (marketing)        │         │  (backoffice + API)          │
 ├─────────────────────┤         ├──────────────────────────────┤
 │ Pagina HTML/JS      │  HTTP   │ /api/public/deposito-bagagli│
-│        │            │ ──────► │   + x-api-key (solo server)  │
+│        │            │ ──────► │   + x-api-key postazione     │
 │        ▼            │         │                              │
-│ Proxy PHP locale    │         │ Staff vede prenotazione in:  │
-│ /api/luggage/*      │         │ /backend/deposito-bagagli    │
+│ Proxy PHP locale    │         │ Depositi isolati in:         │
+│ /api/luggage/*      │         │ luggage_stations + deposits  │
 └─────────────────────┘         └──────────────────────────────┘
 ```
 
-**Regola d'oro:** il browser del cliente **non deve mai** vedere `LUGGAGE_API_KEY`.  
-Solo il server PHP di agenziaplinio.it la usa nelle chiamate a Gestiio.
+**Regola d'oro:** il browser del cliente **non deve mai** vedere la API key.  
+Solo il server del sito agente la usa. Ogni agente vede solo i depositi della propria postazione.
 
 ---
 
@@ -46,10 +48,11 @@ Solo il server PHP di agenziaplinio.it la usa nelle chiamate a Gestiio.
 
 | Elemento | Dove si trova | Note |
 |----------|---------------|------|
-| `LUGGAGE_API_KEY` | File `.env` su Gestiio | Stringa lunga casuale — **segreta** |
+| API key **postazione** | Admin → Deposito bagagli → Postazioni | Dopo richiesta agente |
+| Oppure `LUGGAGE_API_KEY` | Solo HQ globale | Non mischiare con postazioni agente |
 | URL API base | Fisso | `https://gestiio.agenziaplinio.it/api/public/deposito-bagagli` |
-| Tariffa attuale | Impostazioni Gestiio | Es. €2,00/giorno per borsa |
-| Prenotazioni online attive | Impostazioni Gestiio | Campo `onlineBookingEnabled` |
+| Link pubblico | Postazione agente | `/deposito-bagagli/<slug>` |
+| Prenotazioni online | Toggle sulla postazione | Campo `online_booking_enabled` |
 
 Test rapido che Gestiio funziona (senza chiave):
 

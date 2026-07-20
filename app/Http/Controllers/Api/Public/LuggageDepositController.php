@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Public;
 
 use App\Enums\LuggageDepositStatus;
 use App\Exceptions\LuggageNoAvailabilityException;
+use App\Http\Controllers\Api\ResolvesLuggageStationFromRequest;
 use App\Http\Controllers\Api\RespondsWithLuggageJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LuggageDepositResource;
@@ -15,6 +16,7 @@ use InvalidArgumentException;
 class LuggageDepositController extends Controller
 {
     use RespondsWithLuggageJson;
+    use ResolvesLuggageStationFromRequest;
 
     public function __construct(private LuggageDepositService $service)
     {
@@ -22,9 +24,15 @@ class LuggageDepositController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $paginator = $this->service->list($request->only([
-            'email', 'code', 'status', 'from', 'to', 'q',
-        ]), (int) $request->get('page', 1), (int) $request->get('limit', 20));
+        $paginator = $this->service->list(
+            $request->only([
+                'email', 'code', 'status', 'from', 'to', 'q',
+            ]),
+            (int) $request->get('page', 1),
+            (int) $request->get('limit', 20),
+            $this->luggageStation($request),
+            false
+        );
 
         return $this->luggageSuccess(
             LuggageDepositResource::collection($paginator->items())->resolve(),
@@ -37,10 +45,10 @@ class LuggageDepositController extends Controller
         );
     }
 
-    public function show(string $code): JsonResponse
+    public function show(Request $request, string $code): JsonResponse
     {
         $deposit = $this->service->findByCode($code);
-        if (! $deposit) {
+        if (! $this->assertDepositBelongsToApiScope($deposit, $request)) {
             return $this->notFound();
         }
 
@@ -50,7 +58,7 @@ class LuggageDepositController extends Controller
     public function update(Request $request, string $code): JsonResponse
     {
         $deposit = $this->service->findByCode($code);
-        if (! $deposit) {
+        if (! $this->assertDepositBelongsToApiScope($deposit, $request)) {
             return $this->notFound();
         }
 
@@ -89,10 +97,10 @@ class LuggageDepositController extends Controller
         return $this->luggageSuccess((new LuggageDepositResource($updated))->resolve());
     }
 
-    public function cancel(string $code): JsonResponse
+    public function cancel(Request $request, string $code): JsonResponse
     {
         $deposit = $this->service->findByCode($code);
-        if (! $deposit) {
+        if (! $this->assertDepositBelongsToApiScope($deposit, $request)) {
             return $this->notFound();
         }
 

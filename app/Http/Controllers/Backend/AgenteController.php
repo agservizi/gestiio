@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Http\MieClassi\AlertMessage;
+use App\Http\Services\LockerAgentSubscriptionService;
+use App\Http\Services\LuggageAgentSubscriptionService;
 use App\Models\Agente;
 use App\Models\Gestore;
 use App\Models\Mandato;
@@ -12,6 +15,8 @@ use App\Models\RegistroLogin;
 use App\Models\Ticket;
 use App\Models\TipoContratto;
 use App\Models\User;
+use App\Policies\LockerPackagePolicy;
+use App\Policies\LuggageDepositPolicy;
 use App\Notifications\DatiAccessoNotification;
 use App\Notifications\PasswordResetNotification;
 use App\Rules\CodiceFiscaleRule;
@@ -38,7 +43,7 @@ class AgenteController extends Controller
     protected $conFiltro = false;
 
     /**
-     * Raggruppa i permessi granulari di Registro/Impostazioni/Controlli Contratti
+     * Raggruppa i permessi granulari di Registro/Impostazioni/Controlli Contratti/SEND
      * in pochi toggle "di comodo": abilitando un gruppo si abilitano tutti i
      * permessi che contiene.
      */
@@ -70,6 +75,37 @@ class AgenteController extends Controller
             'controlli-contratti.view',
             'controlli-contratti.update',
         ],
+        'gruppo:send-operatore' => [
+            'send.access',
+            'send.requests.view',
+            'send.requests.view-own',
+            'send.requests.create',
+            'send.requests.update',
+            'send.requests.submit',
+            'send.requests.cancel',
+            'send.documents.view',
+            'send.documents.upload',
+            'send.documents.download',
+        ],
+        'gruppo:send-supervisore' => [
+            'send.requests.view-all',
+            'send.requests.assign',
+            'send.requests.take-charge',
+            'send.requests.request-integration',
+            'send.requests.process',
+            'send.requests.complete',
+            'send.requests.reject',
+            'send.documents.delete',
+            'send.notes.view-internal',
+            'send.notes.create-internal',
+        ],
+        'gruppo:send-admin' => [
+            'send.requests.delete',
+            'send.requests.reopen',
+            'send.audit.view',
+            'send.reports.view',
+            'send.settings.manage',
+        ],
     ];
 
     public const ETICHETTE_GRUPPI_AVANZATI = [
@@ -79,6 +115,9 @@ class AgenteController extends Controller
         'settings.update' => 'Impostazioni: Modifica',
         'gruppo:settings-avanzate' => 'Impostazioni: Import / Export / Rollback',
         'gruppo:controlli-contratti' => 'Controlli Contratti',
+        'gruppo:send-operatore' => 'SEND: Operatore sportello',
+        'gruppo:send-supervisore' => 'SEND: Supervisore / lavorazione',
+        'gruppo:send-admin' => 'SEND: Audit e impostazioni',
     ];
 
     /**
@@ -254,6 +293,8 @@ class AgenteController extends Controller
         $record = new User;
         $this->salvaDatiUtente($record, $request);
         $this->salvadatiAgente(new Agente, $request, $record);
+        $this->finalizeLuggageAgentAccess($record, $request);
+        $this->finalizeLockerAgentAccess($record, $request);
 
         return $this->backToIndex();
     }
@@ -340,6 +381,13 @@ class AgenteController extends Controller
         $permessiAvanzati = array_merge(...array_values(self::GRUPPI_PERMESSI_AVANZATI));
         $permessiAvanzati[] = 'settings.update';
 
+        // Nascondi eventuali send.* residui non mappati nei gruppi.
+        $sendResidui = Permission::query()
+            ->where('name', 'like', 'send.%')
+            ->pluck('name')
+            ->all();
+        $permessiAvanzati = array_values(array_unique(array_merge($permessiAvanzati, $sendResidui)));
+
         $gruppiAvanzati = [];
         foreach (self::ETICHETTE_GRUPPI_AVANZATI as $chiave => $etichetta) {
             $permessiGruppo = self::GRUPPI_PERMESSI_AVANZATI[$chiave] ?? [$chiave];
@@ -368,6 +416,8 @@ class AgenteController extends Controller
         $request->validate($this->rules($id));
         $this->salvaDatiUtente($record, $request);
         $this->salvadatiAgente(Agente::firstOrNew(['user_id' => $id]), $request, $record);
+        $this->finalizeLuggageAgentAccess($record, $request);
+        $this->finalizeLockerAgentAccess($record, $request);
 
         return $this->backToIndex();
     }
@@ -539,14 +589,11 @@ class AgenteController extends Controller
         }
         $model->save();
 
-        $permessiEspansi = [];
-        foreach ((array) $request->input('vedi', []) as $voce) {
-            if (array_key_exists($voce, self::GRUPPI_PERMESSI_AVANZATI)) {
-                array_push($permessiEspansi, ...self::GRUPPI_PERMESSI_AVANZATI[$voce]);
-            } else {
-                $permessiEspansi[] = $voce;
-            }
-        }
+        $permessiEspansi = $this->expandVediPermissions((array) $request->input('vedi', []));
+        $permessiEspansi = array_values(array_filter(
+            $permessiEspansi,
+            fn (string $permesso) => $permesso !== LuggageDepositPolicy::PERMISSION
+        ));
         $model->syncPermissions(array_merge([$request->input('ruolo')], $permessiEspansi));
 
         if ($nuovo) {
@@ -558,6 +605,82 @@ class AgenteController extends Controller
         }
 
         return $model;
+    }
+
+    protected function expandVediPermissions(array $vedi): array
+    {
+        $permessiEspansi = [];
+
+        foreach ($vedi as $voce) {
+            if (array_key_exists($voce, self::GRUPPI_PERMESSI_AVANZATI)) {
+                array_push($permessiEspansi, ...self::GRUPPI_PERMESSI_AVANZATI[$voce]);
+                if (str_starts_with($voce, 'gruppo:send-')) {
+                    $permessiEspansi[] = 'servizio_send';
+                }
+            } elseif ($voce === 'servizio_send') {
+                // Toggle Servizi: attiva il modulo + pacchetto operatore.
+                $permessiEspansi[] = 'servizio_send';
+                array_push($permessiEspansi, ...self::GRUPPI_PERMESSI_AVANZATI['gruppo:send-operatore']);
+            } else {
+                $permessiEspansi[] = $voce;
+            }
+        }
+
+        return array_values(array_unique($permessiEspansi));
+    }
+
+    protected function finalizeLuggageAgentAccess(User $user, Request $request): void
+    {
+        if ($user->hasPermissionTo('admin')) {
+            return;
+        }
+
+        $permessi = $this->expandVediPermissions((array) $request->input('vedi', []));
+        $wantsLuggage = in_array(LuggageDepositPolicy::PERMISSION, $permessi, true);
+        $service = app(LuggageAgentSubscriptionService::class);
+
+        if (! $wantsLuggage) {
+            $service->revokeAccess($user);
+
+            return;
+        }
+
+        if ($service->ensureAccessGranted($user)) {
+            return;
+        }
+
+        $service->revokeAccess($user);
+        (new AlertMessage)->messaggio(
+            'Deposito Bagagli non attivato: portafoglio servizi insufficiente per il canone mensile di '.importo($service->monthlyFee(), true).'.',
+            'warning'
+        )->flash();
+    }
+
+    protected function finalizeLockerAgentAccess(User $user, Request $request): void
+    {
+        if ($user->hasPermissionTo('admin')) {
+            return;
+        }
+
+        $permessi = $this->expandVediPermissions((array) $request->input('vedi', []));
+        $wantsLocker = in_array(LockerPackagePolicy::PERMISSION, $permessi, true);
+        $service = app(LockerAgentSubscriptionService::class);
+
+        if (! $wantsLocker) {
+            $service->revokeAccess($user);
+
+            return;
+        }
+
+        if ($service->ensureAccessGranted($user)) {
+            return;
+        }
+
+        $service->revokeAccess($user);
+        (new AlertMessage)->messaggio(
+            'Locker Point non attivato: portafoglio servizi insufficiente per il canone mensile di '.importo($service->monthlyFee(), true).'.',
+            'warning'
+        )->flash();
     }
 
     /**
@@ -588,6 +711,8 @@ class AgenteController extends Controller
             'paga_con_paypal' => 'app\getInputCheckbox',
             'openapi_visure_token' => '',
             'openapi_catasto_token' => '',
+            'openapi_email' => '',
+            'openapi_api_key' => '',
 
         ];
         foreach ($campi as $campo => $funzione) {
@@ -603,8 +728,15 @@ class AgenteController extends Controller
         if ($authUser && $authUser->hasPermissionTo('admin')) {
             $model->openapi_visure_token = trim((string) $model->openapi_visure_token) ?: null;
             $model->openapi_catasto_token = trim((string) $model->openapi_catasto_token) ?: null;
+            $model->openapi_email = trim((string) $model->openapi_email) ?: null;
+            $model->openapi_api_key = trim((string) $model->openapi_api_key) ?: null;
         } else {
-            unset($model->openapi_visure_token, $model->openapi_catasto_token);
+            unset(
+                $model->openapi_visure_token,
+                $model->openapi_catasto_token,
+                $model->openapi_email,
+                $model->openapi_api_key
+            );
         }
         $model->save();
 
@@ -671,6 +803,8 @@ class AgenteController extends Controller
             'password' => [$id == null ? 'required' : 'nullable', 'string', new PasswordRules],
             'openapi_visure_token' => ['nullable', 'string', 'max:2048'],
             'openapi_catasto_token' => ['nullable', 'string', 'max:2048'],
+            'openapi_email' => ['nullable', 'string', 'email', 'max:255'],
+            'openapi_api_key' => ['nullable', 'string', 'max:2048'],
 
         ];
 

@@ -121,7 +121,7 @@
                         <h3>Audit documenti</h3>
                         <span>Chi ha toccato cosa.</span>
                     </div>
-                    <a href="{{action([\App\Http\Controllers\Backend\CartellaFilesController::class, 'index'])}}" class="btn btn-sm btn-light-primary">Apri</a>
+                    <a href="{{ route('backend.documenti') }}" class="btn btn-sm btn-light-primary">Apri</a>
                 </div>
                 <div class="admin-audit-list">
                     @forelse($controlRoomAdmin['audit'] as $log)

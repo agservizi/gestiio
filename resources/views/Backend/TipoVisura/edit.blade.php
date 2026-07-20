@@ -22,12 +22,14 @@
                 </div>
                 <div class="row">
                     <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'prezzo_cliente','testo'=>'Prezzo cliente','required'=>true,"classe"=>"autonumericImporto"])
+                        @include('Backend._inputs.inputText',['campo'=>'prezzo_cliente','testo'=>'Prezzo cliente (listino Gestiio)','required'=>true,"classe"=>"autonumericImporto"])
+                        <small class="text-muted">Prezzo mostrato/addebitato al cliente lato Gestiio. Indipendente dal listino Openapi.</small>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6">
-                        @include('Backend._inputs.inputText',['campo'=>'prezzo_agente','testo'=>'Prezzo agente','required'=>true,"classe"=>"autonumericImporto"])
+                        @include('Backend._inputs.inputText',['campo'=>'prezzo_agente','testo'=>'Prezzo agente (listino Gestiio)','required'=>true,"classe"=>"autonumericImporto"])
+                        <small class="text-muted">Addebitato sempre sul <strong>portafoglio visure</strong> dell’agente (anche se la pratica va in coda backoffice). Non è il costo Openapi.</small>
                     </div>
                 </div>
                 <div class="row">

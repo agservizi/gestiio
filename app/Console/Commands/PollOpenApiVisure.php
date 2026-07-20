@@ -36,7 +36,11 @@ class PollOpenApiVisure extends Command
             ->with('tipo:id,nome')
             ->with('agente:id')
             ->with('agente.agente')
-            ->whereNotNull('openapi_request_id');
+            ->whereNotNull('openapi_request_id')
+            ->where(function ($q) {
+                $q->whereNull('openapi_stato_richiesta')
+                    ->orWhere('openapi_stato_richiesta', '!=', 'backoffice');
+            });
 
         if (Schema::hasColumn('visure', 'openapi_documento_scaricato_at')) {
             $query->whereNull('openapi_documento_scaricato_at');

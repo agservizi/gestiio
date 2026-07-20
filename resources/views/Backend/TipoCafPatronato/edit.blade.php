@@ -18,11 +18,14 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         @include('Backend._inputs.inputText',['campo'=>'prezzo_cliente','testo'=>'Prezzo cliente','required'=>true,"classe"=>"autonumericImporto"])
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         @include('Backend._inputs.inputText',['campo'=>'prezzo_agente','testo'=>'Prezzo agente','required'=>true,"classe"=>"autonumericImporto"])
+                    </div>
+                    <div class="col-md-4">
+                        @include('Backend._inputs.inputText',['campo'=>'importo_fornitore','testo'=>'Importo fornitore','required'=>true,"classe"=>"autonumericImporto"])
                     </div>
                 </div>
                 <div class="row">

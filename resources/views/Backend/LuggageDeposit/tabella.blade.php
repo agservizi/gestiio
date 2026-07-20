@@ -41,20 +41,20 @@
                             @if($canCancel)
                                 @if($record->status->value === 'PRENOTATO')
                                     <div class="menu-item px-3">
-                                        <form method="post" action="{{ action([$controller,'action'], $record->id) }}" onsubmit="return confirm('Segnare {{ $record->code }} come no-show?');">
+                                        <form method="post" action="{{ action([$controller,'action'], $record->id) }}">
                                             @csrf
                                             <input type="hidden" name="action" value="no-show">
-                                            <button type="submit" class="menu-link px-3 w-100 border-0 bg-transparent text-start text-danger">
+                                            <button type="button" class="menu-link px-3 w-100 border-0 bg-transparent text-start text-danger" onclick="return gestiioAsk(this, 'Segnare {{ $record->code }} come no-show?', true)">
                                                 <i class="bi bi-person-x me-2"></i>No-show
                                             </button>
                                         </form>
                                     </div>
                                 @endif
                                 <div class="menu-item px-3">
-                                    <form method="post" action="{{ action([$controller,'action'], $record->id) }}" onsubmit="return confirm('Annullare la prenotazione {{ $record->code }}?');">
+                                    <form method="post" action="{{ action([$controller,'action'], $record->id) }}">
                                         @csrf
                                         <input type="hidden" name="action" value="cancel">
-                                        <button type="submit" class="menu-link px-3 w-100 border-0 bg-transparent text-start text-warning">
+                                        <button type="button" class="menu-link px-3 w-100 border-0 bg-transparent text-start text-warning" onclick="return gestiioAsk(this, 'Annullare la prenotazione {{ $record->code }}?')">
                                             <i class="bi bi-x-circle me-2"></i>Annulla prenotazione
                                         </button>
                                     </form>
@@ -62,10 +62,10 @@
                             @endif
                             @can('delete', $record)
                                 <div class="menu-item px-3">
-                                    <form method="post" action="{{ action([$controller,'action'], $record->id) }}?view={{ request('view', 'oggi') }}" onsubmit="return confirm('Eliminare definitivamente {{ $record->code }} dal database?');">
+                                    <form method="post" action="{{ action([$controller,'action'], $record->id) }}?view={{ request('view', 'oggi') }}">
                                         @csrf
                                         <input type="hidden" name="action" value="delete">
-                                        <button type="submit" class="menu-link px-3 w-100 border-0 bg-transparent text-start text-danger">
+                                        <button type="button" class="menu-link px-3 w-100 border-0 bg-transparent text-start text-danger" onclick="return gestiioAsk(this, 'Eliminare definitivamente {{ $record->code }} dal database?', true)">
                                             <i class="bi bi-trash me-2"></i>Elimina dal database
                                         </button>
                                     </form>

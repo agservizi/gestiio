@@ -676,7 +676,7 @@
                 existingFiles: @json(\App\Models\AllegatoCafPatronato::perBlade($uid,$record->id)),
                 sendingData: {
                     uid: function () { return $('#uid').val(); },
-                    caf_patronato_id: {{$record->id ? (int) $record->id : 0}}
+                    caf_patronato_id: {{ $record->id ? (int) $record->id : 'null' }}
                 }
             });
 

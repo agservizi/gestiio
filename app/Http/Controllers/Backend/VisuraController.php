@@ -91,6 +91,7 @@ class VisuraController extends Controller
             'ok' => (clone $recordsQB)->where('esito_finale', 'ok')->count(),
             'ko' => (clone $recordsQB)->where('esito_finale', 'ko')->count(),
             'sla_attention' => (clone $recordsQB)->whereNull('esito_finale')->where('created_at', '<=', now()->subDays(3))->count(),
+            'backoffice' => (clone $recordsQB)->where('openapi_stato_richiesta', 'backoffice')->whereNull('esito_finale')->count(),
         ];
 
         $records = $recordsQB->paginate(config('configurazione.paginazione'))->withQueryString();
@@ -125,6 +126,11 @@ class VisuraController extends Controller
                 ->get(['id', 'nome', 'cognome']);
         }
 
+        $openapiPlatformCredit = null;
+        if ($this->currentUser()->hasPermissionTo('admin')) {
+            $openapiPlatformCredit = app(\App\Http\Services\OpenApi\OpenApiPlatformClient::class)->cachedCreditForDisplay();
+        }
+
         return view('Backend.Visura.index', [
             'records' => $records,
             'controller' => $nomeClasse,
@@ -139,6 +145,7 @@ class VisuraController extends Controller
             'puoModificareEsito' => $puoModificareEsito,
             'agentiFiltro' => $agentiFiltro,
             'totali' => $totali,
+            'openapiPlatformCredit' => $openapiPlatformCredit,
 
         ]);
 
@@ -212,6 +219,12 @@ class VisuraController extends Controller
             $this->conFiltro = true;
         }
 
+        if ($request->input('openapi_stato_richiesta') === 'backoffice'
+            || $request->input('filtro_canale') === 'backoffice') {
+            $queryBuilder->where('openapi_stato_richiesta', 'backoffice');
+            $this->conFiltro = true;
+        }
+
         return $queryBuilder;
     }
 
@@ -228,7 +241,7 @@ class VisuraController extends Controller
                 'record' => new Visura,
                 'titoloPagina' => 'Nuova visura',
                 'controller' => get_class($this),
-                'serviziVisura' => TipoVisura::query()->orderBy('nome')->get(),
+                'serviziVisura' => TipoVisura::query()->where('abilitato', 1)->orderBy('nome')->get(),
             ]);
         }
         $record = new Visura;
@@ -661,6 +674,7 @@ class VisuraController extends Controller
     {
         $servizio = $request->input('tipo_visura_id');
         $fallbackBackoffice = $request->boolean('fallback_backoffice');
+        $autoBackofficeReason = null;
 
         $request->validate($this->rules(null, $request));
 
@@ -677,16 +691,19 @@ class VisuraController extends Controller
                 throw new \RuntimeException('Agente non trovato per questa visura');
             }
             $prezzo = (float) $tipoServizio->prezzo_agente;
-            if ($fallbackBackoffice) {
-                $saldoServizi = (float) ($agente->agente->portafoglio_servizi ?? 0);
-                if ($saldoServizi < $prezzo) {
-                    throw new \RuntimeException('Credito portafoglio servizi insufficiente per invio al backoffice');
-                }
-            } else {
-                $saldoVisure = (float) ($agente->agente->portafoglio_visure ?? 0);
-                if ($saldoVisure < $prezzo) {
-                    throw new \RuntimeException('Credito portafoglio visure insufficiente');
-                }
+            $saldoVisure = (float) ($agente->agente->portafoglio_visure ?? 0);
+            if ($saldoVisure < $prezzo) {
+                throw new \RuntimeException('Credito portafoglio visure insufficiente');
+            }
+
+            if (! $fallbackBackoffice && ! $this->agenteHasOpenApiAccountCredentials($agente)) {
+                $fallbackBackoffice = true;
+                $autoBackofficeReason = 'Credenziali account Openapi (email + API key) non configurate sul profilo agente: pratica in coda backoffice.';
+            }
+
+            if (! $fallbackBackoffice && ! $this->agenteHasOpenApiTokenForTipo($agente, $tipoServizio)) {
+                $fallbackBackoffice = true;
+                $autoBackofficeReason = 'Token Openapi non configurato sul profilo agente: pratica in coda backoffice.';
             }
 
             $record = new Visura;
@@ -704,17 +721,29 @@ class VisuraController extends Controller
                 $record->openapi_stato_richiesta = 'backoffice';
                 $record->openapi_response = [
                     'status' => 'backoffice',
-                    'message' => 'Pratica inviata al backoffice su richiesta agente',
+                    'message' => $autoBackofficeReason
+                        ?? ($request->boolean('fallback_backoffice')
+                            ? 'Pratica inviata al backoffice su richiesta agente'
+                            : 'Pratica inviata al backoffice'),
                 ];
                 $record->openapi_last_sync_at = now();
                 $record->save();
             } else {
                 try {
+                    $platformClient = app(\App\Http\Services\OpenApi\OpenApiPlatformClient::class);
+                    if (! $platformClient->hasSufficientCreditForAgente($agente->agente, $prezzo)) {
+                        throw new \RuntimeException('__OPENAPI_CREDITO_BLOCCO__Credito Openapi agente insufficiente');
+                    }
                     $this->avviaRichiestaOpenApi($record, $tipoServizio);
                     $this->processaOpenApiAutomatico($record);
                 } catch (\Throwable $openApiException) {
-                    if ($this->isOpenApiCreditoTokenIssue($openApiException->getMessage())) {
-                        throw new \RuntimeException('__OPENAPI_CREDITO_BLOCCO__'.$openApiException->getMessage());
+                    if ($this->isOpenApiCreditoTokenIssue($openApiException->getMessage())
+                        || str_starts_with($openApiException->getMessage(), '__OPENAPI_CREDITO_BLOCCO__')) {
+                        throw new \RuntimeException(
+                            str_starts_with($openApiException->getMessage(), '__OPENAPI_CREDITO_BLOCCO__')
+                                ? $openApiException->getMessage()
+                                : '__OPENAPI_CREDITO_BLOCCO__'.$openApiException->getMessage()
+                        );
                     }
                     throw $openApiException;
                 }
@@ -727,9 +756,7 @@ class VisuraController extends Controller
                 .$tipoServizio->nome.' per '.($record->partita_iva ?? $record->codice_fiscale);
             $movimento->prodotto_id = $record->id;
             $movimento->prodotto_type = get_class($record);
-            $movimento->portafoglio = $fallbackBackoffice
-                ? TipiPortafoglioEnum::SERVIZI->value
-                : TipiPortafoglioEnum::VISURE->value;
+            $movimento->portafoglio = TipiPortafoglioEnum::VISURE->value;
             $movimento->save();
 
             DB::commit();
@@ -757,10 +784,10 @@ class VisuraController extends Controller
         }
 
         $alertMessage = new AlertMessage;
-        $walletText = $fallbackBackoffice ? 'portafoglio servizi' : 'portafoglio visure';
         $azioneText = $fallbackBackoffice ? 'inviata al backoffice' : 'creata';
+        $extra = $autoBackofficeReason ? ' '.$autoBackofficeReason : '';
         $alertMessage
-            ->messaggio('Ti è stato scalato l\'importo di '.importo($tipoServizio->prezzo_agente).' dal '.$walletText.' per la visura '.$tipoServizio->nome.' '.$azioneText, 'primary')
+            ->messaggio('Ti è stato scalato l\'importo di '.importo($tipoServizio->prezzo_agente).' dal portafoglio visure per la visura '.$tipoServizio->nome.' '.$azioneText.'.'.$extra, 'primary')
             ->titolo('Portafoglio aggiornato', 'primary')
             ->flash();
 
@@ -1065,6 +1092,21 @@ class VisuraController extends Controller
         }
 
         try {
+            $agenteUser = User::query()->with('agente')->find((int) $record->agente_id);
+            if (! $agenteUser || ! $agenteUser->agente) {
+                return ['success' => false, 'message' => 'Agente non trovato per questa visura'];
+            }
+            $platformClient = app(\App\Http\Services\OpenApi\OpenApiPlatformClient::class);
+            if (! $platformClient->agenteHasOpenApiAccountCredentials($agenteUser->agente)) {
+                return ['success' => false, 'message' => 'Credenziali account Openapi (email + API key) mancanti sul profilo agente'];
+            }
+            if (! $this->agenteHasOpenApiTokenForTipo($agenteUser, $record->tipo)) {
+                return ['success' => false, 'message' => 'Token Openapi mancante sul profilo agente'];
+            }
+            $minCredit = (float) ($record->prezzo_pratica ?? 0.01);
+            if (! $platformClient->hasSufficientCreditForAgente($agenteUser->agente, $minCredit)) {
+                return ['success' => false, 'message' => 'Credito Openapi agente insufficiente'];
+            }
             $this->avviaRichiestaOpenApi($record, $record->tipo);
         } catch (\Throwable $exception) {
             return ['success' => false, 'message' => $this->userFacingOpenApiMessage($exception->getMessage(), 'Impossibile avviare la richiesta automatica')];
@@ -1461,6 +1503,34 @@ class VisuraController extends Controller
         return $agente->agente->openapi_visure_token ?: null;
     }
 
+    protected function agenteHasOpenApiAccountCredentials(User $agenteUser): bool
+    {
+        if (! $agenteUser->agente) {
+            return false;
+        }
+
+        return app(\App\Http\Services\OpenApi\OpenApiPlatformClient::class)
+            ->agenteHasOpenApiAccountCredentials($agenteUser->agente);
+    }
+
+    protected function agenteHasOpenApiTokenForTipo(User $agenteUser, TipoVisura $tipoServizio): bool
+    {
+        if (! $agenteUser->agente) {
+            return false;
+        }
+
+        $hash = trim((string) $tipoServizio->openapi_hash_visura);
+        if ($hash !== '') {
+            return filled($agenteUser->agente->openapi_visure_token);
+        }
+
+        if ($this->isCatastaleType($tipoServizio)) {
+            return filled($agenteUser->agente->openapi_catasto_token);
+        }
+
+        return filled($agenteUser->agente->openapi_visure_token);
+    }
+
     protected function isOpenApiCreditoTokenIssue(string $message): bool
     {
         $message = strtolower(trim($message));
@@ -1475,6 +1545,10 @@ class VisuraController extends Controller
             'unauthorized',
             '(401)',
             ' 401',
+            'credito openapi piattaforma insufficiente',
+            'credito openapi agente insufficiente',
+            'openapi piattaforma',
+            'openapi agente',
         ];
 
         foreach ($tokenMarkers as $marker) {

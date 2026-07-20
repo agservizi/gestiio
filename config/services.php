@@ -45,6 +45,12 @@ return [
     ],
 
     'openapi' => [
+        // Account piattaforma (OAuth / wallet) — non confondere con i Bearer per-agente
+        'username' => env('OPENAPI_USERNAME', env('OPENAPI_EMAIL')),
+        'email' => env('OPENAPI_EMAIL', env('OPENAPI_USERNAME')),
+        'api_key' => env('OPENAPI_API_KEY', env('OPENAPI_KEY')),
+        'key' => env('OPENAPI_KEY', env('OPENAPI_API_KEY')),
+        'oauth_base_url' => env('OPENAPI_OAUTH_URL'),
         'bearer_visure_camerali' => env('OPENAPI_BEARER_VISURE_CAMERALI'),
         'bearer_visure' => env('OPENAPI_BEARER_VISURE', env('OPENAPI_BEARER')),
         'bearer_catasto' => env('OPENAPI_BEARER_CATASTO'),
@@ -162,6 +168,30 @@ return [
         'sender_country_code' => env('INPOST_SENDER_COUNTRY_CODE', 'PL'),
         'default_headers' => env('INPOST_DEFAULT_HEADERS'),
         'defaults' => env('INPOST_DEFAULTS_JSON'),
+    ],
+
+    'stirling' => [
+        'url' => env('STIRLING_URL', 'http://stirling-pdf:8080'),
+        'public_url' => env('STIRLING_PUBLIC_URL', rtrim((string) env('APP_URL', 'https://gestiio.agenziaplinio.it'), '/').'/pdf-tools'),
+        'desktop_url' => env('STIRLING_DESKTOP_URL', 'http://192.168.1.50:8092'),
+        'timeout' => env('STIRLING_TIMEOUT', 300),
+        'admin_user' => env('STIRLING_ADMIN_USER', 'admin'),
+        'admin_password' => env('STIRLING_ADMIN_PASSWORD'),
+        'user_secret' => env('STIRLING_USER_SECRET'),
+        // Sessione condivisa + niente My Files: evita limite 5 utenti e condivisioni file
+        'shared_session' => env('STIRLING_SHARED_SESSION', true),
+        'storage_enabled' => env('STIRLING_STORAGE_ENABLED', false),
+    ],
+
+    'seafile' => [
+        'url' => env('SEAFILE_URL', 'http://seafile'),
+        'public_url' => env('SEAFILE_PUBLIC_URL', 'https://documenti.agenziaplinio.it'),
+        'admin_email' => env('SEAFILE_ADMIN_EMAIL', 'admin@gestiio.local'),
+        'admin_password' => env('SEAFILE_ADMIN_PASSWORD'),
+        'agente_email' => env('SEAFILE_AGENTE_EMAIL', 'agente-ro@gestiio.local'),
+        'agente_password' => env('SEAFILE_AGENTE_PASSWORD'),
+        'repo_id' => env('SEAFILE_REPO_ID'),
+        'timeout' => env('SEAFILE_TIMEOUT', 300),
     ],
 
 ];

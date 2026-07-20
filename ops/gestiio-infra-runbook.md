@@ -7,6 +7,7 @@ This runbook covers the current production stack on the TerraMaster NAS:
 - DockerEngine / DockerApi services
 - `gestiio-db`
 - `gestiio-app`
+- `stirling-pdf` (PDF Tools, rete interna Gestiio)
 - `corehost_traefik`
 - `cloudflared_corehost`
 - Cloudflare Tunnel for `gestiio.agenziaplinio.it`
@@ -40,7 +41,9 @@ The script starts critical containers first:
 - `corehost_traefik`
 - `cloudflared_corehost`
 
-Then it starts the remaining Docker containers.
+Then it starts the remaining Docker containers (incl. `stirling-pdf` se presente).
+
+PDF Tools: container `stirling-pdf` sulla rete `gestiio-20260624-2128_default`, compose in `/home/Carmine/apps/stirling-pdf/docker-compose.stirling.yml` (repo: `ops/docker-compose.stirling.yml`). UI Gestiio: `/backend/pdf-tools`.
 
 ## Health Check
 

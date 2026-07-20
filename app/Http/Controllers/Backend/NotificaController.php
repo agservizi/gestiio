@@ -97,7 +97,9 @@ class NotificaController extends Controller
             ->withCount('letture');
 
         if ($authUser instanceof User && ! $authUser->hasPermissionTo('admin')) {
-            $destinatario = $authUser->hasPermissionTo('operatore') ? 'operatore' : 'agente';
+            $destinatario = $authUser->hasPermissionTo('operatore')
+                ? 'operatore'
+                : ($authUser->hasPermissionTo('supervisore') ? 'supervisore' : 'agente');
             $queryBuilder
                 ->whereIn('destinatario', [$destinatario, 'tutti'])
                 ->where(function ($q) use ($authUser) {

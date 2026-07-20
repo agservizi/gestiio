@@ -138,11 +138,17 @@
                             <strong>{{ $tipoServizio->richiedi_allegati ? 'Con allegati' : 'Senza allegati' }}</strong>
                         </div>
                         <div class="visura-aside-note">
-                            Salva quando dati e documenti sono completi. Se il credito OpenAPI non basta, puoi inviare al backoffice dal popup dedicato.
+                            Salva quando dati e documenti sono completi. L’addebito avviene sempre sul portafoglio visure (listino Gestiio). Senza token Openapi sul profilo agente la pratica va in coda backoffice.
                         </div>
                         <button class="btn btn-primary w-100" type="submit" id="submit">
                             {{$vecchio?'Salva modifiche':'Crea '.\App\Models\Visura::NOME_SINGOLARE}}
                         </button>
+
+                        @if($vecchio && Auth::user()->hasAnyPermission(['admin','operatore']) && ($record->openapi_stato_richiesta ?? '') === 'backoffice')
+                            <button type="button" class="btn btn-light-info w-100 mt-3" id="btn-riprova-openapi">
+                                Riprova Openapi
+                            </button>
+                        @endif
 
                         @if($vecchio)
                             <div class="mt-3">
@@ -447,7 +453,7 @@
             Swal.fire({
                 icon: 'warning',
                 title: 'Servizio automatico non disponibile',
-                text: 'Puoi ricaricare il portafoglio visure oppure inviare la pratica al backoffice (con scalo da portafoglio servizi).',
+                text: 'Credito Openapi dell’agente insufficiente oppure token non valido. Puoi ricaricare il portafoglio visure Gestiio, verificare email/API key Openapi sul profilo, oppure inviare la pratica al backoffice.',
                 showCancelButton: true,
                 showDenyButton: true,
                 confirmButtonText: 'Ricarica portafoglio visure',
@@ -465,6 +471,34 @@
                 }
             });
             @endif
+
+            $('#btn-riprova-openapi').on('click', function () {
+                const $btn = $(this);
+                $btn.prop('disabled', true);
+                $.ajax({
+                    url: "{{ $vecchio ? action([\App\Http\Controllers\Backend\VisuraController::class,'richiediOpenApi'], $record->id) : '#' }}",
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {_token: '{{ csrf_token() }}'},
+                    success: function (res) {
+                        Swal.fire({
+                            icon: res.success ? 'success' : 'error',
+                            title: res.success ? 'Richiesta inviata' : 'Errore',
+                            text: res.message || ''
+                        }).then(function () {
+                            if (res.success) {
+                                window.location.reload();
+                            }
+                        });
+                    },
+                    error: function () {
+                        Swal.fire({icon: 'error', title: 'Errore', text: 'Impossibile riprovare Openapi'});
+                    },
+                    complete: function () {
+                        $btn.prop('disabled', false);
+                    }
+                });
+            });
 
             initGestiioDropzone("#kt_dropzonejs_example_1", {
                 uploadUrl: "{{action([\App\Http\Controllers\Backend\AllegatoServizioController::class,'uploadAllegato'])}}",

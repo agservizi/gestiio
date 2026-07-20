@@ -23,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('local')) {
             Model::shouldBeStrict();
         }
+
+        $this->app->bind(
+            \App\Contracts\SendProviderInterface::class,
+            \App\Http\Services\Send\ManualSendProvider::class
+        );
     }
 
     /**

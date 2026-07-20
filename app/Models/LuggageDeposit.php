@@ -19,6 +19,7 @@ class LuggageDeposit extends Model
 
     protected $fillable = [
         'id',
+        'station_id',
         'code',
         'qr_token',
         'cliente_id',
@@ -33,6 +34,7 @@ class LuggageDeposit extends Model
         'expected_check_out',
         'checked_in_at',
         'checked_out_at',
+        'pickup_qr_sent_at',
         'daily_rate',
         'total_amount',
         'payment_method',
@@ -48,6 +50,7 @@ class LuggageDeposit extends Model
         'expected_check_out' => 'datetime',
         'checked_in_at' => 'datetime',
         'checked_out_at' => 'datetime',
+        'pickup_qr_sent_at' => 'datetime',
         'daily_rate' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'status' => LuggageDepositStatus::class,
@@ -65,6 +68,11 @@ class LuggageDeposit extends Model
     public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class);
+    }
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(LuggageStation::class, 'station_id');
     }
 
     public function cashMovement(): BelongsTo

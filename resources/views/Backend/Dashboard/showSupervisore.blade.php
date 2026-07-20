@@ -18,6 +18,14 @@
         $canVisure = $canVisure ?? auth()->user()?->can('servizio_visure');
         $canSpedizioni = $canSpedizioni ?? auth()->user()?->can('servizio_spedizioni');
         $canDocumentazione = $canDocumentazione ?? auth()->user()?->can('servizio_documentazione');
+        $canSend = auth()->user()?->can('viewAny', \App\Models\SendRequest::class);
+        if ($canSend && auth()->user()?->can('send.requests.process') && \Illuminate\Support\Facades\Schema::hasTable('send_requests')) {
+            $sendOperativo = $sendOperativo ?? app(\App\Http\Services\SendRequestService::class)
+                ->supervisorOperativoForDashboard(auth()->user());
+        } else {
+            $sendOperativo = $sendOperativo ?? null;
+        }
+        $sendQueueCount = (int) (($sendOperativo['to_take'] ?? 0) + ($sendOperativo['in_work'] ?? 0) + ($sendOperativo['pending_assignment'] ?? 0));
 
         $kpiSupervisore = $kpiSupervisore ?? [
             'contratti_telefonia_mese' => 0,
@@ -47,8 +55,109 @@
             'nuovi_messaggi_oggi' => 0,
         ];
 
-        $showPriorita = $canCafPatronato || $canTicket || $canVisure;
+        $showPriorita = $canCafPatronato || $canTicket || $canVisure || $canSend;
     @endphp
+
+    @if($canSend && auth()->user()?->can('send.requests.process'))
+        <div class="card mb-5">
+            <div class="card-header border-0 pt-5">
+                <div>
+                    <h3 class="card-title fw-bold m-0">SEND — Coda supervisore</h3>
+                    <div class="text-muted fs-7">Pratiche assegnate a te</div>
+                </div>
+                <div class="card-toolbar d-flex flex-wrap gap-2">
+                    @if($sendQueueCount > 0)
+                        <span class="badge badge-danger">{{ $sendQueueCount }} in coda</span>
+                    @endif
+                    <a href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'queue']) }}" class="btn btn-sm btn-primary">Apri coda</a>
+                    <a href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'dashboard']) }}" class="btn btn-sm btn-light">Dashboard SEND</a>
+                </div>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-flex flex-nowrap gap-3 gap-xl-4 mb-5 overflow-x-auto">
+                    <div class="flex-fill min-w-0">
+                        <div class="border rounded p-3 p-xl-4 h-100 text-center">
+                            <div class="text-muted fs-8 text-uppercase text-nowrap">Da prendere</div>
+                            <div class="fs-2 fw-bold @if(data_get($sendOperativo, 'to_take', 0) > 0) text-danger @endif">{{ data_get($sendOperativo, 'to_take', 0) }}</div>
+                        </div>
+                    </div>
+                    <div class="flex-fill min-w-0">
+                        <div class="border rounded p-3 p-xl-4 h-100 text-center">
+                            <div class="text-muted fs-8 text-uppercase text-nowrap">In lavorazione</div>
+                            <div class="fs-2 fw-bold">{{ data_get($sendOperativo, 'in_work', 0) }}</div>
+                        </div>
+                    </div>
+                    <div class="flex-fill min-w-0">
+                        <div class="border rounded p-3 p-xl-4 h-100 text-center">
+                            <div class="text-muted fs-8 text-uppercase text-nowrap">Urgenti</div>
+                            <div class="fs-2 fw-bold @if(data_get($sendOperativo, 'urgent', 0) > 0) text-danger @endif">{{ data_get($sendOperativo, 'urgent', 0) }}</div>
+                        </div>
+                    </div>
+                    <div class="flex-fill min-w-0">
+                        <div class="border rounded p-3 p-xl-4 h-100 text-center">
+                            <div class="text-muted fs-8 text-uppercase text-nowrap">Senza supervisore</div>
+                            <div class="fs-2 fw-bold @if(data_get($sendOperativo, 'pending_assignment', 0) > 0) text-danger @endif">{{ data_get($sendOperativo, 'pending_assignment', 0) }}</div>
+                        </div>
+                    </div>
+                    <div class="flex-fill min-w-0">
+                        <div class="border rounded p-3 p-xl-4 h-100 text-center">
+                            <div class="text-muted fs-8 text-uppercase text-nowrap">Completate oggi</div>
+                            <div class="fs-2 fw-bold">{{ data_get($sendOperativo, 'completed_today', 0) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                @if($sendOperativo && $sendQueueCount > 0 && $sendOperativo['prossime']->isNotEmpty())
+                    <div class="table-responsive">
+                        <table class="table align-middle gs-3 gy-3 mb-0">
+                            <thead>
+                            <tr class="fw-bold text-muted">
+                                <th>Codice</th>
+                                <th>Stato</th>
+                                <th>Soggetto</th>
+                                <th>Operatore</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($sendOperativo['prossime'] as $pratica)
+                                @php
+                                    $dest = $pratica->subjects->firstWhere('subject_role', 'destinatario')
+                                        ?? $pratica->subjects->firstWhere('subject_role', 'impresa')
+                                        ?? $pratica->subjects->first();
+                                @endphp
+                                <tr>
+                                    <td class="fw-semibold">{{ $pratica->request_number }}</td>
+                                    <td><span class="badge {{ $pratica->status->badgeClass() }}">{{ $pratica->status->label() }}</span></td>
+                                    <td>{{ $dest?->displayName() ?: '—' }}</td>
+                                    <td>{{ $pratica->creator?->nominativo() ?: '—' }}</td>
+                                    <td class="text-end text-nowrap">
+                                        @can('claim', $pratica)
+                                            <form method="post" action="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'claim'], $pratica) }}" class="d-inline">@csrf
+                                                <button type="submit" class="btn btn-sm btn-warning">Assegna a me</button>
+                                            </form>
+                                        @endcan
+                                        <a class="btn btn-sm btn-primary" href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'show'], $pratica) }}">Apri</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="text-muted">Nessuna pratica in coda. Controlla l'elenco SEND o attendi nuove richieste dagli operatori.</div>
+                @endif
+            </div>
+        </div>
+    @elseif($canSend)
+        <div class="alert alert-primary d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5">
+            <div>
+                <strong>SEND — Notifiche Digitali</strong>
+                <div class="fs-7">Modulo abilitato</div>
+            </div>
+            <a href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'dashboard']) }}" class="btn btn-sm btn-light">Dashboard SEND</a>
+        </div>
+    @endif
 
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-xl-8">

@@ -46,15 +46,43 @@
     <div class="separator my-6"></div>
     <div class="row">
         <div class="col-md-12">
-            <h5 class="mb-1">Credenziali servizio visure (solo admin)</h5>
-            <div class="text-muted mb-4">Queste credenziali sono gestite esclusivamente dal backoffice admin e usate per separare i costi per agente.</div>
+            <h5 class="mb-1">Account Openapi Visengine (solo admin)</h5>
+            <div class="text-muted mb-2">
+                Credenziali dell’account Openapi <strong>dell’agente</strong> (email + API key dalla
+                <a href="https://console.openapi.com/it" target="_blank" rel="noopener">console Openapi</a>)
+                e Bearer scoped per Visengine/Catasto (console o
+                <a href="https://github.com/openapi/openapi-cli" target="_blank" rel="noopener">openapi-cli</a>).
+                Il wallet Openapi addebitato è quello dell’account agente: <strong>non è condiviso</strong> tra agenti.
+            </div>
+            <div class="alert alert-warning py-3 mb-4">
+                Senza email + API key Openapi <em>e</em> token Bearer sul profilo, le nuove pratiche dell’agente
+                finiscono in <strong>coda backoffice</strong> (lavorazione manuale admin).
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',[
+                'campo'=>'openapi_email',
+                'testo'=>'Email account Openapi',
+                'autocomplete'=>'off',
+                'required'=>false
+            ])
+        </div>
+        <div class="col-md-6">
+            @include('Backend._inputs.inputText',[
+                'campo'=>'openapi_api_key',
+                'testo'=>'API key account Openapi',
+                'autocomplete'=>'off',
+                'required'=>false
+            ])
         </div>
     </div>
     <div class="row">
         <div class="col-md-6">
             @include('Backend._inputs.inputText',[
                 'campo'=>'openapi_visure_token',
-                'testo'=>'Credenziale visure agente',
+                'testo'=>'Token Visengine (Bearer)',
                 'autocomplete'=>'off',
                 'required'=>false
             ])
@@ -62,7 +90,7 @@
         <div class="col-md-6">
             @include('Backend._inputs.inputText',[
                 'campo'=>'openapi_catasto_token',
-                'testo'=>'Credenziale catasto agente',
+                'testo'=>'Token Catasto (Bearer)',
                 'autocomplete'=>'off',
                 'required'=>false
             ])

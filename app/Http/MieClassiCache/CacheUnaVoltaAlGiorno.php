@@ -74,11 +74,9 @@ class CacheUnaVoltaAlGiorno
 
     protected static function creaProforma($mese)
     {
-
         $mesePrecedente = now()->subMonthNoOverflow();
 
         $proformaService = new FatturaProformaService($mesePrecedente->year, $mesePrecedente->month);
         $proformaService->creaFattureProformaTutti();
-
     }
 }

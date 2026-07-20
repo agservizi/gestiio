@@ -5,6 +5,7 @@
             <th class="">Nome</th>
             <th class="text-end">Prezzo cliente</th>
             <th class="text-end">Prezzo agente</th>
+            <th class="text-end">Importo fornitore</th>
             <th class="">Tipo</th>
             <th></th>
         </tr>
@@ -15,6 +16,7 @@
                 <td class="">{{$record->nome}}</td>
                 <td class="text-end">{{$record->prezzo_cliente}}</td>
                 <td class="text-end">{{$record->prezzo_agente}}</td>
+                <td class="text-end">{{$record->importo_fornitore ?? 0}}</td>
                 <td class="">{{$record->tipo}}</td>
 
                 <td class="text-end text-nowrap">

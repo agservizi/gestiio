@@ -13,6 +13,8 @@ class EsitoVisura extends Model
 
     public $incrementing = false;
 
+    protected $keyType = 'string';
+
     public const NOME_SINGOLARE = 'esito visura';
 
     public const NOME_PLURALE = 'esiti visure';

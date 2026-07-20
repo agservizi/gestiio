@@ -59,6 +59,13 @@
                         <option value="attenzione">Solo pratiche aperte da oltre 3 giorni</option>
                     </select>
                 </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Canale Openapi</label>
+                    <select id="filtro_canale" class="form-select form-select-sm form-select-solid">
+                        <option value="">Tutti</option>
+                        <option value="backoffice">Solo coda backoffice</option>
+                    </select>
+                </div>
                 <div class="mb-0">
                     <label class="form-label fw-bold">Allegati</label>
                     <select id="filtro_allegati" class="form-select form-select-sm form-select-solid">
@@ -101,6 +108,21 @@
     </div>
 @endsection
 @section('content')
+    @if(Auth::user()->hasPermissionTo('admin') && isset($openapiPlatformCredit))
+        <div class="alert alert-{{ $openapiPlatformCredit === null ? 'warning' : ($openapiPlatformCredit < 5 ? 'danger' : 'light-primary') }} d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5">
+            <div>
+                <strong>Credito Openapi piattaforma (monitoraggio)</strong>
+                <span class="text-muted ms-2">Account AG Servizi — non usato sulle create agente; ogni agente usa il proprio wallet se ha email + API key sul profilo</span>
+            </div>
+            <div class="fs-4 fw-bold">
+                @if($openapiPlatformCredit === null)
+                    Non disponibile
+                @else
+                    {{ importo($openapiPlatformCredit, true) }}
+                @endif
+            </div>
+        </div>
+    @endif
     <div id="kpi-visura">
         @include('Backend.Visura._kpi')
     </div>
@@ -124,6 +146,7 @@
                     data_da: $('#filtro_data_da').val(),
                     data_a: $('#filtro_data_a').val(),
                     filtro_sla: $('#filtro_sla').val(),
+                    filtro_canale: $('#filtro_canale').val(),
                     con_allegati: $('#filtro_allegati').val(),
                     orderBy: new URLSearchParams(window.location.search).get('orderBy') || '{{$orderBy}}'
                 };
@@ -148,6 +171,7 @@
                 $('#filtro_data_da').val(query.get('data_da') || '');
                 $('#filtro_data_a').val(query.get('data_a') || '');
                 $('#filtro_sla').val(query.get('filtro_sla') || '');
+                $('#filtro_canale').val(query.get('filtro_canale') || '');
                 $('#filtro_allegati').val(query.get('con_allegati') || '');
             };
 
@@ -183,7 +207,7 @@
                 caricaElenco();
             });
 
-            $('#filtro_esito, #filtro_tipo_visura, #filtro_agente, #filtro_data_da, #filtro_data_a, #filtro_sla, #filtro_allegati').on('change', function () {
+            $('#filtro_esito, #filtro_tipo_visura, #filtro_agente, #filtro_data_da, #filtro_data_a, #filtro_sla, #filtro_canale, #filtro_allegati').on('change', function () {
                 caricaElenco();
             });
 
@@ -195,6 +219,7 @@
                 $('#filtro_data_da').val('');
                 $('#filtro_data_a').val('');
                 $('#filtro_sla').val('');
+                $('#filtro_canale').val('');
                 $('#filtro_allegati').val('');
                 caricaElenco();
             });

@@ -198,7 +198,7 @@
 <script src="/assets_backend/plugins/global/plugins.bundle.js"></script>
 <script src="/assets_backend/js/scripts.bundle.js"></script>
 <!--end::Global Javascript Bundle-->
-<script src="/assets_backend/js-miei/mieiScript.js?v=5"></script>
+<script src="/assets_backend/js-miei/mieiScript.js?v=14"></script>
 @stack('customScript')
 <script>
     $(function () {

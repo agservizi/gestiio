@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Actions\Luggage\SendPickupQrReminder;
 use App\Enums\LuggageDepositStatus;
 use App\Events\LuggageDepositCheckedIn;
 use App\Events\LuggageDepositCheckedOut;
@@ -11,6 +12,7 @@ use App\Http\Support\LuggageConfig;
 use App\Models\LuggageCashMovement;
 use App\Models\LuggageDeposit;
 use App\Models\LuggageSetting;
+use App\Models\LuggageStation;
 use App\Models\Setting;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -21,14 +23,19 @@ use InvalidArgumentException;
 
 class LuggageDepositService
 {
-    public function getSettings(): LuggageSetting
+    public function getSettings(?LuggageStation $station = null): LuggageSetting|LuggageStation
     {
-        return LuggageSetting::singleton();
+        return $station ?: LuggageSetting::singleton();
+    }
+
+    public function settingsFor(?LuggageStation $station = null): object
+    {
+        return $this->getSettings($station);
     }
 
     public function updateSettings(array $data): LuggageSetting
     {
-        $settings = $this->getSettings();
+        $settings = LuggageSetting::singleton();
         $settings->fill($data);
         $settings->save();
 
@@ -48,10 +55,14 @@ class LuggageDepositService
         foreach ([
             'luggage_online_booking_enabled',
             'luggage_notify_staff',
+            'luggage_notify_customer_booking',
+            'luggage_notify_customer_thank_you',
             'luggage_notify_customer_receipt',
             'luggage_notify_customer_pickup_qr',
             'luggage_staff_notification_email',
             'luggage_booking_instructions',
+            'luggage_pickup_qr_hours_before',
+            'luggage_agent_monthly_fee',
         ] as $key) {
             if (! array_key_exists($key, $validated)) {
                 continue;
@@ -60,6 +71,8 @@ class LuggageDepositService
             $value = in_array($key, [
                 'luggage_online_booking_enabled',
                 'luggage_notify_staff',
+                'luggage_notify_customer_booking',
+                'luggage_notify_customer_thank_you',
                 'luggage_notify_customer_receipt',
                 'luggage_notify_customer_pickup_qr',
             ], true)
@@ -72,9 +85,21 @@ class LuggageDepositService
         return $settings->fresh();
     }
 
-    public function assertOnlineBookingAllowed(string $source): void
+    public function assertOnlineBookingAllowed(string $source, ?LuggageStation $station = null): void
     {
-        if ($source === 'PORTALE' && ! LuggageConfig::onlineBookingEnabled()) {
+        if ($source !== 'PORTALE') {
+            return;
+        }
+
+        if ($station) {
+            if (! $station->online_booking_enabled) {
+                throw new InvalidArgumentException('Prenotazione online temporaneamente non disponibile.');
+            }
+
+            return;
+        }
+
+        if (! LuggageConfig::onlineBookingEnabled()) {
             throw new InvalidArgumentException('Prenotazione online temporaneamente non disponibile.');
         }
     }
@@ -90,11 +115,11 @@ class LuggageDepositService
         return $code;
     }
 
-    public function create(array $input, string $source = 'SPORTELLO'): LuggageDeposit
+    public function create(array $input, string $source = 'SPORTELLO', ?LuggageStation $station = null): LuggageDeposit
     {
-        $this->assertOnlineBookingAllowed($source);
+        $this->assertOnlineBookingAllowed($source, $station);
 
-        $settings = $this->getSettings();
+        $settings = $this->settingsFor($station);
         $bagCount = max(1, (int) ($input['bag_count'] ?? 1));
         $bookingDate = Carbon::parse($input['booking_date'])->startOfDay();
 
@@ -102,7 +127,7 @@ class LuggageDepositService
             throw new InvalidArgumentException('Numero borse superiore al massimo consentito.');
         }
 
-        $availability = $this->getAvailability($bookingDate);
+        $availability = $this->getAvailability($bookingDate, $station);
         if ($availability['available_bags'] < $bagCount) {
             throw new LuggageNoAvailabilityException(
                 "Disponibilità insufficiente: {$availability['available_bags']} posti per {$availability['date']}"
@@ -113,6 +138,7 @@ class LuggageDepositService
         $bagTags = $this->generateBagTags($code, $bagCount);
 
         $deposit = LuggageDeposit::create([
+            'station_id' => $station?->id,
             'code' => $code,
             'qr_token' => Str::uuid()->toString(),
             'cliente_id' => $input['cliente_id'] ?? null,
@@ -135,20 +161,22 @@ class LuggageDepositService
         return $deposit;
     }
 
-    public function getAvailability(Carbon $date): array
+    public function getAvailability(Carbon $date, ?LuggageStation $station = null): array
     {
-        $settings = $this->getSettings();
+        $settings = $this->settingsFor($station);
         $day = $date->copy()->startOfDay();
 
-        $bookedBags = (int) LuggageDeposit::query()
+        $query = LuggageDeposit::query()
             ->whereDate('booking_date', $day)
             ->whereIn('status', [
                 LuggageDepositStatus::PRENOTATO,
                 LuggageDepositStatus::CHECK_IN,
-            ])
-            ->sum('bag_count');
+            ]);
 
-        $maxCapacity = $settings->max_capacity;
+        $this->scopeStationQuery($query, $station);
+
+        $bookedBags = (int) $query->sum('bag_count');
+        $maxCapacity = (int) $settings->max_capacity;
 
         return [
             'date' => $day->toDateString(),
@@ -156,12 +184,15 @@ class LuggageDepositService
             'booked_bags' => $bookedBags,
             'available_bags' => max(0, $maxCapacity - $bookedBags),
             'available' => $bookedBags < $maxCapacity,
+            'station_id' => $station?->id,
+            'station_slug' => $station?->slug,
         ];
     }
 
-    public function getAvailabilityExcluding(Carbon $date, ?LuggageDeposit $exclude = null): array
+    public function getAvailabilityExcluding(Carbon $date, ?LuggageDeposit $exclude = null, ?LuggageStation $station = null): array
     {
-        $availability = $this->getAvailability($date);
+        $station = $station ?? $exclude?->station;
+        $availability = $this->getAvailability($date, $station);
 
         if (
             $exclude
@@ -175,6 +206,23 @@ class LuggageDepositService
         }
 
         return $availability;
+    }
+
+    /**
+     * HQ capacity uses only deposits without station; agent station uses only its deposits.
+     * When $forListAll is true (admin supervision list), no station filter is applied.
+     */
+    public function scopeStationQuery($query, ?LuggageStation $station = null, bool $forListAll = false)
+    {
+        if ($forListAll) {
+            return $query;
+        }
+
+        if ($station) {
+            return $query->where('station_id', $station->id);
+        }
+
+        return $query->whereNull('station_id');
     }
 
     public function generateBagTags(string $code, int $count): array
@@ -215,6 +263,7 @@ class LuggageDepositService
         $deposit = $deposit->fresh();
         Cache::forget($this->pickupCacheKey($deposit));
         event(new LuggageDepositCheckedIn($deposit));
+        app(SendPickupQrReminder::class)($deposit);
 
         return $deposit;
     }
@@ -324,7 +373,7 @@ class LuggageDepositService
 
         $end = $checkedOutAt ?? now();
         $seconds = $deposit->checked_in_at->diffInSeconds($end);
-        $minDays = max(1, (int) $this->getSettings()->min_days);
+        $minDays = max(1, (int) $this->settingsFor($deposit->station)->min_days);
         $days = max($minDays, (int) ceil($seconds / 86400));
         $total = $days * $deposit->bag_count * (float) $deposit->daily_rate;
 
@@ -349,7 +398,7 @@ class LuggageDepositService
                 'luggage_deposit_id' => $deposit->id,
                 'amount' => $pricing['total'],
                 'payment_method' => $paymentMethod,
-                'currency' => $this->getSettings()->currency,
+                'currency' => $this->settingsFor($deposit->station)->currency,
                 'recorded_by' => auth()->id(),
                 'recorded_at' => $now,
             ]);
@@ -400,7 +449,7 @@ class LuggageDepositService
             throw new InvalidArgumentException('Modifica consentita solo per PRENOTATO');
         }
 
-        $settings = $this->getSettings();
+        $settings = $this->settingsFor($deposit->station);
         $bagCount = array_key_exists('bag_count', $data)
             ? max(1, (int) $data['bag_count'])
             : $deposit->bag_count;
@@ -412,7 +461,7 @@ class LuggageDepositService
             throw new InvalidArgumentException('Numero borse superiore al massimo consentito.');
         }
 
-        $availability = $this->getAvailabilityExcluding($bookingDate, $deposit);
+        $availability = $this->getAvailabilityExcluding($bookingDate, $deposit, $deposit->station);
         if ($availability['available_bags'] < $bagCount) {
             throw new LuggageNoAvailabilityException(
                 "Disponibilità insufficiente: {$availability['available_bags']} posti per {$availability['date']}"
@@ -481,9 +530,15 @@ class LuggageDepositService
             ->first();
     }
 
-    public function list(array $filters = [], int $page = 1, int $limit = 25): LengthAwarePaginator
-    {
+    public function list(
+        array $filters = [],
+        int $page = 1,
+        int $limit = 25,
+        ?LuggageStation $station = null,
+        bool $adminSeesAll = false
+    ): LengthAwarePaginator {
         $query = LuggageDeposit::query()->orderByDesc('created_at');
+        $this->scopeStationQuery($query, $station, $adminSeesAll && $station === null);
 
         if (! empty($filters['view'])) {
             match ($filters['view']) {
@@ -536,32 +591,33 @@ class LuggageDepositService
         return $query->paginate(min(100, max(1, $limit)), ['*'], 'page', max(1, $page));
     }
 
-    public function stats(?Carbon $from = null, ?Carbon $to = null): array
+    public function stats(?Carbon $from = null, ?Carbon $to = null, ?LuggageStation $station = null, bool $adminSeesAll = false): array
     {
         $todayStart = today()->startOfDay();
         $todayEnd = today()->endOfDay();
+        $scoped = fn ($query) => $this->scopeStationQuery($query, $station, $adminSeesAll && $station === null);
 
-        $active = LuggageDeposit::where('status', LuggageDepositStatus::CHECK_IN)->count();
-        $bookedToday = LuggageDeposit::where('status', LuggageDepositStatus::PRENOTATO)
+        $active = $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::CHECK_IN)->count();
+        $bookedToday = $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::PRENOTATO)
             ->whereBetween('booking_date', [$todayStart, $todayEnd])->count();
-        $completedToday = LuggageDeposit::where('status', LuggageDepositStatus::COMPLETATO)
+        $completedToday = $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::COMPLETATO)
             ->whereBetween('checked_out_at', [$todayStart, $todayEnd])->count();
-        $bagsStored = (int) LuggageDeposit::where('status', LuggageDepositStatus::CHECK_IN)->sum('bag_count');
-        $todayRevenue = (float) LuggageDeposit::where('status', LuggageDepositStatus::COMPLETATO)
+        $bagsStored = (int) $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::CHECK_IN)->sum('bag_count');
+        $todayRevenue = (float) $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::COMPLETATO)
             ->whereBetween('checked_out_at', [$todayStart, $todayEnd])
             ->sum('total_amount');
 
-        $breakdown = LuggageDeposit::query()
+        $breakdown = $scoped(LuggageDeposit::query())
             ->selectRaw('status, count(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status');
 
-        $recent = LuggageDeposit::query()
+        $recent = $scoped(LuggageDeposit::query())
             ->latest()
             ->limit(5)
             ->get(['id', 'code', 'customer_name', 'bag_count', 'status', 'created_at', 'source']);
 
-        $periodQuery = LuggageDeposit::query()
+        $periodQuery = $scoped(LuggageDeposit::query())
             ->where('status', LuggageDepositStatus::COMPLETATO);
 
         if ($from) {
@@ -573,10 +629,10 @@ class LuggageDepositService
 
         $periodRevenue = (float) (clone $periodQuery)->sum('total_amount');
         $periodCompleted = (clone $periodQuery)->count();
-        $portalBookings = LuggageDeposit::where('source', 'PORTALE')->count();
-        $sportelloBookings = LuggageDeposit::where('source', 'SPORTELLO')->count();
-        $settings = $this->getSettings();
-        $availabilityToday = $this->getAvailability(today());
+        $portalBookings = $scoped(LuggageDeposit::query())->where('source', 'PORTALE')->count();
+        $sportelloBookings = $scoped(LuggageDeposit::query())->where('source', 'SPORTELLO')->count();
+        $settings = $this->settingsFor($station);
+        $availabilityToday = $this->getAvailability(today(), $station);
 
         $revenueTrend = [];
         for ($i = 6; $i >= 0; $i--) {
@@ -584,16 +640,16 @@ class LuggageDepositService
             $revenueTrend[] = [
                 'date' => $day->toDateString(),
                 'label' => $day->isoFormat('ddd'),
-                'revenue' => (float) LuggageDeposit::where('status', LuggageDepositStatus::COMPLETATO)
+                'revenue' => (float) $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::COMPLETATO)
                     ->whereBetween('checked_out_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
                     ->sum('total_amount'),
-                'completed' => LuggageDeposit::where('status', LuggageDepositStatus::COMPLETATO)
+                'completed' => $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::COMPLETATO)
                     ->whereBetween('checked_out_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
                     ->count(),
             ];
         }
 
-        $upcoming = LuggageDeposit::query()
+        $upcoming = $scoped(LuggageDeposit::query())
             ->where('status', LuggageDepositStatus::PRENOTATO)
             ->whereDate('booking_date', '>=', today())
             ->whereDate('booking_date', '<=', today()->addDays(2))
@@ -611,6 +667,8 @@ class LuggageDepositService
             ]];
         });
 
+        $totalDeposits = $scoped(LuggageDeposit::query())->count();
+
         return [
             'kpis' => [
                 ['key' => 'active', 'label' => 'Depositi attivi', 'value' => $active, 'icon' => 'custodia'],
@@ -618,7 +676,7 @@ class LuggageDepositService
                 ['key' => 'bags_stored', 'label' => 'Borse in custodia', 'value' => $bagsStored, 'icon' => 'bags'],
                 ['key' => 'completed_today', 'label' => 'Completati oggi', 'value' => $completedToday, 'icon' => 'check'],
                 ['key' => 'today_revenue', 'label' => 'Incasso oggi', 'value' => '€'.number_format($todayRevenue, 2, ',', '.'), 'icon' => 'revenue'],
-                ['key' => 'total', 'label' => 'Totale depositi', 'value' => LuggageDeposit::count(), 'icon' => 'total'],
+                ['key' => 'total', 'label' => 'Totale depositi', 'value' => $totalDeposits, 'icon' => 'total'],
                 ['key' => 'portal_bookings', 'label' => 'Prenotazioni online', 'value' => $portalBookings, 'icon' => 'portal'],
                 ['key' => 'period_revenue', 'label' => 'Incasso periodo', 'value' => '€'.number_format($periodRevenue, 2, ',', '.'), 'icon' => 'revenue'],
             ],
@@ -629,7 +687,7 @@ class LuggageDepositService
                 'utilization' => (int) round(($availabilityToday['booked_bags'] / max(1, $settings->max_capacity)) * 100),
             ],
             'pipeline' => [
-                'prenotati' => (int) LuggageDeposit::where('status', LuggageDepositStatus::PRENOTATO)->count(),
+                'prenotati' => (int) $scoped(LuggageDeposit::query())->where('status', LuggageDepositStatus::PRENOTATO)->count(),
                 'attivi' => $active,
                 'completati_oggi' => $completedToday,
             ],

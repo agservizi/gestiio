@@ -27,8 +27,10 @@ tar -cf /tmp/luggage-deploy.tar \
   app/Http/Requests/LuggageDepositActionRequest.php \
   app/Http/Requests/UpdateLuggageSettingsRequest.php \
   app/Http/Controllers/Backend/LuggageDepositController.php \
+  app/Http/Controllers/Backend/Select2.php \
   app/Http/Controllers/Backend/SettingController.php \
   app/Http/Controllers/Frontend/LuggageBookingController.php \
+  app/Http/Controllers/Frontend/LuggagePickupController.php \
   app/Http/Controllers/Frontend/LuggageVerifyPageController.php \
   app/Http/Controllers/Api \
   app/Http/OpenApi \
@@ -36,10 +38,21 @@ tar -cf /tmp/luggage-deploy.tar \
   app/Models/LuggageDeposit.php \
   app/Models/LuggageSetting.php \
   app/Policies/LuggageDepositPolicy.php \
+  app/Http/Controllers/Backend/AttivaServizioController.php \
+  app/Http/Controllers/Backend/DashboardController.php \
+  app/Http/Controllers/Backend/LuggageDepositController.php \
   app/Listeners/NotifyStaffOnLuggageDepositCreated.php \
-  app/Listeners/SendLuggageDepositReceiptEmail.php \
+  app/Listeners/SendLuggageBookingConfirmationEmail.php \
+  app/Listeners/SendLuggageThankYouEmail.php \
+  app/Notifications/NotificaLuggageBookingConfirmation.php \
   app/Notifications/NotificaLuggageDepositCreated.php \
-  app/Notifications/NotificaLuggageDepositReceipt.php \
+  app/Notifications/NotificaLuggagePickupQr.php \
+  app/Notifications/NotificaLuggageThankYou.php \
+  app/Actions/Luggage/SendPickupQrReminder.php \
+  app/Console/Commands/SendLuggagePickupQrReminders.php \
+  app/Console/Commands/ChargeLuggageAgentSubscriptions.php \
+  app/Console/Kernel.php \
+  app/Http/Controllers/Backend/AgenteController.php \
   app/Providers/AuthServiceProvider.php \
   app/Providers/EventServiceProvider.php \
   config/luggage.php \
@@ -52,16 +65,27 @@ tar -cf /tmp/luggage-deploy.tar \
   database/migrations/2026_07_12_100002_create_luggage_deposits_table.php \
   database/seeders/LuggageSettingSeeder.php \
   database/migrations/2026_07_12_100003_create_luggage_cash_movements_table.php \
+  database/migrations/2026_07_12_180000_create_notifications_table.php \
+  database/migrations/2026_07_12_190000_add_pickup_qr_sent_at_to_luggage_deposits_table.php \
+  database/migrations/2026_07_12_200000_seed_servizio_deposito_bagagli_permission.php \
+  database/migrations/2026_07_12_210000_create_luggage_agent_subscriptions_table.php \
+  .docker/entrypoint.sh \
   app/Models/LuggageCashMovement.php \
+  app/Models/LuggageAgentSubscription.php \
   app/Http/Support/LuggageQrCode.php \
   app/Listeners/LogLuggageDepositCheckedIn.php \
   resources/views/Backend/_layout/app-sidebar-menu.blade.php \
+  resources/views/Backend/_inputs/inputSelect2.blade.php \
   resources/views/Backend/Setting/index.blade.php \
   resources/views/Backend/Setting/sections \
   resources/views/Backend/Dashboard \
   resources/views/auth/login.blade.php \
   resources/views/Backend/LuggageDeposit \
-  resources/views/Frontend/LuggageDeposit
+  resources/views/Frontend/LuggageDeposit \
+  docs/LUGGAGE_API_PUBLIC.md \
+  docs/LUGGAGE_API_ADMIN.md \
+  docs/INTEGRAZIONE_AGENZIAPLINIO_DEPOSITO_BAGAGLI.md \
+  ops/start-queue-worker.sh
 
 echo "==> Upload archivio (base64 via SSH)"
 base64 /tmp/luggage-deploy.tar | ssh "$HOST" "base64 -d > /tmp/luggage-deploy.tar"
@@ -81,11 +105,17 @@ $DOCKER cp $APP/app/Models/LuggageSetting.php $CONTAINER:/var/www/html/app/Model
 $DOCKER cp $APP/app/Models/LuggageCashMovement.php $CONTAINER:/var/www/html/app/Models/LuggageCashMovement.php
 $DOCKER cp $APP/app/Models/Cliente.php $CONTAINER:/var/www/html/app/Models/Cliente.php
 $DOCKER cp $APP/app/Policies/LuggageDepositPolicy.php $CONTAINER:/var/www/html/app/Policies/LuggageDepositPolicy.php
-$DOCKER cp $APP/app/Listeners/NotifyStaffOnLuggageDepositCreated.php $CONTAINER:/var/www/html/app/Listeners/NotifyStaffOnLuggageDepositCreated.php
-$DOCKER cp $APP/app/Listeners/LogLuggageDepositCheckedIn.php $CONTAINER:/var/www/html/app/Listeners/LogLuggageDepositCheckedIn.php
-$DOCKER cp $APP/app/Listeners/SendLuggageDepositReceiptEmail.php $CONTAINER:/var/www/html/app/Listeners/SendLuggageDepositReceiptEmail.php
-$DOCKER cp $APP/app/Notifications/NotificaLuggageDepositCreated.php $CONTAINER:/var/www/html/app/Notifications/NotificaLuggageDepositCreated.php
-$DOCKER cp $APP/app/Notifications/NotificaLuggageDepositReceipt.php $CONTAINER:/var/www/html/app/Notifications/NotificaLuggageDepositReceipt.php
+$DOCKER cp $APP/app/Http/Controllers/Backend/AttivaServizioController.php $CONTAINER:/var/www/html/app/Http/Controllers/Backend/AttivaServizioController.php
+$DOCKER cp $APP/app/Http/Controllers/Backend/DashboardController.php $CONTAINER:/var/www/html/app/Http/Controllers/Backend/DashboardController.php
+$DOCKER cp $APP/app/Http/Controllers/Backend/LuggageDepositController.php $CONTAINER:/var/www/html/app/Http/Controllers/Backend/LuggageDepositController.php
+$DOCKER cp $APP/app/Listeners $CONTAINER:/var/www/html/app/
+$DOCKER cp $APP/app/Actions $CONTAINER:/var/www/html/app/
+$DOCKER cp $APP/app/Console/Kernel.php $CONTAINER:/var/www/html/app/Console/Kernel.php
+$DOCKER cp $APP/app/Console/Commands/ChargeLuggageAgentSubscriptions.php $CONTAINER:/var/www/html/app/Console/Commands/ChargeLuggageAgentSubscriptions.php
+$DOCKER cp $APP/app/Http/Controllers/Backend/AgenteController.php $CONTAINER:/var/www/html/app/Http/Controllers/Backend/AgenteController.php
+$DOCKER cp $APP/app/Models/LuggageAgentSubscription.php $CONTAINER:/var/www/html/app/Models/LuggageAgentSubscription.php
+$DOCKER cp $APP/database/migrations/2026_07_12_210000_create_luggage_agent_subscriptions_table.php $CONTAINER:/var/www/html/database/migrations/2026_07_12_210000_create_luggage_agent_subscriptions_table.php
+$DOCKER cp $APP/app/Notifications $CONTAINER:/var/www/html/app/
 $DOCKER cp $APP/app/Events $CONTAINER:/var/www/html/app/
 $DOCKER cp $APP/app/Exceptions/LuggageNoAvailabilityException.php $CONTAINER:/var/www/html/app/Exceptions/LuggageNoAvailabilityException.php
 $DOCKER cp $APP/app/Providers/AuthServiceProvider.php $CONTAINER:/var/www/html/app/Providers/AuthServiceProvider.php
@@ -97,6 +127,11 @@ $DOCKER cp $APP/routes/api.php $CONTAINER:/var/www/html/routes/api.php
 $DOCKER cp $APP/routes/web.php $CONTAINER:/var/www/html/routes/web.php
 $DOCKER cp $APP/routes/web-backend.php $CONTAINER:/var/www/html/routes/web-backend.php
 $DOCKER cp $APP/resources/views/Backend/_layout/app-sidebar-menu.blade.php $CONTAINER:/var/www/html/resources/views/Backend/_layout/app-sidebar-menu.blade.php
+$DOCKER cp $APP/resources/views/Backend/Dashboard/showAgente.blade.php $CONTAINER:/var/www/html/resources/views/Backend/Dashboard/showAgente.blade.php
+$DOCKER cp $APP/resources/views/Backend/Agente/edit.blade.php $CONTAINER:/var/www/html/resources/views/Backend/Agente/edit.blade.php
+$DOCKER cp $APP/database/migrations/2026_07_12_200000_seed_servizio_deposito_bagagli_permission.php $CONTAINER:/var/www/html/database/migrations/2026_07_12_200000_seed_servizio_deposito_bagagli_permission.php
+$DOCKER exec $CONTAINER mkdir -p /var/www/html/resources/views/Backend/_inputs
+$DOCKER cp $APP/resources/views/Backend/_inputs/inputSelect2.blade.php $CONTAINER:/var/www/html/resources/views/Backend/_inputs/inputSelect2.blade.php
 $DOCKER cp $APP/resources/views/Backend/Setting $CONTAINER:/var/www/html/resources/views/Backend/
 $DOCKER cp $APP/resources/views/Backend/Dashboard $CONTAINER:/var/www/html/resources/views/Backend/
 $DOCKER cp $APP/resources/views/auth/login.blade.php $CONTAINER:/var/www/html/resources/views/auth/login.blade.php
@@ -105,9 +140,14 @@ $DOCKER cp $APP/resources/views/Frontend/LuggageDeposit $CONTAINER:/var/www/html
 $DOCKER cp $APP/database/migrations/2026_07_12_100001_create_luggage_settings_table.php $CONTAINER:/var/www/html/database/migrations/2026_07_12_100001_create_luggage_settings_table.php
 $DOCKER cp $APP/database/migrations/2026_07_12_100002_create_luggage_deposits_table.php $CONTAINER:/var/www/html/database/migrations/2026_07_12_100002_create_luggage_deposits_table.php
 $DOCKER cp $APP/database/migrations/2026_07_12_100003_create_luggage_cash_movements_table.php $CONTAINER:/var/www/html/database/migrations/2026_07_12_100003_create_luggage_cash_movements_table.php
+$DOCKER cp $APP/database/migrations/2026_07_12_190000_add_pickup_qr_sent_at_to_luggage_deposits_table.php $CONTAINER:/var/www/html/database/migrations/2026_07_12_190000_add_pickup_qr_sent_at_to_luggage_deposits_table.php
+$DOCKER cp $APP/resources/views/Backend/LuggageDeposit/_setting_field.blade.php $CONTAINER:/var/www/html/resources/views/Backend/LuggageDeposit/_setting_field.blade.php
+$DOCKER cp $APP/.docker/entrypoint.sh $CONTAINER:/usr/local/bin/gestiio-entrypoint
+$DOCKER exec $CONTAINER chmod +x /usr/local/bin/gestiio-entrypoint
 $DOCKER cp $APP/database/seeders/LuggageSettingSeeder.php $CONTAINER:/var/www/html/database/seeders/LuggageSettingSeeder.php
 $DOCKER cp $APP/docs/LUGGAGE_API_PUBLIC.md $CONTAINER:/var/www/html/docs/LUGGAGE_API_PUBLIC.md
 $DOCKER cp $APP/docs/LUGGAGE_API_ADMIN.md $CONTAINER:/var/www/html/docs/LUGGAGE_API_ADMIN.md
+$DOCKER cp $APP/docs/INTEGRAZIONE_AGENZIAPLINIO_DEPOSITO_BAGAGLI.md $CONTAINER:/var/www/html/docs/INTEGRAZIONE_AGENZIAPLINIO_DEPOSITO_BAGAGLI.md
 rm -f /tmp/luggage-deploy.tar
 echo EXTRACT_OK
 "
@@ -132,7 +172,7 @@ ssh "$HOST" "
 $DOCKER exec $CONTAINER sh -lc 'php /var/www/html/artisan migrate --force'
 $DOCKER exec $CONTAINER chown -R www-data:www-data /var/www/html/storage
 $DOCKER exec $CONTAINER chmod -R 775 /var/www/html/storage/framework
-$DOCKER exec -u www-data $CONTAINER sh -lc 'php /var/www/html/artisan view:clear && php /var/www/html/artisan config:clear'
+$DOCKER exec -u www-data $CONTAINER sh -lc 'php /var/www/html/artisan view:clear && php /var/www/html/artisan config:clear && php /var/www/html/artisan route:clear'
 $DOCKER restart $CONTAINER
 $DOCKER exec $CONTAINER chown -R www-data:www-data /var/www/html/storage
 "

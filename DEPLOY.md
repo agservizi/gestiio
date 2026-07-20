@@ -233,6 +233,176 @@ curl -s -H "x-api-key: LA_CHIAVE" https://gestiio.agenziaplinio.it/api/public/de
 php artisan test --filter=Luggage
 ```
 
+## Modulo PDF Tools (Stirling PDF)
+
+Stirling PDF gira in Docker (`stirling-pdf`) sulla rete Gestiio. Il browser lo usa via iframe/proxy same-origin; l’**app Windows** usa la porta LAN `8091` (non pubblicata su Cloudflare; `8090` è di gestiio-app).
+
+### Avvio container (una tantum / dopo reboot)
+
+```sh
+ssh Carmine@192.168.1.50 '
+DOCKER=/Volume1/@apps/DockerEngine/dockerd/bin/docker
+mkdir -p /home/Carmine/apps/stirling-pdf/{configs,logs,tessdata,pipeline,customFiles}
+# Copiare ops/docker-compose.stirling.yml sul NAS, poi:
+cd /home/Carmine/apps/stirling-pdf
+$DOCKER compose -f docker-compose.stirling.yml up -d
+$DOCKER ps --filter name=stirling-pdf
+'
+```
+
+Compose: [`ops/docker-compose.stirling.yml`](ops/docker-compose.stirling.yml) — login on, **`storage.enabled=false`** (niente My Files), porta host **`8091:8080`** (8090 è di gestiio-app), `SYSTEM_FRONTENDURL` / `SYSTEM_BACKENDURL` = URL pubblico Gestiio.
+
+**Sessione condivisa (default):** tutti gli agenti usano lo stesso account Stirling admin (niente provisioning `gestiio-{id}`), così si resta nel piano free senza archivio per utente. I file **non** restano sul server: elabora e scarica. Banner informativo su `/backend/pdf-tools`.
+
+Per tornare allo storage isolato per agente: `STIRLING_SHARED_SESSION=false`, `STIRLING_STORAGE_ENABLED=true` e `storage.enabled: true` in settings.yml.
+
+**App Windows:** URL `http://192.168.1.50:8092` + credenziali admin Stirling da `GET /backend/pdf-tools/desktop-credentials` (sessione condivisa). Non usare l’URL Cloudflare pubblico dall’app desktop.
+
+Credenziali in `.env` Gestiio + `/home/Carmine/apps/stirling-pdf/.env`:
+```env
+STIRLING_ADMIN_USER=admin
+STIRLING_ADMIN_PASSWORD=…          # default install: stirling
+STIRLING_SHARED_SESSION=true
+STIRLING_STORAGE_ENABLED=false
+STIRLING_URL=http://stirling-pdf:8080
+STIRLING_PUBLIC_URL=https://gestiio.agenziaplinio.it/pdf-tools
+STIRLING_DESKTOP_URL=http://192.168.1.50:8092
+```
+
+**OCR / tessdata:** volume host `/home/Carmine/apps/stirling-pdf/tessdata` → `/usr/share/tessdata` (almeno `eng`, `ita`, `osd`).
+
+**Nota licenza:** Piano / Audit avanzato / Analytics Pro richiedono licenza Stirling Pro/Enterprise.
+
+### Variabili `.env` (container gestiio-app)
+
+```env
+STIRLING_URL=http://stirling-pdf:8080
+STIRLING_PUBLIC_URL=https://gestiio.agenziaplinio.it/pdf-tools
+STIRLING_DESKTOP_URL=http://192.168.1.50:8092
+STIRLING_TIMEOUT=300
+STIRLING_ADMIN_USER=admin
+STIRLING_ADMIN_PASSWORD=…
+STIRLING_USER_SECRET=…
+```
+
+### URL
+
+| Uso | URL |
+|---|---|
+| Shell iframe (admin/agente) | `https://gestiio.agenziaplinio.it/backend/pdf-tools` |
+| Proxy same-origin | `https://gestiio.agenziaplinio.it/pdf-tools` |
+| App Windows (LAN) | `http://192.168.1.50:8092` |
+| Mobile scanner (QR telefono, senza login) | `https://gestiio.agenziaplinio.it/pdf-tools/mobile-scanner?session=…` |
+| Carica da telefono (allegati dropzone) | bridge `POST /backend/allegati-mobile-scan/session` |
+
+Il proxy riscrive sempre `Location` in `https://` sul dominio pubblico e segue internamente i redirect trailing-slash di Stirling (evita mixed-content nell’iframe).
+
+### Verifica
+
+```sh
+# Interno (rete Docker)
+ssh Carmine@192.168.1.50 '
+DOCKER=/Volume1/@apps/DockerEngine/dockerd/bin/docker
+$DOCKER exec gestiio-app php /tmp/smoke-pdf-tools-public.php
+# LAN app Windows
+curl -sS http://127.0.0.1:8091/pdf-tools/api/v1/info/status
+'
+```
+
+Gap noti chiusi: URL pubblico QR, mobile-scanner senza login, no Location `http://`, whitelist asset pubblici ristretta, allegati dropzone con materialize senza invalidare la sessione a metà upload, SSO per-agente, porta LAN desktop.
+
+## Modulo Documenti (Seafile)
+
+`/backend/documenti` apre la UI Seafile (iframe + SSO). I file storici restano su disk `sensitive` finché non li cancelli a mano; l’import copia l’albero cartelle in Seafile **senza cancellare** i locali.
+
+### Ruoli
+
+| Ruolo Gestiio | Accesso Documenti |
+|---|---|
+| admin | Sì — account Seafile RW (owner library) |
+| agente | Sì — sola lettura (account RO condiviso) |
+| operatore / supervisore | No (403 / voce menu nascosta) |
+
+### Avvio Seafile (NAS, una tantum)
+
+```sh
+ssh Carmine@192.168.1.50 '
+DOCKER=/Volume1/@apps/DockerEngine/dockerd/bin/docker
+mkdir -p /home/Carmine/apps/seafile/{data,mysql}
+# Copiare ops/docker-compose.seafile.yml e creare .env con password
+cd /home/Carmine/apps/seafile
+cat > .env <<EOF
+SEAFILE_MYSQL_ROOT_PASSWORD=...
+SEAFILE_ADMIN_EMAIL=admin@gestiio.local
+SEAFILE_ADMIN_PASSWORD=...
+SEAFILE_SERVER_HOSTNAME=documenti.agenziaplinio.it
+EOF
+$DOCKER compose -f docker-compose.seafile.yml up -d
+'
+```
+
+Poi bootstrap (locale IT + library + utente agente RO):
+
+```sh
+# Impostare SEAFILE_ADMIN_PASSWORD / SEAFILE_AGENTE_PASSWORD e lanciare:
+sh ops/seafile-bootstrap.sh
+# Annotare SEAFILE_REPO_ID stampato dallo script
+```
+
+### DNS / TLS
+
+Hostname pubblico via Cloudflare Tunnel (`cloudflared_corehost`):
+
+| Hostname | Origin NAS |
+|---|---|
+| `documenti.agenziaplinio.it` | `http://127.0.0.1:8089` (Seafile) |
+
+Config: `/opt/cloudflared/config.yml` — ingress `documenti.agenziaplinio.it` → `localhost:8089`.  
+CNAME tunnel: `cloudflared tunnel route dns --overwrite-dns corehost documenti.agenziaplinio.it` (come root nel container).
+
+Se il browser LAN vede ancora NXDOMAIN (DNS del router `192.168.1.254` con cache negativa), attendi 5–15 minuti oppure usa DNS `1.1.1.1` / svuota cache router. Verifica: `nslookup documenti.agenziaplinio.it 1.1.1.1`.
+
+### Variabili `.env` gestiio-app
+
+```env
+SEAFILE_URL=http://seafile
+SEAFILE_PUBLIC_URL=https://documenti.agenziaplinio.it
+SEAFILE_ADMIN_EMAIL=admin@gestiio.local
+SEAFILE_ADMIN_PASSWORD=...
+SEAFILE_AGENTE_EMAIL=agente-ro@gestiio.local
+SEAFILE_AGENTE_PASSWORD=...
+SEAFILE_REPO_ID=...
+SEAFILE_TIMEOUT=300
+```
+
+### Import file (preserva cartelle)
+
+```sh
+$DOCKER exec gestiio-app php /var/www/html/artisan documenti:import-seafile --dry-run
+$DOCKER exec gestiio-app php /var/www/html/artisan documenti:import-seafile
+```
+
+- Ricostruisce l’albero NestedSet (`files_cartelle`) come directory Seafile
+- Carica ogni file con `filename_originale`
+- Scrive `files.seafile_path` / `seafile_imported_at`
+- **Non elimina** i blob in `storage/app/sensitive/file_manager`
+
+### URL
+
+| Uso | URL |
+|---|---|
+| Shell Gestiio | `https://gestiio.agenziaplinio.it/backend/documenti` |
+| SSO / iframe | `https://gestiio.agenziaplinio.it/backend/documenti/sso` |
+| UI Seafile | `https://documenti.agenziaplinio.it` |
+| Share legacy Gestiio | `https://gestiio.agenziaplinio.it/documenti/condivisi/{token}` (disk locale) |
+
+### Verifica
+
+```sh
+$DOCKER exec -e SEAFILE_URL=http://seafile -e SEAFILE_ADMIN_PASSWORD=... -e SEAFILE_AGENTE_PASSWORD=... -e SEAFILE_REPO_ID=... \
+  gestiio-app php /tmp/smoke-seafile-documenti.php
+```
+
 ## Checklist rapida (copia-incolla mentale)
 
 1. `git push origin main` ✅ fatto?
@@ -243,3 +413,56 @@ php artisan test --filter=Luggage
 6. `view:clear && view:cache && config:clear`
 7. `docker restart gestiio-app` — **sempre**
 8. `docker ps` + `curl .../login` → `200`
+
+## Redis + Chat realtime (SSE)
+
+La chat interna (`/backend/chat-interna`) usa **SSE** + polling delta per il
+realtime (Laravel 9 non ha Reverb: **non** installare `laravel/reverb`). Redis è
+consigliato per cache/coda/presenza online, ma non è obbligatorio per l'SSE.
+
+### Servizio Redis
+
+`docker-compose.nas.yml` include ora un servizio `redis` (`redis:7-alpine`,
+volume `gestiio_redis`, healthcheck `redis-cli ping`) e imposta sull'app:
+
+```env
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+In alternativa, per un Redis standalone (solo su `127.0.0.1:6379`):
+
+```sh
+docker compose -f ops/docker-compose.redis.yml up -d
+```
+
+### Note operative SSE
+
+- Endpoint stream: `GET /backend/chat-interna/{thread}/stream` — tiene aperta la
+  connessione fino a ~20s controllando ogni 500ms i nuovi messaggi, poi chiude
+  (il client riapre). Invia header `X-Accel-Buffering: no` per evitare il
+  buffering del reverse proxy.
+- Se davanti c'è Nginx/Cloudflare, assicurarsi che non facciano buffering/gzip
+  sulla rotta `*/stream` (già mitigato via header, ma verificare la config proxy).
+- Il worker della coda va comunque tenuto attivo per le web push:
+  `php artisan queue:work --tries=3`.
+
+### Allegati chat (disk local)
+
+I nuovi allegati sono salvati su disk `local` (`storage/app/chat-allegati/...`),
+serviti solo tramite rotta autenticata. Per spostare eventuali vecchi allegati da
+`public` a `local`:
+
+```sh
+$DOCKER exec gestiio-app php /var/www/html/artisan chat:migrate-attachments --dry-run
+$DOCKER exec gestiio-app php /var/www/html/artisan chat:migrate-attachments
+```
+
+### Broadcasting
+
+`App\Providers\BroadcastServiceProvider` è ora abilitato in `config/app.php`.
+Gli eventi `ChatMessageSent` e `ChatTypingUpdated` (`ShouldBroadcastNow`) sono
+predisposti per un futuro client Echo; l'UI attuale usa SSE e non dipende da un
+server WebSocket.

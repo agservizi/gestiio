@@ -7,8 +7,8 @@ use App\Events\LuggageDepositCreated;
 use App\Listeners\EmailLogger;
 use App\Listeners\LogLuggageDepositCheckedIn;
 use App\Listeners\NotifyStaffOnLuggageDepositCreated;
-use App\Listeners\SendLuggagePickupQrEmail;
-use App\Listeners\SendLuggageDepositReceiptEmail;
+use App\Listeners\SendLuggageBookingConfirmationEmail;
+use App\Listeners\SendLuggageThankYouEmail;
 use App\Listeners\LogSuccessfulLogin;
 use App\Listeners\RecordFailedLoginAttempt;
 use App\Listeners\RespectUserNotificationPreferences;
@@ -48,14 +48,14 @@ class EventServiceProvider extends ServiceProvider
             RespectUserNotificationPreferences::class,
         ],
         LuggageDepositCreated::class => [
+            SendLuggageBookingConfirmationEmail::class,
             NotifyStaffOnLuggageDepositCreated::class,
         ],
         \App\Events\LuggageDepositCheckedIn::class => [
             LogLuggageDepositCheckedIn::class,
-            SendLuggagePickupQrEmail::class,
         ],
         LuggageDepositCheckedOut::class => [
-            SendLuggageDepositReceiptEmail::class,
+            SendLuggageThankYouEmail::class,
         ],
         /*
         TwoFactorAuthenticationChallenged::class => [

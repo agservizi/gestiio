@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Public;
 
+use App\Http\Controllers\Api\ResolvesLuggageStationFromRequest;
 use App\Http\Controllers\Api\RespondsWithLuggageJson;
 use App\Http\Controllers\Controller;
 use App\Http\Services\LuggageDepositService;
@@ -12,6 +13,7 @@ use Illuminate\Support\Carbon;
 class LuggageAvailabilityController extends Controller
 {
     use RespondsWithLuggageJson;
+    use ResolvesLuggageStationFromRequest;
 
     public function __construct(private LuggageDepositService $service)
     {
@@ -30,6 +32,6 @@ class LuggageAvailabilityController extends Controller
             return $this->luggageError('INVALID_DATE', 'Formato data non valido', 400);
         }
 
-        return $this->luggageSuccess($this->service->getAvailability($date));
+        return $this->luggageSuccess($this->service->getAvailability($date, $this->luggageStation($request)));
     }
 }

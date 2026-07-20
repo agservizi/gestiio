@@ -99,5 +99,6 @@ class Kernel extends HttpKernel
         'set-uid' => SetUid::class,
         '2fa' => Ensure2faAbilitata::class,
         'luggage.api' => \App\Http\Middleware\ValidateLuggageApiKey::class,
+        'locker.api' => \App\Http\Middleware\ValidateLockerApiKey::class,
     ];
 }

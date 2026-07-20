@@ -49,24 +49,47 @@
                     <div class="mt-2">
                         @foreach($messaggio->allegati as $allegato)
                             @php
-                                $allegatoUrl = action([\App\Http\Controllers\Backend\ChatController::class, 'attachment'], ['attachment' => $allegato->id]);
-                                $allegatoDownloadUrl = action([\App\Http\Controllers\Backend\ChatController::class, 'attachment'], ['attachment' => $allegato->id, 'download' => 1]);
-                                $isImage = \Illuminate\Support\Str::startsWith((string) $allegato->mime_type, 'image/');
+                                $relativePath = ltrim((string) $allegato->path_filename, '/');
+                                $fileExists = $relativePath !== ''
+                                    && (
+                                        \Illuminate\Support\Facades\Storage::disk('local')->exists($relativePath)
+                                        || \Illuminate\Support\Facades\Storage::disk('public')->exists($relativePath)
+                                    );
+                                $cacheBust = (int) ($allegato->updated_at?->timestamp ?? $allegato->id);
+                                $allegatoUrl = action([\App\Http\Controllers\Backend\ChatController::class, 'attachment'], ['id' => $allegato->id]).'?v='.$cacheBust;
+                                $allegatoDownloadUrl = action([\App\Http\Controllers\Backend\ChatController::class, 'attachment'], ['id' => $allegato->id]).'?download=1&v='.$cacheBust;
+                                $mime = strtolower((string) $allegato->mime_type);
+                                $isSvg = str_contains($mime, 'svg');
+                                $isImage = str_starts_with($mime, 'image/') && ! $isSvg;
+                                $isPdf = $mime === 'application/pdf' || str_ends_with(strtolower((string) $allegato->filename_originale), '.pdf');
                             @endphp
-                            <div>
-                                @if($isImage)
-                                    <a href="{{$allegatoUrl}}" class="d-inline-block mt-2 chat-image-preview" data-full="{{$allegatoUrl}}" data-name="{{$allegato->filename_originale}}">
-                                        <img src="{{$allegatoUrl}}" alt="{{$allegato->filename_originale}}" class="chat-image-thumb">
-                                    </a>
+                            <div class="mt-2">
+                                @if(! $fileExists)
+                                    <span class="badge badge-light-warning">
+                                        Allegato non disponibile: {{ $allegato->filename_originale }}
+                                    </span>
+                                @else
+                                    @if($isImage)
+                                        <a href="{{$allegatoUrl}}" class="d-inline-block chat-image-preview" data-full="{{$allegatoUrl}}" data-name="{{$allegato->filename_originale}}">
+                                            <img src="{{$allegatoUrl}}"
+                                                 alt="{{$allegato->filename_originale}}"
+                                                 class="chat-image-thumb"
+                                                 loading="lazy"
+                                                 onerror="this.onerror=null;this.style.display='none';var s=document.createElement('span');s.className='badge badge-light-danger';s.textContent='Anteprima non disponibile';this.parentNode&&this.parentNode.appendChild(s);">
+                                        </a>
+                                    @elseif($isPdf)
+                                        <button type="button"
+                                                class="btn btn-sm btn-light-danger chat-pdf-preview"
+                                                data-url="{{$allegatoUrl}}"
+                                                data-name="{{$allegato->filename_originale}}">
+                                            <i class="fas fa-file-pdf me-1"></i> Anteprima PDF
+                                        </button>
+                                    @endif
                                     <div>
                                         <a class="fs-8 fw-bold" href="{{$allegatoDownloadUrl}}" target="_blank" rel="noopener">
-                                            📎 {{$allegato->filename_originale}}
+                                            {{$allegato->filename_originale}}
                                         </a>
                                     </div>
-                                @else
-                                    <a class="fs-8 fw-bold" href="{{$allegatoDownloadUrl}}" target="_blank" rel="noopener">
-                                        📎 {{$allegato->filename_originale}}
-                                    </a>
                                 @endif
                             </div>
                         @endforeach
@@ -127,6 +150,11 @@
                             </button>
                             <button type="button" class="btn btn-icon btn-sm btn-light chat-delete-btn" data-msg-id="{{$messaggio->id}}" title="Elimina">
                                 <i class="fas fa-trash fs-8"></i>
+                            </button>
+                        @endif
+                        @if($messaggio->edited_at || $messaggio->deleted_at)
+                            <button type="button" class="btn btn-icon btn-sm btn-light chat-history-btn" data-msg-id="{{$messaggio->id}}" title="Storico modifiche">
+                                <i class="fas fa-history fs-8"></i>
                             </button>
                         @endif
                     </div>

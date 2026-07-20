@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Http\Support\LuggageBilingualMail;
 use App\Models\LuggageDeposit;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -22,15 +23,58 @@ class NotificaLuggageDepositCreated extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $source = $this->deposit->source === 'PORTALE' ? 'sito web' : 'sportello';
+        $isPortal = $this->deposit->source === 'PORTALE';
+        $sourceEn = $isPortal ? 'website (agenziaplinio.it)' : 'front desk';
+        $sourceIt = $isPortal ? 'sito web (agenziaplinio.it)' : 'sportello';
+        $checkIn = $this->deposit->expected_check_in?->format('d/m/Y H:i') ?? '—';
+        $checkOut = $this->deposit->expected_check_out?->format('d/m/Y H:i') ?? '—';
 
         return (new MailMessage)
-            ->subject('Nuova prenotazione deposito bagagli '.$this->deposit->code)
-            ->line("Nuova prenotazione da {$source}.")
-            ->line('Cliente: '.$this->deposit->customer_name)
-            ->line('Data: '.$this->deposit->booking_date->format('d/m/Y'))
-            ->line('Borse: '.$this->deposit->bag_count)
-            ->action('Apri in piattaforma', url('/backend/deposito-bagagli/'.$this->deposit->id));
+            ->subject(LuggageBilingualMail::subject(
+                'Staff — luggage storage booking confirmation',
+                'Staff — conferma prenotazione deposito bagagli',
+                $this->deposit->code
+            ))
+            ->line(LuggageBilingualMail::line(
+                'A new luggage storage booking has been registered from the '.$sourceEn.'.',
+                'Nuova prenotazione deposito bagagli registrata dal '.$sourceIt.'.'
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Booking code: '.$this->deposit->code,
+                'Codice prenotazione: '.$this->deposit->code
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Customer: '.$this->deposit->customer_name,
+                'Cliente: '.$this->deposit->customer_name
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Email: '.($this->deposit->customer_email ?: '—'),
+                'Email: '.($this->deposit->customer_email ?: '—')
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Phone: '.($this->deposit->customer_phone ?: '—'),
+                'Telefono: '.($this->deposit->customer_phone ?: '—')
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Bags: '.$this->deposit->bag_count,
+                'Borse: '.$this->deposit->bag_count
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Booking date: '.$this->deposit->booking_date->format('d/m/Y'),
+                'Data prenotazione: '.$this->deposit->booking_date->format('d/m/Y')
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Expected drop-off: '.$checkIn,
+                'Check-in previsto: '.$checkIn
+            ))
+            ->line(LuggageBilingualMail::line(
+                'Expected pickup: '.$checkOut,
+                'Ritiro previsto: '.$checkOut
+            ))
+            ->action(
+                LuggageBilingualMail::actionLabel('Open booking in Gestiio', 'Apri prenotazione in Gestiio'),
+                url('/backend/deposito-bagagli/'.$this->deposit->id)
+            );
     }
 
     public function toArray($notifiable): array

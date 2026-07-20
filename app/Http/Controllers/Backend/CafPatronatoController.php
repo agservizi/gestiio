@@ -298,6 +298,7 @@ class CafPatronatoController extends Controller
         $record = new CafPatronato;
         $record->esito_id = 'da-gestire';
         $record->prezzo_pratica = $tipoCafPatronato->prezzo_agente;
+        $record->importo_fornitore = (float) ($tipoCafPatronato->importo_fornitore ?? 0);
         $record->tipo_caf_patronato_id = $tipoCafPatronato->id;
 
         $this->salvaDati($record, $request);
@@ -654,7 +655,12 @@ class CafPatronatoController extends Controller
     {
         abort_unless(Auth::user()->hasAnyPermission(['admin', 'agente', 'supervisore', 'operatore']), 403);
 
-        $cafPatronatoId = $request->input('caf_patronato_id');
+        // In creazione pratica il dropzone manda 0: la FK richiede NULL (collegamento via uid al salvataggio).
+        $rawCafPatronatoId = $request->input('caf_patronato_id');
+        $cafPatronatoId = (is_numeric($rawCafPatronatoId) && (int) $rawCafPatronatoId > 0)
+            ? (int) $rawCafPatronatoId
+            : null;
+
         if ($cafPatronatoId) {
             $record = CafPatronato::find($cafPatronatoId);
             abort_if(! $record, 404);
@@ -664,15 +670,21 @@ class CafPatronatoController extends Controller
             }
         }
 
-        $file = new AllegatoCafPatronato;
+        if (! $request->file('file')) {
+            return response()->json(['success' => false, 'message' => 'File non presente'], 422);
+        }
 
-        if ($request->file('file')) {
+        $stored = null;
+
+        try {
             $cartella = config('configurazione.allegati_contratti.cartella');
             $stored = app(SensitiveFileService::class)->store($request->file('file'), $cartella, [
                 'area' => 'caf_patronato',
-                'caf_patronato_id' => $request->input('caf_patronato_id'),
+                'caf_patronato_id' => $cafPatronatoId,
                 'per_cliente' => $request->input('per_cliente', 0),
             ]);
+
+            $file = new AllegatoCafPatronato;
             $file->path_filename = $stored['path'];
             $file->filename_originale = $stored['original_name'];
             $file->mime_type = $stored['mime_type'];
@@ -681,15 +693,41 @@ class CafPatronatoController extends Controller
                 $file->uid = $request->input('uid');
             }
             $file->dimensione_file = $stored['size'];
-            $file->caf_patronato_id = $request->input('caf_patronato_id');
+            $file->caf_patronato_id = $cafPatronatoId;
             $file->per_cliente = $request->input('per_cliente', 0);
             $file->save();
 
-            return response()->json(['success' => true, 'id' => $file->id, 'filename' => $stored['filename'], 'thumbnail' => $file->urlThumbnail()]);
+            return response()->json([
+                'success' => true,
+                'id' => $file->id,
+                'filename' => $stored['filename'],
+                'thumbnail' => $file->urlThumbnail(),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($stored && ! empty($stored['path'])) {
+                app(SensitiveFileService::class)->delete($stored['path']);
+            }
 
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first() ?: 'Upload non valido.',
+            ], 422);
+        } catch (\Throwable $e) {
+            if ($stored && ! empty($stored['path'])) {
+                app(SensitiveFileService::class)->delete($stored['path']);
+            }
+
+            Log::error('CAF allegato upload failed', [
+                'user_id' => Auth::id(),
+                'caf_patronato_id' => $cafPatronatoId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Caricamento allegato non riuscito. Riprovare.',
+            ], 500);
         }
-        abort(404, 'File non presente');
-
     }
 
     public function deleteAllegato(Request $request)

@@ -62,12 +62,14 @@
                         @include('Backend._layout.app-toolbar')
                     @endunless
                     <div id="kt_app_content" class="app-content flex-column-fluid">
-                        <div id="kt_app_content_container" class="app-container {{\App\Http\HelperForMetronic::ktHeaderHeader()}}">
+                        <div id="kt_app_content_container" class="app-container {{$container??\App\Http\HelperForMetronic::ktHeaderHeader()}}">
                             @yield('content')
                         </div>
                     </div>
                 </div>
-                @include('Backend._layout.app-footer')
+                @unless($nascondiFooter ?? false)
+                    @include('Backend._layout.app-footer')
+                @endunless
             </div>
         </div>
     </div>

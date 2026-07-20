@@ -71,6 +71,17 @@ class Notifica extends Model
         $notifica->save();
     }
 
+    public static function notificaAdSupervisore(User $supervisore, $titolo, $testo, $tipo = 'info')
+    {
+        $notifica = new Notifica;
+        $notifica->titolo = $titolo;
+        $notifica->destinatario = 'supervisore';
+        $notifica->user_id = $supervisore->id;
+        $notifica->testo = $testo;
+        $notifica->tipo = $tipo;
+        $notifica->save();
+    }
+
     public function urlImmagine(): ?string
     {
         return $this->immagine ? '/storage/'.$this->immagine : null;

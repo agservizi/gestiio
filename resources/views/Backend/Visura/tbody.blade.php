@@ -4,11 +4,14 @@
         <td class="">{{$record->tipo->nome}}</td>
 
         <td class="">
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center flex-wrap gap-1">
                 {!! $record->bulletEsitoFinale() !!}
                 <div class="me-1">
                     {!! $record->esito->labelStato() !!}
                 </div>
+                @if(($record->openapi_stato_richiesta ?? '') === 'backoffice')
+                    <span class="badge badge-light-info">Backoffice</span>
+                @endif
                 @if($record->motivo_ko)
                     <i class="fas fa-question-circle ms-1 fs-6 " data-bs-toggle="tooltip" title="{{$record->motivo_ko}}"></i>
                 @endif

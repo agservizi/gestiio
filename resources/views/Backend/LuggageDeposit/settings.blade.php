@@ -61,6 +61,11 @@
                                         <label class="form-label fw-semibold">Giorni minimi fatturabili</label>
                                         <input type="number" min="1" name="min_days" value="{{ old('min_days', $luggage->min_days) }}" class="form-control form-control-solid">
                                     </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Canone mensile agente (€)</label>
+                                        <input type="number" step="0.01" min="0" name="luggage_agent_monthly_fee" value="{{ old('luggage_agent_monthly_fee', \App\Http\Support\LuggageConfig::agentMonthlyFee()) }}" class="form-control form-control-solid">
+                                        <div class="form-text">Addebito dal portafoglio servizi per usare il modulo in sportello. 0 = gratuito.</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -136,8 +141,9 @@
                     </div>
                 </div>
 
-                <div class="mt-6">
+                <div class="mt-6 d-flex flex-wrap gap-3">
                     <button type="submit" class="btn btn-primary">Salva impostazioni</button>
+                    <a href="{{ action([$controller, 'stationsIndex']) }}" class="btn btn-light">Gestisci postazioni agenti / API</a>
                 </div>
             </form>
         </div>

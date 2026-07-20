@@ -12,6 +12,10 @@ class EncryptCookies extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'sessionid',
+        'sfcsrftoken',
+        'csrftoken',
+        'django_language',
+        'gestiio_stirling_jwt',
     ];
 }

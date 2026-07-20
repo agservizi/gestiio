@@ -54,12 +54,12 @@
                     @if($deposit->status->value === 'PRENOTATO')
                         <form method="post" action="{{ action([$controller,'action'], $deposit->id) }}">@csrf
                             <input type="hidden" name="action" value="no-show">
-                            <button class="btn btn-light-danger" onclick="return confirm('Segnare come no-show?')">No-show</button>
+                            <button type="button" class="btn btn-light-danger" onclick="return gestiioAsk(this, 'Segnare come no-show?', true)">No-show</button>
                         </form>
                     @endif
                     <form method="post" action="{{ action([$controller,'action'], $deposit->id) }}">@csrf
                         <input type="hidden" name="action" value="cancel">
-                        <button class="btn btn-light" onclick="return confirm('Annullare?')">Annulla</button>
+                        <button type="button" class="btn btn-light" onclick="return gestiioAsk(this, 'Confermi l\'annullamento?')">Annulla</button>
                     </form>
                 @endif
                 @if($deposit->status->value === 'CHECK_IN')
@@ -71,7 +71,10 @@
                         </select>
                         <button class="btn btn-success">Check-out</button>
                     </form>
-                    <a href="{{ $deposit->pickupUrl() }}" class="btn btn-primary" target="_blank">Ritiro mobile (scan QR cliente)</a>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#pickupMobileModal-{{ $deposit->id }}">
+                        Ritiro mobile (scan QR cliente)
+                    </button>
+                    @include('Backend.LuggageDeposit.partials.pickup-mobile-qr-modal', ['deposit' => $deposit])
                 @endif
                 <a href="{{ action([$controller,'pdfTags'], $deposit->id) }}" class="btn btn-light-primary" target="_blank">PDF Tag bagagli</a>
                 <a href="{{ action([$controller,'pdfAgreement'], [$deposit->id, 'v' => $deposit->updated_at?->timestamp]) }}" class="btn btn-light" target="_blank">Documento firma cliente</a>

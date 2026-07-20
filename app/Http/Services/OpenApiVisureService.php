@@ -2,9 +2,7 @@
 
 namespace App\Http\Services;
 
-use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
+use Openapi\Client as OpenapiHttpClient;
 use Throwable;
 
 class OpenApiVisureService
@@ -13,7 +11,7 @@ class OpenApiVisureService
 
     private const ENDPOINT_PRODUCTION = 'https://visengine2.altravia.com/';
 
-    protected PendingRequest $client;
+    protected OpenapiHttpClient $sdk;
 
     public ?string $message = null;
 
@@ -22,23 +20,19 @@ class OpenApiVisureService
     public function __construct(?string $bearerToken = null)
     {
         $this->bearerTokenOverride = $bearerToken;
-        $this->client = Http::withHeaders([
-            'Authorization' => 'Bearer '.$this->bearerToken(),
-            'content-type' => 'application/json',
-            'accept' => 'application/json',
-        ])->timeout(30);
+        $this->sdk = new OpenapiHttpClient($this->bearerToken());
     }
 
     public function elencoVisure(): ?array
     {
         try {
-            $response = $this->client->get($this->endpoint().'visure');
+            $raw = $this->sdk->get($this->endpoint().'visure');
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
 
             return null;
         }
-        $payload = $this->decode($response);
+        $payload = $this->decodeRaw($raw);
 
         return is_array($payload['data'] ?? null) ? $payload['data'] : null;
     }
@@ -52,13 +46,13 @@ class OpenApiVisureService
         ];
 
         try {
-            $response = $this->client->post($this->endpoint().'richiesta', $payload);
+            $raw = $this->sdk->post($this->endpoint().'richiesta', $payload);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
 
             return null;
         }
-        $decoded = $this->decode($response);
+        $decoded = $this->decodeRaw($raw);
 
         return is_array($decoded['data'] ?? null) ? $decoded['data'] : null;
     }
@@ -66,20 +60,19 @@ class OpenApiVisureService
     public function statoRichiesta(string $requestId): ?array
     {
         try {
-            $response = $this->client->put($this->endpoint().'richiesta/'.urlencode($requestId), []);
+            $raw = $this->sdk->put($this->endpoint().'richiesta/'.urlencode($requestId), []);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
 
             return null;
         }
-        $decoded = $this->decode($response);
+        $decoded = $this->decodeRaw($raw);
         if (is_array($decoded['data'] ?? null)) {
             return $decoded['data'];
         }
 
-        // Fallback per varianti endpoint.
         try {
-            $fallback = $this->client->put($this->endpoint().'richiesta', [
+            $fallback = $this->sdk->put($this->endpoint().'richiesta', [
                 'request_id' => $requestId,
             ]);
         } catch (Throwable $e) {
@@ -87,7 +80,7 @@ class OpenApiVisureService
 
             return null;
         }
-        $decoded = $this->decode($fallback);
+        $decoded = $this->decodeRaw($fallback);
 
         return is_array($decoded['data'] ?? null) ? $decoded['data'] : null;
     }
@@ -95,53 +88,41 @@ class OpenApiVisureService
     public function scaricaDocumento(string $requestId): ?array
     {
         try {
-            $response = $this->client->get($this->endpoint().'documento/'.urlencode($requestId));
+            $raw = $this->sdk->get($this->endpoint().'documento/'.urlencode($requestId));
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
 
             return null;
         }
-        $decoded = $this->decode($response);
+        $decoded = $this->decodeRaw($raw);
         if (is_array($decoded['data'] ?? null)) {
             return $decoded['data'];
         }
 
-        // Fallback per varianti endpoint.
         try {
-            $fallback = $this->client->get($this->endpoint().'documento', ['request_id' => $requestId]);
+            $fallback = $this->sdk->get($this->endpoint().'documento', ['request_id' => $requestId]);
         } catch (Throwable $e) {
             $this->message = $e->getMessage();
 
             return null;
         }
-        $decoded = $this->decode($fallback);
+        $decoded = $this->decodeRaw($fallback);
 
         return is_array($decoded['data'] ?? null) ? $decoded['data'] : null;
     }
 
-    protected function decode(Response $response): array
+    protected function decodeRaw(string $raw): array
     {
-        if ($response->successful()) {
-            $json = $response->json();
-            if (is_array($json)) {
-                $this->message = $json['message'] ?? null;
-
-                return $json;
-            }
+        $json = json_decode($raw, true);
+        if (! is_array($json)) {
+            $this->message = 'Risposta OpenAPI non valida';
 
             return [];
         }
 
-        $json = $response->json();
-        if (is_array($json)) {
-            $this->message = $json['message'] ?? ('Errore OpenAPI ('.$response->status().')');
+        $this->message = isset($json['message']) ? (string) $json['message'] : null;
 
-            return $json;
-        }
-
-        $this->message = 'Errore OpenAPI ('.$response->status().')';
-
-        return [];
+        return $json;
     }
 
     protected function endpoint(): string

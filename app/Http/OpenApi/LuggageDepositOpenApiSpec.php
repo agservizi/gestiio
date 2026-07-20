@@ -11,7 +11,7 @@ class LuggageDepositOpenApiSpec
             'info' => [
                 'title' => 'Deposito Bagagli — API Pubblica',
                 'version' => '1.1.0',
-                'description' => 'API REST per prenotazioni deposito bagagli da sito web e integrazioni esterne. Autenticazione via header x-api-key (eccetto verify e health).',
+                'description' => 'API REST per prenotazioni deposito bagagli da sito web e integrazioni esterne. Autenticazione via header x-api-key: chiave HQ (LUGGAGE_API_KEY) o chiave dedicata postazione agente (eccetto verify e health). Header opzionale X-Station-Slug.',
             ],
             'servers' => [
                 ['url' => url('/api'), 'description' => 'Base API Gestiio'],

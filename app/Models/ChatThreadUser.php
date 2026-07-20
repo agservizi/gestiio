@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ChatThreadUser extends Model
 {
@@ -16,6 +17,7 @@ class ChatThreadUser extends Model
         'thread_id',
         'user_id',
         'last_read_at',
+        'muted_until',
     ];
 
     protected $casts = [
@@ -33,16 +35,27 @@ class ChatThreadUser extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * Conteggio dei THREAD con almeno un messaggio non letto (badge lista).
+     * NB: resta un conteggio di thread, non di singoli messaggi.
+     * Esclude i messaggi soft-deleted (deleted_at) quando la colonna esiste.
+     */
     public static function conteggioNonLetti(int $userId): int
     {
+        $escludiEliminati = Schema::hasColumn('chat_messages', 'deleted_at');
+
         return self::query()
             ->where('chat_thread_users.user_id', $userId)
-            ->whereExists(function ($query) {
+            ->whereExists(function ($query) use ($escludiEliminati) {
                 $query->select(DB::raw(1))
                     ->from('chat_messages')
                     ->whereColumn('chat_messages.thread_id', 'chat_thread_users.thread_id')
                     ->whereColumn('chat_messages.user_id', '<>', 'chat_thread_users.user_id')
                     ->whereRaw("chat_messages.created_at > COALESCE(chat_thread_users.last_read_at, '1970-01-01 00:00:00')");
+
+                if ($escludiEliminati) {
+                    $query->whereNull('chat_messages.deleted_at');
+                }
             })
             ->count();
     }

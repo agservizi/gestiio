@@ -5,10 +5,10 @@
 <script>var hostUrl = "assets/";</script>
 <script src="/assets_backend/plugins/global/plugins.bundle.js"></script>
 <script src="/assets_backend/js/scripts.bundle.js"></script>
-<script src="/assets_backend/js-miei/mieiScript.js?v=10"></script>
+<script src="/assets_backend/js-miei/mieiScript.js?v=14"></script>
 <script src="/assets_backend/js-miei/html2canvas.min.js"></script>
 @if($includeSegnalaChat)
-    <script src="/assets_backend/js-miei/segnala-chat.js?v=1"></script>
+    <script src="/assets_backend/js-miei/segnala-chat.js?v=2"></script>
 @endif
 
 @include('Backend._components.flashToast')

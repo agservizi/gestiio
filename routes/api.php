@@ -107,3 +107,20 @@ Route::prefix('admin/deposito-bagagli')
 
     });
 
+Route::prefix('public/locker-point')
+    ->middleware('throttle:60,1')
+    ->group(function () {
+        Route::get('health', [\App\Http\Controllers\Api\Public\LockerHealthController::class, 'show']);
+
+        Route::middleware('locker.api')->group(function () {
+            Route::post('book', [\App\Http\Controllers\Api\Public\LockerBookController::class, 'store']);
+            Route::get('packages', [\App\Http\Controllers\Api\Public\LockerPackageController::class, 'index']);
+            Route::get('packages/{code}', [\App\Http\Controllers\Api\Public\LockerPackageController::class, 'show']);
+            Route::patch('packages/{code}', [\App\Http\Controllers\Api\Public\LockerPackageController::class, 'update']);
+            Route::post('packages/{code}/cancel', [\App\Http\Controllers\Api\Public\LockerPackageController::class, 'cancel']);
+            Route::get('availability', [\App\Http\Controllers\Api\Public\LockerAvailabilityController::class, 'show']);
+            Route::get('availability/range', [\App\Http\Controllers\Api\Public\LockerAvailabilityRangeController::class, 'show']);
+            Route::get('pricing', [\App\Http\Controllers\Api\Public\LockerPricingController::class, 'show']);
+        });
+    });
+

@@ -3,17 +3,21 @@
 namespace Database\Factories;
 
 use App\Models\ChatMessage;
+use App\Models\ChatThread;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ChatMessageFactory extends Factory
 {
     protected $model = ChatMessage::class;
 
-    public function definition()
+    public function definition(): array
     {
         return [
-            'created_at' => now(),
-            'updated_at' => now(),
+            'thread_id' => ChatThread::factory(),
+            'user_id' => User::factory(),
+            'messaggio' => $this->faker->sentence(),
+            'priority' => 0,
         ];
     }
 }

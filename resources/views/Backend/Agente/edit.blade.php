@@ -61,10 +61,17 @@
                     <div class="col-lg-8 fv-row fv-plugins-icon-container">
                         @foreach(\Spatie\Permission\Models\Permission::where('id','>',3)->where('name','<>','operatore')->whereNotIn('name',$permessiAvanzati)->get()->pluck('name')->toArray() as $ruolo=>$testo)
                             @php($ruolo=$testo)
+                            @php($etichettaServizio=\App\Http\Controllers\Backend\AttivaServizioController::ETICHETTE_SERVIZI[$ruolo] ?? $ruolo)
                             <div class="form-check form-check-custom form-check-solid my-3">
                                 <input class="form-check-input" name="vedi[]" type="checkbox" id="radio{{$ruolo}}"
                                        value="{{$ruolo}}" {{$record->hasPermissionTo($ruolo)?'checked':''}}/>
-                                <label class="form-check-label" for="radio{{$ruolo}}">{{$testo}}</label>
+                                <label class="form-check-label" for="radio{{$ruolo}}">{{$etichettaServizio}}</label>
+                                @if($ruolo === 'servizio_deposito_bagagli')
+                                    <div class="form-text">Canone mensile {{ number_format(\App\Http\Support\LuggageConfig::agentMonthlyFee(), 2, ',', '.') }} € dal portafoglio servizi.</div>
+                                @endif
+                                @if($ruolo === 'servizio_locker_point')
+                                    <div class="form-text">Canone mensile {{ number_format(\App\Http\Support\LockerConfig::agentMonthlyFee(), 2, ',', '.') }} € dal portafoglio servizi.</div>
+                                @endif
                             </div>
                         @endforeach
                     </div>

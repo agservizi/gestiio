@@ -33,7 +33,7 @@
                                         @if($item->status->value === 'PRENOTATO')
                                             <form method="post" action="{{ action([$controller,'action'], $item->id) }}">@csrf
                                                 <input type="hidden" name="action" value="no-show">
-                                                <button class="btn btn-sm btn-light-danger" onclick="return confirm('No-show?')">No-show</button>
+                                                <button type="button" class="btn btn-sm btn-light-danger" onclick="return gestiioAsk(this, 'Segnare come no-show?', true)">No-show</button>
                                             </form>
                                         @endif
                                     @elseif($key === 'attivi')

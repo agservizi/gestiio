@@ -5,9 +5,533 @@ $(function () {
         }
 
     });
+
+    $(document).ajaxError(function (event, xhr) {
+        if (xhr && (xhr.status === 401 || xhr.status === 419)) {
+            gestiioHandleAjaxError(xhr, 'Sessione scaduta.', true);
+        }
+    });
 });
 
 var urlSelect2 = '/select2';
+var gestiioSessionExpiredShown = false;
+
+function gestiioNotify(type, message, title) {
+    var icon = type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'success');
+
+    if (window.toastr && typeof toastr[type] === 'function') {
+        toastr[type](message, title || '');
+        return;
+    }
+
+    if (window.Swal) {
+        Swal.fire({
+            title: title || '',
+            text: message,
+            icon: icon,
+            buttonsStyling: false,
+            confirmButtonText: 'Ok',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
+}
+
+/**
+ * Conferma Metronic (SweetAlert2 oppure modal Bootstrap).
+ * Uso: data-confirm="Messaggio?" su form o button[type=submit].
+ * Opzionale: data-confirm-danger per stile warning/rosso.
+ * Non usa mai window.confirm del browser.
+ */
+function gestiioSwal() {
+    return window.Swal || window.swal || window.Sweetalert2 || null;
+}
+
+function gestiioConfirm(message, options) {
+    options = options || {};
+    var SwalLib = gestiioSwal();
+
+    if (SwalLib && typeof SwalLib.fire === 'function') {
+        return SwalLib.fire({
+            text: message,
+            icon: options.icon || 'question',
+            showCancelButton: true,
+            buttonsStyling: false,
+            reverseButtons: true,
+            focusCancel: true,
+            confirmButtonText: options.confirmText || 'Conferma',
+            cancelButtonText: options.cancelText || 'Annulla',
+            customClass: {
+                confirmButton: options.confirmClass || 'btn btn-primary',
+                cancelButton: options.cancelClass || 'btn btn-light'
+            }
+        }).then(function (result) {
+            return !!(result.isConfirmed || result.value);
+        });
+    }
+
+    return gestiioConfirmBootstrap(message, options);
+}
+
+function gestiioEnsureConfirmModal() {
+    var el = document.getElementById('gestiio_confirm_modal');
+    if (el) {
+        return el;
+    }
+
+    el = document.createElement('div');
+    el.id = 'gestiio_confirm_modal';
+    el.className = 'modal fade';
+    el.tabIndex = -1;
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML =
+        '<div class="modal-dialog modal-dialog-centered">' +
+        '  <div class="modal-content">' +
+        '    <div class="modal-header">' +
+        '      <h3 class="modal-title" data-gestiio-confirm-title>Conferma</h3>' +
+        '      <div class="btn btn-icon btn-sm btn-active-light-primary ms-2" data-bs-dismiss="modal" aria-label="Chiudi">' +
+        '        <span class="svg-icon svg-icon-1">×</span>' +
+        '      </div>' +
+        '    </div>' +
+        '    <div class="modal-body">' +
+        '      <p class="mb-0 fs-5" data-gestiio-confirm-text></p>' +
+        '    </div>' +
+        '    <div class="modal-footer">' +
+        '      <button type="button" class="btn btn-light" data-bs-dismiss="modal" data-gestiio-confirm-cancel>Annulla</button>' +
+        '      <button type="button" class="btn btn-primary" data-gestiio-confirm-ok>Conferma</button>' +
+        '    </div>' +
+        '  </div>' +
+        '</div>';
+    document.body.appendChild(el);
+    return el;
+}
+
+function gestiioConfirmBootstrap(message, options) {
+    options = options || {};
+
+    return new Promise(function (resolve) {
+        var el = gestiioEnsureConfirmModal();
+        var okBtn = el.querySelector('[data-gestiio-confirm-ok]');
+        var textEl = el.querySelector('[data-gestiio-confirm-text]');
+        var settled = false;
+
+        textEl.textContent = message || 'Confermare?';
+        okBtn.textContent = options.confirmText || 'Conferma';
+        okBtn.className = options.confirmClass || 'btn btn-primary';
+
+        function finish(ok) {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            okBtn.onclick = null;
+            el.removeEventListener('hidden.bs.modal', onHidden);
+            resolve(ok);
+        }
+
+        function onHidden() {
+            finish(false);
+        }
+
+        okBtn.onclick = function () {
+            finish(true);
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(el).hide();
+            } else if (window.jQuery) {
+                $(el).modal('hide');
+            }
+        };
+
+        el.addEventListener('hidden.bs.modal', onHidden);
+
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(el).show();
+        } else if (window.jQuery) {
+            $(el).modal('show');
+        } else {
+            finish(true);
+        }
+    });
+}
+
+function gestiioConfirmOptionsFromEl(el) {
+    var danger = el.hasAttribute('data-confirm-danger');
+
+    return {
+        icon: danger ? 'warning' : 'question',
+        confirmText: danger ? 'Sì, conferma' : 'Conferma',
+        confirmClass: danger ? 'btn btn-danger' : 'btn btn-primary',
+        cancelClass: 'btn btn-light'
+    };
+}
+
+function gestiioSubmitConfirmedForm(form, submitter) {
+    form.dataset.confirmAccepted = '1';
+    if (typeof form.requestSubmit === 'function') {
+        if (submitter) {
+            form.requestSubmit(submitter);
+        } else {
+            form.requestSubmit();
+        }
+    } else {
+        form.submit();
+    }
+}
+
+function gestiioBindConfirmHandlers() {
+    if (window.__gestiioConfirmBound) {
+        return;
+    }
+    window.__gestiioConfirmBound = true;
+
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form || form.tagName !== 'FORM' || !form.hasAttribute('data-confirm')) {
+            return;
+        }
+        if (form.dataset.confirmAccepted === '1') {
+            delete form.dataset.confirmAccepted;
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        gestiioConfirm(form.getAttribute('data-confirm') || 'Confermare?', gestiioConfirmOptionsFromEl(form))
+            .then(function (ok) {
+                if (ok) {
+                    gestiioSubmitConfirmedForm(form);
+                }
+            });
+    }, true);
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('button[data-confirm], input[type="submit"][data-confirm]') : null;
+        if (!btn) {
+            return;
+        }
+
+        var form = btn.form || btn.closest('form');
+        if (!form || form.hasAttribute('data-confirm')) {
+            return;
+        }
+        if (form.dataset.confirmAccepted === '1') {
+            delete form.dataset.confirmAccepted;
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        gestiioConfirm(btn.getAttribute('data-confirm') || 'Confermare?', gestiioConfirmOptionsFromEl(btn))
+            .then(function (ok) {
+                if (ok) {
+                    gestiioSubmitConfirmedForm(form, btn);
+                }
+            });
+    }, true);
+}
+
+/**
+ * Conferma Metronic su form/button (onclick="return gestiioAsk(this, 'msg', true)").
+ */
+window.gestiioAsk = function (formOrBtn, message, danger) {
+    var form = formOrBtn;
+    if (formOrBtn && formOrBtn.tagName === 'BUTTON') {
+        form = formOrBtn.form || formOrBtn.closest('form');
+    }
+    if (!form) {
+        return false;
+    }
+
+    message = message || 'Confermare?';
+
+    function submitForm() {
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+        } else {
+            form.submit();
+        }
+    }
+
+    gestiioConfirm(message, {
+        icon: danger ? 'warning' : 'question',
+        confirmText: danger ? 'Sì, conferma' : 'Conferma',
+        confirmClass: danger ? 'btn btn-danger' : 'btn btn-primary',
+        cancelClass: 'btn btn-light'
+    }).then(function (ok) {
+        if (ok) {
+            submitForm();
+        }
+    });
+
+    return false;
+};
+
+function gestiioItalianLocale() {
+    return {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'],
+            longhand: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
+        },
+        months: {
+            shorthand: ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
+            longhand: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+        },
+        rangeSeparator: ' — ',
+        weekAbbreviation: 'Sett',
+        scrollTitle: 'Scorri per aumentare',
+        toggleTitle: 'Clicca per cambiare',
+        time_24hr: true
+    };
+}
+
+/**
+ * Flatpickr Metronic al posto di input type=date/datetime-local del browser.
+ * Opt-out: data-native-date | data-no-flatpickr
+ */
+function gestiioInitDatepickers(root) {
+    if (typeof flatpickr === 'undefined') {
+        return;
+    }
+
+    var scope = root && root.querySelectorAll ? root : document;
+    if (typeof root === 'string' && window.jQuery) {
+        scope = jQuery(root).get(0) || document;
+    }
+
+    var nodes = scope.querySelectorAll(
+        'input[type="date"], input[type="datetime-local"], input.gestiio-datepicker, input.send-datepicker, input.gestiio-datetime'
+    );
+
+    Array.prototype.forEach.call(nodes, function (el) {
+        if (!el || el.nodeType !== 1) {
+            return;
+        }
+        if (el.hasAttribute('data-native-date') || el.hasAttribute('data-no-flatpickr')) {
+            return;
+        }
+        if (el._flatpickr) {
+            return;
+        }
+        if (el.classList.contains('form-control') === false && el.classList.contains('send-datepicker') === false) {
+            // keep going — date inputs may lack form-control
+        }
+
+        var isDateTime = el.type === 'datetime-local'
+            || el.classList.contains('gestiio-datetime')
+            || el.getAttribute('data-enable-time') === 'true';
+
+        var min = el.getAttribute('min') || null;
+        var max = el.getAttribute('max') || null;
+        var rawValue = el.value || '';
+
+        if (el.type === 'date' || el.type === 'datetime-local') {
+            el.type = 'text';
+        }
+
+        if (isDateTime && rawValue.indexOf('T') !== -1) {
+            el.value = rawValue.replace('T', ' ').slice(0, 16);
+        }
+
+        if (!el.classList.contains('form-control') && !el.classList.contains('form-control-solid')) {
+            el.classList.add('form-control');
+        }
+
+        var opts = {
+            altInput: true,
+            altFormat: isDateTime ? 'd/m/Y H:i' : 'd/m/Y',
+            dateFormat: isDateTime ? 'Y-m-d H:i' : 'Y-m-d',
+            allowInput: true,
+            locale: gestiioItalianLocale(),
+            disableMobile: true,
+            enableTime: !!isDateTime,
+            time_24hr: true
+        };
+
+        if (min) {
+            opts.minDate = min.replace('T', ' ');
+        }
+        if (max) {
+            opts.maxDate = max.replace('T', ' ');
+        }
+
+        flatpickr(el, opts);
+    });
+}
+
+/**
+ * Select2 Metronic su select statici. Opt-out: data-no-select2
+ */
+function gestiioInitSelects(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    if (typeof root === 'string' && window.jQuery) {
+        scope = jQuery(root).get(0) || document;
+    }
+
+    var nodes = scope.querySelectorAll(
+        'select.form-select, #kt_app_content select, #kt_content select, .modal select, form select'
+    );
+
+    var seen = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+
+    Array.prototype.forEach.call(nodes, function (el) {
+        if (!el || el.tagName !== 'SELECT') {
+            return;
+        }
+        if (seen) {
+            if (seen.has(el)) {
+                return;
+            }
+            seen.add(el);
+        }
+        if (el.hasAttribute('data-no-select2')) {
+            return;
+        }
+        if (el.classList.contains('select2-hidden-accessible')) {
+            return;
+        }
+        if (el.getAttribute('data-kt-initialized') === '1') {
+            return;
+        }
+        // AJAX Select2 già gestiti da select2Universale* (hanno data-ajax o container custom)
+        if (el.getAttribute('data-select2-ajax') === '1' || el.hasAttribute('data-ajax--url')) {
+            return;
+        }
+
+        if (!el.hasAttribute('data-control') && el.getAttribute('data-kt-select2') !== 'true') {
+            el.setAttribute('data-control', 'select2');
+        }
+
+        var optionCount = el.options ? el.options.length : 0;
+        if (optionCount > 0 && optionCount <= 8 && !el.hasAttribute('data-hide-search')) {
+            el.setAttribute('data-hide-search', 'true');
+        }
+
+        var modal = el.closest('.modal');
+        if (modal && modal.id && !el.hasAttribute('data-dropdown-parent')) {
+            el.setAttribute('data-dropdown-parent', '#' + modal.id);
+        }
+    });
+
+    if (typeof KTApp !== 'undefined' && typeof KTApp.createInstances === 'function') {
+        KTApp.createInstances();
+    } else if (window.jQuery && typeof jQuery.fn.select2 === 'function') {
+        Array.prototype.forEach.call(nodes, function (el) {
+            if (!el || el.hasAttribute('data-no-select2') || el.classList.contains('select2-hidden-accessible')) {
+                return;
+            }
+            if (el.getAttribute('data-kt-initialized') === '1') {
+                return;
+            }
+            var opts = {
+                width: '100%',
+                placeholder: el.getAttribute('data-placeholder') || ''
+            };
+            if (el.getAttribute('data-hide-search') === 'true') {
+                opts.minimumResultsForSearch = Infinity;
+            }
+            var modal = el.closest('.modal');
+            if (modal) {
+                opts.dropdownParent = jQuery(modal);
+            }
+            jQuery(el).select2(opts);
+            el.setAttribute('data-kt-initialized', '1');
+        });
+    }
+}
+
+function gestiioInitMetronicUI(root) {
+    gestiioInitDatepickers(root);
+    gestiioInitSelects(root);
+}
+
+function gestiioBindMetronicUI() {
+    if (window.__gestiioMetronicUiBound) {
+        return;
+    }
+    window.__gestiioMetronicUiBound = true;
+
+    var run = function () {
+        gestiioInitMetronicUI(document);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
+    }
+
+    if (window.jQuery) {
+        jQuery(document).on('shown.bs.modal', '.modal', function () {
+            gestiioInitMetronicUI(this);
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', gestiioBindConfirmHandlers);
+} else {
+    gestiioBindConfirmHandlers();
+}
+gestiioBindMetronicUI();
+
+function gestiioAjaxMessage(xhr, fallback) {
+    var message = fallback || 'Operazione non riuscita.';
+
+    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+        return xhr.responseJSON.message;
+    }
+
+    if (xhr && xhr.responseText) {
+        try {
+            var parsed = JSON.parse(xhr.responseText);
+            if (parsed.message) {
+                return parsed.message;
+            }
+        } catch (e) {
+            if (xhr.status >= 500) {
+                return 'Errore server. Riprova tra poco o ricarica la pagina.';
+            }
+        }
+    }
+
+    return message;
+}
+
+function gestiioHandleAjaxError(xhr, fallback, silentForHandled) {
+    if (!xhr) {
+        gestiioNotify('error', fallback || 'Operazione non riuscita.');
+        return false;
+    }
+
+    if (xhr.gestiioHandled) {
+        return true;
+    }
+
+    if (xhr.status === 401 || xhr.status === 419) {
+        if (!gestiioSessionExpiredShown) {
+            xhr.gestiioHandled = true;
+            gestiioSessionExpiredShown = true;
+            $('.modal.show').modal('hide');
+            gestiioNotify('warning', 'Sessione scaduta. Verrai riportato al login per continuare.', 'Sessione scaduta');
+            setTimeout(function () {
+                window.location.href = '/login';
+            }, 1400);
+        }
+        return true;
+    }
+
+    if (silentForHandled && xhr.status === 422) {
+        return false;
+    }
+
+    xhr.gestiioHandled = true;
+    gestiioNotify('error', gestiioAjaxMessage(xhr, fallback));
+    return false;
+}
 
 function searchHandler() {
     const $filterSearch = $('#filter_search');
@@ -179,12 +703,7 @@ function elimina(url) {
                 }
             },
             error: function (xhr, ajaxOptions, thrownError) {
-                var err = eval("(" + xhr.responseText + ")");
-                Swal.fire(
-                    "Errore " + xhr.status,
-                    err.message,
-                    "error"
-                )
+                gestiioHandleAjaxError(xhr, 'Eliminazione non riuscita.');
             }
         });
 
@@ -206,8 +725,8 @@ function tabAjax() {
             $.get(loadurl, function (data) {
                 $(targ).html(data);
                 //window.livewire.rescan();
-            }).fail(function () {
-                alert('Errore nel caricamento dei contenuti'); // or whatever
+            }).fail(function (xhr) {
+                gestiioHandleAjaxError(xhr, 'Errore nel caricamento dei contenuti.');
             });
 
         } else {
@@ -221,10 +740,36 @@ function tabAjax() {
 }
 
 function modalAjax() {
-    $(document).on('click', '[data-toggle="modal-ajax"]', function (e) {
+    var triggerSelector = '[data-toggle="modal-ajax"], [data-toggleZ="modal-ajax"]';
+
+    var refreshUi = function (container) {
+        var root = container;
+        if (typeof container === 'string') {
+            root = document.querySelector(container) || document;
+        } else if (container && container.jquery) {
+            root = container.get(0) || document;
+        }
+
+        if (typeof gestiioInitMetronicUI === 'function') {
+            gestiioInitMetronicUI(root || document);
+        } else if (typeof KTApp !== 'undefined' && typeof KTApp.createInstances === 'function') {
+            KTApp.createInstances();
+        }
+
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Tooltip === 'function') {
+            $(container || document).find('[data-bs-toggle="tooltip"]').each(function () {
+                if (!bootstrap.Tooltip.getInstance(this)) {
+                    bootstrap.Tooltip.getOrCreateInstance(this);
+                }
+            });
+        }
+    };
+
+    $(document).on('click', triggerSelector, function (e) {
         e.preventDefault();
         var url = $(this).attr('href');
-        var target = '#' + $(this).data('target');
+        var targetName = $(this).data('target') || $(this).attr('data-targetZ');
+        var target = '#' + targetName;
         // AJAX request
         $.ajax({
             url: url,
@@ -235,16 +780,55 @@ function modalAjax() {
 
                 // Display Modal
                 $(target).modal('show');
+                refreshUi(target);
             },
             error: function (xhr, ajaxOptions, thrownError) {
-                var err = eval("(" + xhr.responseText + ")");
-
-                alert(err.message);
+                gestiioHandleAjaxError(xhr, 'Errore nel caricamento del modal.');
             }
 
         });
     });
 
+    refreshUi(document);
+}
+
+function apriModal(url, targetName) {
+    var target = '#' + (targetName || 'kt_modal');
+
+    var refreshUi = function (container) {
+        var root = container;
+        if (typeof container === 'string') {
+            root = document.querySelector(container) || document;
+        } else if (container && container.jquery) {
+            root = container.get(0) || document;
+        }
+
+        if (typeof gestiioInitMetronicUI === 'function') {
+            gestiioInitMetronicUI(root || document);
+        } else if (typeof KTApp !== 'undefined' && typeof KTApp.createInstances === 'function') {
+            KTApp.createInstances();
+        }
+
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Tooltip === 'function') {
+            $(container || document).find('[data-bs-toggle="tooltip"]').each(function () {
+                if (!bootstrap.Tooltip.getInstance(this)) {
+                    bootstrap.Tooltip.getOrCreateInstance(this);
+                }
+            });
+        }
+    };
+
+    $.ajax({
+        url: url,
+        success: function (response) {
+            $(target).html(response);
+            $(target).modal('show');
+            refreshUi(target);
+        },
+        error: function (xhr) {
+            gestiioHandleAjaxError(xhr, 'Errore nel caricamento del modal.');
+        }
+    });
 }
 
 
@@ -274,12 +858,7 @@ function ajaxAzione(url) {
                 }
             },
             error: function (xhr, ajaxOptions, thrownError) {
-                var err = eval("(" + xhr.responseText + ")");
-                Swal.fire(
-                    "Errore " + xhr.status,
-                    err.message,
-                    "error"
-                )
+                gestiioHandleAjaxError(xhr, 'Operazione non riuscita.');
             }
         });
 
@@ -356,9 +935,6 @@ function formSubmit(obj) {
             dataType: 'json',
             success: function (resp) {
 
-                //todo: provare a gestire l'errore con
-                //jQuery("body").html(resp.responseText);
-
                 if (resp.success) {
                     cancellaErrori();
 
@@ -376,7 +952,7 @@ function formSubmit(obj) {
                         if (resp.oggettoReload !== '') {
                             var oggettoReload = $('#' + resp.oggettoReload);
                             if (oggettoReload.length === 0) {
-                                alert('L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
+                                gestiioNotify('error', 'L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
                             } else {
                                 oggettoReload.html(base64_decode(resp.html));
                             }
@@ -388,7 +964,7 @@ function formSubmit(obj) {
                         if (resp.oggettoReplace !== '') {
                             var oggettoReplace = $('#' + resp.oggettoReplace);
                             if (oggettoReplace.length === 0) {
-                                alert('L\'oggetto con ID=' + '#' + resp.oggettoReplace + ' non esiste');
+                                gestiioNotify('error', 'L\'oggetto con ID=' + '#' + resp.oggettoReplace + ' non esiste');
                             } else {
                                 oggettoReplace.replaceWith(base64_decode(resp.html));
                             }
@@ -422,7 +998,7 @@ function formSubmit(obj) {
 
                         }
                     } else {
-                        alert('Manca chiudiDialog');
+                        gestiioNotify('error', 'Manca chiudiDialog');
                     }
 
                     if (typeof resp.eseguiFunzione !== 'undefined') {
@@ -438,7 +1014,7 @@ function formSubmit(obj) {
                     } else {
                         $("#submit").off('click');
 
-                        alert('Errore: '+resp.message);
+                        gestiioNotify('error', 'Errore: ' + resp.message);
                     }
                 }
             },
@@ -451,21 +1027,13 @@ function formSubmit(obj) {
                 } else {
                     $("#submit").off('click');
 
-                    alert(resp.responseText);
+                    gestiioHandleAjaxError(resp, 'Salvataggio non riuscito.');
 
                 }
             }
         }
     )
     ;
-
-    /*            .done(function (response) {
-     //
-     })
-     .fail(function (jqXHR, json) {
-     //
-     alert('Ajax fail');
-     });*/
 
     function visualizzaErrori(errori) {
         console.log(errori);
@@ -484,7 +1052,7 @@ function formSubmit(obj) {
                 txtList += '\n*' + value;
             });
             console.log(txtList);
-            alert('Si sono verificati degli errori:' + txtList);
+            gestiioNotify('error', 'Si sono verificati degli errori:' + txtList);
         }
 
 
@@ -534,7 +1102,7 @@ function formDelete() {
                             if (resp.html !== '' || resp.oggettoReload !== '') {
                                 var oggettoReload = $('#' + resp.oggettoReload);
                                 if (oggettoReload.length === 0) {
-                                    alert('L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
+                                    gestiioNotify('error', 'L\'oggetto con ID=' + '#' + resp.oggettoReload + ' non esiste');
                                 } else {
                                     oggettoReload.html(base64_decode(resp.html));
                                 }
@@ -552,11 +1120,11 @@ function formDelete() {
 
 
                     } else {
-                        alert(resp.message);
+                        gestiioNotify('error', resp.message || 'Eliminazione non riuscita.');
                     }
                 },
-                error: function () {
-                    jQuery("body").html(resp.responseText);
+                error: function (xhr) {
+                    gestiioHandleAjaxError(xhr, 'Eliminazione non riuscita.');
                 }
 
             });
@@ -660,8 +1228,8 @@ function segnalaProblema() {
                     $('#kt_modal').modal('show');
 
                 },
-                error: function () {
-                    jQuery("body").html(resp.responseText);
+                error: function (xhr) {
+                    gestiioHandleAjaxError(xhr, 'Impossibile aprire la segnalazione.');
                 }
             });
         //document.body.appendChild(canvas);

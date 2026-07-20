@@ -10,9 +10,9 @@ php artisan view:clear --no-interaction || true
 php artisan package:discover --ansi --no-interaction || true
 php artisan storage:link --no-interaction || true
 
-# Queue worker (email ritiro bagagli, web push, listener in coda)
+# Queue worker (email, web push, listener in coda) — loop: --max-time termina il processo ogni ora
 if ! pgrep -f "artisan queue:work" >/dev/null 2>&1; then
-    su -s /bin/sh www-data -c "php /var/www/html/artisan queue:work --sleep=3 --tries=3 --max-time=3600 >> /var/www/html/storage/logs/queue-worker.log 2>&1" &
+    su -s /bin/sh www-data -c 'while true; do php /var/www/html/artisan queue:work --sleep=3 --tries=3 --max-time=3600 >> /var/www/html/storage/logs/queue-worker.log 2>&1; sleep 1; done' &
 fi
 
 exec apache2-foreground

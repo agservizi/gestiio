@@ -19,6 +19,10 @@
         @elseif($type === 'textarea')
             <textarea name="{{ $name }}" id="{{ $name }}" rows="4"
                       class="form-control form-control-solid">{{ old($name, setting($name, '')) }}</textarea>
+        @elseif($type === 'number')
+            <input type="number" name="{{ $name }}" id="{{ $name }}" min="1" max="168"
+                   value="{{ old($name, setting($name, $name === 'luggage_pickup_qr_hours_before' ? 24 : '')) }}"
+                   class="form-control form-control-solid">
         @else
             <input type="text" name="{{ $name }}" id="{{ $name }}"
                    value="{{ old($name, setting($name, '')) }}"

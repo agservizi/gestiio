@@ -1,0 +1,78 @@
+# Stirling PDF — rete Docker Gestiio + porte LAN per app Windows (non pubblicare su Cloudflare)
+# Avvio sul NAS:
+#   mkdir -p /home/Carmine/apps/stirling-pdf/{configs,logs,tessdata,pipeline,customFiles}
+#   cd /home/Carmine/apps/stirling-pdf
+#   /Volume1/@apps/DockerEngine/dockerd/bin/docker compose -f docker-compose.stirling.yml up -d
+#
+# URL:
+#   Browser (via Gestiio): https://gestiio.agenziaplinio.it/pdf-tools
+#   App Windows (LAN):     http://192.168.1.50:8092
+services:
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest
+    container_name: stirling-pdf
+    restart: unless-stopped
+    # Accesso diretto con context /pdf-tools (debug / browser LAN)
+    ports:
+      - "8091:8080"
+    expose:
+      - "8080"
+    volumes:
+      - /home/Carmine/apps/stirling-pdf/tessdata:/usr/share/tessdata
+      - /home/Carmine/apps/stirling-pdf/configs:/configs
+      - /home/Carmine/apps/stirling-pdf/logs:/logs
+      - /home/Carmine/apps/stirling-pdf/pipeline:/pipeline
+      - /home/Carmine/apps/stirling-pdf/customFiles:/customFiles
+    env_file:
+      - .env
+    environment:
+      SECURITY_ENABLELOGIN: "true"
+      SECURITY_LOGINMETHOD: normal
+      SECURITY_INITIALLOGIN_USERNAME: ${STIRLING_ADMIN_USER:-admin}
+      SECURITY_INITIALLOGIN_PASSWORD: ${STIRLING_ADMIN_PASSWORD:?set STIRLING_ADMIN_PASSWORD in .env}
+      DISABLE_ADDITIONAL_FEATURES: "false"
+      DOCKER_ENABLE_SECURITY: "true"
+      SECURITY_XFRAMEOPTIONS: SAMEORIGIN
+      SYSTEM_ROOTURIPATH: /pdf-tools
+      # URL pubblico (QR mobile-scanner / link): non usare hostname Docker interno
+      SYSTEM_FRONTENDURL: https://gestiio.agenziaplinio.it/pdf-tools
+      SYSTEM_BACKENDURL: https://gestiio.agenziaplinio.it/pdf-tools
+      SYSTEM_ENABLEMOBILESCANNER: "true"
+      SYSTEM_DEFAULTLOCALE: it-IT
+      UI_LANGUAGES: it_IT
+      SYSTEM_ENABLEANALYTICS: "false"
+      SYSTEM_ENABLEDESKTOPINSTALLSLIDE: "false"
+      SYSTEM_SHOWUPDATE: "false"
+      SYSTEM_SHOWUPDATEONLYADMIN: "true"
+      SYSTEM_GOOGLEVISIBILITY: "false"
+      # Niente My Files / archiviazione: evita condivisioni e resta nel piano free
+      STORAGE_ENABLED: "false"
+      # Solo tool developer nascosti; LibreOffice/OCR restano attivi (immagine full)
+      ENDPOINTS_GROUPSTOREMOVE: DeveloperTools,DeveloperDocs
+      # false = mostra anche tool temporaneamente non disponibili (non li nasconde)
+      UI_DEFAULTHIDEUNAVAILABLETOOLS: "false"
+      UI_DEFAULTHIDEUNAVAILABLECONVERSIONS: "false"
+      # Path OCR: volume host tessdata (deve contenere almeno eng/ita/osd)
+      TESSDATA_PREFIX: /usr/share/tessdata/
+    networks:
+      - gestiio_net
+
+  # Proxy LAN per app Windows: espone Stirling in root (/api/v1/info/status)
+  # perché il client desktop risolve /api/... dall'origin, ignorando /pdf-tools.
+  stirling-lan:
+    image: nginx:alpine
+    container_name: stirling-lan
+    restart: unless-stopped
+    ports:
+      - "8092:80"
+    volumes:
+      - /home/Carmine/apps/stirling-pdf/stirling-lan-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - stirling-pdf
+    networks:
+      - gestiio_net
+
+networks:
+  gestiio_net:
+    external: true
+    name: gestiio-20260624-2128_default

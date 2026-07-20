@@ -25,6 +25,13 @@ class CartellaFilesController extends Controller
 
     public function index(Request $request, $cartellaId = 0)
     {
+        // UI Documenti migrata a Seafile: mantieni il metodo per action() legacy → redirect
+        return redirect()->to(url('/backend/documenti'));
+    }
+
+    /** Elenco legacy (non usato dalla UI principale). */
+    public function indexLegacy(Request $request, $cartellaId = 0)
+    {
         abort_unless($this->canViewDocumenti(), 403);
 
         $nomeClasse = get_class($this);

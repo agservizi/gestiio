@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Backend\AllegatoMobileScanController;
 use App\Http\Controllers\Backend\AgenteController;
 use App\Http\Controllers\Backend\AiAutomationController;
 use App\Http\Controllers\Backend\AjaxController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Backend\Autenticazione2faController;
 use App\Http\Controllers\Backend\BrtOrmController;
 use App\Http\Controllers\Backend\CafPatronatoController;
 use App\Http\Controllers\Backend\CartellaFilesController;
+use App\Http\Controllers\Backend\SeafileDocumentiController;
 use App\Http\Controllers\Backend\CausaleTicketController;
 use App\Http\Controllers\Backend\ChatController;
 use App\Http\Controllers\Backend\ChiamataApiController;
@@ -27,6 +29,8 @@ use App\Http\Controllers\Backend\EsitoVisuraController;
 use App\Http\Controllers\Backend\EsportaController;
 use App\Http\Controllers\Backend\FasciaTipoContrattoController;
 use App\Http\Controllers\Backend\FatturaProformaController;
+use App\Http\Controllers\Backend\BillingDocumentController;
+use App\Http\Controllers\Backend\BillingFornitoreController;
 use App\Http\Controllers\Backend\GestoreAttivazioniController;
 use App\Http\Controllers\Backend\GestoreContrattoEnergiaController;
 use App\Http\Controllers\Backend\GestoreController;
@@ -37,11 +41,14 @@ use App\Http\Controllers\Backend\ListinoBrtController;
 use App\Http\Controllers\Backend\ListinoBrtEuropaController;
 use App\Http\Controllers\Backend\ListinoController;
 use App\Http\Controllers\Backend\ListinoInpostController;
+use App\Http\Controllers\Backend\LockerPackageController;
 use App\Http\Controllers\Backend\LuggageDepositController;
+use App\Http\Controllers\Backend\SendRequestController;
 use App\Http\Controllers\Backend\ModalController;
 use App\Http\Controllers\Backend\NotificaController;
 use App\Http\Controllers\Backend\OffertaSimController;
 use App\Http\Controllers\Backend\PaymentController;
+use App\Http\Controllers\Backend\PdfToolsController;
 use App\Http\Controllers\Backend\PortafoglioController;
 use App\Http\Controllers\Backend\ProdottoAssistenzaController;
 use App\Http\Controllers\Backend\ProduzioneOperatoreController;
@@ -79,6 +86,74 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/gestiio-ai/ricarica-plafond/intent', [PaymentController::class, 'prepareChatRicarica']);
     Route::post('/gestiio-ai/ricarica-plafond/pay', [PaymentController::class, 'storePagamentoChat']);
     Route::post('/ai-suggestion/{suggestion}/feedback', [AiAutomationController::class, 'feedback']);
+
+    Route::middleware(['role_or_permission:admin|agente'])->group(function () {
+        Route::get('/pdf-tools', [PdfToolsController::class, 'index'])->name('backend.pdf-tools');
+        Route::get('/pdf-tools/enter', [PdfToolsController::class, 'enter'])->name('backend.pdf-tools.enter');
+        Route::get('/pdf-tools/sso-token', [PdfToolsController::class, 'ssoToken'])->name('backend.pdf-tools.sso-token');
+        Route::get('/pdf-tools/desktop-credentials', [PdfToolsController::class, 'desktopCredentials'])->name('backend.pdf-tools.desktop-credentials');
+
+        // Documenti → Seafile (admin RW / agente RO via SSO)
+        Route::get('/documenti/sso', [SeafileDocumentiController::class, 'sso'])->name('backend.documenti.sso');
+        Route::get('/documenti/{id?}', [SeafileDocumentiController::class, 'index'])
+            ->where('id', '[0-9]*')
+            ->name('backend.documenti');
+    });
+
+    Route::middleware(['can:viewAny,App\Models\SendRequest'])->prefix('send')->group(function () {
+        Route::get('/', [SendRequestController::class, 'dashboard']);
+        Route::get('richieste', [SendRequestController::class, 'index']);
+        Route::get('nuova', [SendRequestController::class, 'create']);
+        Route::post('nuova', [SendRequestController::class, 'store']);
+        Route::get('coda', [SendRequestController::class, 'queue']);
+        Route::get('integrazioni', [SendRequestController::class, 'integrations']);
+        Route::get('report', [SendRequestController::class, 'report']);
+        Route::get('report.csv', [SendRequestController::class, 'exportCsv']);
+        Route::get('impostazioni', [SendRequestController::class, 'settings']);
+        Route::post('impostazioni', [SendRequestController::class, 'updateSettings']);
+        Route::post('allegato', [SendRequestController::class, 'uploadAllegato']);
+        Route::delete('allegato', [SendRequestController::class, 'deleteAllegato']);
+        Route::get('{send}', [SendRequestController::class, 'show']);
+        Route::get('{send}/modifica', [SendRequestController::class, 'edit']);
+        Route::post('{send}/modifica', [SendRequestController::class, 'update']);
+        Route::post('{send}/invia', [SendRequestController::class, 'submit']);
+        Route::post('{send}/prendi-in-carico', [SendRequestController::class, 'takeCharge']);
+        Route::post('{send}/assegna-a-me', [SendRequestController::class, 'claim']);
+        Route::post('{send}/lavorazione', [SendRequestController::class, 'startProcessing']);
+        Route::post('{send}/integrazione', [SendRequestController::class, 'requestIntegration']);
+        Route::post('{send}/completa', [SendRequestController::class, 'complete']);
+        Route::post('{send}/rifiuta', [SendRequestController::class, 'reject']);
+        Route::post('{send}/annulla', [SendRequestController::class, 'cancel']);
+        Route::post('{send}/consegna', [SendRequestController::class, 'deliver']);
+        Route::post('{send}/elimina', [SendRequestController::class, 'destroy']);
+        Route::post('{send}/riapri', [SendRequestController::class, 'reopen']);
+        Route::post('{send}/riassegna', [SendRequestController::class, 'reassign']);
+        Route::get('{send}/ricevuta-consegna.pdf', [SendRequestController::class, 'deliveryReceiptPdf']);
+        Route::post('{send}/nota', [SendRequestController::class, 'addNote']);
+        Route::post('{send}/documento', [SendRequestController::class, 'uploadDocument']);
+        Route::post('{send}/allegato-cliente', [SendRequestController::class, 'uploadClientDocument']);
+        Route::get('{send}/allegato-cliente', [SendRequestController::class, 'downloadClientDocument']);
+        Route::get('{send}/documento/{document}', [SendRequestController::class, 'downloadDocument']);
+        Route::post('{send}/documento/{document}/elimina', [SendRequestController::class, 'destroyDocument']);
+    });
+
+    // Alias per action([CartellaFilesController::class,'index']) legacy (dashboard/view) → redirect Seafile
+    Route::get('/documenti-index/{id?}', [CartellaFilesController::class, 'index'])
+        ->where('id', '[0-9]*')
+        ->name('documenti.legacy-index');
+
+    // Carica da telefono (Stirling mobile-scanner) — bridge autenticato per dropzoneUx
+    Route::post('/allegati-mobile-scan/session', [AllegatoMobileScanController::class, 'createSession'])
+        ->name('allegati-mobile-scan.session');
+    Route::get('/allegati-mobile-scan/session/{sessionId}', [AllegatoMobileScanController::class, 'status'])
+        ->where('sessionId', '[a-fA-F0-9-]{36}')
+        ->name('allegati-mobile-scan.status');
+    Route::get('/allegati-mobile-scan/session/{sessionId}/file/{fileId}', [AllegatoMobileScanController::class, 'download'])
+        ->where('sessionId', '[a-fA-F0-9-]{36}')
+        ->name('allegati-mobile-scan.download');
+    Route::delete('/allegati-mobile-scan/session/{sessionId}', [AllegatoMobileScanController::class, 'destroy'])
+        ->where('sessionId', '[a-fA-F0-9-]{36}')
+        ->name('allegati-mobile-scan.destroy');
 
     // Contratto
     Route::post('/allegato-contratto', [ContrattoTelefoniaController::class, 'uploadAllegato']);
@@ -159,8 +234,8 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/allegato-servizio', [AllegatoServizioController::class, 'uploadAllegato']);
     Route::delete('/allegato-servizio', [AllegatoServizioController::class, 'deleteAllegato']);
 
-    // Documenti
-    Route::get('documenti/{id?}', [CartellaFilesController::class, 'index']);
+    // Documenti legacy (share/download/versioni su disk locale — UI sostituita da Seafile)
+    // Route::get('documenti/{id?}', ...) → SeafileDocumentiController sopra
 
     Route::resource('documenti/{cartellaId}/cartella', CartellaFilesController::class)->except(['index', 'show']);
 
@@ -193,7 +268,29 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
 
     // Fatture proforma
     Route::get('fattura-proforma/{id}/pdf', [FatturaProformaController::class, 'pdf']);
-    Route::resource('fattura-proforma', FatturaProformaController::class)->except(['edit', 'update']);
+    Route::post('fattura-proforma/{id}/emetti', [FatturaProformaController::class, 'emetti']);
+    Route::post('fattura-proforma/{id}/invia-email', [FatturaProformaController::class, 'inviaEmail']);
+    Route::post('fattura-proforma/{id}/segna-pagata', [FatturaProformaController::class, 'segnaPagata']);
+    Route::post('fattura-proforma/{id}/rigenera', [FatturaProformaController::class, 'rigenera']);
+    Route::patch('fattura-proforma/{id}/intestazione', [FatturaProformaController::class, 'updateIntestazione']);
+    Route::resource('fattura-proforma', FatturaProformaController::class)->except(['create', 'store', 'edit', 'update']);
+
+    // Fatturazione InvoiceShelf (hub Metronic)
+    Route::get('fatturazione', [BillingDocumentController::class, 'index']);
+    Route::get('fatturazione/invoiceshelf', [BillingDocumentController::class, 'invoiceshelfIndex']);
+    Route::get('fatturazione/invoiceshelf/{isId}/xml', [BillingDocumentController::class, 'exportInvoiceShelfXml'])->whereNumber('isId');
+    Route::get('fatturazione/{id}', [BillingDocumentController::class, 'show'])->whereNumber('id');
+    Route::get('fatturazione/{id}/pdf', [BillingDocumentController::class, 'pdf'])->whereNumber('id');
+    Route::get('fatturazione/{id}/xml', [BillingDocumentController::class, 'exportXml'])->whereNumber('id');
+    Route::post('fatturazione/{id}/emetti', [BillingDocumentController::class, 'emetti'])->whereNumber('id');
+    Route::post('fatturazione/{id}/segna-pagata', [BillingDocumentController::class, 'segnaPagata'])->whereNumber('id');
+    Route::post('fatturazione/{id}/convert-to-invoice', [BillingDocumentController::class, 'convertToInvoice'])->whereNumber('id');
+    Route::get('proforma-caf-patronato', [BillingFornitoreController::class, 'caf']);
+    Route::get('proforma-caf-patronato/preview', [BillingFornitoreController::class, 'previewCaf']);
+    Route::post('proforma-caf-patronato/genera', [BillingFornitoreController::class, 'generaCaf']);
+    Route::get('proforma-send', [BillingFornitoreController::class, 'send']);
+    Route::get('proforma-send/preview', [BillingFornitoreController::class, 'previewSend']);
+    Route::post('proforma-send/genera', [BillingFornitoreController::class, 'generaSend']);
 
     // Portafoglio
     Route::post('/portafoglio/richiedi-spostamento', [PortafoglioController::class, 'richiediSpostamento']);
@@ -229,17 +326,22 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::get('/chat-interna/push/vapid-public-key', [ChatController::class, 'pushVapidPublicKey']);
     Route::post('/chat-interna/push/subscribe', [ChatController::class, 'subscribePush']);
     Route::post('/chat-interna/push/unsubscribe', [ChatController::class, 'unsubscribePush']);
-    Route::get('/chat-interna/attachment/{attachment}', [ChatController::class, 'attachment']);
+    Route::get('/chat-interna/file/{id}', [ChatController::class, 'attachment'])->whereNumber('id');
+    // Alias legacy: evita 404 da cache CDN sulle vecchie URL /attachment/{id}
+    Route::get('/chat-interna/attachment/{id}', [ChatController::class, 'attachment'])->whereNumber('id');
     Route::get('/chat-interna/{thread}/messages', [ChatController::class, 'messages']);
     Route::post('/chat-interna/{thread}/messages', [ChatController::class, 'sendMessage']);
+    Route::get('/chat-interna/{thread}/stream', [ChatController::class, 'stream']);
     Route::post('/chat-interna/{thread}/forward', [ChatController::class, 'forwardMessages']);
     Route::post('/chat-interna/mention/resolve', [ChatController::class, 'resolveMention']);
     Route::post('/chat-interna/{thread}/typing', [ChatController::class, 'typing']);
     Route::post('/chat-interna/{thread}/close', [ChatController::class, 'closeThread']);
+    Route::post('/chat-interna/{thread}/archive', [ChatController::class, 'archiveThread']);
     Route::post('/chat-interna/{thread}/mute', [ChatController::class, 'toggleThreadMute']);
     Route::post('/chat-interna/message/{message}/reaction', [ChatController::class, 'toggleReaction']);
     Route::post('/chat-interna/message/{message}/pin', [ChatController::class, 'togglePin']);
     Route::post('/chat-interna/message/{message}/favorite', [ChatController::class, 'toggleFavorite']);
+    Route::get('/chat-interna/message/{message}/history', [ChatController::class, 'messageHistory']);
     Route::patch('/chat-interna/message/{message}', [ChatController::class, 'updateMessage']);
     Route::delete('/chat-interna/message/{message}', [ChatController::class, 'deleteMessage']);
     Route::get('/chat-interna/templates', [ChatController::class, 'quickTemplates']);
@@ -308,7 +410,10 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
     Route::resource('/notifica', NotificaController::class)->except(['show']);
 
     Route::get('produzione-operatore', [ProduzioneOperatoreController::class, 'index']);
-    Route::get('produzione-operatore/{id}/crea-proforma', [ProduzioneOperatoreController::class, 'creaProforma']);
+    Route::get('produzione-operatore/{id}', [ProduzioneOperatoreController::class, 'show']);
+    Route::get('produzione-operatore/{id}/preview-proforma', [ProduzioneOperatoreController::class, 'previewProforma']);
+    Route::post('produzione-operatore/{id}/crea-proforma', [ProduzioneOperatoreController::class, 'creaProforma']);
+    Route::post('produzione-operatore/{id}/ricalcola', [ProduzioneOperatoreController::class, 'ricalcola']);
 
     Route::resource('/tipo-contratto', TipoContrattoController::class)->except(['show']);
     Route::resource('/tipo-caf-patronato', TipoCafPatronatoController::class)->except(['show']);
@@ -342,6 +447,13 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
         Route::get('check-out', [LuggageDepositController::class, 'checkOutPage']);
         Route::get('settings', [LuggageDepositController::class, 'settings']);
         Route::post('settings', [LuggageDepositController::class, 'updateSettings']);
+        Route::get('mia-postazione', [LuggageDepositController::class, 'stationSettings']);
+        Route::post('mia-postazione', [LuggageDepositController::class, 'updateStationSettings']);
+        Route::post('mia-postazione/richiedi-api', [LuggageDepositController::class, 'requestStationApi']);
+        Route::get('postazioni', [LuggageDepositController::class, 'stationsIndex']);
+        Route::post('postazioni/{id}/enable-api', [LuggageDepositController::class, 'enableStationApi']);
+        Route::post('postazioni/{id}/regenerate-api', [LuggageDepositController::class, 'regenerateStationApi']);
+        Route::post('postazioni/{id}/disable-api', [LuggageDepositController::class, 'disableStationApi']);
         Route::get('report', [LuggageDepositController::class, 'report']);
         Route::get('export/csv', [LuggageDepositController::class, 'exportCsv']);
         Route::get('create', [LuggageDepositController::class, 'create']);
@@ -353,6 +465,31 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
         Route::get('{id}/pdf/tags', [LuggageDepositController::class, 'pdfTags']);
         Route::get('{id}/pdf/agreement', [LuggageDepositController::class, 'pdfAgreement']);
         Route::get('{id}', [LuggageDepositController::class, 'show']);
+    });
+
+    Route::prefix('locker-point')->group(function () {
+        Route::get('dashboard', [LockerPackageController::class, 'dashboard']);
+        Route::get('pipeline', [LockerPackageController::class, 'pipeline']);
+        Route::get('settings', [LockerPackageController::class, 'settings']);
+        Route::post('settings', [LockerPackageController::class, 'updateSettings']);
+        Route::get('mia-postazione', [LockerPackageController::class, 'stationSettings']);
+        Route::post('mia-postazione', [LockerPackageController::class, 'updateStationSettings']);
+        Route::post('mia-postazione/richiedi-api', [LockerPackageController::class, 'requestStationApi']);
+        Route::get('postazioni', [LockerPackageController::class, 'stationsIndex']);
+        Route::post('postazioni/{id}/enable-api', [LockerPackageController::class, 'enableStationApi']);
+        Route::post('postazioni/{id}/regenerate-api', [LockerPackageController::class, 'regenerateStationApi']);
+        Route::post('postazioni/{id}/disable-api', [LockerPackageController::class, 'disableStationApi']);
+        Route::get('create', [LockerPackageController::class, 'create']);
+        Route::get('accetta', [LockerPackageController::class, 'intakePage']);
+        Route::post('/', [LockerPackageController::class, 'store']);
+        Route::get('/', [LockerPackageController::class, 'index']);
+        Route::get('{id}/accetta', [LockerPackageController::class, 'intake']);
+        Route::post('{id}/accetta', [LockerPackageController::class, 'storeIntake']);
+        Route::post('{id}/action', [LockerPackageController::class, 'action']);
+        Route::delete('{id}', [LockerPackageController::class, 'destroy']);
+        Route::get('{id}/pdf/label', [LockerPackageController::class, 'pdfLabel']);
+        Route::get('{id}/foto', [LockerPackageController::class, 'photo'])->name('locker.photo');
+        Route::get('{id}', [LockerPackageController::class, 'show']);
     });
 
     // Chiamate api

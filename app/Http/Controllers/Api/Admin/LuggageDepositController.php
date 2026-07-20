@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\RespondsWithLuggageJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LuggageDepositResource;
 use App\Http\Services\LuggageDepositService;
+use App\Http\Services\LuggageStationService;
 use App\Models\LuggageDeposit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,18 +17,23 @@ class LuggageDepositController extends Controller
 {
     use RespondsWithLuggageJson;
 
-    public function __construct(private LuggageDepositService $service)
-    {
+    public function __construct(
+        private LuggageDepositService $service,
+        private LuggageStationService $stations,
+    ) {
     }
 
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', LuggageDeposit::class);
+        [$station, $adminSeesAll] = $this->scope($request);
 
         $paginator = $this->service->list(
             $request->only(['view', 'q', 'status', 'from', 'to', 'source']),
             (int) $request->get('page', 1),
-            (int) $request->get('limit', 25)
+            (int) $request->get('limit', 25),
+            $station,
+            $adminSeesAll
         );
 
         return $this->luggageSuccess(
@@ -44,6 +50,10 @@ class LuggageDepositController extends Controller
     public function store(Request $request): JsonResponse
     {
         $this->authorize('create', LuggageDeposit::class);
+        [$station] = $this->scope($request);
+        if (! $request->user()->hasPermissionTo('admin')) {
+            abort_unless($station, 403, 'Postazione deposito non disponibile.');
+        }
 
         $validated = $request->validate([
             'customer_name' => ['required', 'string'],
@@ -56,7 +66,7 @@ class LuggageDepositController extends Controller
         ]);
 
         try {
-            $deposit = $this->service->create($validated, 'SPORTELLO');
+            $deposit = $this->service->create($validated, 'SPORTELLO', $station);
         } catch (LuggageNoAvailabilityException $e) {
             return $this->luggageError('NO_AVAILABILITY', $e->getMessage(), 409);
         } catch (InvalidArgumentException $e) {
@@ -108,5 +118,18 @@ class LuggageDepositController extends Controller
         $deposit->delete();
 
         return $this->luggageSuccess(['deleted' => true], 200);
+    }
+
+    /**
+     * @return array{0: ?\App\Models\LuggageStation, 1: bool}
+     */
+    private function scope(Request $request): array
+    {
+        $user = $request->user();
+        if ($user->hasPermissionTo('admin')) {
+            return [null, true];
+        }
+
+        return [$this->stations->forUser($user), false];
     }
 }

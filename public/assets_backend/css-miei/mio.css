@@ -69,8 +69,41 @@ body,
 .ui-toolbar-actions {
     display: flex;
     align-items: center;
-    gap: var(--ui-gap-2);
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+}
+
+/* Flatten only plain wrappers — keep position-relative / menu hosts intact */
+.ui-toolbar-actions > div:not(.position-relative):not([data-kt-menu="true"]):not(.menu) {
+    display: contents;
+}
+
+.ui-toolbar-actions form {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.ui-toolbar-actions .form-select,
+.ui-toolbar-actions .form-control,
+.ui-toolbar-actions .btn {
+    flex-shrink: 0;
+    width: auto !important;
+    white-space: nowrap;
+}
+
+.ui-toolbar-actions .btn {
+    display: inline-flex;
+    align-items: center;
 }
 
 .ui-card-surface {

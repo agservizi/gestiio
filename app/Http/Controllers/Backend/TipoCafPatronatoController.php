@@ -232,6 +232,7 @@ class TipoCafPatronatoController extends Controller
             'nome' => 'app\getInputUcwords',
             'prezzo_cliente' => 'app\getInputNumero',
             'prezzo_agente' => 'app\getInputNumero',
+            'importo_fornitore' => 'app\getInputNumero',
             'tipo' => '',
             'html' => '',
         ];
@@ -271,6 +272,7 @@ class TipoCafPatronatoController extends Controller
             'view' => ['nullable', 'max:255'],
             'prezzo_cliente' => ['required'],
             'prezzo_agente' => ['required'],
+            'importo_fornitore' => ['required'],
             'tipo' => ['required', 'max:255'],
         ];
 

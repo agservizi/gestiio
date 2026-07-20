@@ -125,7 +125,7 @@ class ProduzioneOperatore extends Model
 
         Log::debug('calcolo ordini in pagamento per $userId:'.$userId.' $anno:'.$anno.' $mese:'.$mese);
         $startTime = microtime(true);
-        $meseAnnoPagamento = $mese.'_'.$anno;
+        $meseAnnoPagamento = meseStrPad($mese).'_'.$anno;
         $inPagamento = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
             ->where('mese_pagamento', $meseAnnoPagamento)
             ->where('agente_id', $userId)
@@ -165,10 +165,10 @@ class ProduzioneOperatore extends Model
     public function calcolaGuadagnoMese()
     {
 
-        // Trovo i vari tipi di contratto nel periodo
+        // Trovo i vari tipi di contratto nel periodo (mese_pagamento = mm_YYYY, es. 07_2026)
         $contrattiGroupByTipoContratto = ContrattoTelefonia::query()
             ->where('agente_id', $this->user_id)
-            ->where('mese_pagamento', $this->mese.'_'.$this->anno)
+            ->where('mese_pagamento', meseStrPad($this->mese).'_'.$this->anno)
             ->groupBy('tipo_contratto_id')
             ->select('tipo_contratto_id', DB::raw('count(*) as conteggio'))
             ->get();
