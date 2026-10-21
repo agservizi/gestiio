@@ -20,7 +20,11 @@ class ContrattoEnergia extends Model
         'data' => 'datetime',
         'data_rilascio' => 'datetime',
         'data_scadenza' => 'datetime',
+        'data_fine' => 'date',
+        'data_reminder' => 'date',
+        'reminder_inviato' => 'datetime',
         'permesso_soggiorno_scadenza' => 'datetime',
+        'ok_at' => 'datetime',
     ];
 
     public const ESITI = [
@@ -52,7 +56,10 @@ class ContrattoEnergia extends Model
                 return;
             }
 
-            if ($user->hasPermissionTo('agente')) {
+            // Affiliato + supervisore whitelist (es. AG00062): solo contratti propri.
+            if ($user->actsAsAgenteForContratti()) {
+                $builder->where('agente_id', $user->id);
+            } elseif ($user->hasPermissionTo('agente')) {
                 $builder->where('agente_id', $user->id);
             } elseif ($user->hasPermissionTo('supervisore')) {
                 $builder->whereHas('mandato', function ($q) {
@@ -77,8 +84,28 @@ class ContrattoEnergia extends Model
                 $model->mese_pagamento = now()->format('m_Y');
             }
 
+            if ($model->esito_finale == 'ok' && ! $model->ok_at) {
+                $model->ok_at = now();
+            }
+
+            // Reminder rinnovo da data_fine contratto (non da EnergiaOfferta.valido_al).
+            if (Schema::hasColumn($model->getTable(), 'data_fine')
+                && Schema::hasColumn($model->getTable(), 'data_reminder')
+                && $model->data_fine
+                && ! $model->data_reminder) {
+                $model->data_reminder = \Carbon\Carbon::parse($model->data_fine)->subDays(30);
+            }
+
             if ($model->esito_finale != 'ok') {
+                if ($model->getOriginal('esito_finale') === 'ok') {
+                    try {
+                        app(\App\Http\Services\Billing\ProvvigioneClawbackService::class)->captureBeforeKo($model);
+                    } catch (\Throwable $e) {
+                        \Log::warning('ContrattoEnergia clawback capture', ['id' => $model->id, 'error' => $e->getMessage()]);
+                    }
+                }
                 $model->mese_pagamento = null;
+                $model->ok_at = null;
             }
 
             $model->testo_ricerca = $model->denominazione.'|'.$model->codice_contratto.'|'.$model->codice_contratto_interno.'|'.$model->codice_fiscale;
@@ -87,24 +114,64 @@ class ContrattoEnergia extends Model
 
         self::saved(function ($model) {
             Log::debug(__CLASS__.'->'.__FUNCTION__.' contratto: '.$model->id.' mese_pagamento '.$model->mese_pagamento);
-            if ($model->isDirty('mese_pagamento')) {
+            // Conteggio mese (tel+energia) sul created_at — come ContrattoTelefonia
+            if ($model->agente_id && $model->created_at) {
+                ProduzioneOperatore::calcolaTotaliOrdiniMese(
+                    (int) $model->agente_id,
+                    (int) $model->created_at->year,
+                    (int) $model->created_at->month
+                );
+            }
+            if ($model->wasChanged('mese_pagamento') || $model->wasChanged('pagato') || $model->wasChanged('provvigione_agente')
+                || $model->wasChanged('fattura_proforma_id') || $model->wasChanged('autofattura_billing_document_id')) {
+                $mesi = [];
                 if ($model->mese_pagamento) {
-                    [$mese, $anno] = explode('_', $model->mese_pagamento);
-                    ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->agente_id, $anno, $mese);
-                    self::calcolaProduzioneContrattiEnergia($model->agente_id, $anno, $mese);
-
+                    $mesi[] = $model->mese_pagamento;
                 }
                 if ($model->getOriginal('mese_pagamento')) {
-                    [$mese, $anno] = explode('_', $model->getOriginal('mese_pagamento'));
-                    self::calcolaProduzioneContrattiEnergia($model->agente_id, $anno, $mese);
-
+                    $mesi[] = $model->getOriginal('mese_pagamento');
+                }
+                foreach (array_unique(array_filter($mesi)) as $mesePagamento) {
+                    [$mese, $anno] = explode('_', $mesePagamento);
+                    self::ricalcolaProduzioneSeAperta((int) $model->agente_id, $anno, $mese);
+                }
+            }
+            if ($model->esito_finale === 'ok') {
+                try {
+                    app(\App\Http\Services\Billing\ProvvigioneClawbackService::class)->openOrRefresh($model);
+                } catch (\Throwable $e) {
+                    \Log::warning('ContrattoEnergia clawback open', ['id' => $model->id, 'error' => $e->getMessage()]);
                 }
             }
 
+            try {
+                app(\App\Http\Services\AffiliateReferralService::class)
+                    ->onContrattoCaricato((int) $model->agente_id);
+            } catch (\Throwable $e) {
+                \Log::warning('ContrattoEnergia referral eval', ['id' => $model->id, 'error' => $e->getMessage()]);
+            }
         });
 
         self::deleted(function ($model) {
-            self::calcolaProduzioneContrattiEnergia($model->agente_id, $model->created_at->year, $model->created_at->month);
+            if ($model->agente_id && $model->created_at) {
+                ProduzioneOperatore::calcolaTotaliOrdiniMese(
+                    (int) $model->agente_id,
+                    (int) $model->created_at->year,
+                    (int) $model->created_at->month
+                );
+            }
+            if ($model->mese_pagamento) {
+                [$mese, $anno] = explode('_', $model->mese_pagamento);
+                self::ricalcolaProduzioneSeAperta((int) $model->agente_id, $anno, $mese);
+            } else {
+                self::ricalcolaProduzioneSeAperta((int) $model->agente_id, $model->created_at->year, $model->created_at->month);
+            }
+            try {
+                app(\App\Http\Services\AffiliateReferralService::class)
+                    ->onContrattoCaricato((int) $model->agente_id);
+            } catch (\Throwable $e) {
+                \Log::warning('ContrattoEnergia referral eval on delete', ['id' => $model->id, 'error' => $e->getMessage()]);
+            }
         });
 
         self::created(function (ContrattoEnergia $model) {
@@ -116,16 +183,71 @@ class ContrattoEnergia extends Model
 
     }
 
-    protected static function calcolaProduzioneContrattiEnergia($userId, $anno, $mese)
+    /**
+     * Contratti ancora da liquidare all'affiliato (esclude già pagati).
+     */
+    public function scopeDaLiquidare($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('pagato')->orWhere('pagato', 0)->orWhere('pagato', false);
+        });
+    }
+
+    /**
+     * OK da oltre 2 mesi, non pagati, non già in autofattura.
+     */
+    public function scopeEleggibileAutofattura($query)
+    {
+        $cutoff = now()->subMonths(2)->toDateTimeString();
+
+        return $query->daLiquidare()
+            ->where('esito_finale', 'ok')
+            ->where(function ($q) {
+                $q->whereNull('autofattura_billing_document_id')
+                    ->orWhere('autofattura_billing_document_id', 0);
+            })
+            ->where(function ($q) use ($cutoff) {
+                $q->where(function ($inner) use ($cutoff) {
+                    $inner->whereNotNull('ok_at')->where('ok_at', '<=', $cutoff);
+                })->orWhere(function ($inner) use ($cutoff) {
+                    $inner->whereNull('ok_at')
+                        ->whereNotNull('mese_pagamento')
+                        ->whereRaw(
+                            "STR_TO_DATE(CONCAT('01_', REPLACE(mese_pagamento, '-', '_')), '%d_%m_%Y') <= ?",
+                            [substr($cutoff, 0, 10)]
+                        );
+                });
+            });
+    }
+
+    protected static function ricalcolaProduzioneSeAperta(int $userId, $anno, $mese): void
+    {
+        $p = ProduzioneOperatore::findOrNewMio($userId, $anno, $mese);
+        if ($p->exists && $p->fattura_proforma_id) {
+            return;
+        }
+
+        // Conteggio "caricati" resta su created_at (hook saved/deleted), non sul mese_pagamento.
+        ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($userId, $anno, $mese);
+        self::calcolaProduzioneContrattiEnergia($userId, $anno, $mese);
+    }
+
+    public static function calcolaProduzioneContrattiEnergia($userId, $anno, $mese)
     {
         Log::debug('calcolo contratti energia in pagamento per $userId:'.$userId.' $anno:'.$anno.' $mese:'.$mese);
-        $meseAnnoPagamento = $mese.'_'.$anno;
+        $keys = [
+            meseStrPad($mese).'_'.$anno,
+            ((int) $mese).'_'.$anno,
+        ];
         $inPagamento = self::withoutGlobalScope('filtroOperatore')
-            ->where('mese_pagamento', $meseAnnoPagamento)
+            ->daLiquidare()
+            ->whereIn('mese_pagamento', array_unique($keys))
             ->where('agente_id', $userId)
-            ->sum('provvigione_agente');
-
-        // Log::debug('=>$start:' . $start->format('d/m/Y') . ' $end:' . $end->format('d/m/Y') . ' $ordiniOk:' . $ordiniOk . ' $ordiniKo:' . $ordiniKo . ' $ordini' . $ordini . ' chiamata da ' . debug_backtrace()[1]['function']);
+            ->with('gestore')
+            ->get()
+            ->sum(function (self $c) {
+                return $c->isNonLiquidabile() ? 0.0 : (float) ($c->provvigione_agente ?? 0);
+            });
 
         $p = ProduzioneOperatore::findOrNewMio($userId, $anno, $mese);
         $p->user_id = $userId;
@@ -134,9 +256,6 @@ class ContrattoEnergia extends Model
 
         $p->importo_contratti_energia = $inPagamento;
         $p->save();
-
-        // self::calcolaGuadagnoAgenzia($anno, $mese);
-
     }
 
     protected static function buildInternalContractCode(int $id): string
@@ -192,9 +311,42 @@ class ContrattoEnergia extends Model
         return $this->belongsTo(GestoreContrattoEnergia::class, 'gestore_id');
     }
 
+    public function energiaOfferta()
+    {
+        return $this->belongsTo(EnergiaOfferta::class, 'energia_offerta_id');
+    }
+
     public function esito()
     {
         return $this->belongsTo(EsitoContrattoEnergia::class, 'esito_id');
+    }
+
+    public function latestRiskSignal()
+    {
+        return $this->hasOne(CustomerRiskSignal::class, 'contract_id')
+            ->ofMany(['id' => 'max'], function ($query) {
+                $query->where('contract_type', 'contratto-energia');
+            });
+    }
+
+    public function latestOtpSigningRelay()
+    {
+        return $this->hasOne(ContractSigningRelay::class, 'contract_id')
+            ->ofMany(['id' => 'max'], function ($query) {
+                $query->where('module', ContractSigningRelay::MODULE_ENERGIA)
+                    ->where('kind', ContractSigningRelay::KIND_OTP);
+            });
+    }
+
+    public function hasOtpFirmaScaduto(): bool
+    {
+        if (($this->firma_digitale_status ?? '') !== 'awaiting_otp') {
+            return false;
+        }
+
+        $relay = $this->latestOtpSigningRelay;
+
+        return $relay !== null && $relay->isExpired();
     }
 
     public function mandato()
@@ -235,6 +387,59 @@ class ContrattoEnergia extends Model
         return $this->denominazione;
     }
 
+    public function tipoAttivazioneKey(): ?string
+    {
+        $tipo = trim((string) ($this->tipo_attivazione ?? ''));
+        if ($tipo !== '') {
+            return $tipo;
+        }
+
+        $prodotto = $this->relationLoaded('prodotto') ? $this->prodotto : null;
+        if ($prodotto && isset($prodotto->tipo_attivazione)) {
+            $tipo = trim((string) $prodotto->tipo_attivazione);
+            if ($tipo !== '') {
+                return $tipo;
+            }
+        }
+
+        return null;
+    }
+
+    public function labelTipoAttivazione(): ?string
+    {
+        return app(\App\Http\Services\EnergiaComposizioneService::class)
+            ->labelTipoAttivazione($this->tipoAttivazioneKey());
+    }
+
+    public function isNonLiquidabile(): bool
+    {
+        return ! app(\App\Http\Services\EnergiaComposizioneService::class)
+            ->isProvvigioneEligible($this->tipoAttivazioneKey(), $this->gestorePerLiquidabilita());
+    }
+
+    public function labelNonLiquidabile(): ?string
+    {
+        if (! $this->isNonLiquidabile()) {
+            return null;
+        }
+
+        return app(\App\Http\Services\EnergiaComposizioneService::class)
+            ->nonLiquidabileMessage($this->tipoAttivazioneKey(), $this->gestorePerLiquidabilita());
+    }
+
+    /**
+     * Gestore con switch_key affidabile (gli eager load parziali spesso omettono la colonna).
+     */
+    protected function gestorePerLiquidabilita(): ?GestoreContrattoEnergia
+    {
+        $gestore = $this->relationLoaded('gestore') ? $this->gestore : null;
+        if ($gestore && filled($gestore->switch_key)) {
+            return $gestore;
+        }
+
+        return $this->gestore()->first();
+    }
+
     public function bulletEsitoFinale()
     {
         if ($this->esito_finale) {
@@ -247,8 +452,10 @@ class ContrattoEnergia extends Model
     public function labelPagato()
     {
         if ($this->pagato) {
-            return "<span class='badge badge-success' >Pagato</span>";
+            return \App\Http\HelperForMetronic::statusBadge('Pagato', 'success');
         }
+
+        return \App\Http\HelperForMetronic::statusBadge('Non pagato', 'danger');
     }
 
     public static function selected($id)
@@ -267,19 +474,48 @@ class ContrattoEnergia extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function puoModificare($puoModificare)
+    public function isStatoApertoPerModifica(): bool
     {
-        if ($puoModificare) {
-            return true;
-        }
-
         $editableEsiti = ['bozza', 'da-gestire', 'in-gestione', 'in_gestione'];
         if (in_array((string) $this->esito_id, $editableEsiti, true)) {
             return true;
         }
 
         $nomeEsito = strtolower(trim((string) optional($this->esito)->nome));
-        if ($nomeEsito === 'in gestione') {
+        $nomeNorm = preg_replace('/[\s_\-]+/', ' ', $nomeEsito) ?? '';
+        if (in_array($nomeNorm, ['in gestione', 'da gestire', 'bozza'], true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function puoModificare($puoModificare)
+    {
+        if ($puoModificare) {
+            return true;
+        }
+
+        return $this->isStatoApertoPerModifica();
+    }
+
+    public function puoRiaprire(?User $user = null): bool
+    {
+        $user = $user ?: Auth::user();
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        // Bozza / Da gestire / In Gestione: niente Riapri (si usa Modifica)
+        if ($this->isStatoApertoPerModifica()) {
+            return false;
+        }
+
+        if ($user->hasAnyPermission(['admin', 'supervisore', 'operatore'])) {
+            return true;
+        }
+
+        if ($user->hasPermissionTo('agente') && (int) $this->agente_id === (int) $user->id) {
             return true;
         }
 

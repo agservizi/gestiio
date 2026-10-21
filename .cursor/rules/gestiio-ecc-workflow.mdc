@@ -1,0 +1,28 @@
+---
+description: Workflow ECC su Gestiio — sempre attivo (feature→test→review→commit)
+alwaysApply: true
+---
+
+# Workflow agente Gestiio (ECC + regole progetto)
+
+L’utente vuole che il lavoro su Gestiio sia **sempre** così — non “a volte”.
+ECC (profilo developer in `.cursor/`) + regole `gestiio-*.mdc` sono la baseline.
+
+## Sempre fare così
+
+1. **Workflow ripetibili** — feature → test → review → commit con skill/agent già definiti; non ricominciare da zero a ogni chat.
+2. **Review di qualità** — dopo codice sostanziale: code review, security, silent-failure (controller, Livewire, pagamenti, referral, contratti).
+3. **Sicurezza / confini** — non toccare `.env`/segreti; deploy NAS solo con script `ops/` e finish soft; validare input; auth/permessi espliciti.
+4. **Memoria di progetto** — rispettare ECC + `gestiio-metronic-stack` (Bootstrap Metronic) + `gestiio-deploy-force-clear` (tar+base64, finish soft).
+5. **Task grossi** — planner → implementazione → verifica (deploy/log), con meno drift (es. gare, listino, referral, landing).
+6. **Git più pulito** — conventional commits / PR coerenti **solo quando l’utente chiede** commit o PR.
+
+## Referral (regola business)
+
+Soglia bonus: **≥2 energia OK + ≥1 telefonia OK** (`esito_finale = ok` / liquidabili). Non basta “caricato”. Allineare sempre Backend UI + landing.
+
+## Default operativi
+
+- Preferire agent/skill ECC già installati (`planner`, `tdd-guide`, `code-reviewer`, `security-reviewer`, `php-reviewer`, …) invece di improvvisare.
+- Non stackare install ECC alternative; non committare bulk ECC (già in `.gitignore`); tenere solo `gestiio-*.mdc`.
+- Formazione/Boorite: non includere in release notes / dump versione finché incompleta.

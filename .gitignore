@@ -5,13 +5,13 @@
 /vendor
 .env
 .env.backup
+docs/.fiber-token.local
 .phpunit.result.cache
 docker-compose.override.yml
 Homestead.json
 Homestead.yaml
 npm-debug.log
 yarn-error.log
-/tests
 #ide
 /.idea
 .editorconfig
@@ -28,5 +28,13 @@ yarn-error.log
 /.agents/
 /skills-lock.json
 
+# ECC (ecc-universal) — adapter Cursor locale, non codice app
+# Tiene solo le regole di progetto gestiio-*.mdc
+/.cursor/*
+!/.cursor/rules/
+/.cursor/rules/*
+!/.cursor/rules/gestiio-*.mdc
+
 /composer.phar
 
+ops/invoiceshelf-sso/.sso_secret

@@ -87,37 +87,49 @@ class ProduzioneOperatore extends Model
 
     public function ricalcola()
     {
-
         $this->calcolaGuadagnoMese();
         $this->save();
-
+        try {
+            app(\App\Http\Services\GaraEvalService::class)
+                ->ricalcolaMese((int) $this->anno, (int) $this->mese, (int) $this->user_id);
+        } catch (\Throwable $e) {
+            \Log::error('GaraEvalService in ricalcola: '.$e->getMessage(), [
+                'produzione_id' => $this->id,
+                'user_id' => $this->user_id,
+            ]);
+            report($e);
+        }
     }
 
     public static function calcolaTotaliOrdiniMese($userId, $anno, $mese)
     {
-        $startTime = microtime(true);
-
         $start = Carbon::createFromDate($anno, $mese, 1);
-
         $end = $start->copy()->endOfMonth();
 
-        $ordini = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
-            ->whereDate('created_at', '>=', $start)
-            ->whereDate('created_at', '<=', $end)
-            ->where('agente_id', $userId)
-            ->select('esito_finale', DB::raw('count(esito_finale) as conteggio'))
-            ->groupBy('esito_finale')
-            ->get()->keyBy('esito_finale');
+        // Telefonia + energia (created_at nel mese): widget "Contratti caricati" include entrambi.
+        $byEsito = [];
+        foreach ([ContrattoTelefonia::class, ContrattoEnergia::class] as $modelClass) {
+            $rows = $modelClass::withoutGlobalScope('filtroOperatore')
+                ->whereDate('created_at', '>=', $start)
+                ->whereDate('created_at', '<=', $end)
+                ->where('agente_id', $userId)
+                ->select('esito_finale', DB::raw('count(*) as conteggio'))
+                ->groupBy('esito_finale')
+                ->get();
+            foreach ($rows as $row) {
+                $key = $row->esito_finale ?? '';
+                $byEsito[$key] = ($byEsito[$key] ?? 0) + (int) $row->conteggio;
+            }
+        }
 
         $p = ProduzioneOperatore::findOrNewMio($userId, $anno, $mese);
         $p->user_id = $userId;
         $p->anno = $anno;
         $p->mese = $mese;
-        $p->conteggio_ordini_ok = $ordini['ok']->conteggio ?? 0;
-        $p->conteggio_ordini_ko = $ordini['ko']->conteggio ?? 0;
-        $p->conteggio_ordini = $ordini->sum('conteggio');
+        $p->conteggio_ordini_ok = $byEsito['ok'] ?? 0;
+        $p->conteggio_ordini_ko = $byEsito['ko'] ?? 0;
+        $p->conteggio_ordini = array_sum($byEsito);
         $p->save();
-
     }
 
     public static function calcolaTotaliOrdiniInPagamento($userId, $anno, $mese)
@@ -127,12 +139,14 @@ class ProduzioneOperatore extends Model
         $startTime = microtime(true);
         $meseAnnoPagamento = meseStrPad($mese).'_'.$anno;
         $inPagamento = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+            ->daLiquidare()
             ->where('mese_pagamento', $meseAnnoPagamento)
             ->where('agente_id', $userId)
             ->count();
 
         if (false) {
             $rid = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+                ->daLiquidare()
                 ->where('mese_pagamento', $meseAnnoPagamento)
                 ->where('agente_id', $userId)
                 ->where('metodo_pagamento', 'rid')
@@ -166,7 +180,9 @@ class ProduzioneOperatore extends Model
     {
 
         // Trovo i vari tipi di contratto nel periodo (mese_pagamento = mm_YYYY, es. 07_2026)
+        // Esclude contratti già pagati all'affiliato.
         $contrattiGroupByTipoContratto = ContrattoTelefonia::query()
+            ->daLiquidare()
             ->where('agente_id', $this->user_id)
             ->where('mese_pagamento', meseStrPad($this->mese).'_'.$this->anno)
             ->groupBy('tipo_contratto_id')
@@ -210,7 +226,57 @@ class ProduzioneOperatore extends Model
     {
         self::calcolaTotaliOrdiniMese($this->user_id, $this->anno, $this->mese);
         self::calcolaTotaliOrdiniInPagamento($this->user_id, $this->anno, $this->mese);
+        ContrattoEnergia::calcolaProduzioneContrattiEnergia($this->user_id, $this->anno, $this->mese);
 
+        // Servizi dismessi: azzera voci legacy così importo_totale (generated) = solo tel+energia.
+        $this->refresh();
+        $dirty = false;
+        foreach (['importo_servizi_finanziari', 'importo_segnalazioni', 'importo_attivazioni_sim'] as $campo) {
+            if ((float) ($this->getAttribute($campo) ?? 0) !== 0.0) {
+                $this->setAttribute($campo, 0);
+                $dirty = true;
+            }
+        }
+        if ($dirty) {
+            $this->save();
+        }
+
+        try {
+            app(\App\Http\Services\GaraEvalService::class)
+                ->ricalcolaMese((int) $this->anno, (int) $this->mese, (int) $this->user_id);
+        } catch (\Throwable $e) {
+            \Log::error('GaraEvalService in ricalcolaProduzione: '.$e->getMessage(), [
+                'produzione_id' => $this->id,
+                'user_id' => $this->user_id,
+            ]);
+            report($e);
+        }
+
+        $this->refresh();
+    }
+
+    /**
+     * Totale liquidabile attuale: telefonia + energia (senza gare).
+     */
+    public function importoTelEnergia(): float
+    {
+        return round((float) ($this->importo_ordini ?? 0) + (float) ($this->importo_contratti_energia ?? 0), 2);
+    }
+
+    /**
+     * Totale liquidabile inclusi premi gara del mese.
+     */
+    public function importoLiquidabile(): float
+    {
+        $gare = 0.0;
+        try {
+            $gare = app(\App\Http\Services\GaraEvalService::class)
+                ->importoGareUser((int) $this->user_id, (int) $this->anno, (int) $this->mese);
+        } catch (\Throwable $e) {
+            // tabella assente in ambienti non migrati
+        }
+
+        return round($this->importoTelEnergia() + $gare, 2);
     }
 
     public static function findOrNewMio($agenteId, $anno, $mese)

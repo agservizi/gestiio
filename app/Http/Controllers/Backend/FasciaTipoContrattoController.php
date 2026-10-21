@@ -115,11 +115,17 @@ class FasciaTipoContrattoController extends Controller
     public function edit($listinoId, $tipoContrattoId)
     {
 
-        $tipoContratto = TipoContratto::find($tipoContrattoId);
+        $tipoContratto = TipoContratto::with('telefoniaOfferta')->find($tipoContrattoId);
+        $offerta = $tipoContratto?->telefoniaOfferta;
+        $label = $offerta
+            ? ($offerta->nome.($offerta->prezzo_mese !== null
+                ? ' — '.number_format((float) $offerta->prezzo_mese, 2, ',', '.').' €/mese'
+                : ''))
+            : ($tipoContratto->nome ?? '');
 
         return view('Backend.FasciaListinoTipoContratto.edit', [
             'controller' => get_class($this),
-            'titoloPagina' => 'Modifica fasce '.$tipoContratto->nome,
+            'titoloPagina' => 'Fasce provvigione · '.$label,
             'agenteId' => $listinoId,
             'tipoContrattoId' => $tipoContrattoId,
             'records' => FasciaListinoTipoContratto::where('listino_id', $listinoId)->where('tipo_contratto_id', $tipoContrattoId)->get(),
