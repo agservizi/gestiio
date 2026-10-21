@@ -2,9 +2,16 @@
 
 return [
 
-    'tag_title' => env('APP_NAME'),
+    'tag_title' => 'Gestiio',
     'log_rocket' => '',
-    'versione' => '4.0',
+    'versione' => '5.5',
+
+    /*
+     | Footer email: solo AG00001 usa il testo aziendale fisso.
+     | Gli altri affiliati mostrano ragione sociale / P.IVA / codice AG.
+     */
+    'mail_footer_primary_codice' => 'AG00001',
+    'mail_footer_primary_company' => 'AG SERVIZI · P.IVA 08442881218',
 
     'mostra_accessi_test' => false,
     'accessi_test' => [
@@ -50,6 +57,23 @@ return [
         'cartella' => '/file_manager',
     ],
     'cartella_locale' => 'gestio',
+
+    /*
+     | Supervisori che possono caricare contratti energia/telefonia
+     | (e moduli collegati) come un affiliato. Codice = User::codiceAgente().
+     */
+    'supervisore_affiliato_contratti_codici' => [
+        // AG00062 usa il workflow segnalazione (sotto), non il percorso affiliato pieno.
+    ],
+
+    /*
+     | Supervisori in modalità segnalazione energia/telefonia:
+     | form minimo + allegati obbligatori, poi sola lettura; ops chiude.
+     | Codice = User::codiceAgente().
+     */
+    'supervisore_segnalazione_contratti_codici' => [
+        'AG00062',
+    ],
 
     'allegati_attivazioni_sim' => [
         'cartella' => '/allegati_attivazioni_sim',

@@ -1,0 +1,76 @@
+---
+description: Deploy NAS Gestiio — tar+base64, soft finish (no cold OPcache)
+alwaysApply: true
+---
+
+# Deploy NAS Gestiio — tar+base64 + finish soft (default)
+
+Target: `Carmine@192.168.1.50` · app path `/home/Carmine/apps/gestiio-20260624-2128` · container `gestiio-app`
+
+## Trasporto file: tar + base64 (preferito)
+
+Su Windows **non usare `scp` diretto**. Usare **Git Bash**:
+
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" -lc 'cd /c/Users/carva/Desktop/Progetti/gestiio && sh ops/deploy-*.sh'
+```
+
+```sh
+HOST="Carmine@192.168.1.50"
+APP="/home/Carmine/apps/gestiio-20260624-2128"
+DOCKER="/Volume1/@apps/DockerEngine/dockerd/bin/docker"
+CONTAINER="gestiio-app"
+
+tar -cf /tmp/gestiio-<nome>.tar path/to/file1 ...
+base64 /tmp/gestiio-<nome>.tar | ssh "$HOST" "base64 -d > /tmp/gestiio-<nome>.tar"
+ssh "$HOST" "
+set -e
+cd $APP
+tar -xf /tmp/gestiio-<nome>.tar
+$DOCKER cp $APP/path/file $CONTAINER:/var/www/html/path/file
+# finish soft (sotto)
+"
+rm -f /tmp/gestiio-<nome>.tar
+```
+
+## Finish soft (DEFAULT — Blade / CSS / JS / PHP)
+
+**Non** fare `cache:clear` + `optimize:clear` + `docker restart` su ogni deploy UI:
+dopo il restart OPcache è vuoto e `/backend` resta a 15–30s per diversi refresh.
+
+```sh
+$DOCKER exec $CONTAINER sh -lc 'rm -rf /var/www/html/storage/framework/views/*; php /var/www/html/artisan view:clear'
+$DOCKER exec $CONTAINER sh -lc 'php /var/www/html/artisan config:cache; php /var/www/html/artisan route:cache; php /var/www/html/artisan view:cache' || true
+$DOCKER exec $CONTAINER sh -lc 'php -r "if (function_exists(\"opcache_reset\")) { opcache_reset(); }"' || true
+# Preserva app cache; riscalda solo il marker giornaliero
+$DOCKER exec $CONTAINER sh -lc 'php /var/www/html/artisan tinker --execute="Illuminate\\Support\\Facades\\Cache::put(\"CacheUnaVoltaAlGiorno\", now(), now()->endOfDay());"' || true
+```
+
+Per asset sotto `assets_backend/`: copiare anche in `public/assets_backend/` se DocumentRoot è `public/`.
+
+Verifica marker (`grep`) sui file nel container. **Restart solo se** cambia `.env`, Apache/PHP ini, o OPcache non rilascia proprio il PHP.
+
+Template: `ops/_deploy-finish-soft.sh`
+
+## Finish hard (solo se necessario)
+
+Usare **solo** per migrate/composer/.env/opcache sticky:
+
+```sh
+$DOCKER exec $CONTAINER sh -lc 'rm -rf /var/www/html/storage/framework/views/*; php /var/www/html/artisan view:clear; php /var/www/html/artisan config:cache; php /var/www/html/artisan route:cache; php /var/www/html/artisan view:cache'
+# NON cache:clear a meno che non sia obbligatorio
+$DOCKER exec $CONTAINER sh -lc 'php -r "if (function_exists(\"opcache_reset\")) { opcache_reset(); }"' || true
+$DOCKER restart $CONTAINER
+sleep 8
+$DOCKER exec $CONTAINER sh -lc 'php /var/www/html/artisan tinker --execute="Illuminate\\Support\\Facades\\Cache::put(\"CacheUnaVoltaAlGiorno\", now(), now()->endOfDay());"' || true
+$DOCKER exec $CONTAINER sh -lc 'curl -sk -o /dev/null http://127.0.0.1/login; curl -sk -o /dev/null http://127.0.0.1/login'
+```
+
+## Script di riferimento
+
+- `ops/_deploy-finish-soft.sh` — finish soft riusabile
+- `ops/deploy-send-policy-fix.sh` — template tar+base64
+- `ops/deploy-mobile-app-shell.sh`
+- `ops/deploy-send-module.sh` — modulo grande (+ migrate)
+
+Manutenzione giornaliera: `php artisan gestiio:daily-maintenance` (schedule 01:15), **mai** nella dashboard web.

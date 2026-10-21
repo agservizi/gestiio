@@ -1,0 +1,30 @@
+---
+description: Metronic stack Gestiio — Bootstrap attuale vs seed Tailwind
+alwaysApply: true
+---
+
+# Metronic / UI Gestiio
+
+## Stack attuale (usare questo)
+
+Gestiio backend auth/UI usa **Metronic classico Bootstrap** (non Tailwind):
+
+- CSS/JS: `/assets_backend/` (`plugins.bundle`, `style.bundle`, Keenicons)
+- Pattern Blade: classi Metronic 8 (`card`, `btn-primary`, `form-control-solid`, `ki-duotone`, …)
+- Layout: `resources/views/Backend/_layout/`, auth split `auth._main-split` + `_aside-promo`
+
+Per login / OTP / pagine auth: restare su Metronic Bootstrap + CSS mirato; non introdurre Tailwind o un secondo design system.
+
+## Repo di riferimento (non drop-in)
+
+[keenthemes/metronic-tailwind-html-integration](https://github.com/keenthemes/metronic-tailwind-html-integration) = seed **Metronic Tailwind** (Laravel, Livewire, Vue, …).
+
+- Utile solo come guida se in futuro si valuta migrazione a Metronic Tailwind
+- Richiede acquisto Metronic + drop della cartella components nel seed
+- **Non** copiare quei seed nell’app attuale: breaking change enorme (Bootstrap → Tailwind, asset path, classi Blade)
+
+Seed rilevanti se un giorno si migra: `metronic-tailwind-laravel`, `metronic-tailwind-laravel-livewire`.
+
+## Default agente
+
+Quando l’utente chiede UI “come Metronic”: allinearsi a **Bootstrap Metronic già in repo**, non al kit Tailwind del repo GitHub sopra.
