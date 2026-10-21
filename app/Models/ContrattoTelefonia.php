@@ -25,6 +25,9 @@ class ContrattoTelefonia extends Model
         'sollecito_gestore' => 'datetime',
         'data_reminder' => 'datetime',
         'reminder_inviato' => 'datetime',
+        'ok_at' => 'datetime',
+        'copertura_verificata_at' => 'datetime',
+        'copertura_payload' => 'array',
     ];
 
     public const ESITI = [
@@ -49,7 +52,11 @@ class ContrattoTelefonia extends Model
     {
 
         static::addGlobalScope('filtroOperatore', function (Builder $builder) {
-            if (self::authUserHasPermissionTo('agente')) {
+            $user = Auth::user();
+            // Affiliato + supervisore whitelist (es. AG00062): solo contratti propri.
+            if ($user instanceof User && $user->actsAsAgenteForContratti()) {
+                $builder->where('agente_id', Auth::id());
+            } elseif (self::authUserHasPermissionTo('agente')) {
                 $builder->where('agente_id', Auth::id());
             } elseif (self::authUserHasPermissionTo('supervisore')) {
                 $builder->whereHas('mandato', function ($q) {
@@ -64,14 +71,26 @@ class ContrattoTelefonia extends Model
             }
 
             $esito = EsitoTelefonia::find($model->esito_id);
-            $model->esito_finale = $esito->esito_finale;
+            $model->esito_finale = $esito?->esito_finale;
 
             if (! $model->mese_pagamento && $model->esito_finale == 'ok') {
                 $model->mese_pagamento = now()->format('m_Y');
             }
 
+            if ($model->esito_finale == 'ok' && ! $model->ok_at) {
+                $model->ok_at = now();
+            }
+
             if ($model->esito_finale != 'ok') {
+                if ($model->getOriginal('esito_finale') === 'ok') {
+                    try {
+                        app(\App\Http\Services\Billing\ProvvigioneClawbackService::class)->captureBeforeKo($model);
+                    } catch (\Throwable $e) {
+                        \Log::warning('ContrattoTelefonia clawback capture', ['id' => $model->id, 'error' => $e->getMessage()]);
+                    }
+                }
                 $model->mese_pagamento = null;
+                $model->ok_at = null;
             }
         });
 
@@ -79,21 +98,55 @@ class ContrattoTelefonia extends Model
             Log::debug(__CLASS__.'->'.__FUNCTION__.' contratto: '.$model->id.' mese_pagamento '.$model->mese_pagamento);
             ProduzioneOperatore::calcolaTotaliOrdiniMese($model->agente_id, $model->created_at->year, $model->created_at->month);
 
-            if ($model->isDirty('mese_pagamento')) {
+            if ($model->wasChanged('mese_pagamento') || $model->wasChanged('pagato')) {
+                $mesi = [];
                 if ($model->mese_pagamento) {
-                    [$mese, $anno] = explode('_', $model->mese_pagamento);
-                    ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->agente_id, $anno, $mese);
+                    $mesi[] = $model->mese_pagamento;
                 }
                 if ($model->getOriginal('mese_pagamento')) {
-                    [$mese, $anno] = explode('_', $model->getOriginal('mese_pagamento'));
+                    $mesi[] = $model->getOriginal('mese_pagamento');
+                }
+                foreach (array_unique(array_filter($mesi)) as $mesePagamento) {
+                    [$mese, $anno] = explode('_', $mesePagamento);
+                    $p = ProduzioneOperatore::findOrNewMio($model->agente_id, $anno, $mese);
+                    if ($p->exists && $p->fattura_proforma_id) {
+                        continue;
+                    }
                     ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->agente_id, $anno, $mese);
                 }
             }
 
+            if ($model->esito_finale === 'ok') {
+                try {
+                    app(\App\Http\Services\Billing\ProvvigioneClawbackService::class)->openOrRefresh($model);
+                } catch (\Throwable $e) {
+                    \Log::warning('ContrattoTelefonia clawback open', ['id' => $model->id, 'error' => $e->getMessage()]);
+                }
+            }
+
+            try {
+                app(\App\Http\Services\AffiliateReferralService::class)
+                    ->onContrattoCaricato((int) $model->agente_id);
+            } catch (\Throwable $e) {
+                \Log::warning('ContrattoTelefonia referral eval', ['id' => $model->id, 'error' => $e->getMessage()]);
+            }
         });
 
         self::deleted(function ($model) {
             ProduzioneOperatore::calcolaTotaliOrdiniMese($model->agente_id, $model->created_at->year, $model->created_at->month);
+            if ($model->mese_pagamento) {
+                [$mese, $anno] = explode('_', $model->mese_pagamento);
+                $p = ProduzioneOperatore::findOrNewMio($model->agente_id, $anno, $mese);
+                if (! ($p->exists && $p->fattura_proforma_id)) {
+                    ProduzioneOperatore::calcolaTotaliOrdiniInPagamento($model->agente_id, $anno, $mese);
+                }
+            }
+            try {
+                app(\App\Http\Services\AffiliateReferralService::class)
+                    ->onContrattoCaricato((int) $model->agente_id);
+            } catch (\Throwable $e) {
+                \Log::warning('ContrattoTelefonia referral eval on delete', ['id' => $model->id, 'error' => $e->getMessage()]);
+            }
         });
 
         self::created(function (ContrattoTelefonia $model) {
@@ -103,6 +156,40 @@ class ContrattoTelefonia extends Model
             }
         });
 
+    }
+
+    /**
+     * Contratti ancora da liquidare all'affiliato (esclude già pagati).
+     */
+    public function scopeDaLiquidare($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('pagato')->orWhere('pagato', 0)->orWhere('pagato', false);
+        });
+    }
+
+    public function scopeEleggibileAutofattura($query)
+    {
+        $cutoff = now()->subMonths(2)->toDateTimeString();
+
+        return $query->daLiquidare()
+            ->where('esito_finale', 'ok')
+            ->where(function ($q) {
+                $q->whereNull('autofattura_billing_document_id')
+                    ->orWhere('autofattura_billing_document_id', 0);
+            })
+            ->where(function ($q) use ($cutoff) {
+                $q->where(function ($inner) use ($cutoff) {
+                    $inner->whereNotNull('ok_at')->where('ok_at', '<=', $cutoff);
+                })->orWhere(function ($inner) use ($cutoff) {
+                    $inner->whereNull('ok_at')
+                        ->whereNotNull('mese_pagamento')
+                        ->whereRaw(
+                            "STR_TO_DATE(CONCAT('01_', REPLACE(mese_pagamento, '-', '_')), '%d_%m_%Y') <= ?",
+                            [substr($cutoff, 0, 10)]
+                        );
+                });
+            });
     }
 
     /*
@@ -136,9 +223,42 @@ class ContrattoTelefonia extends Model
         return $this->belongsTo(Comune::class, 'citta');
     }
 
+    public function coperturaRichiesta()
+    {
+        return $this->belongsTo(CoperturaRichiesta::class, 'copertura_richiesta_id');
+    }
+
     public function esito()
     {
         return $this->belongsTo(EsitoTelefonia::class, 'esito_id');
+    }
+
+    public function latestRiskSignal()
+    {
+        return $this->hasOne(CustomerRiskSignal::class, 'contract_id')
+            ->ofMany(['id' => 'max'], function ($query) {
+                $query->where('contract_type', 'contratto-telefonia');
+            });
+    }
+
+    public function latestOtpSigningRelay()
+    {
+        return $this->hasOne(ContractSigningRelay::class, 'contract_id')
+            ->ofMany(['id' => 'max'], function ($query) {
+                $query->where('module', ContractSigningRelay::MODULE_TELEFONIA)
+                    ->where('kind', ContractSigningRelay::KIND_OTP);
+            });
+    }
+
+    public function hasOtpFirmaScaduto(): bool
+    {
+        if (($this->firma_digitale_status ?? '') !== 'awaiting_otp') {
+            return false;
+        }
+
+        $relay = $this->latestOtpSigningRelay;
+
+        return $relay !== null && $relay->isExpired();
     }
 
     public function mandato()
@@ -154,6 +274,11 @@ class ContrattoTelefonia extends Model
     public function tipoContratto()
     {
         return $this->belongsTo(TipoContratto::class, 'tipo_contratto_id');
+    }
+
+    public function telefoniaOfferta()
+    {
+        return $this->belongsTo(TelefoniaOfferta::class, 'telefonia_offerta_id');
     }
 
     /*
@@ -201,8 +326,10 @@ class ContrattoTelefonia extends Model
     public function labelPagato()
     {
         if ($this->pagato) {
-            return "<span class='badge badge-success' >Pagato</span>";
+            return \App\Http\HelperForMetronic::statusBadge('Pagato', 'success');
         }
+
+        return \App\Http\HelperForMetronic::statusBadge('Non pagato', 'danger');
     }
 
     public static function selected($id)
@@ -221,17 +348,52 @@ class ContrattoTelefonia extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function isStatoApertoPerModifica(): bool
+    {
+        $editableEsiti = ['bozza', 'da-gestire', 'in-gestione', 'in_gestione'];
+        if (in_array((string) $this->esito_id, $editableEsiti, true)) {
+            return true;
+        }
+
+        $nomeEsito = strtolower(trim((string) optional($this->esito)->nome));
+        $nomeNorm = preg_replace('/[\s_\-]+/', ' ', $nomeEsito) ?? '';
+        if (in_array($nomeNorm, ['in gestione', 'da gestire', 'bozza'], true)) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function puoModificare($puoModificare)
     {
         if ($puoModificare) {
             return true;
         }
 
-        if ($this->esito_id == 'bozza' || $this->esito_id == 'da-gestire') {
-            return true;
-        } else {
+        return $this->isStatoApertoPerModifica();
+    }
+
+    public function puoRiaprire(?User $user = null): bool
+    {
+        $user = $user ?: Auth::user();
+        if (! $user instanceof User) {
             return false;
         }
+
+        // Bozza / Da gestire / In Gestione: niente Riapri (si usa Modifica)
+        if ($this->isStatoApertoPerModifica()) {
+            return false;
+        }
+
+        if ($user->hasAnyPermission(['admin', 'supervisore', 'operatore'])) {
+            return true;
+        }
+
+        if ($user->hasPermissionTo('agente') && (int) $this->agente_id === (int) $user->id) {
+            return true;
+        }
+
+        return false;
     }
 
     protected static function determinaMesePagamento($model)
@@ -272,20 +434,32 @@ class ContrattoTelefonia extends Model
 
     public static function determinaPuoModificare()
     {
-        return self::authUserHasAnyPermission(['admin', 'supervisore']);
+        $user = Auth::user();
+        if ($user instanceof User) {
+            return $user->canBypassContrattoEditLock();
+        }
 
+        return false;
     }
 
     public static function determinaPuoCambiareStato()
     {
-        return self::determinaPuoModificare() || self::authUserHasPermissionTo('supervisore');
+        $user = Auth::user();
+        if ($user instanceof User) {
+            return $user->canManageContrattoSegnalazione() || $user->canBypassContrattoEditLock();
+        }
 
+        return false;
     }
 
     public static function determinaPuoCreare()
     {
-        return self::authUserHasAnyPermission(['admin', 'agente']);
+        $user = Auth::user();
+        if ($user instanceof User && $user->canCreateContrattiAffiliato()) {
+            return true;
+        }
 
+        return self::authUserHasAnyPermission(['admin', 'agente']);
     }
 
     protected static function authUserHasPermissionTo(string $permission): bool

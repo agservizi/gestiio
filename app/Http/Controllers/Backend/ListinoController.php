@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\Gestore;
 use App\Models\Listino;
+use App\Models\TelefoniaOfferta;
 use App\Models\TipoContratto;
 use DB;
 use Illuminate\Database\Eloquent\Builder;
@@ -144,21 +145,39 @@ class ListinoController extends Controller
     {
         $record = Listino::find($id);
         abort_if(! $record, 404, 'Questo listino non esiste');
-        $records = TipoContratto::with('gestore')
+
+        $tipi = TipoContratto::with(['gestore', 'telefoniaOfferta'])
             ->whereHas('gestore', function ($q) {
                 $q->where('attivo', 1);
             })
-            ->orderBy(Gestore::select('nome')->whereColumn('tab_gestori.id', 'tipi_contratto.gestore_id'))->orderBy('tipi_contratto.nome')
+            ->orderBy(Gestore::select('nome')->whereColumn('tab_gestori.id', 'tipi_contratto.gestore_id'))
+            ->orderBy('tipi_contratto.nome')
             ->select('tipi_contratto.*')
             ->get();
+
+        // Gestori con offerte syncate: mostra solo tipi collegati a offerta attiva
+        $gestoriConOfferte = TelefoniaOfferta::query()
+            ->attive()
+            ->whereNotNull('tipo_contratto_id')
+            ->pluck('gestore_id')
+            ->unique()
+            ->filter()
+            ->all();
+
+        $records = $tipi->filter(function (TipoContratto $tipo) use ($gestoriConOfferte) {
+            if (! in_array((int) $tipo->gestore_id, array_map('intval', $gestoriConOfferte), true)) {
+                return (bool) $tipo->attivo;
+            }
+            $offerta = $tipo->telefoniaOfferta;
+            return $offerta && $offerta->attivo;
+        })->values();
 
         return view('Backend.Listino.show', [
             'record' => $record,
             'records' => $records,
             'controller' => ListinoController::class,
-            'titoloPagina' => Listino::NOME_SINGOLARE,
+            'titoloPagina' => 'Fasce · '.$record->nome,
             'breadcrumbs' => [action([ListinoController::class, 'index']) => 'Torna a elenco '.Listino::NOME_PLURALE],
-
         ]);
     }
 

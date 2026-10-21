@@ -9,6 +9,8 @@ class TipoContratto extends Model
 {
     protected $table = 'tipi_contratto';
 
+    protected $guarded = [];
+
     public const NOME_SINGOLARE = 'tipo contratto';
 
     public const NOME_PLURALE = 'tipi contratto';
@@ -34,6 +36,17 @@ class TipoContratto extends Model
         return $this->hasMany(Mandato::class, 'gestore_id', 'gestore_id');
     }
 
+    public function offertaTelefonia()
+    {
+        return $this->hasOne(TelefoniaOfferta::class, 'tipo_contratto_id');
+    }
+
+    /** Alias per eager-load / Blade (Listino, fasce) — stesso di offertaTelefonia() */
+    public function telefoniaOfferta()
+    {
+        return $this->hasOne(TelefoniaOfferta::class, 'tipo_contratto_id');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPE
@@ -42,7 +55,11 @@ class TipoContratto extends Model
 
     public function scopeSoloAttivi(Builder $query): Builder
     {
-        return $query->where('attivo', 1);
+        return $query
+            ->where('attivo', 1)
+            ->whereHas('gestore', function (Builder $q) {
+                $q->where('attivo', 1);
+            });
     }
 
     /*

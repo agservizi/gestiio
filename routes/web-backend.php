@@ -1,22 +1,26 @@
 <?php
 
-use App\Http\Controllers\Backend\AllegatoMobileScanController;
 use App\Http\Controllers\Backend\AgenteController;
-use App\Http\Controllers\Backend\AiAutomationController;
 use App\Http\Controllers\Backend\AjaxController;
+use App\Http\Controllers\Backend\AllegatoMobileScanController;
 use App\Http\Controllers\Backend\AllegatoServizioController;
 use App\Http\Controllers\Backend\AttivaServizioController;
 use App\Http\Controllers\Backend\Autenticazione2faController;
+use App\Http\Controllers\Backend\BillingDocumentController;
+use App\Http\Controllers\Backend\BillingFornitoreController;
 use App\Http\Controllers\Backend\BrtOrmController;
 use App\Http\Controllers\Backend\CafPatronatoController;
+use App\Http\Controllers\Backend\CanoneServiziController;
+use App\Http\Controllers\Backend\ContentReportController;
 use App\Http\Controllers\Backend\CartellaFilesController;
-use App\Http\Controllers\Backend\SeafileDocumentiController;
 use App\Http\Controllers\Backend\CausaleTicketController;
+use App\Http\Controllers\Backend\CentroNotificheController;
 use App\Http\Controllers\Backend\ChatController;
 use App\Http\Controllers\Backend\ChiamataApiController;
 use App\Http\Controllers\Backend\ClienteAssistenzaController;
 use App\Http\Controllers\Backend\ClienteController;
 use App\Http\Controllers\Backend\ContattoBrtController;
+use App\Http\Controllers\Backend\ContractSigningController;
 use App\Http\Controllers\Backend\ContrattoEnergiaController;
 use App\Http\Controllers\Backend\ContrattoTelefoniaController;
 use App\Http\Controllers\Backend\DashboardController;
@@ -29,8 +33,8 @@ use App\Http\Controllers\Backend\EsitoVisuraController;
 use App\Http\Controllers\Backend\EsportaController;
 use App\Http\Controllers\Backend\FasciaTipoContrattoController;
 use App\Http\Controllers\Backend\FatturaProformaController;
-use App\Http\Controllers\Backend\BillingDocumentController;
-use App\Http\Controllers\Backend\BillingFornitoreController;
+use App\Http\Controllers\Backend\LiquidazioneProvvigioniController;
+use App\Http\Controllers\Backend\ProvvigioneClawbackController;
 use App\Http\Controllers\Backend\GestoreAttivazioniController;
 use App\Http\Controllers\Backend\GestoreContrattoEnergiaController;
 use App\Http\Controllers\Backend\GestoreController;
@@ -39,25 +43,38 @@ use App\Http\Controllers\Backend\InpostPickupController;
 use App\Http\Controllers\Backend\InpostReturnController;
 use App\Http\Controllers\Backend\ListinoBrtController;
 use App\Http\Controllers\Backend\ListinoBrtEuropaController;
+use App\Http\Controllers\Backend\GaraController;
 use App\Http\Controllers\Backend\ListinoController;
 use App\Http\Controllers\Backend\ListinoInpostController;
 use App\Http\Controllers\Backend\LockerPackageController;
 use App\Http\Controllers\Backend\LuggageDepositController;
-use App\Http\Controllers\Backend\SendRequestController;
 use App\Http\Controllers\Backend\ModalController;
 use App\Http\Controllers\Backend\NotificaController;
 use App\Http\Controllers\Backend\OffertaSimController;
+use App\Http\Controllers\Backend\EnergiaOffertaController;
+use App\Http\Controllers\Backend\TelefoniaOffertaController;
+use App\Http\Controllers\Backend\SimulaBollettaController;
+use App\Http\Controllers\Backend\PasskeyController;
+use App\Http\Controllers\Backend\PreferenzeTemaController;
 use App\Http\Controllers\Backend\PaymentController;
 use App\Http\Controllers\Backend\PdfToolsController;
+use App\Http\Controllers\Backend\BooriteSsoController;
+use App\Http\Controllers\Backend\PdfToolsWorkbenchController;
 use App\Http\Controllers\Backend\PortafoglioController;
 use App\Http\Controllers\Backend\ProdottoAssistenzaController;
 use App\Http\Controllers\Backend\ProduzioneOperatoreController;
 use App\Http\Controllers\Backend\ProfiloController;
+use App\Http\Controllers\Backend\QuickContractController;
 use App\Http\Controllers\Backend\RegistriController;
+use App\Http\Controllers\Backend\BreakingNewsController;
+use App\Http\Controllers\Backend\RicaricaBonificoPortafoglioController;
 use App\Http\Controllers\Backend\RicaricaCartaIbanController;
 use App\Http\Controllers\Backend\RicaricaPlafonController;
 use App\Http\Controllers\Backend\RichiestaAssistenzaController;
+use App\Http\Controllers\Backend\SeafileDocumentiController;
+use App\Http\Controllers\Backend\AddressAutocompleteController;
 use App\Http\Controllers\Backend\Select2;
+use App\Http\Controllers\Backend\SendRequestController;
 use App\Http\Controllers\Backend\SettingController;
 use App\Http\Controllers\Backend\SpedizioneBrtController;
 use App\Http\Controllers\Backend\SpedizioneInpostController;
@@ -73,25 +90,52 @@ Route::middleware(['auth', 'role_or_permission:admin|agente|supervisore|operator
     Route::get('2fa', [Autenticazione2faController::class, 'show']);
 });
 
-Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa']], function () {
+Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervisore|operatore', '2fa', 'demo.readonly']], function () {
     Route::get('/', [DashboardController::class, 'show']);
     Route::get('/lavoro', [DashboardController::class, 'show']);
     Route::get('/attiva-servizio', [AttivaServizioController::class, 'show'])->name('attiva-servizio');
     Route::post('/attiva-servizio', [AttivaServizioController::class, 'richiedi'])->name('attiva-servizio.richiedi');
+    Route::get('produzione-operatore', [ProduzioneOperatoreController::class, 'index']);
+    Route::get('produzione-operatore/{id}', [ProduzioneOperatoreController::class, 'show']);
+    Route::get('provvigioni', [\App\Http\Controllers\Backend\ProvvigioniAffiliatoController::class, 'index'])
+        ->name('backend.provvigioni.index');
+    Route::get('mie-pratiche', [\App\Http\Controllers\Backend\MiePraticheController::class, 'index'])
+        ->name('backend.mie-pratiche.index');
+    Route::post('mie-pratiche/lookup', [\App\Http\Controllers\Backend\MiePraticheController::class, 'lookup'])
+        ->name('backend.mie-pratiche.lookup');
+    Route::get('hub-promozione', [\App\Http\Controllers\Backend\HubPromozioneController::class, 'index'])
+        ->name('backend.hub-promozione.index');
+    Route::get('referral-affiliato', [\App\Http\Controllers\Backend\ReferralAffiliatoController::class, 'index'])
+        ->name('backend.referral.index');
+    Route::get('admin/referral-bonus', [\App\Http\Controllers\Backend\AdminReferralController::class, 'index'])
+        ->name('backend.admin.referral.index');
+    Route::post('admin/referral-bonus/{id}/credit', [\App\Http\Controllers\Backend\AdminReferralController::class, 'credit'])
+        ->name('backend.admin.referral.credit')->whereNumber('id');
+    Route::post('admin/referral-bonus/{id}/cancel', [\App\Http\Controllers\Backend\AdminReferralController::class, 'cancel'])
+        ->name('backend.admin.referral.cancel')->whereNumber('id');
+    Route::post('preventivo-allaccio/stima', [\App\Http\Controllers\Backend\PreventivoAllaccioController::class, 'stima'])
+        ->name('backend.preventivo-allaccio.stima');
+    Route::get('preventivo-allaccio/pdf', [\App\Http\Controllers\Backend\PreventivoAllaccioController::class, 'pdf'])
+        ->name('backend.preventivo-allaccio.pdf');
     Route::post('/dashboard/bulk-action', [DashboardController::class, 'bulkAction']);
-    Route::get('/ai-control-tower', [AiAutomationController::class, 'index']);
-    Route::post('/ai-control-tower/dashboard-review', [AiAutomationController::class, 'triggerDashboard']);
-    Route::post('/ai-control-tower/ask', [AiAutomationController::class, 'ask']);
-    Route::post('/gestiio-ai/chat', [AiAutomationController::class, 'chat']);
-    Route::post('/gestiio-ai/ricarica-plafond/intent', [PaymentController::class, 'prepareChatRicarica']);
-    Route::post('/gestiio-ai/ricarica-plafond/pay', [PaymentController::class, 'storePagamentoChat']);
-    Route::post('/ai-suggestion/{suggestion}/feedback', [AiAutomationController::class, 'feedback']);
-
+    Route::post('/dashboard/mercati-energia/ack', [DashboardController::class, 'ackMercatiEnergiaSwal'])
+        ->name('backend.dashboard.mercati-energia.ack');
+    Route::get('/dashboard/workspace-search', [DashboardController::class, 'workspaceSearch'])
+        ->name('dashboard.workspace-search');
     Route::middleware(['role_or_permission:admin|agente'])->group(function () {
-        Route::get('/pdf-tools', [PdfToolsController::class, 'index'])->name('backend.pdf-tools');
+        Route::get('/pdf-tools', [PdfToolsWorkbenchController::class, 'index'])->name('backend.pdf-tools');
+        Route::post('/pdf-tools/run/{tool}', [PdfToolsWorkbenchController::class, 'run'])
+            ->where('tool', 'merge|split|compress|rotate|remove-pages|ocr|extract-text')
+            ->middleware('throttle:30,1')
+            ->name('backend.pdf-tools.run');
         Route::get('/pdf-tools/enter', [PdfToolsController::class, 'enter'])->name('backend.pdf-tools.enter');
         Route::get('/pdf-tools/sso-token', [PdfToolsController::class, 'ssoToken'])->name('backend.pdf-tools.sso-token');
         Route::get('/pdf-tools/desktop-credentials', [PdfToolsController::class, 'desktopCredentials'])->name('backend.pdf-tools.desktop-credentials');
+
+        // Formazione → Boorite Learning SSO (JWT)
+        Route::get('/formazione', BooriteSsoController::class)
+            ->middleware('throttle:30,1')
+            ->name('backend.training.sso');
 
         // Documenti → Seafile (admin RW / agente RO via SSO)
         Route::get('/documenti/sso', [SeafileDocumentiController::class, 'sso'])->name('backend.documenti.sso');
@@ -111,8 +155,11 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
         Route::get('report.csv', [SendRequestController::class, 'exportCsv']);
         Route::get('impostazioni', [SendRequestController::class, 'settings']);
         Route::post('impostazioni', [SendRequestController::class, 'updateSettings']);
+        Route::get('eventi-inviati', [SendRequestController::class, 'webhookEvents']);
+        Route::post('eventi-inviati/{delivery}/retry', [SendRequestController::class, 'retryWebhook']);
         Route::post('allegato', [SendRequestController::class, 'uploadAllegato']);
         Route::delete('allegato', [SendRequestController::class, 'deleteAllegato']);
+        Route::get('{send}/audit.csv', [SendRequestController::class, 'exportAudit']);
         Route::get('{send}', [SendRequestController::class, 'show']);
         Route::get('{send}/modifica', [SendRequestController::class, 'edit']);
         Route::post('{send}/modifica', [SendRequestController::class, 'update']);
@@ -155,29 +202,91 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
         ->where('sessionId', '[a-fA-F0-9-]{36}')
         ->name('allegati-mobile-scan.destroy');
 
+    Route::prefix('quick-contract/{module}')
+        ->where(['module' => 'telefonia|energia'])
+        ->group(function () {
+            Route::get('nuovo', [QuickContractController::class, 'choice'])->name('quick-contract.choice');
+            Route::get('destinazione', [QuickContractController::class, 'destinationForm'])->name('quick-contract.destination');
+            Route::post('destinazione', [QuickContractController::class, 'storeDestination'])->name('quick-contract.destination.store');
+            Route::get('upload', [QuickContractController::class, 'uploadForm'])->name('quick-contract.upload-form');
+            Route::post('upload', [QuickContractController::class, 'upload'])->name('quick-contract.upload');
+            Route::get('{extraction}/status', [QuickContractController::class, 'status'])->name('quick-contract.status');
+            Route::post('{extraction}/operazione', [QuickContractController::class, 'storeOperazione'])->name('quick-contract.operazione');
+            Route::post('{extraction}/customer-patch', [QuickContractController::class, 'storeCustomerPatch'])->name('quick-contract.customer-patch');
+            Route::post('{extraction}/swal-ack', [QuickContractController::class, 'ackOperazioneSwal'])->name('quick-contract.swal-ack');
+            Route::get('{extraction}/retry', [QuickContractController::class, 'retry'])->name('quick-contract.retry');
+            Route::get('{extraction}/preview', [QuickContractController::class, 'preview'])->name('quick-contract.preview');
+            Route::get('{extraction}/completa', [QuickContractController::class, 'completa'])->name('quick-contract.completa');
+            Route::get('{extraction}/confronta', [QuickContractController::class, 'confrontaForm'])->name('quick-contract.confronta');
+            Route::post('{extraction}/confronta', [QuickContractController::class, 'storeConfronta'])->name('quick-contract.confronta.store');
+            Route::get('{extraction}/cliente-check', [QuickContractController::class, 'clienteCheck'])->name('quick-contract.cliente-check');
+            Route::post('{extraction}/cliente-check', [QuickContractController::class, 'clienteCheckRefresh'])->name('quick-contract.cliente-check.refresh');
+            Route::post('{extraction}/confirm', [QuickContractController::class, 'confirm'])->name('quick-contract.confirm');
+            Route::get('{extraction}', [QuickContractController::class, 'review'])->name('quick-contract.review');
+        });
+
     // Contratto
     Route::post('/allegato-contratto', [ContrattoTelefoniaController::class, 'uploadAllegato']);
     Route::delete('/allegato-contratto', [ContrattoTelefoniaController::class, 'deleteAllegato']);
     Route::get('contratto/{contrattoId}/allegato/{allegatoId}', [ContrattoTelefoniaController::class, 'downloadAllegato']);
     Route::resource('contratto', ContrattoTelefoniaController::class);
+    Route::post('/contratto/{id}/riapri', [ContrattoTelefoniaController::class, 'riapri'])->name('contratto.riapri');
+    Route::post('/contratto/{id}/conferma-bozza', [ContrattoTelefoniaController::class, 'confermaBozza'])->name('contratto.conferma-bozza');
+    Route::post('/contratto/{id}/prendi-in-carico-segnalazione', [ContrattoTelefoniaController::class, 'prendiInCaricoSegnalazione'])
+        ->name('contratto.prendi-in-carico-segnalazione');
     Route::post('/contratto/{id}/azione/{azione}', [ContrattoTelefoniaController::class, 'azioni']);
     Route::post('/contratto/verifica-cf-rischio', [ContrattoTelefoniaController::class, 'verificaCodiceFiscaleRischio']);
+    Route::post('/contratto/verifica-copertura', [ContrattoTelefoniaController::class, 'verificaCopertura'])
+        ->middleware('throttle:30,1');
+    Route::post('/contratto/richiedi-copertura', [ContrattoTelefoniaController::class, 'richiediCopertura'])
+        ->middleware('throttle:10,1');
+    Route::get('/autocomplete/vie', [AddressAutocompleteController::class, 'streets'])
+        ->middleware('throttle:60,1')
+        ->name('autocomplete.vie');
+    Route::get('/autocomplete/civici', [AddressAutocompleteController::class, 'houseNumbers'])
+        ->middleware('throttle:60,1')
+        ->name('autocomplete.civici');
+    Route::post('/contratto/{id}/segnala-rischio', [ContrattoTelefoniaController::class, 'segnalaRischio']);
     Route::get('pda-contratto/{id}', [ContrattoTelefoniaController::class, 'pda']);
 
     // ContrattoEnergia
     Route::post('/allegato-contratto-energia', [ContrattoEnergiaController::class, 'uploadAllegato']);
     Route::delete('/allegato-contratto-energia', [ContrattoEnergiaController::class, 'deleteAllegato']);
     Route::get('contratto-energia/{contrattoId}/allegato/{allegatoId}', [ContrattoEnergiaController::class, 'downloadAllegato']);
+    Route::post('/contratto-energia/sentra-nuova-attivazione/generate', [ContrattoEnergiaController::class, 'sentraNuovaAttivazioneGenerate'])
+        ->name('contratto-energia.sentra-nuova.generate');
+    Route::get('/contratto-energia/sentra-nuova-attivazione/download/{file}', [ContrattoEnergiaController::class, 'sentraNuovaAttivazioneDownload'])
+        ->name('contratto-energia.sentra-nuova.download');
+    Route::get('/contratto-energia/sentra-nuova-attivazione/cte', [ContrattoEnergiaController::class, 'sentraNuovaAttivazioneCte'])
+        ->name('contratto-energia.sentra-nuova.cte');
     Route::get('pda-contratto-energia/{id}', [ContrattoEnergiaController::class, 'pda']);
     Route::get('/contratto-energia/create/{servizio?}', [ContrattoEnergiaController::class, 'create']);
 
     Route::resource('contratto-energia', ContrattoEnergiaController::class)->except(['create']);
     Route::post('/contratto-energia/verifica-cf-rischio', [ContrattoEnergiaController::class, 'verificaCodiceFiscaleRischio']);
+    Route::post('/contratto-energia/{id}/riapri', [ContrattoEnergiaController::class, 'riapri'])->name('contratto-energia.riapri');
+    Route::post('/contratto-energia/{id}/conferma-bozza', [ContrattoEnergiaController::class, 'confermaBozza'])->name('contratto-energia.conferma-bozza');
+    Route::post('/contratto-energia/{id}/scadenza', [ContrattoEnergiaController::class, 'aggiornaScadenza'])->name('contratto-energia.scadenza');
+    Route::post('/contratto-energia/{id}/prendi-in-carico-segnalazione', [ContrattoEnergiaController::class, 'prendiInCaricoSegnalazione'])
+        ->name('contratto-energia.prendi-in-carico-segnalazione');
+    Route::post('/contratto-energia/{id}/segnala-rischio', [ContrattoEnergiaController::class, 'segnalaRischio']);
     Route::get('/contratto-energia/{id}/duplica-anagrafica', [ContrattoEnergiaController::class, 'duplicaAnagrafica']);
     Route::post('/contratto-energia/{id}/switch-categoria', [ContrattoEnergiaController::class, 'switchCategoria']);
     Route::post('/contratto-energia/{id}/segnala-chat', [ContrattoEnergiaController::class, 'segnalaChat']);
     Route::post('/contratto-energia/{id}/apri-chat', [ContrattoEnergiaController::class, 'apriChat']);
     // Route::post('/contratto-energia/{id}/azione/{azione}', [\App\Http\Controllers\Backend\ContrattoEnergiaController::class, 'azioni']);
+
+    // Firma digitale: relay link/OTP admin ↔ affiliato (SweetAlert)
+    Route::prefix('contract-signing')->group(function () {
+        Route::get('/pending', [ContractSigningController::class, 'pending']);
+        Route::get('/latest', [ContractSigningController::class, 'latest']);
+        Route::get('/reopen', [ContractSigningController::class, 'reopen']);
+        Route::get('/{relay}', [ContractSigningController::class, 'show'])->whereNumber('relay');
+        Route::post('/request-link', [ContractSigningController::class, 'requestLink']);
+        Route::post('/request-otp', [ContractSigningController::class, 'requestOtp']);
+        Route::post('/{relay}/answer', [ContractSigningController::class, 'answer'])->whereNumber('relay');
+        Route::post('/{relay}/complete', [ContractSigningController::class, 'complete'])->whereNumber('relay');
+    });
 
     // Caf patronato
     Route::get('/caf-patronato/{contrattoId}/allegato/{allegatoId}', [CafPatronatoController::class, 'downloadAllegato']);
@@ -275,9 +384,18 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::patch('fattura-proforma/{id}/intestazione', [FatturaProformaController::class, 'updateIntestazione']);
     Route::resource('fattura-proforma', FatturaProformaController::class)->except(['create', 'store', 'edit', 'update']);
 
+    // Liquidazione provvigioni mese (admin)
+    Route::get('liquidazione-provvigioni', [LiquidazioneProvvigioniController::class, 'index']);
+    Route::get('liquidazione-provvigioni/report', [LiquidazioneProvvigioniController::class, 'report']);
+    Route::get('liquidazione-provvigioni/export', [LiquidazioneProvvigioniController::class, 'exportExcel']);
+    Route::post('liquidazione-provvigioni/genera-tutte', [LiquidazioneProvvigioniController::class, 'generaTutte']);
+    Route::post('liquidazione-provvigioni/genera/{produzioneId}', [LiquidazioneProvvigioniController::class, 'generaSingola']);
+    Route::post('liquidazione-provvigioni/segna-pagate', [LiquidazioneProvvigioniController::class, 'segnaPagateBatch']);
+
     // Fatturazione InvoiceShelf (hub Metronic)
     Route::get('fatturazione', [BillingDocumentController::class, 'index']);
     Route::get('fatturazione/invoiceshelf', [BillingDocumentController::class, 'invoiceshelfIndex']);
+    Route::get('fatturazione/invoiceshelf/enter', [BillingDocumentController::class, 'enterInvoiceShelf']);
     Route::get('fatturazione/invoiceshelf/{isId}/xml', [BillingDocumentController::class, 'exportInvoiceShelfXml'])->whereNumber('isId');
     Route::get('fatturazione/{id}', [BillingDocumentController::class, 'show'])->whereNumber('id');
     Route::get('fatturazione/{id}/pdf', [BillingDocumentController::class, 'pdf'])->whereNumber('id');
@@ -299,6 +417,17 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/portafoglio/richieste-spostamento/{id}/applica', [PortafoglioController::class, 'applicaRichiestaSpostamento']);
     Route::resource('/portafoglio', PortafoglioController::class);
 
+    Route::get('/ricariche-bonifico', [RicaricaBonificoPortafoglioController::class, 'index']);
+    Route::post('/ricariche-bonifico', [RicaricaBonificoPortafoglioController::class, 'store']);
+    Route::get('/ricariche-bonifico/{id}/download', [RicaricaBonificoPortafoglioController::class, 'download'])->whereNumber('id');
+    Route::post('/ricariche-bonifico/{id}/approve', [RicaricaBonificoPortafoglioController::class, 'approve'])->whereNumber('id');
+    Route::post('/ricariche-bonifico/{id}/reject', [RicaricaBonificoPortafoglioController::class, 'reject'])->whereNumber('id');
+    Route::get('/ricariche-bonifico/pending-json', [RicaricaBonificoPortafoglioController::class, 'pendingJson']);
+    Route::post('/ricariche-bonifico/ack-swal', [RicaricaBonificoPortafoglioController::class, 'ackSwal']);
+
+    Route::post('/breaking-news/{id}/toggle', [BreakingNewsController::class, 'toggle'])->whereNumber('id');
+    Route::resource('/breaking-news', BreakingNewsController::class)->except(['show']);
+
     // Ebike B2B
     Route::resource('/ebike/prodotti', EbikeProdottoController::class)->except(['show']);
     Route::post('/ebike/ordini/{id}/carica-pagamento', [EbikeOrdineController::class, 'caricaPagamento']);
@@ -308,17 +437,23 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
     Route::post('/ebike/ordini/{id}/annulla', [EbikeOrdineController::class, 'annulla']);
     Route::resource('/ebike/ordini', EbikeOrdineController::class)->only(['index', 'create', 'store', 'show']);
 
-    Route::post('/pagamento/{servizio}', [PaymentController::class, 'pagamento']);
-    Route::get('/pagamento/{servizio}/{result}', [PaymentController::class, 'response']);
-    Route::post('/pagamento', [PaymentController::class, 'storePagamento']);
-    Route::post('/pagamento-bonifico-stripe', [PaymentController::class, 'storeBonificoStripe']);
+    Route::post('/pagamento/droppay/start', [PaymentController::class, 'startDropPay']);
+    Route::get('/pagamento/droppay/{id}/checkout', [PaymentController::class, 'checkoutDropPay'])->whereNumber('id');
+    Route::match(['get', 'post'], '/pagamento/droppay/complete', [PaymentController::class, 'completeDropPay']);
     Route::get('/pagamento-success', [PaymentController::class, 'pagamentoSuccess']);
 
     // Tickets
     Route::resource('/ticket', TicketsController::class, ['as' => 'ticket-admin']);
 
-    // Chat interna
+    // Chat interna (Metronic / chat_*)
+    Route::get('/chat', [ChatController::class, 'index'])->name('internal-chat');
     Route::get('/chat-interna', [ChatController::class, 'index']);
+    Route::get('/chat-nuova/{any?}', function (?string $any = null) {
+        $threadId = ctype_digit((string) $any) ? (int) $any : (request()->integer('thread') ?: null);
+
+        return redirect()->to(\App\Support\InternalChat::url($threadId));
+    })->where('any', '.*');
+
     Route::post('/chat-interna/thread', [ChatController::class, 'storeThread']);
     Route::get('/chat-interna/poll', [ChatController::class, 'poll']);
     Route::get('/chat-interna/poll-global', [ChatController::class, 'pollGlobalNotifications']);
@@ -356,17 +491,59 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin|agente|supervis
 
     Route::get('profilo', [ProfiloController::class, 'show']);
     Route::get('profilo-listino/{tipoContratto}', [ProfiloController::class, 'showListino']);
+    Route::post('preferenze/tema', [PreferenzeTemaController::class, 'update'])->name('backend.preferenze.tema');
+
+    Route::middleware(['role_or_permission:agente'])->group(function () {
+        Route::get('profilo/canoni-servizi', [CanoneServiziController::class, 'index'])->name('backend.canoni.index');
+        Route::post('profilo/canoni-servizi/disdici', [CanoneServiziController::class, 'disdici'])->name('backend.canoni.disdici');
+        Route::get('billing/clawback', [ProvvigioneClawbackController::class, 'index'])->name('backend.billing.clawback');
+        Route::get('billing/clawback/export', [ProvvigioneClawbackController::class, 'exportCsv'])->name('backend.billing.clawback.export');
+        Route::post('billing/clawback/ack', [ProvvigioneClawbackController::class, 'ack'])->name('backend.billing.clawback.ack');
+        Route::post('billing/clawback/ack-form', [ProvvigioneClawbackController::class, 'ackForm'])->name('backend.billing.clawback.ack-form');
+    });
+
+    Route::post('chat-interna/allegato/{id}/segnala', [ContentReportController::class, 'reportAttachment'])
+        ->whereNumber('id')
+        ->name('backend.content-report.attachment');
+
+    Route::middleware(['role_or_permission:admin|agente|supervisore|operatore'])->group(function () {
+        Route::get('profilo/passkey', [PasskeyController::class, 'index'])->name('backend.profilo.passkey');
+        Route::post('profilo/passkey/options', [PasskeyController::class, 'options'])->name('backend.profilo.passkey.options');
+        Route::post('profilo/passkey/register', [PasskeyController::class, 'register'])->name('backend.profilo.passkey.register');
+        Route::delete('profilo/passkey/{id}', [PasskeyController::class, 'destroy'])->name('backend.profilo.passkey.destroy');
+    });
 
     // Contatti Brt
     Route::resource('contatto-brt', ContattoBrtController::class)->except(['show']);
 
+    // Simula bolletta: affiliati con servizio energia + admin (gate fine nel controller)
+    Route::prefix('simula-bolletta')->name('simula-bolletta.')->group(function () {
+        Route::get('/', [SimulaBollettaController::class, 'index'])->name('index');
+        Route::get('/manual', [SimulaBollettaController::class, 'manualForm'])->name('manual');
+        Route::post('/calcola', [SimulaBollettaController::class, 'calcola'])->name('calcola');
+        Route::get('/risultato', [SimulaBollettaController::class, 'risultato'])->name('risultato');
+        Route::get('/scheda/{offerta}', [SimulaBollettaController::class, 'scheda'])->name('scheda');
+        Route::post('/upload', [SimulaBollettaController::class, 'upload'])->name('upload');
+        Route::get('/review/{extraction}', [SimulaBollettaController::class, 'review'])->name('review');
+        Route::get('/review/{extraction}/status', [SimulaBollettaController::class, 'reviewStatus'])->name('review.status');
+    });
+
 });
 
 Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], function () {
+    Route::get('segnalazioni-contenuto', [ContentReportController::class, 'adminIndex'])->name('backend.content-report.index');
+    Route::post('segnalazioni-contenuto/{id}/stato', [ContentReportController::class, 'adminUpdateStatus'])
+        ->whereNumber('id')
+        ->name('backend.content-report.status');
+
+    Route::post('/richieste-servizi/{serviceRequest}', [AttivaServizioController::class, 'aggiorna'])
+        ->name('admin.richieste-servizi.aggiorna');
 
     // Cliente
     Route::get('cliente/{id}/tab/{tab}', [ClienteController::class, 'tab']);
     Route::resource('cliente', ClienteController::class);
+    // Impersonazione: admin già autenticato + 2FA; niente step-up password (né admin né affiliato).
+    Route::get('/cliente/{id}/impersona', [ClienteController::class, 'impersona']);
     Route::post('/cliente/{id}/azione/{azione}', [ClienteController::class, 'azioni']);
 
     Route::get('esporta/{cosa}', [EsportaController::class, 'esporta']);
@@ -388,7 +565,7 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
     Route::post('richiesta-assistenza/{id}/reinvio-credenziali', [RichiestaAssistenzaController::class, 'reinviaCredenziali']);
     // Registri
     Route::get('registro/{cosa}', [RegistriController::class, 'index'])
-        ->whereIn('cosa', ['login', 'email', 'backup-db', 'elenco_licenze', 'info-sito', 'errori', 'upload', 'modifiche'])
+        ->whereIn('cosa', ['login', 'email', 'backup-db', 'elenco_licenze', 'info-sito', 'errori', 'upload', 'modifiche', 'security'])
         ->name('registro.index');
     Route::post('registro/backup-db/esegui', [RegistriController::class, 'eseguiBackup'])->name('registro.backup.esegui');
     Route::get('registro/backup-db/scarica', [RegistriController::class, 'scaricaBackup'])->name('registro.backup.scarica');
@@ -399,7 +576,18 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
 
     // Agente
     Route::get('/agente-tab/{id}/tab/{tab}', [AgenteController::class, 'tab']);
-    Route::resource('/agente', AgenteController::class);
+    Route::post('/agente/bulk/{azione}', [AgenteController::class, 'bulkAzioni'])
+        ->where('azione', 'sospendi|riattiva|invita_rientro|export');
+    Route::get('/agente/preview-email-rientro', [AgenteController::class, 'previewEmailRientro'])
+        ->name('agente.preview-email-rientro');
+    // whereNumber: evita che "preview-email-rientro" venga catturato da agente/{agente}
+    Route::resource('/agente', AgenteController::class)->whereNumber('agente');
+    Route::post('/agente/{id}/send-api-key', [AgenteController::class, 'regenerateSendApiKey'])
+        ->middleware('password.confirm');
+    Route::post('/agente/{id}/send-api-key/revoke', [AgenteController::class, 'revokeSendApiKey'])
+        ->middleware('password.confirm');
+    // Impersonazione: admin già autenticato + 2FA; niente step-up password (né admin né affiliato).
+    Route::get('/agente/{id}/impersona', [AgenteController::class, 'impersona']);
     Route::post('/agente/{id}/azione/{azione}', [AgenteController::class, 'azioni']);
 
     Route::get('agente/{agente}/tipo-contratto/{tipocontratto}', [FasciaTipoContrattoController::class, 'edit']);
@@ -408,9 +596,10 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
     // Route::resource('/operatore', \App\Http\Controllers\Backend\OperatoreController::class)->except(['show']);
 
     Route::resource('/notifica', NotificaController::class)->except(['show']);
+    Route::get('/centro-notifiche', [CentroNotificheController::class, 'index'])->name('centro-notifiche');
+    Route::post('/centro-notifiche/{id}/letta', [CentroNotificheController::class, 'markRead'])->name('centro-notifiche.mark-read');
+    Route::post('/centro-notifiche/lette-tutte', [CentroNotificheController::class, 'markAllRead'])->name('centro-notifiche.mark-all');
 
-    Route::get('produzione-operatore', [ProduzioneOperatoreController::class, 'index']);
-    Route::get('produzione-operatore/{id}', [ProduzioneOperatoreController::class, 'show']);
     Route::get('produzione-operatore/{id}/preview-proforma', [ProduzioneOperatoreController::class, 'previewProforma']);
     Route::post('produzione-operatore/{id}/crea-proforma', [ProduzioneOperatoreController::class, 'creaProforma']);
     Route::post('produzione-operatore/{id}/ricalcola', [ProduzioneOperatoreController::class, 'ricalcola']);
@@ -420,6 +609,10 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
     Route::resource('/tipo-esito', EsitoTelefoniaController::class)->except(['show']);
     Route::resource('/tipo-visura', TipoVisuraController::class)->except(['show']);
     Route::resource('/offerta-sim', OffertaSimController::class)->except(['show']);
+    Route::post('/offerta-energia/sync', [EnergiaOffertaController::class, 'syncNow'])->name('offerta-energia.sync');
+    Route::resource('/offerta-energia', EnergiaOffertaController::class)->except(['show']);
+    Route::post('/offerta-telefonia/sync', [TelefoniaOffertaController::class, 'syncNow'])->name('offerta-telefonia.sync');
+    Route::resource('/offerta-telefonia', TelefoniaOffertaController::class)->except(['show']);
 
     // Gestori
     Route::resource('/gestore', GestoreController::class)->except(['show']);
@@ -431,8 +624,9 @@ Route::group(['middleware' => ['auth', '2fa', 'role_or_permission:admin']], func
     Route::resource('esito-contratto-energia', EsitoContrattoEnergiaController::class)->except(['show']);
     Route::resource('esito-visura', EsitoVisuraController::class)->except(['show']);
 
-    // Listini
+    // Listini + Gare
     Route::resource('listino', ListinoController::class);
+    Route::resource('gara', GaraController::class)->except(['show']);
     Route::resource('brt-listino', ListinoBrtController::class);
     Route::resource('brt-listino-europa', ListinoBrtEuropaController::class);
     Route::resource('inpost-listino', ListinoInpostController::class);

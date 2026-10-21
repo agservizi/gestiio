@@ -7,6 +7,7 @@ use App\Http\Services\Billing\AgentProformaInvoiceShelfSync;
 use App\Models\ContrattoEnergia;
 use App\Models\ContrattoTelefonia;
 use App\Models\FatturaProforma;
+use App\Models\GaraRisultato;
 use App\Models\IntestazioneFatturaProforma;
 use App\Models\ProduzioneOperatore;
 use App\Models\RigaFatturaProforma;
@@ -55,7 +56,7 @@ class FatturaProformaService
             return ['ok' => false, 'error' => 'Fattura proforma già esistente'];
         }
 
-        $totale = (float) ($produzione->importo_totale ?? 0);
+        $totale = $produzione->importoLiquidabile();
         if ($totale <= 0) {
             return ['ok' => false, 'error' => 'Importo zero: nessuna proforma'];
         }
@@ -90,7 +91,7 @@ class FatturaProformaService
             return false;
         }
 
-        $totaleProduzione = (float) ($produzione->importo_totale ?? 0);
+        $totaleProduzione = $produzione->importoLiquidabile();
         if ($totaleProduzione <= 0) {
             $this->error = 'Importo zero: nessuna proforma';
 
@@ -170,6 +171,7 @@ class FatturaProformaService
             DB::beginTransaction();
 
             $this->scollegaContratti($fattura->id);
+            $this->scollegaGare($fattura->id);
             RigaFatturaProforma::where('fattura_proforma_id', $fattura->id)->delete();
 
             $totaleImponibile = $this->scriviRigheECollegaContratti($fattura, $produzione, $produzione->user_id);
@@ -210,6 +212,7 @@ class FatturaProformaService
             DB::beginTransaction();
 
             $this->scollegaContratti($fattura->id);
+            $this->scollegaGare($fattura->id);
 
             ProduzioneOperatore::where('fattura_proforma_id', $fattura->id)
                 ->update(['fattura_proforma_id' => null]);
@@ -232,6 +235,144 @@ class FatturaProformaService
     public function getErrore()
     {
         return $this->error;
+    }
+
+    /**
+     * Segna proforma pagata, marca contratti tel/energia e ricalcola produzione.
+     *
+     * @param  array{data_pagamento?:string,riferimento_pagamento?:string}  $meta
+     */
+    public function segnaPagata(FatturaProforma $fattura, array $meta = []): bool
+    {
+        if ($fattura->statusEnum() === FatturaProformaStatus::PAGATA) {
+            $this->error = 'Proforma già pagata';
+
+            return false;
+        }
+
+        $dataPagamento = $meta['data_pagamento'] ?? now()->toDateString();
+        $riferimento = trim((string) ($meta['riferimento_pagamento'] ?? ''));
+        if ($riferimento === '') {
+            $this->error = 'Riferimento pagamento obbligatorio (CRO / causale bonifico)';
+
+            return false;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $fattura->status = FatturaProformaStatus::PAGATA;
+            $fattura->data_pagamento = $dataPagamento;
+            $fattura->riferimento_pagamento = $riferimento;
+            $fattura->save();
+
+            $this->marcaContrattiPagati($fattura->id);
+
+            GaraRisultato::query()
+                ->where('fattura_proforma_id', $fattura->id)
+                ->whereNull('liquidato_at')
+                ->update(['liquidato_at' => now()]);
+
+            $produzione = ProduzioneOperatore::firstWhere('fattura_proforma_id', $fattura->id);
+            if ($produzione) {
+                ProduzioneOperatore::calcolaTotaliOrdiniInPagamento(
+                    (int) $produzione->user_id,
+                    (int) $produzione->anno,
+                    (int) $produzione->mese
+                );
+                ContrattoEnergia::calcolaProduzioneContrattiEnergia(
+                    (int) $produzione->user_id,
+                    (int) $produzione->anno,
+                    (int) $produzione->mese
+                );
+            }
+
+            DB::commit();
+
+            return true;
+        } catch (Throwable $e) {
+            DB::rollBack();
+            \Log::error('FatturaProformaService::segnaPagata', [
+                'fattura_id' => $fattura->id,
+                'message' => $e->getMessage(),
+            ]);
+            $this->error = 'Errore chiusura pagamento. Riprova.';
+
+            return false;
+        }
+    }
+
+    /**
+     * Batch: segna pagate più proforma con stessi dati bonifico.
+     *
+     * @param  list<int>  $ids
+     * @return array{ok:int,fail:int,errors:list<string>}
+     */
+    public function segnaPagateBatch(array $ids, string $dataPagamento, string $riferimento): array
+    {
+        $ok = 0;
+        $fail = 0;
+        $errors = [];
+        foreach ($ids as $id) {
+            $fattura = FatturaProforma::withoutGlobalScopes()->with('produzione')->find($id);
+            if (! $fattura) {
+                $fail++;
+                $errors[] = "Proforma #{$id} non trovata";
+
+                continue;
+            }
+            if ($fattura->statusEnum() === FatturaProformaStatus::PAGATA) {
+                continue;
+            }
+            $svc = new self(
+                optional($fattura->produzione)->anno ?? now()->year,
+                optional($fattura->produzione)->mese ?? now()->month
+            );
+            if ($svc->segnaPagata($fattura, [
+                'data_pagamento' => $dataPagamento,
+                'riferimento_pagamento' => $riferimento,
+            ])) {
+                $ok++;
+            } else {
+                $fail++;
+                $errors[] = 'Proforma #'.$fattura->numero.': '.($svc->getErrore() ?: 'errore');
+            }
+        }
+
+        return ['ok' => $ok, 'fail' => $fail, 'errors' => $errors];
+    }
+
+    public function marcaContrattiPagati(int $fatturaId): int
+    {
+        $n = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+            ->where('fattura_proforma_id', $fatturaId)
+            ->update(['pagato' => 1]);
+
+        $n += ContrattoEnergia::withoutGlobalScope('filtroOperatore')
+            ->where('fattura_proforma_id', $fatturaId)
+            ->update(['pagato' => 1]);
+
+        return $n;
+    }
+
+    /**
+     * Marca pagati i contratti collegati a un BillingDocument autofattura affiliato.
+     */
+    public static function marcaContrattiPagatiAutofattura(int $billingDocumentId): int
+    {
+        $n = 0;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('contratti', 'autofattura_billing_document_id')) {
+            $n += ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+                ->where('autofattura_billing_document_id', $billingDocumentId)
+                ->update(['pagato' => 1]);
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('contratti_energia', 'autofattura_billing_document_id')) {
+            $n += ContrattoEnergia::withoutGlobalScope('filtroOperatore')
+                ->where('autofattura_billing_document_id', $billingDocumentId)
+                ->update(['pagato' => 1]);
+        }
+
+        return $n;
     }
 
     protected function ensureIntestazione(int $agenteId): IntestazioneFatturaProforma
@@ -303,16 +444,18 @@ class FatturaProformaService
         $mesePagamento = $this->mesePagamento();
 
         $telCount = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+            ->daLiquidare()
             ->where('agente_id', $agenteId)
             ->where('mese_pagamento', $mesePagamento)
             ->count();
 
         $enCount = ContrattoEnergia::withoutGlobalScope('filtroOperatore')
+            ->daLiquidare()
             ->where('agente_id', $agenteId)
             ->where('mese_pagamento', $mesePagamento)
             ->count();
 
-        return [
+        $componenti = [
             [
                 'key' => 'telefonia',
                 'descrizione' => 'Provvigioni contratti Telefonia',
@@ -327,28 +470,24 @@ class FatturaProformaService
                 'quantita' => max(1, $enCount),
                 'classe' => ContrattoEnergia::class,
             ],
-            [
-                'key' => 'servizi_finanziari',
-                'descrizione' => 'Provvigioni servizi finanziari',
-                'importo' => (float) ($produzione->importo_servizi_finanziari ?? 0),
-                'quantita' => 1,
-                'classe' => null,
-            ],
-            [
-                'key' => 'segnalazioni',
-                'descrizione' => 'Provvigioni segnalazioni',
-                'importo' => (float) ($produzione->importo_segnalazioni ?? 0),
-                'quantita' => 1,
-                'classe' => null,
-            ],
-            [
-                'key' => 'sim',
-                'descrizione' => 'Provvigioni attivazioni SIM',
-                'importo' => (float) ($produzione->importo_attivazioni_sim ?? 0),
-                'quantita' => 1,
-                'classe' => null,
-            ],
         ];
+
+        $risultatiGare = app(GaraEvalService::class)
+            ->risultatiAperti($agenteId, (int) $this->anno, (int) $this->mese);
+        foreach ($risultatiGare as $ris) {
+            $nome = optional($ris->gara)->nome ?: ('#'.$ris->gara_id);
+            $componenti[] = [
+                'key' => 'gara_'.$ris->id,
+                'descrizione' => 'Premio gara '.$nome,
+                'importo' => (float) $ris->premio,
+                'quantita' => 1,
+                'classe' => GaraRisultato::class,
+                'gara_risultato_id' => (int) $ris->id,
+                'dettaglio' => 'Contratti raggiunti: '.(int) $ris->valore_raggiunto,
+            ];
+        }
+
+        return $componenti;
     }
 
     protected function scriviRigheECollegaContratti(FatturaProforma $fattura, ProduzioneOperatore $produzione, int $agenteId): float
@@ -363,19 +502,42 @@ class FatturaProformaService
             }
 
             if ($comp['classe'] === ContrattoTelefonia::class) {
-                ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+                $telIds = ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+                    ->daLiquidare()
                     ->where('agente_id', $agenteId)
                     ->where('mese_pagamento', $mesePagamento)
+                    ->pluck('id')
+                    ->all();
+                ContrattoTelefonia::withoutGlobalScope('filtroOperatore')
+                    ->whereIn('id', $telIds)
                     ->update(['fattura_proforma_id' => $fattura->id]);
+                app(\App\Http\Services\Billing\ProvvigioneClawbackService::class)
+                    ->openForIds(ContrattoTelefonia::class, $telIds);
 
                 $dettaglio = $this->dettaglioTelefonia($fattura->id);
             } elseif ($comp['classe'] === ContrattoEnergia::class) {
-                ContrattoEnergia::withoutGlobalScope('filtroOperatore')
+                $enIds = ContrattoEnergia::withoutGlobalScope('filtroOperatore')
+                    ->daLiquidare()
                     ->where('agente_id', $agenteId)
                     ->where('mese_pagamento', $mesePagamento)
+                    ->pluck('id')
+                    ->all();
+                ContrattoEnergia::withoutGlobalScope('filtroOperatore')
+                    ->whereIn('id', $enIds)
                     ->update(['fattura_proforma_id' => $fattura->id]);
+                app(\App\Http\Services\Billing\ProvvigioneClawbackService::class)
+                    ->openForIds(ContrattoEnergia::class, $enIds);
 
                 $dettaglio = $this->dettaglioEnergia($fattura->id);
+            } elseif ($comp['classe'] === GaraRisultato::class) {
+                $risId = (int) ($comp['gara_risultato_id'] ?? 0);
+                if ($risId > 0) {
+                    GaraRisultato::query()
+                        ->where('id', $risId)
+                        ->whereNull('fattura_proforma_id')
+                        ->update(['fattura_proforma_id' => $fattura->id]);
+                }
+                $dettaglio = $comp['dettaglio'] ?? null;
             } else {
                 $dettaglio = null;
             }
@@ -440,6 +602,16 @@ class FatturaProformaService
             ->update(['fattura_proforma_id' => null]);
     }
 
+    protected function scollegaGare(int $fatturaId): void
+    {
+        GaraRisultato::query()
+            ->where('fattura_proforma_id', $fatturaId)
+            ->update([
+                'fattura_proforma_id' => null,
+                'liquidato_at' => null,
+            ]);
+    }
+
     protected function trovaNumero($data): int
     {
         $numero = FatturaProforma::whereYear('data', $data->year)
@@ -454,13 +626,22 @@ class FatturaProformaService
 
     protected function syncToInvoiceShelf(FatturaProforma $fattura): void
     {
+        $client = app(\App\Http\Services\InvoiceShelf\InvoiceShelfClient::class);
+        if (! $client->enabled()) {
+            return;
+        }
+
         try {
-            app(AgentProformaInvoiceShelfSync::class)->sync($fattura, (int) $this->anno, (int) $this->mese);
+            $doc = app(AgentProformaInvoiceShelfSync::class)->sync($fattura, (int) $this->anno, (int) $this->mese);
+            if (! $doc || ! $doc->invoiceshelf_id) {
+                throw new \RuntimeException('Sync InvoiceShelf non ha creato estimate.');
+            }
         } catch (Throwable $e) {
             \Log::warning('FatturaProformaService sync InvoiceShelf', [
                 'fattura_id' => $fattura->id,
                 'error' => $e->getMessage(),
             ]);
+            $this->error = 'Proforma creata in Gestiio ma sync InvoiceShelf fallito: '.$e->getMessage();
         }
     }
 }

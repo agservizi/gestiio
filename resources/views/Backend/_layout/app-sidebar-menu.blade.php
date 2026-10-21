@@ -52,6 +52,12 @@
                                 </a>
                             </div>
                             <div class="menu-item">
+                                <a class="menu-link" href="{{ route('simula-bolletta.index') }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">Simula bolletta</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
                                 <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\CafPatronatoController::class,'index'])}}">
                                     <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title">Caf / Patronato</span>
@@ -66,9 +72,9 @@
                                     </span>
                                     <div class="menu-sub menu-sub-accordion">
                                         <div class="menu-item">
-                                            <a class="menu-link" href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'dashboard']) }}">
+                                            <a class="menu-link" href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'index']) }}">
                                                 <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                                <span class="menu-title">Dashboard</span>
+                                                <span class="menu-title">Elenco richieste</span>
                                             </a>
                                         </div>
                                         @can('send.requests.process')
@@ -198,7 +204,13 @@
                             <div class="menu-item">
                                 <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\AgenteController::class,'index'])}}">
                                     <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">Agenti</span>
+                                    <span class="menu-title">Affiliati</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\AdminReferralController::class,'index'])}}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">Referral bonus</span>
                                 </a>
                             </div>
                             <div class="menu-item">
@@ -246,7 +258,19 @@
                             <div class="menu-item">
                                 <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\RicaricaPlafonController::class,'show'])}}">
                                     <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">Ricarica plafond agenti</span>
+                                    <span class="menu-title">Ricarica plafond affiliati</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\RicaricaBonificoPortafoglioController::class,'index'])}}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">Ricariche bonifico</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\BreakingNewsController::class,'index'])}}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">Breaking news</span>
                                 </a>
                             </div>
                             <div class="menu-item">
@@ -314,6 +338,14 @@
                                 <i class="ki-duotone ki-electricity fs-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                    <span class="path5"></span>
+                                    <span class="path6"></span>
+                                    <span class="path7"></span>
+                                    <span class="path8"></span>
+                                    <span class="path9"></span>
+                                    <span class="path10"></span>
                                 </i>
                             </span>
                             <span class="menu-title">Contratti Energia</span>
@@ -327,6 +359,8 @@
                                 <i class="ki-duotone ki-profile-user fs-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
                                 </i>
                             </span>
                             <span class="menu-title">Caf / Patronato</span>
@@ -409,6 +443,7 @@
                                 <i class="ki-duotone ki-archive fs-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
+                                    <span class="path3"></span>
                                 </i>
                             </span>
                             <span class="menu-title">Documenti</span>
@@ -456,14 +491,77 @@
                             </div>
                         </div>
                         <div class="menu-item">
-                            <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\FatturaProformaController::class,'index'])}}">
+                            <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\ProvvigioniAffiliatoController::class,'index'])}}">
+                                <span class="menu-icon">
+                                    <i class="ki-duotone ki-chart-simple fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                    </i>
+                                </span>
+                                <span class="menu-title">Provvigioni</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\MiePraticheController::class,'index'])}}">
+                                <span class="menu-icon">
+                                    <i class="ki-duotone ki-tablet fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                </span>
+                                <span class="menu-title">Le mie pratiche</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\HubPromozioneController::class,'index'])}}">
+                                <span class="menu-icon">
+                                    <i class="ki-duotone ki-abstract-26 fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </span>
+                                <span class="menu-title">Cosa promuovere</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\ReferralAffiliatoController::class,'index'])}}">
+                                <span class="menu-icon">
+                                    <i class="ki-duotone ki-people fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                        <span class="path5"></span>
+                                    </i>
+                                </span>
+                                <span class="menu-title">Invita affiliato</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\ProduzioneOperatoreController::class,'index'])}}">
+                                <span class="menu-icon">
+                                    <i class="ki-duotone ki-status fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                    </i>
+                                </span>
+                                <span class="menu-title">I miei pagamenti</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\BillingDocumentController::class,'enterInvoiceShelf'])}}">
                                 <span class="menu-icon">
                                     <i class="ki-duotone ki-receipt-square fs-2">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
                                 </span>
-                                <span class="menu-title">Fatture proforma</span>
+                                <span class="menu-title">Le mie pre-fatture</span>
                             </a>
                         </div>
                     @endcan
@@ -474,6 +572,8 @@
                                     <i class="ki-duotone ki-gift fs-2">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
                                     </i>
                                 </span>
                                 <span class="menu-title">Ebike B2B</span>
@@ -489,7 +589,7 @@
                 @endif
 
                 <div class="menu-item">
-                    <a class="menu-link" href="{{action([\App\Http\Controllers\Backend\ChatController::class,'index'])}}">
+                    <a class="menu-link" href="{{ \App\Support\InternalChat::url() }}">
                         <span class="menu-icon">
                             <i class="ki-duotone ki-send fs-2">
                                 <span class="path1"></span>
@@ -497,7 +597,7 @@
                             </i>
                         </span>
                         <span class="menu-title">Chat interna
-                            @php($chatDaLeggere=\App\Models\ChatThreadUser::conteggioNonLetti(Auth::id()))
+                            @php($chatDaLeggere=Auth::user()->getUnreadCount())
                             <span class="badge badge-danger fw-bolder my-2 ms-2 js-chat-unread-wrap {{$chatDaLeggere ? '' : 'd-none'}}">
                                 <span class="js-chat-unread-total">{{$chatDaLeggere}}</span>
                             </span>
@@ -511,6 +611,7 @@
                             <i class="ki-duotone ki-information fs-2">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
+                                <span class="path3"></span>
                             </i>
                         </span>
                         <span class="menu-title">Tickets
@@ -524,14 +625,31 @@
                     </a>
                 </div>
 
-                @can('admin')
-
+                @canany(['admin', 'agente'])
                     <div class="menu-item">
-                        <a class="menu-link" href="{{ action([\App\Http\Controllers\Backend\PdfToolsController::class, 'index']) }}">
+                        <a class="menu-link" href="{{ route('backend.pdf-tools') }}">
                             <span class="menu-icon">
-                                <i class="fas fa-file-pdf fs-2"></i>
+                                <i class="ki-duotone ki-book-square fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
                             </span>
                             <span class="menu-title">PDF Tools</span>
+                        </a>
+                    </div>
+                @endcanany
+
+                @can('admin')
+                    <div class="menu-item">
+                        <a class="menu-link" href="{{ route('backend.training.sso') }}" target="_blank" rel="noopener noreferrer">
+                            <span class="menu-icon">
+                                <i class="ki-duotone ki-youtube fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </span>
+                            <span class="menu-title">Formazione</span>
                         </a>
                     </div>
 
@@ -560,11 +678,38 @@
                             </div>
                             <div class="menu-item">
                                 <a class="menu-link"
+                                   href="{{action([\App\Http\Controllers\Backend\BillingDocumentController::class,'enterInvoiceShelf'])}}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Apri InvoiceShelf</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link"
+                                   href="{{action([\App\Http\Controllers\Backend\LiquidazioneProvvigioniController::class,'index'])}}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Liquidazione mese</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link"
+                                   href="{{action([\App\Http\Controllers\Backend\GaraController::class,'index'])}}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Gare / premi obiettivo</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link"
                                    href="{{action([\App\Http\Controllers\Backend\FatturaProformaController::class,'index'])}}">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
-                                    <span class="menu-title">Proforma agenti</span>
+                                    <span class="menu-title">Proforma affiliati</span>
                                 </a>
                             </div>
                             <div class="menu-item">
@@ -656,7 +801,7 @@
                                     <div class="menu-item">
                                         <a class="menu-link" href="{{ url('/backend/locker-point/postazioni') }}">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Postazioni agenti / API</span>
+                                            <span class="menu-title">Postazioni affiliati / API</span>
                                         </a>
                                     </div>
                                 </div>
@@ -691,6 +836,13 @@
                                     </div>
                                     <div class="menu-item">
                                         <a class="menu-link"
+                                           href="{{action([\App\Http\Controllers\Backend\TelefoniaOffertaController::class,'index'])}}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Offerte telefonia</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
                                            href="{{action([\App\Http\Controllers\Backend\EsitoTelefoniaController::class,'index'])}}">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">Esiti</span>
@@ -701,6 +853,13 @@
                                            href="{{action([\App\Http\Controllers\Backend\ListinoController::class,'index'])}}">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">Listini</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{action([\App\Http\Controllers\Backend\GaraController::class,'index'])}}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Gare</span>
                                         </a>
                                     </div>
                                 </div>
@@ -729,6 +888,13 @@
                                            href="{{action([\App\Http\Controllers\Backend\GestoreContrattoEnergiaController::class,'index'])}}">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">Gestori</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link"
+                                           href="{{action([\App\Http\Controllers\Backend\EnergiaOffertaController::class,'index'])}}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Offerte energia</span>
                                         </a>
                                     </div>
                                 </div>
@@ -832,7 +998,7 @@
                                                 <span class="menu-bullet">
                                                     <span class="bullet bullet-dot"></span>
                                                 </span>
-                                            <span class="menu-title">Ricarico agenti</span>
+                                            <span class="menu-title">Ricarico affiliati</span>
                                         </a>
                                     </div>
                                     <div class="menu-item">
@@ -950,9 +1116,9 @@
                                     </span>
                                     <div class="menu-sub menu-sub-accordion">
                                         <div class="menu-item">
-                                            <a class="menu-link" href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'dashboard']) }}">
+                                            <a class="menu-link" href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'index']) }}">
                                                 <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                                <span class="menu-title">Dashboard</span>
+                                                <span class="menu-title">Elenco richieste</span>
                                             </a>
                                         </div>
                                         @can('viewReports', \App\Models\SendRequest::class)
@@ -994,6 +1160,7 @@
                         <i class="ki-duotone ki-status fs-2">
                             <span class="path1"></span>
                             <span class="path2"></span>
+                            <span class="path3"></span>
                         </i>
                     </span>
                     <span class="menu-title">Registri</span>
@@ -1003,12 +1170,29 @@
                         <!--begin:Menu sub-->
                         <div class="menu-sub menu-sub-accordion">
                             <div class="menu-item">
+                                <a class="menu-link" href="{{ route('backend.content-report.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Segnalazioni DSA</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
                                 <a class="menu-link"
                                    href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],'login')}}">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
                                     <span class="menu-title">Login</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link"
+                                   href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],'security')}}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Sicurezza</span>
                                 </a>
                             </div>
                             <div class="menu-item">
@@ -1218,9 +1402,9 @@
                         </span>
                         <div class="menu-sub menu-sub-accordion">
                             <div class="menu-item">
-                                <a class="menu-link" href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'dashboard']) }}">
+                                <a class="menu-link" href="{{ action([\App\Http\Controllers\Backend\SendRequestController::class, 'index']) }}">
                                     <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">Dashboard</span>
+                                    <span class="menu-title">Elenco richieste</span>
                                 </a>
                             </div>
                             @can('send.requests.process')
